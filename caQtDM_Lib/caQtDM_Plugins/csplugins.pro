@@ -8,6 +8,7 @@ include (../../caQtDM_Viewer/qtdefs.pri)
 
 TEMPLATE = subdirs
 SUBDIRS = demo epics3 archive environment
+SUBDIRS += opcua
   contains(QT_VER_MAJ, 5) {
     greaterThan(QT_VER_MIN, 10){
         # the reason is the modbus impementation in Qt
