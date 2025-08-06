@@ -99,8 +99,8 @@ Requires: qt-devel
 Requires: qt-assistant
 Requires: qwt zeromq
 Requires: epics-base%{EPICS_TARGET_VERSION}
-%description bin-qt4
 %define qt_vers qt4
+%description bin-qt4
 
 %package qt4
 Summary: Make %{name}-bin-qt4 default
@@ -134,13 +134,15 @@ Summary: caQtDM built against Qt 5.
 Requires: qt5-assistant
 Requires: qt5-designer
 Requires: qwt-qt5 zeromq
+Requires: epics-base%{EPICS_TARGET_VERSION}
 Obsoletes:  caqtdm
-%description bin-qt5
 %define qt_vers qt5
 %if 0%{?rhel} <  8
 Requires: python==3.12
 %endif
-Requires: epics-base%{EPICS_TARGET_VERSION}
+
+
+%description bin-qt5
 
 %endif
 
@@ -163,12 +165,12 @@ Summary: caQtDM built against Qt 6.
 Requires: qt6-qttools
 Requires: qwt-qt6 zeromq
 Obsoletes:  caqtdm
-%description bin-qt6
 %define qt_vers qt6
 Requires: epics-base%{EPICS_TARGET_VERSION}
 Requires: qt6-qt5compat
 Requires: qt6-qtlocation
 Requires: python3
+%description bin-qt6
 %endif
 
 
