@@ -61,12 +61,12 @@ class QTCON_EXPORT caWaveTable : public QTableWidget
     Q_PROPERTY(FormatType formatType READ getFormatType WRITE setFormatType)
 
     // this will prevent user interference
-    Q_PROPERTY(QString styleSheet READ styleSheet WRITE noStyle DESIGNABLE false)
+    Q_PROPERTY(QString styleSheet READ styleSheet WRITE noStyle)
 
     Q_ENUMS(FormatType)
 
 public:
-    void noStyle(QString style) {Q_UNUSED(style);}
+    //void noStyle(QString style) {Q_UNUSED(style);}
 
     caWaveTable(QWidget *parent);
 
@@ -122,6 +122,8 @@ public:
     Alignment getAlignment() const {return thisAlignment;}
 
                                                   void copy();
+
+    void noStyle(QString stylesheet);
 
 public slots:
     void animation(QRect p) {
