@@ -148,5 +148,6 @@ private:
     int orig_decDig = -1;
     int orig_intDig = -1;
     bool suppressInput = false;
+    QString backupStylesheet = "";
 };
 #endif // EDIGIT_H

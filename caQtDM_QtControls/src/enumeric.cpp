@@ -265,12 +265,14 @@ bool ENumeric::canEdit(){
 
 void ENumeric::suppressUserInput(){
     suppressInput = true;
-    for(int i = 0; i < digits; i++){
-        labels[i]->setText("§");
+    if (backupStylesheet.isEmpty()) backupStylesheet=this->styleSheet();
+     for(int i = 0; i < digits; i++){
+        labels[i]->setText("?");
             labels[i]->setStyleSheet("QLabel {color:red;}");
     }
     signLabel->setText("");
     // Crashes: pointLabel->setText("");
+
     this->setStyleSheet("* {color: red;}");
     this->setToolTip("input broke widget: awaiting processable input");
     update();
@@ -296,6 +298,9 @@ void ENumeric::silentSetValue(double v)
             if(orig_decDig < decDig) decDig--;
         }
         digits = intDig + decDig;
+        qDebug()<< "Digits:"<< this->objectName()<< digits << intDig << decDig;
+
+
     }
 
     setValuesFromChannel(v);
@@ -305,14 +310,16 @@ void ENumeric::silentSetValue(double v)
     if(suppressInput && canEdit()){
         suppressInput = false;
         isInitialized = false;
+        this->setStyleSheet(this->backupStylesheet);
+        this->backupStylesheet="";
 
         for(int i = 0; i < digits; i++){
             labels[i]->setStyleSheet("");
         }
-        this->setStyleSheet("");
         clearContainers();
         init();
         showData();
+        triggerRoundColorUpdate();
     }else if(!canEdit() && !suppressInput){
         suppressUserInput();
     }
