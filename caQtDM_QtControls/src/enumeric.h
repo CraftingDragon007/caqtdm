@@ -116,8 +116,8 @@ private:
     void upDataIndex(int id);
     void updateRoundColors(int i);
     void triggerRoundColorUpdate();
-    double transformNumberSpace(long long value, int dig);
-    long long transformNumberSpace(double value, int dig);
+    double transformNumberSpace(qint64 value, int dig);
+    qint64 transformNumberSpace(double value, int dig);
     void setValuesFromChannel(double v);
     bool canEdit();
     void suppressUserInput();
@@ -128,9 +128,9 @@ private:
     int intDig;
     int decDig;
     int digits;
-    long long data;
-    long long minVal;
-    long long maxVal;
+    qint64 data;
+    qint64 minVal;
+    qint64 maxVal;
     double d_minAsDouble, d_maxAsDouble;
     QButtonGroup *bup;
     QButtonGroup *bdown;

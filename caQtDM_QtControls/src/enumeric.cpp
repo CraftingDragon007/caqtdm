@@ -242,7 +242,7 @@ void ENumeric::init()
 
 void ENumeric::setValue(double v)
 {
-    long long temp = transformNumberSpace(v, decDig);
+    qint64 temp = transformNumberSpace(v, decDig);
     if ((temp >= minVal) && (temp <= maxVal)) {
         bool valChanged = data != temp;
         data = temp;
@@ -294,7 +294,7 @@ void ENumeric::suppressUserInput(){
 
 void ENumeric::silentSetValue(double v)
 {
-    int intDigits = QString().number((long long) v).length();
+    int intDigits = QString().number((qint64) v).length();
     if(orig_decDig == -1) orig_decDig = decDig;
     if(orig_intDig == -1) orig_intDig = intDig;
 
@@ -344,7 +344,7 @@ void ENumeric::setValuesFromChannel(double v)
     csValue = v;
     // Adjust min/max if set by channel
     setDecDigits(decDig);
-    long long temp = transformNumberSpace(v, decDig);
+    qint64 temp = transformNumberSpace(v, decDig);
     if(!isInitialized) isInitialized = true;
     data = temp;
     showData();
@@ -356,7 +356,7 @@ void ENumeric::setMaximum(double v)
         d_maxAsDouble = v;
         maxVal = transformNumberSpace(v, decDig);
     }
-    long long temp = (long long) round(csValue * pow(10.0, decDig));
+    qint64 temp = (qint64) round(csValue * pow(10.0, decDig));
     data = temp;
 }
 
@@ -367,7 +367,7 @@ void ENumeric::setMinimum(double v)
         d_minAsDouble = v;
         minVal = transformNumberSpace(v, decDig);
     }
-    long long temp = (long long) round(csValue * pow(10.0, decDig));
+    qint64 temp = (qint64) round(csValue * pow(10.0, decDig));
     data = temp;
 }
 
@@ -383,9 +383,9 @@ void ENumeric::setIntDigits(int i)
 void ENumeric::setDecDigits(int d)
 {
     if (d < 0) return;
-    data = (long long) (data * pow(10.0, d - decDig));
-    maxVal = (long long) (maxVal * pow(10.0, d - decDig));
-    minVal = (long long) (minVal * pow(10.0, d - decDig));
+    data = (qint64) (data * pow(10.0, d - decDig));
+    maxVal = (qint64) (maxVal * pow(10.0, d - decDig));
+    minVal = (qint64) (minVal * pow(10.0, d - decDig));
     decDig = d;
 
     // shift digits around if max/minvalue get too big.
@@ -426,11 +426,11 @@ void ENumeric::upDataIndex(int id)
 {
     if(!_AccessW) return;
     if(id == -1) return;
-    long long datad = data;
-    long long const currentData = data;
-    long long power =  qPow(10.0, digits-id-1);
+    qint64 datad = data;
+    qint64 const currentData = data;
+    qint64 power =  qPow(10.0, digits-id-1);
     datad = datad + power;
-    // (long long) power overflows between 10^18 and 10^19
+    // (qint64) power overflows between 10^18 and 10^19
     if (datad <= (maxVal) && digits-id-1 < 19) {
         data = datad;
         double dataDouble = (double) datad;
@@ -443,16 +443,16 @@ void ENumeric::upDataIndex(int id)
     }
     if (text != NULL) text->hide();
 }
-long long ENumeric::transformNumberSpace(double value, int dig){
+qint64 ENumeric::transformNumberSpace(double value, int dig){
     double f1;
     double f = std::modf(value, &f1);
-    long long pw = f *pow(10.0, dig);
-    long long pw1 = f1 *pow(10.0, dig);
+    qint64 pw = f *pow(10.0, dig);
+    qint64 pw1 = f1 *pow(10.0, dig);
 
     return pw+pw1;
 }
 
-double ENumeric::transformNumberSpace(long long value, int dig){
+double ENumeric::transformNumberSpace(qint64 value, int dig){
     double pw = value;
     while (dig > 10) {
         dig -= 10;
@@ -476,9 +476,9 @@ void ENumeric::downDataIndex(int id)
 {
     if(!_AccessW) return;
     if(id == -1) return;
-    long long datad = data;
-    long long const currentData = data;
-    long long power =  pow(10.0, digits-id-1);
+    qint64 datad = data;
+    qint64 const currentData = data;
+    qint64 power =  pow(10.0, digits-id-1);
     datad = datad - power;
     if (datad >= minVal) {
         data = datad;
@@ -497,7 +497,7 @@ void ENumeric::showData()
 {
     int thisDigit, prvDigit;
     bool suppress = true;
-    long long temp = data;
+    qint64 temp = data;
     double num = 0;
 
     if(!suppressInput){
@@ -514,7 +514,7 @@ void ENumeric::showData()
             else
                 num = ceil(numd);
             numd = num * power;
-            temp = temp - (long long) numd;
+            temp = temp - (qint64) numd;
 
             thisDigit = abs((int) num);
             if(i>0 && prvDigit == 0 && suppress && labels.length() > 2) labels[i-1]->setText(" ");
@@ -610,7 +610,7 @@ bool ENumeric::eventFilter(QObject *obj, QEvent *event)
         } else {
             lastLabelOnTab = lastLabel;
             lastLabel = -1;
-            long long temp = (long long) round(csValue * pow(10.0, decDig));
+            qint64 temp = (qint64) round(csValue * pow(10.0, decDig));
             data = temp;
             showData();
             QApplication::restoreOverrideCursor();
