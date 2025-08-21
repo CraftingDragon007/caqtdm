@@ -121,6 +121,7 @@ private:
     void setValuesFromChannel(double v);
     bool canEdit();
     void suppressUserInput();
+    QString generate_valueString();
 
     int idUpVuoto, idDownVuoto;
     int idUpPoint, idDownPoint;

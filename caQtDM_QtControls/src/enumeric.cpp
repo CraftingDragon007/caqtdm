@@ -255,6 +255,20 @@ void ENumeric::setValue(double v)
     }
 }
 
+QString ENumeric::generate_valueString(){
+    QString valueString="";
+    if(signLabel->text() == "-") valueString += signLabel->text();
+    for(int i = 0; i < digits; i++){
+        if(i == intDig) valueString += ".";
+        QString txt = labels[i]->text();
+        if(txt != " ") valueString += txt;
+    }
+    return valueString;
+}
+
+
+
+
 bool ENumeric::canEdit(){
     QString dataString = QString().number(data);
     if(((dataString.contains("922337")) && dataString.length() >= 19)){
@@ -525,12 +539,7 @@ void ENumeric::updateRoundColors(int i) {
     if(!suppressInput){
         QColor currColor = labels[i]->palette().color(QPalette::Text);
 
-        QString valueString = "";
-        if(signLabel->text() == "-") valueString += signLabel->text();
-        for(int i = 0; i < digits; i++){
-            if(i == intDig) valueString += ".";
-            QString txt = labels[i]->text();
-            if(txt != " ") valueString += txt;
+        QString valueString = generate_valueString();
 
         }
         int digitsToColorFromEnd = (valueString.length() - PREC_LIMIT_NUMERIC);
@@ -571,14 +580,7 @@ void ENumeric::mouseDoubleClickEvent(QMouseEvent*)
             text->raise();
             text->show();
         }
-        QString valueString = "";
-        if(signLabel->text() == "-") valueString += signLabel->text();
-        for(int i = 0; i < digits; i++){
-            if(i == intDig) valueString += ".";
-            QString txt = labels[i]->text();
-            if(txt != " ") valueString += txt;
-
-        }
+        QString valueString = generate_valueString();
         text->setText(valueString);
 
         connect(text, SIGNAL(returnPressed()), this, SLOT(dataInput()));
