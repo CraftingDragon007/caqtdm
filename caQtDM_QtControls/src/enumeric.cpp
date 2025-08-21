@@ -281,7 +281,7 @@ void ENumeric::suppressUserInput(){
     suppressInput = true;
     if (backupStylesheet.isEmpty()) backupStylesheet=this->styleSheet();
      for(int i = 0; i < digits; i++){
-        labels[i]->setText("?");
+        labels[i]->setText("*");
             labels[i]->setStyleSheet("QLabel {color:red;}");
     }
     signLabel->setText("");
