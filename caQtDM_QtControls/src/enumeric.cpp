@@ -54,7 +54,7 @@ int round (double x) {
     }
 }
 #endif
-
+#pragma optimize( "", off )
 ENumeric::ENumeric(QWidget *parent, int id, int dd) : QFrame(parent), FloatDelegate()
 {
     lastLabelOnTab = lastLabel = -1;
@@ -257,7 +257,7 @@ void ENumeric::setValue(double v)
 
 QString ENumeric::generate_valueString(){
     QString valueString="";
-    if(signLabel->text() == "-") valueString += signLabel->text();
+    if(signLabel && (signLabel->text() == "-")) valueString += signLabel->text();
     for(int i = 0; i < digits; i++){
         if(i == intDig) valueString += ".";
         QString txt = labels[i]->text();
@@ -271,6 +271,7 @@ QString ENumeric::generate_valueString(){
 
 bool ENumeric::canEdit(){
     QString dataString = QString().number(data);
+    qDebug()<< "canEdit:" << dataString << dataString.length();
     if(((dataString.contains("922337")) && dataString.length() >= 19)){
         return false;
     }
@@ -304,39 +305,45 @@ void ENumeric::silentSetValue(double v)
         // Shift digits towards integers if the integer digits over EPICS is bigger than those displayed currently
         while (intDigits > intDig) {
             intDig++;
+            decDig--;
+
         }
         // Shift back if the opposite is the case
         while(intDigits < intDig){
             intDig--;
-            if(orig_decDig > decDig) decDig++;
-            if(orig_decDig < decDig) decDig--;
+            decDig++;
+            //if(orig_decDig > decDig) decDig++;
+            //if(orig_decDig < decDig) decDig--;
         }
         digits = intDig + decDig;
-        qDebug()<< "Digits:"<< this->objectName()<< digits << intDig << decDig;
+
+        qDebug()<< "Digits:"<< this->objectName()<< digits << intDig << decDig << suppressInput;
 
 
     }
 
     setValuesFromChannel(v);
-    valueChangedByButton = false;
+
 
     // Remove Suppression if values are working fine
-    if(suppressInput && canEdit()){
+    //if(suppressInput && canEdit()){
+    if(canEdit()){
         suppressInput = false;
         isInitialized = false;
-        this->setStyleSheet(this->backupStylesheet);
+        if (!this->backupStylesheet.isEmpty()) this->setStyleSheet(this->backupStylesheet);
         this->backupStylesheet="";
 
         for(int i = 0; i < digits; i++){
             labels[i]->setStyleSheet("");
         }
-        clearContainers();
-        init();
+        if(!valueChangedByButton) clearContainers();
+        if(!valueChangedByButton) init();
         showData();
         triggerRoundColorUpdate();
     }else if(!canEdit() && !suppressInput){
         suppressUserInput();
     }
+    valueChangedByButton = false;
 }
 
 void ENumeric::setValuesFromChannel(double v)
@@ -354,7 +361,7 @@ void ENumeric::setMaximum(double v)
 {
     if (v >= d_minAsDouble) {
         d_maxAsDouble = v;
-        maxVal = transformNumberSpace(v, decDig);
+        maxVal = transformNumberSpace(v, decDig)-1;
     }
     qint64 temp = (qint64) round(csValue * pow(10.0, decDig));
     data = temp;
@@ -365,7 +372,7 @@ void ENumeric::setMinimum(double v)
     if (v <= d_maxAsDouble)
     {
         d_minAsDouble = v;
-        minVal = transformNumberSpace(v, decDig);
+        minVal = transformNumberSpace(v, decDig)+1;
     }
     qint64 temp = (qint64) round(csValue * pow(10.0, decDig));
     data = temp;
@@ -399,14 +406,14 @@ void ENumeric::setDecDigits(int d)
     digits = decDig + intDig;
 
     if(((decDig != orig_decDig || intDig != orig_intDig) && digShifted > 0) || !isInitialized){
-        clearContainers();
+        if(!valueChangedByButton) clearContainers();
         /* when changing decimal digits, minimum and maximum need to be recalculated, to avoid
          * round issues. So, recalculating maximum and minimum is required  to obtain precision
          */
         setMinimum(d_minAsDouble);
         setMaximum(d_maxAsDouble);
 
-        init();
+        if(!valueChangedByButton) init();
     }
     if(!canEdit()){
         suppressUserInput();
@@ -431,6 +438,7 @@ void ENumeric::upDataIndex(int id)
     qint64 power =  qPow(10.0, digits-id-1);
     datad = datad + power;
     // (qint64) power overflows between 10^18 and 10^19
+    qDebug()<<"upDataIndex:" << id << datad << maxVal;
     if (datad <= (maxVal) && digits-id-1 < 19) {
         data = datad;
         double dataDouble = (double) datad;
@@ -502,9 +510,9 @@ void ENumeric::showData()
 
     if(!suppressInput){
         if (data < 0)
-            signLabel->setText(QString("-"));
+            if (signLabel) signLabel->setText(QString("-"));
         else
-            signLabel->setText(QString("+"));
+            if (signLabel) signLabel->setText(QString("+"));
 
         for (int i = 0; i < digits; i++) {
             double power =  pow(10.0, digits-i-1);
@@ -518,13 +526,13 @@ void ENumeric::showData()
 
             thisDigit = abs((int) num);
             if(i>0 && prvDigit == 0 && suppress && labels.length() > 2) labels[i-1]->setText(" ");
-            labels[i]->setText(QString().setNum(abs((int) num)));
+            if (i<labels.length()) labels[i]->setText(QString().setNum(abs((int) num)));
             prvDigit = thisDigit;
             if(thisDigit != 0) suppress = false;
             if(i >= intDig-1)  suppress = false;
         }
 
-        QTimer::singleShot(1000, this, SLOT(valueUpdated()));
+       if(!valueChangedByButton) QTimer::singleShot(1000, this, SLOT(valueUpdated()));
         triggerRoundColorUpdate();
     }
 }
@@ -537,11 +545,11 @@ void ENumeric::triggerRoundColorUpdate(){
 
 void ENumeric::updateRoundColors(int i) {
     if(!suppressInput){
-        QColor currColor = labels[i]->palette().color(QPalette::Text);
+        QColor currColor=Qt::green;
+        if (i<labels.length()) currColor = labels[i]->palette().color(QPalette::Text);
 
         QString valueString = generate_valueString();
 
-        }
         int digitsToColorFromEnd = (valueString.length() - PREC_LIMIT_NUMERIC);
         if (i > PREC_LIMIT_NUMERIC ||  (i > (digits-digitsToColorFromEnd) && valueString.length() > (PREC_LIMIT_NUMERIC +1))) {
             if(currColor != roundingColor){
