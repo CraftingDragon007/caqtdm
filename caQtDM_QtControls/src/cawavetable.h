@@ -33,6 +33,7 @@
 #include <QKeyEvent>
 #include <QTimer>
 #include <stdint.h>
+#include "caWaveTableModel.h"
 #include <qtcontrols_global.h>
 
 typedef char string40[40];
@@ -59,18 +60,23 @@ class QTCON_EXPORT caWaveTable : public QTableWidget
     Q_ENUMS(SourceMode)
 
     Q_PROPERTY(FormatType formatType READ getFormatType WRITE setFormatType)
-
+    Q_PROPERTY(QString formatString READ getFormatString WRITE setFormatString)
     // this will prevent user interference
     Q_PROPERTY(QString styleSheet READ styleSheet WRITE noStyle DESIGNABLE false)
 
     Q_ENUMS(FormatType)
+
+    Q_PROPERTY(QString horizontalString READ getHorizontalString WRITE setHorizontalString )
+    Q_PROPERTY(QString verticalString READ getVerticalString WRITE setVerticalString)
+    Q_PROPERTY(int horizontalOffset READ getHorizontalOffset WRITE setHorizontalOffset)
+    Q_PROPERTY(int verticalOffset READ getVerticalOffset WRITE setVerticalOffset)
 
 public:
     void noStyle(QString style) {Q_UNUSED(style);}
 
     caWaveTable(QWidget *parent);
 
-    enum FormatType {decimal, exponential, compact, hexadecimal, octal, string};
+    enum FormatType {decimal, exponential, compact, hexadecimal, octal, string ,user_defined_format};
     enum DataType {doubles, longs, characters, strings};
     enum Alignment {Center, Left, Right};
 
@@ -115,6 +121,9 @@ public:
 
     void setFormatType(FormatType m) { thisFormatType = m;}
     FormatType getFormatType() { return thisFormatType; }
+    void setFormatString(const QString m) { thisFormatUserString = m; }
+    QString getFormatString() {return thisFormatUserString;}
+
 
     void setAlignment(const Alignment &alignment) { thisAlignment = alignment;
                                                     if(colcount > 0 && rowcount > 0) setupItems(rowcount, colcount);
@@ -122,6 +131,18 @@ public:
     Alignment getAlignment() const {return thisAlignment;}
 
                                                   void copy();
+
+    QString getHorizontalString() const;
+    void setHorizontalString(const QString &newHorizontalString);
+
+    QString getVerticalString() const;
+    void setVerticalString(const QString &newVerticalString);
+
+    int getHorizontalOffset() const;
+    void setHorizontalOffset(int newHorizontalOffset);
+
+    int getVerticalOffset() const;
+    void setVerticalOffset(int newVerticalOffset);
 
 public slots:
     void animation(QRect p) {
@@ -140,6 +161,14 @@ private slots:
 
 signals:
     void WaveEntryChanged(const QString &text, int index);
+
+    void horizontalStringChanged();
+
+    void verticalStringChanged();
+
+    void horizontalOffsetChanged();
+
+    void verticalOffsetChanged();
 
 private:
     bool eventFilter(QObject *obj, QEvent *event);
@@ -160,6 +189,7 @@ private:
     char thisFormat[20];
     char thisFormatC[20];
     FormatType thisFormatType;
+    QString thisFormatUserString;
     bool thisUnsigned;
     Alignment thisAlignment;
     int thisPrecision;
@@ -185,6 +215,11 @@ private:
     int channelPrecision;
     int actualPrecision;
     int colSaved, rowSaved, sizeSaved;
+    QString horizontalString;
+    QString verticalString;
+    int horizontalOffset;
+    int verticalOffset;
+
 };
 
 #endif

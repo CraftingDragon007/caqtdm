@@ -23,6 +23,7 @@
  *    anton.mezger@psi.ch
  */
 
+
 #if defined(_MSC_VER)
 #define NOMINMAX
 #include <windows.h>
@@ -37,12 +38,14 @@
 #include "cawavetable.h"
 #include "alarmdefs.h"
 
+
 #if defined(_MSC_VER)
     #ifndef snprintf
      #define snprintf _snprintf
     #endif
 #endif
 
+#pragma optimize( "", off )
 
 caWaveTable::caWaveTable(QWidget *parent) : QTableWidget(parent)
 {
@@ -63,10 +66,17 @@ caWaveTable::caWaveTable(QWidget *parent) : QTableWidget(parent)
 
     setAlternatingRowColors(true);
     setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Expanding);
+
+    verticalOffset=1;
+    horizontalOffset=1;
     verticalHeader()->setDefaultSectionSize(20);
     verticalHeader()->setSortIndicatorShown(false);
+    caWaveTableModel* d=new caWaveTableModel(0,0,this);
+    verticalHeader()->setModel(d);
+    horizontalHeader()->setModel(d);
 
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+
+ #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     horizontalHeader()->setResizeMode(QHeaderView::Stretch);
 #else
     horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
@@ -150,6 +160,62 @@ void caWaveTable::RedefineRowColumns(int xsav, int ysav, int z, int &x, int &y)
     }
 }
 
+int caWaveTable::getVerticalOffset() const
+{
+    return verticalOffset;
+}
+
+void caWaveTable::setVerticalOffset(int newVerticalOffset)
+{
+    if (verticalOffset == newVerticalOffset)
+        return;
+    verticalOffset = newVerticalOffset;
+    setupItems(rowcount, colcount);
+    emit verticalOffsetChanged();
+}
+
+int caWaveTable::getHorizontalOffset() const
+{
+    return horizontalOffset;
+}
+
+void caWaveTable::setHorizontalOffset(int newHorizontalOffset)
+{
+    if (horizontalOffset == newHorizontalOffset)
+        return;
+    horizontalOffset = newHorizontalOffset;
+    setupItems(rowcount, colcount);
+    emit horizontalOffsetChanged();
+}
+
+QString caWaveTable::getVerticalString() const
+{
+    return verticalString;
+}
+
+void caWaveTable::setVerticalString(const QString &newVerticalString)
+{
+    if (verticalString == newVerticalString)
+        return;
+    verticalString = newVerticalString;
+    setupItems(rowcount, colcount);
+    emit verticalStringChanged();
+}
+
+QString caWaveTable::getHorizontalString() const
+{
+    return horizontalString;
+}
+
+void caWaveTable::setHorizontalString(const QString &newHorizontalString)
+{
+    if (horizontalString == newHorizontalString)
+        return;
+    horizontalString = newHorizontalString;
+    setupItems(rowcount, colcount);
+    emit horizontalStringChanged();
+}
+
 void caWaveTable::setNumberOfRows(int nbRows)
 {
     if(nbRows <=0) rowSaved = rowcount = 0;
@@ -176,9 +242,21 @@ void caWaveTable::setupItems(int nbRows, int nbCols)
     }
     clear();
 
+
     // setup table with alignment of items
     setColumnCount(nbCols);
     setRowCount(nbRows);
+    QAbstractItemModel* temp_data=verticalHeader()->model();
+
+    caWaveTableModel* d=new caWaveTableModel(nbRows,nbCols,this);
+    d->setHorizontalOffset(this->horizontalOffset);
+    d->setVerticalOffset(this->verticalOffset);
+    d->setHorizontalString(this->horizontalString);
+    d->setVerticalString(this->verticalString);
+    verticalHeader()->setModel(d);
+    horizontalHeader()->setModel(d);
+    if (temp_data) delete(temp_data);
+
     for(int i=0; i<nbRows; i++) {
         for(int j=0; j<nbCols; j++) {
 
@@ -203,6 +281,7 @@ void caWaveTable::setupItems(int nbRows, int nbCols)
     keepData.clear();
     keepText.resize(rowcount*colcount+1);
     keepData.resize(rowcount*colcount+1);
+
 }
 
 void caWaveTable::cellChange(int currentRow, int currentColumn, int previousRow, int previousColumn) {
@@ -344,7 +423,12 @@ void caWaveTable::setFormat(DataType dataType)
         case octal:
             strcpy(thisFormat, "O%o");
             break;
+
+        case user_defined_format:
+            qstrncpy(thisFormat,thisFormatUserString.toLatin1().data(),MAX_STRING_LENGTH);
+            break;
         }
+
 
     } else if (dataType == longs) {
         switch (thisFormatType) {
@@ -361,6 +445,10 @@ void caWaveTable::setFormat(DataType dataType)
         case octal:
             strcpy(thisFormat, "O%o");
             break;
+        case user_defined_format:
+            qstrncpy(thisFormat,thisFormatUserString.toLatin1().data(),MAX_STRING_LENGTH);
+            break;
+
         }
     } else if(dataType == characters) {
         switch (thisFormatType) {
@@ -379,6 +467,9 @@ void caWaveTable::setFormat(DataType dataType)
             break;
         case octal:
             strcpy(thisFormat, "O%o");
+            break;
+        case user_defined_format:
+            qstrncpy(thisFormat,thisFormatUserString.toLatin1().data(),MAX_STRING_LENGTH);
             break;
         }
     }
