@@ -137,5 +137,14 @@ public:
     virtual QWidget* createWidget(QWidget* parent);
 };
 
+class caHMIConfigInterface : public CustomWidgetInterface_Utilities
+{
+    Q_OBJECT
+    Q_INTERFACES(QDesignerCustomWidgetInterface)
+
+public:
+    caHMIConfigInterface(QObject* parent);
+    virtual QWidget* createWidget(QWidget* parent);
+};
 
 #endif

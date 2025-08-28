@@ -70,6 +70,7 @@ contains(QWT_VER_MIN, 1)|contains(QWT_VER_MIN, 2) {
 
 SOURCES	+= \
     src/caframe.cpp \
+    src/cahmiconfig.cpp \
     src/cainclude.cpp \
     src/caimage.cpp \
     src/cagraphics.cpp \
@@ -164,6 +165,7 @@ XDR_HACK {
 
 QT += network
 HEADERS += src/networkaccess.h src/fileFunctions.h \
+    src/cahmiconfig.h \
     src/calinedraw.h \
     src/plotHelperClasses.h \
     src/wmsignalpropagator.h \
@@ -268,3 +270,6 @@ ADL_EDL_FILES {
 }
 
 OTHER_FILES += README
+
+DISTFILES += \
+    src/caHMIConfig

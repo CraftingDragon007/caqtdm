@@ -242,6 +242,25 @@ QWidget *caMimeDisplayInterface::createWidget(QWidget *parent)
     return new caMimeDisplay(parent);
 }
 
+caHMIConfigInterface::caHMIConfigInterface(QObject *parent): CustomWidgetInterface_Utilities(parent)
+{
+    strng name[2], type[2] = {"", ""};
+    longtext text[2] = {"", ""};
+
+    strcpy(name[0], "shortcut");
+    strcpy(name[1], "channel");
+
+    d_domXml = XmlFunc("caHMIConfig", "cahmiconfig", 0, 0, 100, 22, name, type, text, 2);
+    d_toolTip = "[Configures capture of certain user input]";
+    d_name = "caHMIConfig";
+    d_include = "caHMIConfig";
+    QPixmap qpixmap = QPixmap(":pixmaps/input.png");
+    d_icon = qpixmap.scaled(70, 70, Qt::IgnoreAspectRatio, Qt::FastTransformation);
+}
+
+QWidget *caHMIConfigInterface::createWidget(QWidget *parent){
+    return new caHMIConfig(parent);
+}
 
 CustomWidgetCollectionInterface_Utilities::CustomWidgetCollectionInterface_Utilities(QObject *parent): QObject(parent)
 {
@@ -250,6 +269,7 @@ CustomWidgetCollectionInterface_Utilities::CustomWidgetCollectionInterface_Utili
     d_plugins.append(new caShellCommandInterface(this));
     d_plugins.append(new caScriptButtonInterface(this));
     d_plugins.append(new caMimeDisplayInterface(this));
+    d_plugins.append(new caHMIConfigInterface(this));
 }
 
 QList<QDesignerCustomWidgetInterface*> CustomWidgetCollectionInterface_Utilities::customWidgets(void) const

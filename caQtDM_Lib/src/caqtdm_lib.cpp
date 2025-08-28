@@ -3343,6 +3343,25 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         scan2dWidget->setProperty("MonitorList", integerList);
 
         scan2dWidget->setProperty("Taken", true);
+    } else if(caHMIConfig* hmiConfigWidget = qobject_cast<caHMIConfig *>(w1)) {
+
+        qDebug() << "create caHMIConfig";
+        w1->setProperty("ObjectType", caHMIConfig_Widget);
+
+        if(hmiConfigWidget->channel().size() > 0) {
+            hmiConfigWidget->setEnabled(true);
+            int num = addMonitor(myWidget, &kData, hmiConfigWidget->channel(), w1, specData, map, &pv);
+            integerList.append(num);
+            hmiConfigWidget->setChannel(pv);
+            connect(hmiConfigWidget, SIGNAL(TextEntryChanged(const QString&)), this, SLOT(Callback_TextEntryChanged(const QString&)));
+            nbMonitors++;
+        }
+
+        // insert dataindex list
+        integerList.insert(0, nbMonitors);
+        hmiConfigWidget->setProperty("MonitorList", integerList);
+
+        hmiConfigWidget->setProperty("Taken", true);
     }
 
     //==================================================================================================================
