@@ -49,23 +49,46 @@ QVariant caWaveTableModel::data(const QModelIndex &index, int role) const
 
 QVariant caWaveTableModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
+
+
+
     if (role == Qt::DisplayRole && orientation == Qt::Horizontal) {
-        if (horizontalString.contains("%1")){
-            return QString(horizontalString).arg(section+horizontalOffset);
-        } else if (horizontalString.isEmpty()){
+        QString headerstring=horizontalString;
+        if (headerstring.contains(";")){
+            QList<QString> data=headerstring.split(";");
+            if (section < data.length()){
+                headerstring=data.at(section);
+            }else{
+                headerstring="not defined";
+            }
+        }
+        if (headerstring.contains("%1")){
+            return QString(headerstring).arg(section+horizontalOffset);
+        } else if (headerstring.isEmpty()){
             return QString("%1").arg(section+horizontalOffset);
         } else{
-            return QString(horizontalString);
+            return QString(headerstring);
         }
      }
 
     if (role == Qt::DisplayRole && orientation == Qt::Vertical) {
-         if (verticalString.contains("%1")){
-             return QString(verticalString).arg(section+verticalOffset);
-         } else if (verticalString.isEmpty()){
+        QString  headerstring=verticalString;
+        if (headerstring.contains(";")){
+            QList<QString> data=headerstring.split(";");
+            if (section < data.length()){
+                headerstring=data.at(section);
+            }else{
+                headerstring="not defined";
+            }
+        }
+
+
+         if (headerstring.contains("%1")){
+             return QString(headerstring).arg(section+verticalOffset);
+         } else if (headerstring.isEmpty()){
              return QString("%1").arg(section+verticalOffset);
          } else{
-             return QString(verticalString);
+             return QString(headerstring);
          }
     }
 
