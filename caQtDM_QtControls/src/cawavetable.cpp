@@ -24,6 +24,7 @@
  */
 
 
+#include "qscrollbar.h"
 #if defined(_MSC_VER)
 #define NOMINMAX
 #include <windows.h>
@@ -124,6 +125,9 @@ caWaveTable::caWaveTable(QWidget *parent) : QTableWidget(parent)
 
     connect(this, SIGNAL(currentCellChanged(int, int, int, int)), this,  SLOT(cellChange(int,int, int, int)));
 
+    connect(this->verticalScrollBar(),SIGNAL(valueChanged(int)),this, SLOT(vscrollbarInput(int)));
+    connect(this->horizontalScrollBar(),SIGNAL(valueChanged(int)),this, SLOT(hscrollbarInput(int)));
+
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     defaultForeColor = palette().foreground().color();
 #else
@@ -139,6 +143,17 @@ caWaveTable::caWaveTable(QWidget *parent) : QTableWidget(parent)
     setNumberOfColumns(1);
     setFocusPolicy(Qt::ClickFocus);
 }
+
+void caWaveTable::vscrollbarInput(int scrollvalue)
+{
+    emit verticalScrollbarChanged(scrollvalue);
+}
+void caWaveTable::hscrollbarInput(int scrollvalue)
+{
+    emit verticalScrollbarChanged(scrollvalue);
+}
+
+
 
 void caWaveTable::RedefineRowColumns(int xsav, int ysav, int z, int &x, int &y)
 {
@@ -172,6 +187,16 @@ void caWaveTable::setVerticalOffset(int newVerticalOffset)
     verticalOffset = newVerticalOffset;
     setupItems(rowcount, colcount);
     emit verticalOffsetChanged();
+}
+
+void caWaveTable::vscrollbarControl(int scrollvalue)
+{
+    verticalScrollBar()->setValue(scrollvalue);
+}
+
+void caWaveTable::hscrollbarControl(int scrollvalue)
+{
+    horizontalScrollBar()->setValue(scrollvalue);
 }
 
 int caWaveTable::getHorizontalOffset() const
@@ -248,13 +273,17 @@ void caWaveTable::setupItems(int nbRows, int nbCols)
     setRowCount(nbRows);
     QAbstractItemModel* temp_data=verticalHeader()->model();
 
-    caWaveTableModel* d=new caWaveTableModel(nbRows,nbCols,this);
-    d->setHorizontalOffset(this->horizontalOffset);
-    d->setVerticalOffset(this->verticalOffset);
-    d->setHorizontalString(this->horizontalString);
-    d->setVerticalString(this->verticalString);
-    verticalHeader()->setModel(d);
-    horizontalHeader()->setModel(d);
+    caWaveTableModel* dt=new caWaveTableModel(nbRows,nbCols,this);
+    dt->setHorizontalOffset(this->horizontalOffset);
+    dt->setVerticalOffset(this->verticalOffset);
+    dt->setHorizontalString(this->horizontalString);
+    dt->setVerticalString(this->verticalString);
+    verticalHeader()->setModel(dt);
+    horizontalHeader()->setModel(dt);
+
+    verticalHeader()->update();
+    horizontalHeader()->update();
+
     if (temp_data) delete(temp_data);
 
     for(int i=0; i<nbRows; i++) {

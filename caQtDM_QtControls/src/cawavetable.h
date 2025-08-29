@@ -152,12 +152,17 @@ public slots:
     void hideObject(bool hideit) {
 #include "hideobjectcode.h"
     }
+    void vscrollbarControl(int scrollvalue);
+    void hscrollbarControl(int scrollvalue);
 
 private slots:
     void dataInput(int, int);
     void cellDoubleclicked(int, int);
     void cellClicked(int, int);
     void cellChange(int, int, int, int);
+    void vscrollbarInput(int scrollvalue);
+    void hscrollbarInput(int scrollvalue);
+
 
 signals:
     void WaveEntryChanged(const QString &text, int index);
@@ -169,6 +174,9 @@ signals:
     void horizontalOffsetChanged();
 
     void verticalOffsetChanged();
+    void verticalScrollbarChanged(int);
+    void horizontalScrollbarChanged(int);
+
 
 private:
     bool eventFilter(QObject *obj, QEvent *event);
