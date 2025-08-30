@@ -33,7 +33,11 @@ jobs:
           zeromq \
           python \
           qt6-5compat \
-          git # Just making sure git is available
+          git \ # Just making sure git is available
+          ncurses \
+          perl \
+          readline \
+          qt6-svg
 
         echo "Creating non-root user 'builder' for makepkg..."
         useradd -m -G wheel builder
