@@ -48,7 +48,7 @@ jobs:
       run: |
         export AUR_DIR="${{ github.workspace }}/aur_packages"
         mkdir -p "$AUR_DIR"
-        cd "$AUR_DIR"
+        chown -R builder:builder "$AUR_DIR"
 
         sudo -u builder bash -c "
           cd \"$AUR_DIR\"
