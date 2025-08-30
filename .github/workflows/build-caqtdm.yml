@@ -44,12 +44,21 @@ jobs:
         echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
       shell: bash
 
-    - name: Install AUR dependencies (qwt-qt6, epics-base)
+    - name: Configure builder user environment and import GPG key
       run: |
         export AUR_DIR="${{ github.workspace }}/aur_packages"
         mkdir -p "$AUR_DIR"
         chown -R builder:builder "$AUR_DIR"
 
+        echo "Importing PGP key for epics-base as builder user..."
+        sudo -u builder bash -c "
+          export HOME=/home/builder
+          gpg --recv-keys 6C741EFAAE4AF616
+        "
+      shell: bash
+
+    - name: Install AUR dependencies (qwt-qt6, epics-base)
+      run: |
         sudo -u builder bash -c "
           cd \"$AUR_DIR\"
 
