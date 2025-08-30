@@ -1,0 +1,194 @@
+name: caQtDM CI Build
+
+on:
+  push:
+  pull_request:
+  # Allow manual triggering of the workflow
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build caQtDM
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux/archlinux:latest
+      options: --privileged
+
+    steps:
+    - name: Set up build environment and install dependencies
+      run: |
+        pacman-key --init
+        pacman-key --populate archlinux
+        pacman -Syu --noconfirm
+
+        # Install base-devel which covers make, gcc, patch, git
+        pacman -S --noconfirm base-devel
+
+        # Install other specified dependencies and makedepends
+        # glibc, gcc-libs, bash are already preinstalled
+        # python is typically python3.
+        pacman -S --noconfirm \
+          qt6-base \
+          qt6-tools \
+          qwt-qt6 \
+          epics-base \
+          zeromq \
+          python \
+          qt6-5compat \
+          git # Just making sure git is available
+      shell: bash
+
+    - name: Checkout repository and patches
+      uses: actions/checkout@v4
+
+    - name: Prepare source directories and preparation logic
+      run: |
+        export srcdir="${{ github.workspace }}"
+        echo "srcdir=$srcdir" >> $GITHUB_ENV # Make srcdir available to subsequent steps
+
+        echo "Executing prepare() function..."
+        # Write environment variables to env_config.sh
+        cat > "${srcdir}/env_config.sh" << 'EOF'
+export QWTLIBNAME=qwt-qt6
+export QWTINCLUDE=/usr/include/qwt-qt6
+export EPICS_BASE=/usr/lib/epics
+export PYTHONVERSION=$(python --version 2>&1 | cut -d ' ' -f 2 | cut -d '.' -f 1-2)
+export ZMQ=/usr
+export ZMQINC=$ZMQ/include
+export ZMQLIB=$ZMQ/lib
+export QTDM_RPATH=/opt/caqtdm/lib/qt6
+
+if [ -z "$CARCH" ]; then
+    export CARCH=$(uname -m)
+fi
+
+export EPICS_HOST_ARCH=linux-${CARCH}
+
+export QTHOME=/usr
+export QWTHOME=/usr
+export QWTLIB=${QWTHOME}/lib
+export QWTVERSION=6.1
+export EPICSINCLUDE=${EPICS_BASE}/include
+export EPICSLIB=${EPICS_BASE}/lib/$EPICS_HOST_ARCH
+export EPICSEXTENSIONS=${EPICS_BASE}/extensions
+export QTCONTROLS_LIBS=${srcdir}/binaries # Output binaries to a separate dir for collection
+export CAQTDM_COLLECT=${srcdir}/binaries
+export QTBASE=${QTCONTROLS_LIBS}
+export CAQTDM_CA_ARCHIVELIBS=${srcdir}/binaries/
+export CAQTDM_LOGGING_ARCHIVELIBS=${srcdir}/binaries
+export QTDM_LIBINSTALL=$EPICSEXTENSIONS/lib/$EPICS_HOST_ARCH
+export QTDM_BININSTALL=$EPICSEXTENSIONS/bin/$EPICS_HOST_ARCH
+export PYTHONINCLUDE=/usr/include/python$PYTHONVERSION
+export PYTHONLIB=/usr/lib/
+EOF
+
+        echo "Patching config for rpath removal..."
+        cd "$srcdir" # Change into the caqtdm source directory
+        patch --forward --strip=1 --input="${srcdir}/no_rpath.patch"
+      shell: bash
+
+    - name: Run preparation logic
+      run: |
+        export srcdir="${{ env.srcdir }}" # Use the srcdir defined in the previous step
+
+        echo "Executing prepare() function..."
+        # Write environment variables to env_config.sh
+        cat > "${srcdir}/env_config.sh" << 'EOF'
+export QWTLIBNAME=qwt-qt6
+export QWTINCLUDE=/usr/include/qwt-qt6
+export EPICS_BASE=/usr/lib/epics
+export PYTHONVERSION=$(python --version 2>&1 | cut -d ' ' -f 2 | cut -d '.' -f 1-2)
+export ZMQ=/usr
+export ZMQINC=$ZMQ/include
+export ZMQLIB=$ZMQ/lib
+export QTDM_RPATH=/opt/caqtdm/lib/qt6
+
+if [ -z "$CARCH" ]; then
+    export CARCH=$(uname -m)
+fi
+
+export EPICS_HOST_ARCH=linux-${CARCH}
+
+export QTHOME=/usr
+export QWTHOME=/usr
+export QWTLIB=${QWTHOME}/lib
+export QWTVERSION=6.1
+export EPICSINCLUDE=${EPICS_BASE}/include
+export EPICSLIB=${EPICS_BASE}/lib/$EPICS_HOST_ARCH
+export EPICSEXTENSIONS=${EPICS_BASE}/extensions
+export QTCONTROLS_LIBS=${srcdir}/binaries
+export CAQTDM_COLLECT=${srcdir}/binaries
+export QTBASE=${QTCONTROLS_LIBS}
+export CAQTDM_CA_ARCHIVELIBS=${srcdir}/binaries/
+export CAQTDM_LOGGING_ARCHIVELIBS=${srcdir}/binaries
+export QTDM_LIBINSTALL=$EPICSEXTENSIONS/lib/$EPICS_HOST_ARCH
+export QTDM_BININSTALL=$EPICSEXTENSIONS/bin/$EPICS_HOST_ARCH
+export PYTHONINCLUDE=/usr/include/python$PYTHONVERSION
+export PYTHONLIB=/usr/lib/
+EOF
+
+        echo "Patching broken files..."
+        patch --forward --strip=1 --input="${srcdir}/fix_qwt_static_cast_gcc.patch"
+        echo "Patching config for rpath removal..."
+        cd "$srcdir/caqtdm"
+        patch --forward --strip=1 --input="${srcdir}/no_rpath.patch"
+      shell: bash
+
+    - name: Run build process with pseudo-static linking flags
+      run: |
+        export srcdir="${{ env.srcdir }}" # Use the srcdir defined in a previous step
+
+        echo "Executing build() function..."
+        cd "$srcdir"
+        # Source the environment variables for the build process
+        source "${srcdir}/env_config.sh"
+
+        # Create make files
+        qmake6 ./all.pro
+
+        # Build the project. The output binaries, plugins, and custom shared libs
+        # are expected to be in ${srcdir}/binaries/
+        make -j $(nproc)
+      shell: bash
+
+    - name: Collect build artifacts (executables and libs)
+      run: |
+        export srcdir="${{ env.srcdir }}"
+        export ARTIFACT_DIR="${{ github.workspace }}/caqtdm-build-output"
+        mkdir -p "$ARTIFACT_DIR"
+
+        echo "Collecting executables and shared libraries from ${srcdir}/binaries into output directory..."
+        # Copy all contents of the binaries directory, which should contain the built application and its plugins/libs
+        if [ -d "$srcdir/binaries" ]; then
+          cp -r "$srcdir/binaries/"* "$ARTIFACT_DIR/" || true # '|| true' to prevent failure if directory is empty
+        else
+          echo "Warning: No 'binaries' directory found at $srcdir. The build might not have produced expected outputs."
+        fi
+
+        if [ -d "$srcdir/caqtdm/caQtDM_QtControls/doc" ]; then
+            echo "Copying documentation from build directory into output..."
+            mkdir -p "$ARTIFACT_DIR/doc"
+            cp -r "$srcdir/caqtdm/caQtDM_QtControls/doc/"* "$ARTIFACT_DIR/doc/" || true
+        fi
+
+        echo "Collected artifacts are in $ARTIFACT_DIR"
+
+        # Display dynamic dependencies of the main executable for verification
+        # The 'caQtDM' executable is expected in the root of the 'binaries' output
+        if [ -f "$ARTIFACT_DIR/caQtDM" ]; then
+          echo ""
+          echo "--- Dynamic dependencies of caQtDM (via ldd) ---"
+          ldd "$ARTIFACT_DIR/caQtDM" || echo "ldd command failed or caQtDM not found/executable."
+          echo "------------------------------------------------"
+          echo "All dependencies (Qt, EPICS, QWT, ZeroMQ, glibc, etc.) are dynamically linked."
+        else
+          echo "Warning: 'caQtDM' executable not found in '$ARTIFACT_DIR' to run ldd. Check build output."
+        fi
+      shell: bash
+
+    - name: Upload caQtDM build output
+      uses: actions/upload-artifact@v4
+      with:
+        name: caqtdm-build-output-current
+        path: ${{ github.workspace }}/caqtdm-build-output
+        retention-days: 7
