@@ -15,7 +15,7 @@ jobs:
       options: --privileged
 
     steps:
-    - name: Set up build environment and install dependencies
+    - name: Set up build environment and install official repository dependencies
       run: |
         pacman-key --init
         pacman-key --populate archlinux
@@ -30,12 +30,29 @@ jobs:
         pacman -S --noconfirm \
           qt6-base \
           qt6-tools \
-          qwt-qt6 \
-          epics-base \
           zeromq \
           python \
           qt6-5compat \
           git # Just making sure git is available
+      shell: bash
+
+    - name: Install AUR dependencies (qwt-qt6, epics-base)
+      run: |
+        export AUR_DIR="${{ github.workspace }}/aur_packages"
+        mkdir -p "$AUR_DIR"
+        cd "$AUR_DIR"
+
+        echo "Installing qwt-qt6 from AUR..."
+        git clone https://aur.archlinux.org/qwt-qt6.git
+        cd qwt-qt6
+        makepkg -si --noconfirm
+        cd "$AUR_DIR"
+
+        echo "Installing epics-base from AUR..."
+        git clone https://aur.archlinux.org/epics-base.git
+        cd epics-base
+        makepkg -si --noconfirm
+        cd "$AUR_DIR"
       shell: bash
 
     - name: Checkout repository and patches
