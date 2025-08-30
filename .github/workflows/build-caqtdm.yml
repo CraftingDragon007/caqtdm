@@ -44,6 +44,24 @@ jobs:
         echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
       shell: bash
 
+    - name: Optimize makepkg.conf for parallel building
+      run: |
+        NUM_CORES=$(nproc)
+        echo "Detected ${NUM_CORES} CPU cores. Optimizing /etc/makepkg.conf..."
+
+        # Remove any existing MAKEFLAGS line
+        grep -v "^MAKEFLAGS=" /etc/makepkg.conf > /tmp/makepkg.conf.tmp
+
+        # Append the new MAKEFLAGS line with the actual number of cores
+        echo "MAKEFLAGS=\"-j${NUM_CORES}\"" >> /tmp/makepkg.conf.tmp
+
+        # Replace the original file
+        mv /tmp/makepkg.conf.tmp /etc/makepkg.conf
+
+        echo "Current MAKEFLAGS in /etc/makepkg.conf:"
+        grep "MAKEFLAGS" /etc/makepkg.conf
+      shell: bash
+
     - name: Configure builder user environment and import GPG key
       run: |
         export AUR_DIR="${{ github.workspace }}/aur_packages"
@@ -77,8 +95,8 @@ jobs:
         "
       shell: bash
 
-    - name: Checkout repository and patches
-      uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v5
 
     - name: Prepare source directories and preparation logic
       run: |
@@ -131,6 +149,9 @@ jobs:
         cd "$srcdir"
         # Source the environment variables for the build process
         source "${srcdir}/env_config.sh"
+
+        echo "Files in current dir:"
+        ls
 
         # Create make files
         qmake6 ./all.pro
