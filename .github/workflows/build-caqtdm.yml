@@ -59,6 +59,7 @@ jobs:
 
     - name: Install AUR dependencies (qwt-qt6, epics-base)
       run: |
+        export AUR_DIR="${{ github.workspace }}/aur_packages"
         sudo -u builder bash -c "
           cd \"$AUR_DIR\"
 
