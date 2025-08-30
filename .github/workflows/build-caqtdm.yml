@@ -33,7 +33,7 @@ jobs:
           zeromq \
           python \
           qt6-5compat \
-          git \ # Just making sure git is available
+          git \
           ncurses \
           perl \
           readline \
@@ -73,7 +73,7 @@ jobs:
     - name: Prepare source directories and preparation logic
       run: |
         export srcdir="${{ github.workspace }}"
-        echo "srcdir=$srcdir" >> $GITHUB_ENV # Make srcdir available to subsequent steps
+        echo "srcdir=$srcdir" >> $GITHUB_ENV
 
         echo "Executing prepare() function..."
         # Write environment variables to env_config.sh
@@ -115,7 +115,7 @@ jobs:
 
     - name: Run build process
       run: |
-        export srcdir="${{ env.srcdir }}" # Use the srcdir defined in a previous step
+        export srcdir="${{ env.srcdir }}"
 
         echo "Executing build() function..."
         cd "$srcdir"
@@ -139,7 +139,7 @@ jobs:
         echo "Collecting executables and shared libraries from ${srcdir}/binaries into output directory..."
         # Copy all contents of the binaries directory, which should contain the built application and its plugins/libs
         if [ -d "$srcdir/binaries" ]; then
-          cp -r "$srcdir/binaries/"* "$ARTIFACT_DIR/" || true # '|| true' to prevent failure if directory is empty
+          cp -r "$srcdir/binaries/"* "$ARTIFACT_DIR/" || true
         else
           echo "Warning: No 'binaries' directory found at $srcdir. The build might not have produced expected outputs."
         fi
