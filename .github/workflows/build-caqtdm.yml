@@ -15,14 +15,14 @@ jobs:
       options: --privileged
 
     steps:
-    - name: Set up build environment and install official repository dependencies
+    - name: Set up build environment, create non-root user and install official repository dependencies
       run: |
         pacman-key --init
         pacman-key --populate archlinux
         pacman -Syu --noconfirm
 
         # Install base-devel which covers make, gcc, patch, git
-        pacman -S --noconfirm base-devel
+        pacman -S --noconfirm base-devel sudo
 
         # Install other specified dependencies and makedepends
         # glibc, gcc-libs, bash are already preinstalled
@@ -34,6 +34,10 @@ jobs:
           python \
           qt6-5compat \
           git # Just making sure git is available
+
+        echo "Creating non-root user 'builder' for makepkg..."
+        useradd -m -G wheel builder
+        echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
       shell: bash
 
     - name: Install AUR dependencies (qwt-qt6, epics-base)
@@ -42,17 +46,21 @@ jobs:
         mkdir -p "$AUR_DIR"
         cd "$AUR_DIR"
 
-        echo "Installing qwt-qt6 from AUR..."
-        git clone https://aur.archlinux.org/qwt-qt6.git
-        cd qwt-qt6
-        makepkg -si --noconfirm
-        cd "$AUR_DIR"
+        sudo -u builder bash -c "
+          cd \"$AUR_DIR\"
 
-        echo "Installing epics-base from AUR..."
-        git clone https://aur.archlinux.org/epics-base.git
-        cd epics-base
-        makepkg -si --noconfirm
-        cd "$AUR_DIR"
+          echo 'Installing qwt-qt6 from AUR as builder user...'
+          git clone https://aur.archlinux.org/qwt-qt6.git
+          cd qwt-qt6
+          makepkg -si --noconfirm
+          cd \"$AUR_DIR\"
+
+          echo 'Installing epics-base from AUR as builder user...'
+          git clone https://aur.archlinux.org/epics-base.git
+          cd epics-base
+          makepkg -si --noconfirm
+          cd \"$AUR_DIR\"
+        "
       shell: bash
 
     - name: Checkout repository and patches
