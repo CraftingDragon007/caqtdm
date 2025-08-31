@@ -15,9 +15,6 @@ jobs:
       options: --privileged
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v5
-
     - name: Set up build environment, create non-root user and install official repository dependencies
       run: |
         pacman-key --init
@@ -46,6 +43,9 @@ jobs:
         useradd -m -G wheel builder
         echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
       shell: bash
+
+    - name: Checkout repository
+      uses: actions/checkout@v5
 
     - name: Optimize makepkg.conf for parallel building
       run: |
