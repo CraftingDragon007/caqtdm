@@ -164,7 +164,7 @@ jobs:
 
     - name: Debug environment variables
       run: |
-        source "${srcdir}/env_config.sh
+        source "${srcdir}/env_config.sh"
         echo "QWTLIBNAME=${QWTLIBNAME}"
         echo "QWTINCLUDE=${QWTINCLUDE}"
         echo "EPICS_BASE=${EPICS_BASE}"
