@@ -18,15 +18,6 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v5
 
-    - name: List repo contents
-      run: |
-        echo "Current dir:"
-        pwd
-        echo "Files in current dir:"
-        ls -lisa
-        echo "Branch:"
-        git branch
-
     - name: Set up build environment, create non-root user and install official repository dependencies
       run: |
         pacman-key --init
@@ -76,7 +67,7 @@ jobs:
 
     - name: Configure builder user environment and import GPG key
       run: |
-        export AUR_DIR="${{ github.workspace }}/aur_packages"
+        export AUR_DIR="$(pwd)/aur_packages"
         mkdir -p "$AUR_DIR"
         chown -R builder:builder "$AUR_DIR"
 
@@ -89,7 +80,7 @@ jobs:
 
     - name: Install AUR dependencies (qwt-qt6, epics-base)
       run: |
-        export AUR_DIR="${{ github.workspace }}/aur_packages"
+        export AUR_DIR="$(pwd)/aur_packages"
         sudo -u builder bash -c "
           cd \"$AUR_DIR\"
 
@@ -109,7 +100,7 @@ jobs:
 
     - name: Prepare source directories and preparation logic
       run: |
-        export srcdir="${{ github.workspace }}"
+        export srcdir="$(pwd)"
         echo "srcdir=$srcdir" >> $GITHUB_ENV
 
         echo "Executing prepare() function..."
@@ -170,7 +161,7 @@ jobs:
     - name: Collect build artifacts (executables and libs)
       run: |
         export srcdir="${{ env.srcdir }}"
-        export ARTIFACT_DIR="${{ github.workspace }}/caqtdm-build-output"
+        export ARTIFACT_DIR="$(pwd)/caqtdm-build-output"
         mkdir -p "$ARTIFACT_DIR"
 
         echo "Collecting executables and shared libraries from ${srcdir}/binaries into output directory..."
@@ -206,5 +197,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: caqtdm-build-output-current
-        path: ${{ github.workspace }}/caqtdm-build-output
+        path: ./caqtdm-build-output
         retention-days: 7
