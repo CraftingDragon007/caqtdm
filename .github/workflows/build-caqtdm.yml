@@ -151,7 +151,9 @@ jobs:
         source "${srcdir}/env_config.sh"
 
         echo "Files in current dir:"
-        ls
+        ls -lisa
+        echo "Branch:"
+        git branch
 
         # Create make files
         qmake6 ./all.pro
