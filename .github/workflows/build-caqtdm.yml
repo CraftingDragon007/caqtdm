@@ -98,6 +98,29 @@ jobs:
         "
       shell: bash
 
+    - name: Determine uname -m equivalent
+      shell: bash
+      run: |
+        case "${{ runner.arch }}" in
+          X66)
+            UNAME_ARCH="i686"
+            ;;
+          X64)
+            UNAME_ARCH="x86_64"
+            ;;
+          ARM)
+            UNAME_ARCH="armv7l"
+            ;;
+          ARM64)
+            UNAME_ARCH="aarch64"
+            ;;
+          *)
+            echo "Unsupported runner architecture: ${{ runner.arch }}"
+            exit 1
+            ;;
+        esac
+        echo "UNAME_ARCH=$UNAME_ARCH" >> "$GITHUB_ENV"
+
     - name: Prepare source directories and preparation logic
       run: |
         export srcdir="$(pwd)"
@@ -115,11 +138,9 @@ jobs:
         export ZMQLIB=$ZMQ/lib
         export QTDM_RPATH=/opt/caqtdm/lib/qt6
 
-        if [ -z "$CARCH" ]; then
-            export CARCH=$(uname -m)
-        fi
+        export CARCH=${{ env.UNAME_ARCH }}
 
-        export EPICS_HOST_ARCH=linux-$(uname -m)
+        export EPICS_HOST_ARCH=linux-$CARCH
 
         export QTHOME=/usr
         export QWTHOME=/usr
