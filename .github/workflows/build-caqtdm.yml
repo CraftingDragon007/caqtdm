@@ -119,7 +119,7 @@ jobs:
             export CARCH=$(uname -m)
         fi
 
-        export EPICS_HOST_ARCH=linux-${CARCH}
+        export EPICS_HOST_ARCH=linux-$(uname -m)
 
         export QTHOME=/usr
         export QWTHOME=/usr
@@ -144,7 +144,6 @@ jobs:
     - name: Run build process
       run: |
         export srcdir="${{ env.srcdir }}"
-        export CARCH=$(uname -m)
 
         echo "Executing build() function..."
         cd "$srcdir"
