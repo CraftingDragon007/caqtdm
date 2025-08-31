@@ -123,47 +123,73 @@ jobs:
 
     - name: Set up caQtDM specific environment variables
       run: |
-        echo "srcdir=$(pwd)" >> $GITHUB_ENV
-        echo "QWTLIBNAME=qwt-qt6" >> $GITHUB_ENV
-        echo "QWTINCLUDE=/usr/include/qwt-qt6" >> $GITHUB_ENV
-        echo "EPICS_BASE=/usr/lib/epics" >> $GITHUB_ENV
-        echo "ZMQ=/usr" >> $GITHUB_ENV
-        echo "QTDM_RPATH=/opt/caqtdm/lib/qt6" >> $GITHUB_ENV
-        echo "QTHOME=/usr" >> $GITHUB_ENV
-        echo "QWTHOME=/usr" >> $GITHUB_ENV
-        echo "QWTVERSION=6.1" >> $GITHUB_ENV
+        # Define all variables as local shell variables first
+        local_srcdir="$(pwd)"
+        local_pythonversion="$(python --version 2>&1 | cut -d ' ' -f 2 | cut -d '.' -f 1-2)"
+        local_carch="$(uname -m)"
 
-        # Derived variables
-        PYTHONVERSION=$(python --version 2>&1 | cut -d ' ' -f 2 | cut -d '.' -f 1-2)
-        echo "PYTHONVERSION=${PYTHONVERSION}" >> $GITHUB_ENV
-        echo "ZMQINC=/usr/include" >> $GITHUB_ENV # Derived from ZMQ=/usr
-        echo "ZMQLIB=/usr/lib" >> $GITHUB_ENV     # Derived from ZMQ=/usr
+        local_qwtnam="qwt-qt6"
+        local_qwtinc="/usr/include/qwt-qt6"
+        local_epicsbase="/usr/lib/epics"
+        local_zmq="/usr"
+        local_qtdmrpath="/opt/caqtdm/lib/qt6"
+        local_qthome="/usr"
+        local_qwthome="/usr"
+        local_qwtversion="6.1"
 
-        CARCH=$(uname -m)
-        echo "CARCH=${CARCH}" >> $GITHUB_ENV
-        echo "EPICS_HOST_ARCH=linux-${CARCH}" >> $GITHUB_ENV
+        # Derive complex paths using local shell variables
+        local_zmqinc="${local_zmq}/include"
+        local_zmqlib="${local_zmq}/lib"
+        local_epics_host_arch="linux-${local_carch}"
+        local_qwtnamelib="${local_qwthome}/lib" # This was QWTLIB
 
-        # Paths depending on EPICS_BASE and EPICS_HOST_ARCH (need to use the env var already set)
-        echo "EPICSINCLUDE=${{ env.EPICS_BASE }}/include" >> $GITHUB_ENV
-        echo "EPICSLIB=${{ env.EPICS_BASE }}/lib/${{ env.EPICS_HOST_ARCH }}" >> $GITHUB_ENV
-        echo "EPICSEXTENSIONS=${{ env.EPICS_BASE }}/extensions" >> $GITHUB_ENV
+        local_epicsinclude="${local_epicsbase}/include"
+        local_epicslib="${local_epicsbase}/lib/${local_epics_host_arch}"
+        local_epicsextensions="${local_epicsbase}/extensions"
 
-        # Paths depending on srcdir (need to use the env var already set)
-        echo "QTCONTROLS_LIBS=${{ env.srcdir }}/binaries" >> $GITHUB_ENV
-        echo "CAQTDM_COLLECT=${{ env.srcdir }}/binaries" >> $GITHUB_ENV
-        echo "CAQTDM_CA_ARCHIVELIBS=${{ env.srcdir }}/binaries/" >> $GITHUB_ENV
-        echo "CAQTDM_LOGGING_ARCHIVELIBS=${{ env.srcdir }}/binaries" >> $GITHUB_ENV
+        local_qtcontrols_libs="${local_srcdir}/binaries"
+        local_caqtdm_collect="${local_srcdir}/binaries"
+        local_qtdm_rpath="/opt/caqtdm/lib/qt6"
 
-        # QTBASE also depends on QTCONTROLS_LIBS
-        echo "QTBASE=${{ env.QTCONTROLS_LIBS }}" >> $GITHUB_ENV
+        local_qtbase="${local_qtcontrols_libs}" # QTBASE depends on QTCONTROLS_LIBS
 
-        # Paths for installation targets
-        echo "QTDM_LIBINSTALL=${{ env.EPICSEXTENSIONS }}/lib/${{ env.EPICS_HOST_ARCH }}" >> $GITHUB_ENV
-        echo "QTDM_BININSTALL=${{ env.EPICSEXTENSIONS }}/bin/${{ env.EPICS_HOST_ARCH }}" >> $GITHUB_ENV
+        local_caqtdm_ca_archivelibs="${local_srcdir}/binaries/"
+        local_caqtdm_logging_archivelibs="${local_srcdir}/binaries"
 
-        # Python paths
-        echo "PYTHONINCLUDE=/usr/include/python${PYTHONVERSION}" >> $GITHUB_ENV
-        echo "PYTHONLIB=/usr/lib/" >> $GITHUB_ENV  
+        local_qtdm_libinstall="${local_epicsextensions}/lib/${local_epics_host_arch}"
+        local_qtdm_bininstall="${local_epicsextensions}/bin/${local_epics_host_arch}"
+
+        local_pythoninclude="/usr/include/python${local_pythonversion}"
+        local_pythonlib="/usr/lib/"
+
+        # Now, echo all final values to $GITHUB_ENV
+        echo "srcdir=${local_srcdir}" >> $GITHUB_ENV
+        echo "QWTLIBNAME=${local_qwtnam}" >> $GITHUB_ENV
+        echo "QWTINCLUDE=${local_qwtinc}" >> $GITHUB_ENV
+        echo "EPICS_BASE=${local_epicsbase}" >> $GITHUB_ENV
+        echo "PYTHONVERSION=${local_pythonversion}" >> $GITHUB_ENV
+        echo "ZMQ=${local_zmq}" >> $GITHUB_ENV
+        echo "ZMQINC=${local_zmqinc}" >> $GITHUB_ENV
+        echo "ZMQLIB=${local_zmqlib}" >> $GITHUB_ENV
+        echo "QTDM_RPATH=${local_qtdmrpath}" >> $GITHUB_ENV
+        echo "CARCH=${local_carch}" >> $GITHUB_ENV
+        echo "EPICS_HOST_ARCH=${local_epics_host_arch}" >> $GITHUB_ENV
+        echo "QTHOME=${local_qthome}" >> $GITHUB_ENV
+        echo "QWTHOME=${local_qwthome}" >> $GITHUB_ENV
+        echo "QWTLIB=${local_qwtnamelib}" >> $GITHUB_ENV # Corrected
+        echo "QWTVERSION=${local_qwtversion}" >> $GITHUB_ENV
+        echo "EPICSINCLUDE=${local_epicsinclude}" >> $GITHUB_ENV # Corrected
+        echo "EPICSLIB=${local_epicslib}" >> $GITHUB_ENV         # Corrected
+        echo "EPICSEXTENSIONS=${local_epicsextensions}" >> $GITHUB_ENV # Corrected
+        echo "QTCONTROLS_LIBS=${local_qtcontrols_libs}" >> $GITHUB_ENV # Corrected
+        echo "CAQTDM_COLLECT=${local_caqtdm_collect}" >> $GITHUB_ENV   # Corrected
+        echo "QTBASE=${local_qtbase}" >> $GITHUB_ENV               # Corrected
+        echo "CAQTDM_CA_ARCHIVELIBS=${local_caqtdm_ca_archivelibs}" >> $GITHUB_ENV # Corrected
+        echo "CAQTDM_LOGGING_ARCHIVELIBS=${local_caqtdm_logging_archivelibs}" >> $GITHUB_ENV # Corrected
+        echo "QTDM_LIBINSTALL=${local_qtdm_libinstall}" >> $GITHUB_ENV # Corrected
+        echo "QTDM_BININSTALL=${local_qtdm_bininstall}" >> $GITHUB_ENV # Corrected
+        echo "PYTHONINCLUDE=${local_pythoninclude}" >> $GITHUB_ENV # Corrected
+        echo "PYTHONLIB=${local_pythonlib}" >> $GITHUB_ENV
                      
       shell: bash
 
@@ -199,8 +225,9 @@ jobs:
 
     - name: Run build process
       run: |
-        echo "Executing build() function..."
         cd "$srcdir"
+
+        git config --global --add safe.directory $(pwd)
 
         # Create make files
         qmake6 ./all.pro
