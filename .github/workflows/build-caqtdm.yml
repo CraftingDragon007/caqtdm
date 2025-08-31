@@ -140,27 +140,58 @@ jobs:
 
         export CARCH=${{ env.UNAME_ARCH }}
 
-        export EPICS_HOST_ARCH=linux-$CARCH
+        export EPICS_HOST_ARCH=linux-${CARCH}
 
         export QTHOME=/usr
         export QWTHOME=/usr
         export QWTLIB=${QWTHOME}/lib
         export QWTVERSION=6.1
         export EPICSINCLUDE=${EPICS_BASE}/include
-        export EPICSLIB=${EPICS_BASE}/lib/$EPICS_HOST_ARCH
+        export EPICSLIB=${EPICS_BASE}/lib/${EPICS_HOST_ARCH}
         export EPICSEXTENSIONS=${EPICS_BASE}/extensions
         export QTCONTROLS_LIBS=${srcdir}/binaries
         export CAQTDM_COLLECT=${srcdir}/binaries
         export QTBASE=${QTCONTROLS_LIBS}
         export CAQTDM_CA_ARCHIVELIBS=${srcdir}/binaries/
         export CAQTDM_LOGGING_ARCHIVELIBS=${srcdir}/binaries
-        export QTDM_LIBINSTALL=$EPICSEXTENSIONS/lib/$EPICS_HOST_ARCH
-        export QTDM_BININSTALL=$EPICSEXTENSIONS/bin/$EPICS_HOST_ARCH
-        export PYTHONINCLUDE=/usr/include/python$PYTHONVERSION
+        export QTDM_LIBINSTALL=$EPICSEXTENSIONS/lib/${EPICS_HOST_ARCH}
+        export QTDM_BININSTALL=$EPICSEXTENSIONS/bin/${EPICS_HOST_ARCH}
+        export PYTHONINCLUDE=/usr/include/python${PYTHONVERSION}
         export PYTHONLIB=/usr/lib/
         EOF
 
       shell: bash
+
+    - name: Debug environment variables
+      run: |
+        source "${srcdir}/env_config.sh
+        echo "QWTLIBNAME=${QWTLIBNAME}"
+        echo "QWTINCLUDE=${QWTINCLUDE}"
+        echo "EPICS_BASE=${EPICS_BASE}"
+        echo "PYTHONVERSION=${PYTHONVERSION}"
+        echo "ZMQ=${ZMQ}"
+        echo "ZMQINC=${ZMQINC}"
+        echo "ZMQLIB=${ZMQLIB}"
+        echo "QTDM_RPATH=${QTDM_RPATH}"
+        echo "CARCH=${{ env.UNAME_ARCH }}"
+        echo "EPICS_HOST_ARCH=${EPICS_HOST_ARCH}"
+        echo "QTHOME=${QTHOME}"
+        echo "QWTHOME=${QWTHOME}"
+        echo "QWTLIB=${QWTLIB}"
+        echo "QWTVERSION=${QWTVERSION}"
+        echo "EPICSINCLUDE=${EPICSINCLUDE}"
+        echo "EPICSLIB=${EPICSLIB}"
+        echo "EPICSEXTENSIONS=${EPICSEXTENSIONS}"
+        echo "QTCONTROLS_LIBS=${QTCONTROLS_LIBS}"
+        echo "CAQTDM_COLLECT=${CAQTDM_COLLECT}"
+        echo "QTBASE=${QTBASE}"
+        echo "CAQTDM_CA_ARCHIVELIBS=${CAQTDM_CA_ARCHIVELIBS}"
+        echo "CAQTDM_LOGGING_ARCHIVELIBS=${CAQTDM_LOGGING_ARCHIVELIBS}"
+        echo "QTDM_LIBINSTALL=${QTDM_LIBINSTALL}"
+        echo "QTDM_BININSTALL=${QTDM_BININSTALL}"
+        echo "PYTHONINCLUDE=${PYTHONINCLUDE}"
+        echo "PYTHONLIB=${PYTHONLIB}"
+
 
     - name: Run build process
       run: |
