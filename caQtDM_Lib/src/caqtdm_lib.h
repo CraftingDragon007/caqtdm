@@ -498,6 +498,7 @@ private slots:
     void DisplayContextMenu(QWidget* w);
     void Callback_TextEntryChanged(const QString &);
     void Callback_WaveEntryChanged(const QString &, int index);
+    void Callback_HMIConfigInputReceived(int* value);
     void processTerminated();
     void closeWindow();
     void showNormalWindow();

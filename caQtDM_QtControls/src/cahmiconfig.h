@@ -1,6 +1,8 @@
 #ifndef CAHMICONFIG_H
 #define CAHMICONFIG_H
 
+#include "hmiapplicationeventfilter.h"
+
 #include <QWidget>
 
 #include <qtcontrols_global.h>
@@ -22,10 +24,23 @@ public:
     QString channel() const;
 
 private:
-    QKeySequence thisKey;
+    QKeyCombination thisKey;
+    QKeyCombination* previousInput;
     QString thisChannel;
+    HMIApplicationEventFilter* globalEventFilter;
+    bool processEvent(QEvent *event);
+
+private slots:
+    void handleKeyPressed(QObject *target, QKeyEvent *event);
+    void handleMousePressed(QObject *target, QMouseEvent *event);
+
+protected:
+    /*void keyPressEvent(QKeyEvent *event) override;
+    bool event(QEvent *event) override;
+    bool eventFilter(QObject *obj, QEvent *event) override;*/
 
 signals:
+    void HMIConfigInputReceived(int *data);
 
 };
 

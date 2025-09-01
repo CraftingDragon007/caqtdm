@@ -3353,7 +3353,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
             int num = addMonitor(myWidget, &kData, hmiConfigWidget->channel(), w1, specData, map, &pv);
             integerList.append(num);
             hmiConfigWidget->setChannel(pv);
-            connect(hmiConfigWidget, SIGNAL(TextEntryChanged(const QString&)), this, SLOT(Callback_TextEntryChanged(const QString&)));
+            connect(hmiConfigWidget, SIGNAL(HMIConfigInputReceived(int*)), this, SLOT(Callback_HMIConfigInputReceived(int*)));
             nbMonitors++;
         }
 
@@ -6069,8 +6069,10 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
         messagebuttonWidget->setAccessW((bool) data.edata.accessW);
         updateAccessCursor(messagebuttonWidget);
 
-        // something else (user defined monitors with non ca imageWidgets ?) ==============================================
+    } else if (caHMIConfig *cahmiConfigWidget = qobject_cast<caHMIConfig*>(w)) {
+
     } else {
+        // something else (user defined monitors with non ca imageWidgets ?) ==============================================
         qDebug() << "unrecognized widget" << w->metaObject()->className();
     }
 }
@@ -6541,6 +6543,15 @@ void CaQtDM_Lib::Callback_WaveEntryChanged(const QString& text, int index)
     //qDebug() << "should write" << text << "at index" << index;
     fType = w->getFormatType();
     TreatRequestedWave(w->getPV(), text, fType, index, w1);
+}
+
+void CaQtDM_Lib::Callback_HMIConfigInputReceived(int* value){
+    FormatType fType = FormatType::decimal;
+    QWidget *w1 = qobject_cast<QWidget *>(sender());
+    caHMIConfig *w = qobject_cast<caHMIConfig *>(sender());
+    QString text = QString::number(*value);
+
+    TreatRequestedValue(w->channel(), text, fType, w1);
 }
 
 /**
