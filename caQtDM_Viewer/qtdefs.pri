@@ -294,8 +294,17 @@ DEFINES += TARGET_DESCRIPTION=\"\\\"$${TARGET_DESCRIPTION}\\\"\"
 DEFINES += TARGET_COPYRIGHT=\"\\\"$${TARGET_COPYRIGHT}\\\"\"
 DEFINES += TARGET_INTERNALNAME=\"\\\"$${TARGET_INTERNALNAME}\\\"\"
 DEFINES += TARGET_VERSION_STR=\"\\\"$${CAQTDM_VERSION}\\\"\"
+
+# 4.6.0
+# added various packing mechanissmen
+# caWavetable got some signals and slots for generating for vertical and horizontal sync
+# caWavetable added header manipulation functions
+# fix in RPM dependencies
+# cainfo Panel corrections and remove EPICS data requests (avoid unesseary channel searchs)
+# recoloring caDoubleTabWidget via Stylesheets
+
 # 4.5.0
-# special character feature handling by CAQTDM_CUSTOM_UNIT_REPLACMETS
+# special character feature handling by CAQTDM_CUSTOM_UNIT_REPLACEMETS
 # caStripplot improved data handling
 # optimized UI loading by reducing the load of incoming data (CAQTDM_SUPPRESS_UPDATES_ONLOAD)
 # improved colors in caQtDM status window
