@@ -62,7 +62,8 @@ PRE_TARGETDEPS += \
      moc/moc_cacartesianplot.cpp \
      moc/moc_castripplot.cpp \
      moc/moc_cameter.cpp \
-     moc/moc_caclock.cpp
+     moc/moc_caclock.cpp \
+     moc/moc_cawavetableModel.cpp
 
 contains(QWT_VER_MIN, 1)|contains(QWT_VER_MIN, 2) {
   PRE_TARGETDEPS += moc/moc_qwt_thermo_marker_61.cpp
