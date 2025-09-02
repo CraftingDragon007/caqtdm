@@ -162,4 +162,3 @@ void caWaveTableModel::setVerticalOffset(int newVerticalOffset)
     verticalOffset = newVerticalOffset;
 }
 
-#include "moc_cawavetableModel.cpp"
