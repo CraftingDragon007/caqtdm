@@ -30,7 +30,7 @@
 
 class caWaveTableModel : public QAbstractTableModel
 {
-    Q_OBJECT
+
 public:
     explicit caWaveTableModel(int rows, int columns, QObject *parent = nullptr);
 

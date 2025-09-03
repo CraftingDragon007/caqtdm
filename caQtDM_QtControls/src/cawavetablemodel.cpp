@@ -23,7 +23,7 @@
  *    helge.brands@psi.ch
  */
 
-#include "caWaveTableModel.h"
+#include "cawavetablemodel.h"
 
 
 caWaveTableModel::caWaveTableModel(int rows, int columns,QObject *parent)
