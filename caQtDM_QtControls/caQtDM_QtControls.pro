@@ -124,7 +124,7 @@ SOURCES	+= \
     src/caspinbox.cpp \
     src/qwtplotcurvenan.cpp \
     src/cawavetable.cpp \
-    src/cawavetableModel.cpp \
+    src/cawavetablemodel.cpp \
     src/specialFunctions.cpp \
     src/caclock.cpp \
     src/cameter.cpp \
@@ -241,7 +241,7 @@ HEADERS	+= \
     src/caspinbox.h \
     src/qwtplotcurvenan.h \
     src/cawavetable.h \
-    src/cawavetableModel.h \
+    src/cawavetablemodel.h \
     src/capolylinedialog.h \
     src/specialFunctions.h \
     src/caclock.h \
