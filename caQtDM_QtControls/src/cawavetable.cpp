@@ -37,7 +37,7 @@
 #include <QClipboard>
 #include <qnumeric.h>
 #include "cawavetable.h"
-#include "caWaveTableModel.h"
+#include "cawavetablemodel.h"
 #include "alarmdefs.h"
 
 
