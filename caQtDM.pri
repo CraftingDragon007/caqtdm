@@ -253,11 +253,7 @@ environment_Plugin {
                 message(“environment_plugin configuration macx”)
                 INCLUDEPATH   += $(EPICSINCLUDE)
                 INCLUDEPATH   += $(EPICSINCLUDE)/os/Linux
-                LIBS += -L$(CAQTDM_COLLECT) -lqtcontrols
-                LIBS += -L$(QTBASE) -lcaQtDM_Lib
-                caqtdm_rpath {
-                    LIBS += -Wl,-rpath,$(QTDM_RPATH)
-                }
+                LIBS += $$(CAQTDM_COLLECT)/libcaQtDM_Lib.dylib
                 LIBS += $$(EPICSLIB)/libCom.dylib
 
 
@@ -376,7 +372,7 @@ epics4_plugin {
                 #LIBS += $${EPICS4LOC3}/libpvaClient.a
                 #LIBS += $${EPICS4LOC4}/libnt.a
 
-        	LIBS += $(CAQTDM_COLLECT)/libcaQtDM_Lib.dylib
+
         	LIBS += $(CAQTDM_COLLECT)/libcaQtDM_Lib.dylib
         	LIBS += $$(EPICSLIB)/libca.dylib
         	LIBS += $$(EPICSLIB)/libCom.dylib
