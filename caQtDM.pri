@@ -254,6 +254,7 @@ environment_Plugin {
                 INCLUDEPATH   += $(EPICSINCLUDE)
                 INCLUDEPATH   += $(EPICSINCLUDE)/os/Linux
                 LIBS += $$(CAQTDM_COLLECT)/libcaQtDM_Lib.dylib
+                LIBS += $$(CAQTDM_COLLECT)/libqtcontrols.dylib
                 LIBS += $$(EPICSLIB)/libCom.dylib
 
 
