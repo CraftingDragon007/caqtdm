@@ -572,7 +572,7 @@ caQtDM_Viewer {
                 !ios:!android {
                         message("caQtDM_viewer configuration : !ios!android (all unixes + mac)")
                         DESTDIR = $(CAQTDM_COLLECT)
-                 !macx: {CONFIG += x11}
+                 !macx: {CONFIG += x11
                         LIBS += -L$(QTBASE) -lcaQtDM_Lib
                         LIBS += -L$(QTBASE) -lqtcontrols
                         ADL_EDL_FILES {
@@ -583,6 +583,7 @@ caQtDM_Viewer {
                             LIBS += -Wl,-rpath,$(QTDM_RPATH)
                         }
                         LIBS += -L$(CAQTDM_COLLECT) -L$(CAQTDM_COLLECT)/designer
+                    }
                 }
         }
         macx:!ios {
