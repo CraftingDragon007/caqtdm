@@ -191,11 +191,6 @@ int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
                     mutexknobdataP->SetMutexKnobData(kData.index, kData);
                     mutexknobdataP->SetMutexKnobDataReceived(&kData);
                 }
-
-                if (messageWindowPtr) {
-                    QString msg = QString("OPCUA: [%1] = %2").arg(nodeId).arg(value.toString());
-                    messageWindowPtr->postMsgEvent(QtDebugMsg, (char*)msg.toLatin1().constData());
-                }
             });
         }
         core = m_cores[endpoint];
@@ -206,10 +201,6 @@ int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
 
     if (state == ConnectionState::Connected) {
         core->subscribeToNode(nodeId);
-        if (messageWindowPtr) {
-            QString msg = QString("OPCUA: Subscribed %1 on %2 (immediate)").arg(nodeId, endpoint);
-            messageWindowPtr->postMsgEvent(QtDebugMsg, (char*)msg.toLatin1().constData());
-        }
     } else {
         // Store subscription to do later
         m_pendingSubscriptions[endpoint].append(nodeId);
@@ -239,10 +230,6 @@ int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
                 // Now subscribe to all pending nodeIds
                 for (const QString& nodeId : m_pendingSubscriptions[endpoint]) {
                     core->subscribeToNode(nodeId);
-                    if (messageWindowPtr) {
-                        QString msg = QString("OPCUA: Subscribed %1 on %2").arg(nodeId, endpoint);
-                        messageWindowPtr->postMsgEvent(QtDebugMsg, (char*)msg.toLatin1().constData());
-                    }
                 }
                 m_pendingSubscriptions[endpoint].clear();
             });
@@ -277,10 +264,6 @@ int OPCUAPlugin::pvClearMonitor(knobData *kData) {
         auto core = it.value();
         if (core && core->hasSubscription(nodeId)) {
             core->unsubscribeFromNode(nodeId);
-            if (messageWindowPtr) {
-                QString msg = QString("OPCUA: Unsubscribed %1 on %2").arg(nodeId, it.key());
-                messageWindowPtr->postMsgEvent(QtDebugMsg, (char*)msg.toLatin1().constData());
-            }
             break;
         }
     }
