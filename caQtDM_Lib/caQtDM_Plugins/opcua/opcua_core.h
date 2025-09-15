@@ -63,7 +63,7 @@ public:
     bool hasSubscription(const QString &nodeId) const;
     void unsubscribeFromNode(const QString &nodeId);
     void disableMonitoringForNode(const QString &nodeId);
-    bool writeValue(QString &nodeId, double rdata, int32_t idata, char *sdata, char *object, char *errmess, int forceType);
+    bool writeValue(const QString &nodeId, double rdata, int32_t idata, char *sdata, char *object, char *errmess, int forceType);
 
 signals:
     void connected();
@@ -71,6 +71,7 @@ signals:
     void errorOccured(const QString &message);
     void valueRead(const QString nodeId, const QVariant &value);
     void valuesRead(const QVector<QVariant> &values);
+    void accessLevelRead(const QString nodeId, const bool readAccess, const bool writeAccess);
 
 private:
     QOpcUaProvider m_provider;

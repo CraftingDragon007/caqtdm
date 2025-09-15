@@ -178,6 +178,18 @@ int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
                     mutexknobdataP->SetMutexKnobDataReceived(&kData);
                 }
             });
+
+            QObject::connect(core.get(), &opc::OpcUaCore::accessLevelRead, [=](const QString &nodeId, const bool &readAccess, const bool &writeAccess) {
+                auto range = Channelcache.equal_range(nodeId);
+                for (auto it = range.first; it != range.second; ++it) {
+                    int idx = it.value();
+                    knobData kData = mutexKnobdataPtr->GetMutexKnobData(idx);
+
+                    updateKnobDataWithAccessLevel(kData, readAccess, writeAccess);
+                    mutexknobdataP->SetMutexKnobData(kData.index, kData);
+                    mutexknobdataP->SetMutexKnobDataReceived(&kData);
+                }
+            });
         }
         core = m_cores[endpoint];
     }
@@ -512,8 +524,6 @@ void OPCUAPlugin::updateKnobDataFromVariant(knobData &kData, const QVariant &val
     caType detectedType = generateCaTypeFromVariant(value);
     kData.edata.fieldtype = detectedType;
     kData.edata.connected = 1;
-    kData.edata.accessR = true;
-    kData.edata.accessW = true;
     kData.edata.monitorCount++;
 
     switch (detectedType) {
@@ -550,6 +560,13 @@ void OPCUAPlugin::updateKnobDataFromVariant(knobData &kData, const QVariant &val
         kData.edata.rvalue = 0.0;
         break;
     }
+}
+
+void OPCUAPlugin::updateKnobDataWithAccessLevel(knobData &kData, const bool &accessR, const bool &accessW)
+{
+    QMutexLocker locker((QMutex *)kData.mutex);
+    kData.edata.accessR = accessR;
+    kData.edata.accessW = accessW;
 }
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)

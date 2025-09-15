@@ -71,6 +71,7 @@ public:
     bool resolveConnectionString(knobData *kData, QString &endpoint, QString &nodeId);
     caType generateCaTypeFromVariant(const QVariant &value);
     void updateKnobDataFromVariant(knobData &kData, const QVariant &value);
+    void updateKnobDataWithAccessLevel(knobData &kData, const bool &accessR, const bool &accessW);
 
 private:
     QMutex mutex;

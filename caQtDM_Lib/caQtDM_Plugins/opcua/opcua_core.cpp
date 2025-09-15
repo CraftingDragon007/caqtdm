@@ -243,10 +243,18 @@ void OpcUaCore::subscribeToNode(const QString &nodeId)
 
         m_subscriptionNodes.insert(nodeId, node);
         qDebug() << "[subscribeToNode] Subscribed successfully to:" << nodeId;
+
+        QVariant accessLevel = node->attribute(QOpcUa::NodeAttribute::UserAccessLevel);
+
+        if (accessLevel.isValid()) {
+            bool readAccess = accessLevel.value<quint8>() & static_cast<quint8>(QOpcUa::AccessLevelBit::CurrentRead);
+            bool writeAccess = accessLevel.value<quint8>() & static_cast<quint8>(QOpcUa::AccessLevelBit::CurrentWrite);
+            emit accessLevelRead(nodeId, readAccess, writeAccess);
+        }
     });
 
     // Must come after connect
-    node->readAttributes(QOpcUa::NodeAttribute::NodeClass);
+    node->readAttributes(QOpcUa::NodeAttribute::NodeClass | QOpcUa::NodeAttribute::UserAccessLevel);
 }
 
 
@@ -469,7 +477,7 @@ void OpcUaCore::disableMonitoringForNode(const QString &nodeId){
     }
 }
 
-bool OpcUaCore::writeValue(QString &nodeId, double rdata, int32_t idata, char *sdata,
+bool OpcUaCore::writeValue(const QString &nodeId, double rdata, int32_t idata, char *sdata,
                            char *object, char *errmess, int forceType) {
     Q_UNUSED(object);
     Q_UNUSED(forceType);
