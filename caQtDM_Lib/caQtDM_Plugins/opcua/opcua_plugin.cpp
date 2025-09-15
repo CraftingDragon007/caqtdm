@@ -268,8 +268,40 @@ int OPCUAPlugin::pvFreeAllocatedData(knobData *kData)
 
 // caQtDM_Lib will call this routine for setting data (see for more detail the epics3 plugin)
 int OPCUAPlugin::pvSetValue(char *pv, double rdata, int32_t idata, char *sdata, char *object, char *errmess, int forceType) {
-    qDebug() << "pvSetValue not implemented for OPC UA";
-    return false;
+    QString key = QString::fromLatin1(pv).trimmed();
+    QString raw = opcua_translation_map.value(key).trimmed();
+
+    if(raw.isEmpty()){
+        raw=key;
+    }
+
+    int splitPos = raw.lastIndexOf("/ns=");
+    if (splitPos < 0) {
+        splitPos = raw.lastIndexOf("/i=");
+        if (splitPos < 0) {
+            if (messageWindowPtr) {
+                QString msg = "Invalid OPCUA PV format. Expected <endpoint>/ns=...; got: " + raw;
+                messageWindowPtr->postMsgEvent(QtCriticalMsg, (char*)msg.toLatin1().constData());
+            }
+            return false;
+        }
+    }
+
+    QString endpoint = raw.left(splitPos);
+    QString nodeId = raw.mid(splitPos + 1).trimmed();
+
+    if (m_cores.contains(endpoint)) {
+        auto& core = m_cores[endpoint];
+        return core->writeValue(nodeId, rdata, idata, sdata, object, errmess, forceType);
+    } else {
+        if (messageWindowPtr) {
+            QString msg = "Tried writing to pv that's not connected correctly: " + endpoint;
+            messageWindowPtr->postMsgEvent(QtCriticalMsg, (char*)msg.toLatin1().constData());
+        }
+        return false;
+    }
+
+    return true;
 }
 
 // caQtDM_Lib will call this routine for setting waveforms data (see for more detail the epics3 plugin)
@@ -291,18 +323,14 @@ int OPCUAPlugin::pvSetWave(char *pv, float *fdata, double *ddata, int16_t *data1
 // caQtDM_Lib will call this routine for getting the timestamp for this monitor
 int OPCUAPlugin::pvGetTimeStamp(char *pv, char *timestamp) {
     Q_UNUSED(pv);
-    Q_UNUSED(timestamp);
-    qDebug() << "OPCUAPlugin:pvgetTimeStamp";
-    strcpy(timestamp, "timestamp in epics format");
+    strcpy(timestamp, "N/A");
     return true;
 }
 
 // caQtDM_Lib will call this routine for getting a description of the monitor
 int OPCUAPlugin::pvGetDescription(char *pv, char *description) {
     Q_UNUSED(pv);
-    Q_UNUSED(description);
-    qDebug() << "OPCUAPlugin:pvGetDescription";
-    strcpy(description, "hello, I am a double");
+    strncpy(description, "OPCUA Variable", 255);
     return true;
 }
 
@@ -485,7 +513,7 @@ void OPCUAPlugin::updateKnobDataFromVariant(knobData &kData, const QVariant &val
     kData.edata.fieldtype = detectedType;
     kData.edata.connected = 1;
     kData.edata.accessR = true;
-    kData.edata.accessW = false;
+    kData.edata.accessW = true;
     kData.edata.monitorCount++;
 
     switch (detectedType) {

@@ -469,4 +469,72 @@ void OpcUaCore::disableMonitoringForNode(const QString &nodeId){
     }
 }
 
+bool OpcUaCore::writeValue(QString &nodeId, double rdata, int32_t idata, char *sdata,
+                           char *object, char *errmess, int forceType) {
+    Q_UNUSED(object);
+    Q_UNUSED(forceType);
+    Q_UNUSED(errmess)
+
+    if (!m_subscriptionNodes.contains(nodeId)) {
+        emit errorOccured("Node not found");
+        return false;
+    }
+
+    QOpcUaNode *node = m_subscriptionNodes[nodeId];
+    if (!node) {
+        emit errorOccured("Node is null");
+        return false;
+    }
+
+    auto makeValue = [&](const QVariant &ref) -> QVariant {
+        switch (ref.type()) {
+        case QVariant::Int:    return idata;
+        case QVariant::UInt:   return static_cast<quint32>(idata);
+        case QVariant::Bool:   return static_cast<bool>(idata != 0);
+        case QVariant::Double: return rdata;
+        case QVariant::String: return QString::fromUtf8(sdata ? sdata : "");
+        default: return {};
+        }
+    };
+
+    auto doWrite = [&](const QVariant &ref) {
+        QVariant valueToWrite = makeValue(ref);
+        if (!valueToWrite.isValid()) {
+            emit errorOccured("Unsupported type");
+            return;
+        }
+
+        QObject::connect(node, &QOpcUaNode::attributeWritten, this,
+            [=](QOpcUa::NodeAttribute attr, QOpcUa::UaStatusCode status) {
+                if (attr != QOpcUa::NodeAttribute::Value) return;
+                if (status != QOpcUa::UaStatusCode::Good && errmess) {
+                    emit errorOccured(QString("Write failed: %1")
+                                        .arg(QOpcUa::statusToString(status))
+                                        .toUtf8().constData());
+                }
+            },
+            Qt::SingleShotConnection);
+
+        node->writeValueAttribute(valueToWrite);
+    };
+
+    QVariant existingValue = node->attribute(QOpcUa::NodeAttribute::Value);
+    if (existingValue.isValid()) {
+        doWrite(existingValue);
+        return true;
+    }
+
+    QObject::connect(node, &QOpcUaNode::attributeRead, this,
+        [=](QOpcUa::NodeAttributes attrs) {
+            if (!attrs.testFlag(QOpcUa::NodeAttribute::Value)) {
+                emit errorOccured("Value not readable");
+                return;
+            }
+            doWrite(node->attribute(QOpcUa::NodeAttribute::Value));
+        },
+        Qt::SingleShotConnection);
+
+    node->readValueAttribute();
+    return true;
+}
 }
