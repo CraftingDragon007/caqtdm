@@ -72,10 +72,6 @@ public:
     caType generateCaTypeFromVariant(const QVariant &value);
     void updateKnobDataFromVariant(knobData &kData, const QVariant &value);
 
-private slots:
-   // void updateValues();
-   // void updateInterface();
-
 private:
     QMutex mutex;
     MutexKnobData *mutexknobdataP;

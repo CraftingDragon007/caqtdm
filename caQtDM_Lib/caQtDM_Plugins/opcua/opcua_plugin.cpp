@@ -42,13 +42,11 @@ QString OPCUAPlugin::pluginName()
     return "opcua";
 }
 
-// constructor
 OPCUAPlugin::OPCUAPlugin()
 {
     qDebug() << "OPCUAPlugin: Create";
 }
 
-// initialize our communicationlayer with everything you need
 int OPCUAPlugin::initCommunicationLayer(MutexKnobData *data, MessageWindow *messageWindow, QMap<QString, QString> options)
 {
     qDebug() << "OPCUA Plugin: InitCommunicationLayer with options " << options;
@@ -174,7 +172,7 @@ int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
                     int idx = it.value();
                     knobData kData = mutexKnobdataPtr->GetMutexKnobData(idx);
 
-                    updateKnobDataFromVariant(kData, value); // Refactored into seperate Method to increase readability
+                    updateKnobDataFromVariant(kData, value);
 
                     mutexknobdataP->SetMutexKnobData(kData.index, kData);
                     mutexknobdataP->SetMutexKnobDataReceived(&kData);
@@ -290,7 +288,7 @@ int OPCUAPlugin::pvSetWave(char *pv, float *fdata, double *ddata, int16_t *data1
     return true;
 }
 
-// caQtDM_Lib will call this routine for getting a description of the monitor
+// caQtDM_Lib will call this routine for getting the timestamp for this monitor
 int OPCUAPlugin::pvGetTimeStamp(char *pv, char *timestamp) {
     Q_UNUSED(pv);
     Q_UNUSED(timestamp);
@@ -299,7 +297,7 @@ int OPCUAPlugin::pvGetTimeStamp(char *pv, char *timestamp) {
     return true;
 }
 
-// caQtDM_Lib will call this routine for getting the timestamp for this monitor
+// caQtDM_Lib will call this routine for getting a description of the monitor
 int OPCUAPlugin::pvGetDescription(char *pv, char *description) {
     Q_UNUSED(pv);
     Q_UNUSED(description);
