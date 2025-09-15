@@ -51,7 +51,6 @@ OpcUaCore::OpcUaCore(QObject *parent)
 
 }
 
-// QT expects for you to clean up a client once it's not used anymore.
 OpcUaCore::~OpcUaCore()
 {
     clearAllSubscriptions();
@@ -215,9 +214,9 @@ void OpcUaCore::clearAllSubscriptions()
     for (auto it = m_subscriptionNodes.begin(); it != m_subscriptionNodes.end(); ++it) {
         QOpcUaNode *node = it.value();
         if (node) {
-            node->disableMonitoring(QOpcUa::NodeAttribute::Value); // disable monitoring
+            node->disableMonitoring(QOpcUa::NodeAttribute::Value);
             node->disconnect(); // disconnect any signals/slots
-            node->deleteLater(); // safe deletion
+            node->deleteLater();
         }
     }
 
@@ -334,7 +333,7 @@ void OpcUaCore::browseObjectForVariables(const QString &objectNodeId) {
 
 void OpcUaCore::fetchDataFromSingleNode(const QString &nodeId)
 {
-    // Check if we actually are connected, duuuuh.
+    // Check if we actually are connected.
     if(!m_client || m_client->state() != QOpcUaClient::Connected){
         emit errorOccured("Client is not connected.");
         return;
@@ -369,14 +368,14 @@ void OpcUaCore::fetchDataFromSingleNode(const QString &nodeId)
                 qInfo() << "Value attribute read successfully for node" << nodeId << ". Fetching value...";
                 QVariant val = node->attribute(QOpcUa::NodeAttribute::Value);
                 qDebug() << "Read value for node " << nodeId << ":" << val;
-                emit valueRead(nodeId, val); // Emit with NodeId and value
+                emit valueRead(nodeId, val);
             }
         } else {
             // This case might occur if the server, despite the request, couldn't provide the Value attribute
             // or if the read operation failed at a lower level before even attempting to get attributes.
             emit errorOccured("Read response from server did not include the Value attribute for node: " + nodeId);
         }
-        node->deleteLater(); // Clean, clean, clean!
+        node->deleteLater();
     }, Qt::UniqueConnection);
 
 

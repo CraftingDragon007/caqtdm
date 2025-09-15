@@ -142,19 +142,7 @@ int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
 
     if(raw.isEmpty()){
         raw=key;
-
-//        if(messageWindowPtr){
-//            QString msg = QString("OPCUA: No mapping found for key: %1").arg(key);
-//            messageWindowPtr->postMsgEvent(QtCriticalMsg, (char*)msg.toLatin1().constData());
-//        }
-
     }
-
-//    int sep = raw.indexOf("::");
-//    if (sep >= 0) raw = raw.mid(sep + 2);
-//    if (raw.startsWith("opcua://", Qt::CaseInsensitive)) {
-//        raw = raw.mid(QString("opcua://").length());
-//    }
 
     int splitPos = raw.lastIndexOf("/ns=");
     if (splitPos < 0) {
@@ -256,7 +244,6 @@ int OPCUAPlugin::pvClearMonitor(knobData *kData) {
         return false;
     }
 
-    // Remove from Channelcache
     Channelcache.remove(nodeId, index);
 
     // Find which endpoint this node belongs to
@@ -283,7 +270,6 @@ int OPCUAPlugin::pvFreeAllocatedData(knobData *kData)
 
 // caQtDM_Lib will call this routine for setting data (see for more detail the epics3 plugin)
 int OPCUAPlugin::pvSetValue(char *pv, double rdata, int32_t idata, char *sdata, char *object, char *errmess, int forceType) {
-    // Optional: You can implement write support here using m_core
     qDebug() << "pvSetValue not implemented for OPC UA";
     return false;
 }
@@ -332,7 +318,7 @@ int OPCUAPlugin::pvClearEvent(void * ptr)
 
     QMutexLocker locker(&m_mutex);
     if (m_cores.contains(endpoint)) {
-        m_cores[endpoint]->disableMonitoringForNode(nodeId);  // must exist in your OpcUaCore
+        m_cores[endpoint]->disableMonitoringForNode(nodeId);
         qDebug() << "OPCUAPlugin:pvClearEvent - paused monitoring for" << nodeId;
     }
 
@@ -402,7 +388,6 @@ int OPCUAPlugin::pvDisconnect(knobData *kData)
 // flush any io is periodically called (1s timer) in order to flush the disconnection and reconnection
 // used for pv's that will be hidden and shown in case of tabwidgets
 int OPCUAPlugin::FlushIO() {
-    //qDebug() << "OPCUAPlugin:FlushIO";
     return true;
 }
 
