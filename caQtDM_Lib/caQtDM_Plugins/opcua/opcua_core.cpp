@@ -25,6 +25,7 @@
 #include "opcua_core.h"
 #include "qeventloop.h"
 #include "qrandom.h"
+#include "qtcpsocket.h"
 #include <QDebug>
 namespace opc{
 OpcUaCore::OpcUaCore(QObject *parent)
@@ -87,6 +88,48 @@ bool OpcUaCore::connectOpc(const QString &url, std::function<void(bool)> onConne
                         return;
                     }
 
+                    QOpcUaEndpointDescription chosenEndpoint;
+                    bool foundWorkingEndpoint = false;
+                    QList<QTcpSocket*> sockets;
+                    QEventLoop loop;
+                    QTimer timer;
+                    std::atomic<bool> found(false);
+
+                    timer.setSingleShot(true);
+                    connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
+
+                    // For each endpoint returned from the server, try to establish a simple tcp connection. The first endpoint that connects is chosen for further opcua communication.
+                    for (int i = 0; i < endpoints.size(); ++i) {
+                        QOpcUaEndpointDescription ep = endpoints.at(i);
+                        QUrl url = ep.endpointUrl();
+                        QTcpSocket* sock = new QTcpSocket(this);
+                        sockets.append(sock);
+
+                        connect(sock, &QTcpSocket::connected, this,
+                                [this, ep, &sockets, &found, &chosenEndpoint, &foundWorkingEndpoint, &timer, &loop]() {
+                                    if (found.exchange(true)) return;
+                                    chosenEndpoint = ep;
+                                    foundWorkingEndpoint = true;
+                                    timer.stop();
+                                    loop.quit();
+                                    for (QTcpSocket* s : sockets) if (s && s->state() == QAbstractSocket::ConnectedState && s != qobject_cast<QTcpSocket*>(QObject::sender())) s->abort();
+                                });
+
+                        sock->connectToHost(url.host(), url.port(4840));
+                    }
+
+                    // Try to connect to all endpoints for a certain time. Due to signal / slot mechanism, the fastest connection will usually be chosen.
+                    timer.start(500);
+                    loop.exec();
+
+                    for (QTcpSocket* s : sockets) { if (s) { s->abort(); s->deleteLater(); } }
+
+                    if (!foundWorkingEndpoint) {
+                        emit errorOccured("No reachable endpoint hosts.");
+                        onConnected(false);
+                        return;
+                    }
+
                     connect(m_client, &QOpcUaClient::stateChanged, this,
                             [this, onConnected](QOpcUaClient::ClientState state) {
                                 if (state == QOpcUaClient::Connected) {
@@ -97,7 +140,7 @@ bool OpcUaCore::connectOpc(const QString &url, std::function<void(bool)> onConne
                                 }
                             });
 
-                    m_client->connectToEndpoint(endpoints.first());
+                    m_client->connectToEndpoint(chosenEndpoint);
                 });
         m_endpointsHooked = true;
     }
