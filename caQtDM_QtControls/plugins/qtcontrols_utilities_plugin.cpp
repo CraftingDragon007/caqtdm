@@ -244,13 +244,17 @@ QWidget *caMimeDisplayInterface::createWidget(QWidget *parent)
 
 caHMIConfigInterface::caHMIConfigInterface(QObject *parent): CustomWidgetInterface_Utilities(parent)
 {
-    strng name[2], type[2] = {"", ""};
-    longtext text[2] = {"", ""};
+    strng name[5], type[5] = {"", "", "", "", ""};
+    longtext text[5] = {"", "", "", "", ""};
 
-    strcpy(name[0], "shortcut");
-    strcpy(name[1], "channel");
+    qstrncpy(name[0], "shortcut", sizeof(name[0]));
+    qstrncpy(name[1], "channel", sizeof(name[1]));
+    qstrncpy(name[2], "valueOrCalc", sizeof(name[2]));
+    qstrncpy(text[2], "Either the value to set or a calc string, can be configured by setting calculationType", sizeof(text[2]));
+    qstrncpy(name[3], "calculationType", sizeof(name[3]));
+    qstrncpy(name[4], "captureType", sizeof(name[4]));
 
-    d_domXml = XmlFunc("caHMIConfig", "cahmiconfig", 0, 0, 100, 22, name, type, text, 2);
+    d_domXml = XmlFunc("caHMIConfig", "cahmiconfig", 0, 0, 100, 22, name, type, text, 5);
     d_toolTip = "[Configures capture of certain user input]";
     d_name = "caHMIConfig";
     d_include = "caHMIConfig";

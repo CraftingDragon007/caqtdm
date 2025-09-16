@@ -533,6 +533,15 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
     setContextMenuPolicy(Qt::CustomContextMenu);
     connect(this, SIGNAL(customContextMenuRequested(const QPoint&)), this, SLOT(ShowContextMenu(const QPoint&)));
 
+    this->globalEventFilter = new HMIApplicationEventFilter(this);
+
+
+    if (qApp){
+        qApp->installEventFilter(globalEventFilter);
+        connect(this->globalEventFilter, &HMIApplicationEventFilter::keyPressed, this, &CaQtDM_Lib::hmiHandleKeyPressed);
+        connect(this->globalEventFilter, &HMIApplicationEventFilter::mousePressed, this, &CaQtDM_Lib::hmiHandleMousePressed);
+    }
+
     level=0;
     cainclude_path="";
     // say for all widgets that they have to be treated, will be set to true when treated to avoid multiple use
@@ -3344,7 +3353,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
         scan2dWidget->setProperty("Taken", true);
     } else if(caHMIConfig* hmiConfigWidget = qobject_cast<caHMIConfig *>(w1)) {
-
+        QList<QVariant> indexList;
         qDebug() << "create caHMIConfig";
         w1->setProperty("ObjectType", caHMIConfig_Widget);
 
@@ -3352,14 +3361,28 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
             hmiConfigWidget->setEnabled(true);
             int num = addMonitor(myWidget, &kData, hmiConfigWidget->channel(), w1, specData, map, &pv);
             integerList.append(num);
+            indexList.append(0);
             hmiConfigWidget->setChannel(pv);
             connect(hmiConfigWidget, SIGNAL(HMIConfigInputReceived(int*)), this, SLOT(Callback_HMIConfigInputReceived(int*)));
             nbMonitors++;
         }
 
+        caHMIConfigTransferItem* transferItem = new caHMIConfigTransferItem(hmiConfigWidget);
+        transferItem->setChannel(hmiConfigWidget->channel());
+        transferItem->setShortcut(hmiConfigWidget->shortcut());
+        transferItem->setValue(hmiConfigWidget->value());
+        transferItem->setCalculationType(hmiConfigWidget->calculationType());
+        transferItem->setCaptureType(hmiConfigWidget->captureType());
+        transferItem->setUUID(hmiConfigWidget->uuid());
+        transferItem->setPID(QCoreApplication::applicationPid());
+        transferItem->setWidgetCallback(hmiConfigWidget);
+        hmiConfigList.append(transferItem);
+
         // insert dataindex list
         integerList.insert(0, nbMonitors);
+        indexList.insert(0, nbMonitors);
         hmiConfigWidget->setProperty("MonitorList", integerList);
+        hmiConfigWidget->setProperty("IndexList", indexList);
 
         hmiConfigWidget->setProperty("Taken", true);
     }
@@ -4215,6 +4238,8 @@ bool CaQtDM_Lib::CalcVisibility(QWidget *w, double &result, bool &valid)
     }
     else if(caCalc *calc = qobject_cast<caCalc *>(w)) {
         calcQString = calc->getCalc();
+    }else if(caHMIConfig *cahmiconfig = qobject_cast<caHMIConfig *>(w)) {
+        calcQString = cahmiconfig->value();
     }
 
     // no calc
@@ -6070,7 +6095,7 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
         updateAccessCursor(messagebuttonWidget);
 
     } else if (caHMIConfig *cahmiConfigWidget = qobject_cast<caHMIConfig*>(w)) {
-
+        Q_UNUSED(cahmiConfigWidget)
     } else {
         // something else (user defined monitors with non ca imageWidgets ?) ==============================================
         qDebug() << "unrecognized widget" << w->metaObject()->className();
@@ -6543,6 +6568,65 @@ void CaQtDM_Lib::Callback_WaveEntryChanged(const QString& text, int index)
     //qDebug() << "should write" << text << "at index" << index;
     fType = w->getFormatType();
     TreatRequestedWave(w->getPV(), text, fType, index, w1);
+}
+
+void CaQtDM_Lib::hmiHandleKeyPressed(QObject *target, QKeyEvent *event){
+    this->hmiHandleIncomingEvent(target, event);
+}
+
+void CaQtDM_Lib::hmiHandleMousePressed(QObject *target, QMouseEvent *event){
+    this->hmiHandleIncomingEvent(target, event);
+}
+
+void CaQtDM_Lib::hmiHandleIncomingEvent(QObject *target, QEvent *event){
+
+    if (event->type() == QEvent::KeyPress) {
+        QKeyEvent *keyEvent = dynamic_cast<QKeyEvent*>(event);
+        foreach (caHMIConfigTransferItem *item, hmiConfigList) {
+            if (item->captureType() != caHMIConfig::capType::Mouse) {
+                int key = keyEvent->key();
+                Qt::Key qtKey = static_cast<Qt::Key>(key);
+                int modifiers = keyEvent->modifiers();
+                Qt::KeyboardModifiers qtModifiers = static_cast<Qt::KeyboardModifiers>(modifiers);
+                if (qtKey == item->shortcut().key() && qtModifiers == item->shortcut().keyboardModifiers()){
+                    caHMIConfig *widget = item->widgetCallback();
+                    if (widget){
+                        widget->handleKeyPressed(target, keyEvent);                        
+                        if (item->captureType() == caHMIConfig::capType::KeyboardSet) {
+                            if (item->calculationType() == caHMIConfig::calcType::SetValue) {
+                                FormatType fType;
+                                if (item->value().canConvert<double>()){
+                                    fType = FormatType::decimal;
+                                } else {
+                                    fType = FormatType::string;
+                                }
+
+                                QString text = item->value().toString();
+                                QWidget *w1 = qobject_cast<QWidget *>(widget);
+                                TreatRequestedValue(item->channel(), text, fType, w1);
+                            } else if (item->calculationType() == caHMIConfig::calcType::Calc) {
+                                QString calc = item->value().toString();
+                                double result;
+                                bool valid;
+                                CalcVisibility(widget, result, valid);
+                                if (valid){
+                                    FormatType fType = FormatType::decimal;
+                                    QWidget *w1 = qobject_cast<QWidget *>(widget);
+                                    QString text = QString::number(result);
+
+                                    TreatRequestedValue(item->channel(), text, fType, w1);
+                                }
+                            }
+                        }
+                    }                    
+
+                }
+            } else {
+                // handle mouse
+            }
+        }
+    }
+
 }
 
 void CaQtDM_Lib::Callback_HMIConfigInputReceived(int* value){
@@ -10015,7 +10099,7 @@ extern "C"  {
         QMainWindow *pWindow =  new CaQtDM_Lib(Q_NULLPTR, FileName, macroS, mutexKnobData, interfaces);
         pWindow->show();
 
-        myWidget = pWindow;
+        myWidget = pWindow;        
         return app.exec();
     }
 

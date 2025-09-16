@@ -59,6 +59,7 @@
 #ifndef MOBILE
 #include <QPrinter>
 #include <QPrintDialog>
+#include <cahmiconfigtransferitem.h>
 #endif
 #include <QClipboard>
 
@@ -463,6 +464,17 @@ private:
 
     QMap<int, caStripPlot*> stripList;          // list of stripplots with key group
     QList<int> stripGroupList;                  // group numbers found
+
+    QList<caHMIConfigTransferItem*> hmiConfigList;
+
+    HMIApplicationEventFilter *globalEventFilter;
+
+    void hmiHandleKeyPressed(QObject *target, QKeyEvent *event);
+
+    void hmiHandleMousePressed(QObject *target, QMouseEvent *event);
+
+    void hmiHandleIncomingEvent(QObject* target, QEvent *event);
+
     QHash<QString, QString> softvars;                // use a hash list to test if same variable names
 
     QString defaultPlugin;
