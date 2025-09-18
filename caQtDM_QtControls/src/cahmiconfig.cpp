@@ -1,5 +1,7 @@
 #include "cahmiconfig.h"
-#include "qevent.h"
+#include "qapplication.h"
+
+#include <QPainter>
 
 caHMIConfig::caHMIConfig(QWidget *parent)
     : QWidget{parent}
@@ -10,7 +12,9 @@ caHMIConfig::caHMIConfig(QWidget *parent)
 }
 
 void caHMIConfig::setShortcutFromSequence(const QKeySequence &key){
+    qDebug() << "setShortcut called with << '" << key << "' (isDesignerMode:" << isDesignerMode() << ")";
     this->thisKey = key[0];
+    update();
 }
 
 QKeySequence caHMIConfig::shortcutAsSequence() const {
@@ -57,30 +61,16 @@ QString caHMIConfig::uuid() const {
     return this->thisUUID.toString();
 }
 
-void caHMIConfig::handleKeyPressed(QObject *target, QKeyEvent *event){
-    Q_UNUSED(target);
+bool caHMIConfig::isDesignerMode(){
+    return qApp->property("APP_SOURCE") == QString("DESIGNER");
 }
 
-void caHMIConfig::handleMousePressed(QObject *target, QMouseEvent *event){
-    Q_UNUSED(target);
-}
-
-void caHMIConfig::processEvent(QEvent *event){
-    if (event->type() == QEvent::MouseButtonPress) {
-        QMouseEvent *mouseEvent = static_cast<QMouseEvent*>(event);
-        qDebug() << "Central event(): Mouse press at" << mouseEvent->pos();
-    } else if (event->type() == QEvent::KeyPress) {
-        QKeyEvent *keyEvent = dynamic_cast<QKeyEvent*>(event);
-        int key = keyEvent->key();
-        Qt::Key qtKey = static_cast<Qt::Key>(key);
-        int modifiers = keyEvent->modifiers();
-        Qt::KeyboardModifiers qtModifiers = static_cast<Qt::KeyboardModifiers>(modifiers);
-        qDebug() << "Key: " << key << " Modifiers: " << modifiers;
-        qDebug() << "Central event(): Key press " << keyEvent->text();
-        if (qtKey == this->thisKey.key() && qtModifiers == this->thisKey.keyboardModifiers()){
-            qDebug() << "Correct key pressed!!!";
-            int signal = 1;
-            emit HMIConfigInputReceived(&signal);
-        }
+void caHMIConfig::paintEvent(QPaintEvent *ev){
+    QWidget::paintEvent(ev);
+    if (this->isDesignerMode()){
+        QPainter p(this);
+        p.setPen(Qt::white);
+        p.fillRect(rect(), Qt::blue);
+        p.drawText(rect(), Qt::AlignCenter, QKeySequence(this->thisKey).toString());
     }
 }

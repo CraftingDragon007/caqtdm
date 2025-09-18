@@ -3363,7 +3363,6 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
             integerList.append(num);
             indexList.append(0);
             hmiConfigWidget->setChannel(pv);
-            connect(hmiConfigWidget, SIGNAL(HMIConfigInputReceived(int*)), this, SLOT(Callback_HMIConfigInputReceived(int*)));
             nbMonitors++;
         }
 
@@ -6588,17 +6587,23 @@ void CaQtDM_Lib::hmiHandleIncomingEvent(QObject *target, QEvent *event){
                 Qt::Key qtKey = static_cast<Qt::Key>(key);
                 int modifiers = keyEvent->modifiers();
                 Qt::KeyboardModifiers qtModifiers = static_cast<Qt::KeyboardModifiers>(modifiers);
-                if (qtKey == item->shortcut().key() && qtModifiers == item->shortcut().keyboardModifiers()){
+                QKeyCombination shortcut = item->shortcut();
+                if (qtKey == shortcut.key() && qtModifiers == shortcut.keyboardModifiers()){
                     caHMIConfig *widget = item->widgetCallback();
                     if (widget){
-                        widget->handleKeyPressed(target, keyEvent);                        
+                        qDebug() << "Correct key pressed" << widget->objectName() << qtKey;
+                        emit widget->caHMIConfigKeyPressReceived(&shortcut);
                         if (item->captureType() == caHMIConfig::capType::KeyboardSet) {
                             if (item->calculationType() == caHMIConfig::calcType::SetValue) {
                                 FormatType fType;
                                 if (item->value().canConvert<double>()){
                                     fType = FormatType::decimal;
+                                    QVariant value = QVariant(item->value().toDouble());
+                                    emit widget->caHMIConfigValueSet(&value);
                                 } else {
                                     fType = FormatType::string;
+                                    QVariant value = item->value();
+                                    emit widget->caHMIConfigValueSet(&value);
                                 }
 
                                 QString text = item->value().toString();

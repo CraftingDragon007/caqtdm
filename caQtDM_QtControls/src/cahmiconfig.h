@@ -1,8 +1,6 @@
 #ifndef CAHMICONFIG_H
 #define CAHMICONFIG_H
 
-#include "hmiapplicationeventfilter.h"
-
 #include <QWidget>
 
 #include <quuid.h>
@@ -43,6 +41,8 @@ public:
 
     QString uuid() const;
 
+    static bool isDesignerMode();
+
 private:
     QKeyCombination thisKey;
     QString thisChannel;
@@ -50,16 +50,18 @@ private:
     calcType thisCalculationType = calcType::SetValue;
     capType thisCaptureType = capType::KeyboardSet;
     QUuid thisUUID;
-    void processEvent(QEvent *event);
 
 public slots:
-    void handleKeyPressed(QObject *target, QKeyEvent *event);
-    void handleMousePressed(QObject *target, QMouseEvent *event);
 
 protected:
+    void paintEvent(QPaintEvent *ev) override;
 
 signals:
-    void HMIConfigInputReceived(int *data);
+    void caHMIConfigInputReceived(int data);
+    void caHMIConfigKeyPressReceived(QKeyCombination *data);
+    void caHMIConfigMouseMoved(int x, int y);
+    void caHMIConfigMouseMoved(QRect *rect);
+    void caHMIConfigValueSet(QVariant *value);
 
 };
 

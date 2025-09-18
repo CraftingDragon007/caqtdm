@@ -59,8 +59,9 @@
 #ifndef MOBILE
 #include <QPrinter>
 #include <QPrintDialog>
-#include <cahmiconfigtransferitem.h>
 #endif
+#include <cahmiconfigtransferitem.h>
+#include <hmiapplicationeventfilter.h>
 #include <QClipboard>
 
 #include <QUiLoader>
