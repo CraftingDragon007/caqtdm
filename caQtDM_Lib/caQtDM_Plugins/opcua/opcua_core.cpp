@@ -79,14 +79,22 @@ bool OpcUaCore::connectOpc(const QString &url, std::function<void(bool)> onConne
 
     if (!m_endpointsHooked) {
         connect(m_client, &QOpcUaClient::endpointsRequestFinished, this,
-                [this, onConnected](const QVector<QOpcUaEndpointDescription> &endpoints,
+                [this, url, onConnected](const QVector<QOpcUaEndpointDescription> &returnedEndpoints,
                                     QOpcUa::UaStatusCode status,
                                     const QUrl &) {
-                    if (endpoints.isEmpty() || status != QOpcUa::UaStatusCode::Good) {
+                    // If no endpoints are returned at all, there is something fundamentally wrong with the server.
+                    // Thus, not even the fallbackEndpoint is checked from the pv, and we error out here.
+                    if (returnedEndpoints.isEmpty() || status != QOpcUa::UaStatusCode::Good) {
                         emit errorOccured("No endpoints received or status not good.");
                         onConnected(false);
                         return;
                     }
+
+                    QOpcUaEndpointDescription fallbackEndpoint = returnedEndpoints.constFirst();
+                    fallbackEndpoint.setEndpointUrl(url);
+
+                    QVector<QOpcUaEndpointDescription> endpoints = returnedEndpoints;
+                    endpoints.append(fallbackEndpoint);
 
                     QOpcUaEndpointDescription chosenEndpoint;
                     bool foundWorkingEndpoint = false;
