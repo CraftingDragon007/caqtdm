@@ -11,8 +11,17 @@ class caHMIConfigTransferItem : public QObject
 public:
     explicit caHMIConfigTransferItem(QObject *parent = nullptr);
 
-    void setChannel(const QString &channel) { this->thisChannel = channel; }
-    QString channel() const { return this->thisChannel; }
+    void setChannel(const QString &channel) { this->thisChannelA = channel; }
+    QString channel() const { return this->thisChannelA; }
+
+    void setChannelB(const QString &channel) { this->thisChannelB = channel; }
+    QString channelB() const { return this->thisChannelB; }
+
+    void setChannelC(const QString &channel) { this->thisChannelC = channel; }
+    QString channelC() const { return this->thisChannelC; }
+
+    void setChannelD(const QString &channel) { this->thisChannelD = channel; }
+    QString channelD() const { return this->thisChannelD; }
 
     void setShortcut(const QKeyCombination &shortcut) { this->thisShortcut = shortcut; }
     QKeyCombination shortcut() const { return this->thisShortcut; }
@@ -36,7 +45,10 @@ public:
     caHMIConfig* widgetCallback() const { return this->thisWidgetCallback; }
 
 private:
-    QString thisChannel;
+    QString thisChannelA;
+    QString thisChannelB;
+    QString thisChannelC;
+    QString thisChannelD;
     QKeyCombination thisShortcut;
     QVariant thisValue;
     caHMIConfig::calcType thisCalculationType;

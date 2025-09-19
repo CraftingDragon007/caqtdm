@@ -539,7 +539,7 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
     if (qApp){
         qApp->installEventFilter(globalEventFilter);
         connect(this->globalEventFilter, &HMIApplicationEventFilter::keyPressed, this, &CaQtDM_Lib::hmiHandleKeyPressed);
-        connect(this->globalEventFilter, &HMIApplicationEventFilter::mousePressed, this, &CaQtDM_Lib::hmiHandleMousePressed);
+        connect(this->globalEventFilter, &HMIApplicationEventFilter::mouse, this, &CaQtDM_Lib::hmiHandleMouse);
     }
 
     level=0;
@@ -3357,17 +3357,44 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         qDebug() << "create caHMIConfig";
         w1->setProperty("ObjectType", caHMIConfig_Widget);
 
+        int index = 0;
         if(hmiConfigWidget->channel().size() > 0) {
-            hmiConfigWidget->setEnabled(true);
             int num = addMonitor(myWidget, &kData, hmiConfigWidget->channel(), w1, specData, map, &pv);
             integerList.append(num);
-            indexList.append(0);
+            indexList.append(index);
             hmiConfigWidget->setChannel(pv);
             nbMonitors++;
+            index++;
+        }
+        if(hmiConfigWidget->channelB().size() > 0) {
+            int num = addMonitor(myWidget, &kData, hmiConfigWidget->channelB(), w1, specData, map, &pv);
+            integerList.append(num);
+            indexList.append(index);
+            hmiConfigWidget->setChannelB(pv);
+            nbMonitors++;
+            index++;
+        }
+        if(hmiConfigWidget->channelC().size() > 0) {
+            int num = addMonitor(myWidget, &kData, hmiConfigWidget->channelC(), w1, specData, map, &pv);
+            integerList.append(num);
+            indexList.append(index);
+            hmiConfigWidget->setChannelC(pv);
+            nbMonitors++;
+            index++;
+        }
+        if(hmiConfigWidget->channelD().size() > 0) {
+            int num = addMonitor(myWidget, &kData, hmiConfigWidget->channelD(), w1, specData, map, &pv);
+            integerList.append(num);
+            indexList.append(index);
+            hmiConfigWidget->setChannelD(pv);
+            index++;
         }
 
         caHMIConfigTransferItem* transferItem = new caHMIConfigTransferItem(hmiConfigWidget);
         transferItem->setChannel(hmiConfigWidget->channel());
+        transferItem->setChannelB(hmiConfigWidget->channelB());
+        transferItem->setChannelC(hmiConfigWidget->channelC());
+        transferItem->setChannelD(hmiConfigWidget->channelD());
         transferItem->setShortcut(hmiConfigWidget->shortcut());
         transferItem->setValue(hmiConfigWidget->value());
         transferItem->setCalculationType(hmiConfigWidget->calculationType());
@@ -6573,41 +6600,45 @@ void CaQtDM_Lib::hmiHandleKeyPressed(QObject *target, QKeyEvent *event){
     this->hmiHandleIncomingEvent(target, event);
 }
 
-void CaQtDM_Lib::hmiHandleMousePressed(QObject *target, QMouseEvent *event){
+void CaQtDM_Lib::hmiHandleMouse(QObject *target, QMouseEvent *event){
     this->hmiHandleIncomingEvent(target, event);
 }
 
 void CaQtDM_Lib::hmiHandleIncomingEvent(QObject *target, QEvent *event){
+    Q_UNUSED(target);
 
     if (event->type() == QEvent::KeyPress) {
         QKeyEvent *keyEvent = dynamic_cast<QKeyEvent*>(event);
         foreach (caHMIConfigTransferItem *item, hmiConfigList) {
-            if (item->captureType() != caHMIConfig::capType::Mouse) {
+            if (item->captureType() != caHMIConfig::capType::MouseMove && item->captureType() != caHMIConfig::capType::MousePress) {
                 int key = keyEvent->key();
                 Qt::Key qtKey = static_cast<Qt::Key>(key);
                 int modifiers = keyEvent->modifiers();
                 Qt::KeyboardModifiers qtModifiers = static_cast<Qt::KeyboardModifiers>(modifiers);
                 QKeyCombination shortcut = item->shortcut();
-                if (qtKey == shortcut.key() && qtModifiers == shortcut.keyboardModifiers()){
-                    caHMIConfig *widget = item->widgetCallback();
-                    if (widget){
-                        qDebug() << "Correct key pressed" << widget->objectName() << qtKey;
-                        emit widget->caHMIConfigKeyPressReceived(&shortcut);
-                        if (item->captureType() == caHMIConfig::capType::KeyboardSet) {
+                caHMIConfig *widget = item->widgetCallback();
+                if (widget != Q_NULLPTR) {
+                    if (item->captureType() == caHMIConfig::capType::KeyboardSet) {
+                        if (qtKey == shortcut.key() && qtModifiers == shortcut.keyboardModifiers()){
+                            qDebug() << "Correct key pressed" << widget->objectName() << qtKey;
+                            emit widget->caHMIConfigKeyPressReceived(shortcut);
+
                             if (item->calculationType() == caHMIConfig::calcType::SetValue) {
                                 FormatType fType;
                                 if (item->value().canConvert<double>()){
                                     fType = FormatType::decimal;
                                     QVariant value = QVariant(item->value().toDouble());
-                                    emit widget->caHMIConfigValueSet(&value);
+                                    emit widget->caHMIConfigValueSet(value);
                                 } else {
                                     fType = FormatType::string;
                                     QVariant value = item->value();
-                                    emit widget->caHMIConfigValueSet(&value);
+                                    emit widget->caHMIConfigValueSet(value);
                                 }
 
                                 QString text = item->value().toString();
                                 QWidget *w1 = qobject_cast<QWidget *>(widget);
+
+                                if (item->channel().length() == 0) return;
                                 TreatRequestedValue(item->channel(), text, fType, w1);
                             } else if (item->calculationType() == caHMIConfig::calcType::Calc) {
                                 QString calc = item->value().toString();
@@ -6619,15 +6650,51 @@ void CaQtDM_Lib::hmiHandleIncomingEvent(QObject *target, QEvent *event){
                                     QWidget *w1 = qobject_cast<QWidget *>(widget);
                                     QString text = QString::number(result);
 
+                                    if (item->channel().length() == 0) return;
                                     TreatRequestedValue(item->channel(), text, fType, w1);
                                 }
                             }
                         }
-                    }                    
+                    } else if (item->captureType() == caHMIConfig::capType::KeyboardValue) {
+                        FormatType fType = FormatType::decimal;
+                        QWidget *w1 = qobject_cast<QWidget *>(widget);
+                        QString keyText = QString::number(key);
+                        QString keyModifiersText = QString::number(qtModifiers);
 
+                        emit widget->caHMIConfigKeyPressReceived(shortcut);
+
+                        if (item->channel().length() == 0 || item->channelB().length() == 0) return;
+
+                        TreatRequestedValue(item->channel(), keyText, fType, w1);
+                        TreatRequestedValue(item->channelB(), keyModifiersText, fType, w1);
+                    }
                 }
-            } else {
-                // handle mouse
+            }
+        }
+    } else if (event->type() == QEvent::MouseMove || event->type() == QEvent::MouseButtonPress) {
+        QMouseEvent *mouseEvent = dynamic_cast<QMouseEvent*>(event);
+        QPoint point = mouseEvent->pos();
+        if (point.x() == 0 && point.y() == 0) return;
+        foreach (caHMIConfigTransferItem *item, hmiConfigList) {
+            if ((item->captureType() == caHMIConfig::capType::MouseMove && event->type() == QEvent::MouseMove) || (item->captureType() == caHMIConfig::capType::MousePress && event->type() == QEvent::MouseButtonPress )) {
+                caHMIConfig* widget = item->widgetCallback();
+                if (widget != Q_NULLPTR){
+                    QRect rect = QRect(point, widget->mouseRectSize());
+                    emit widget->caHMIConfigMouse(point);
+                    emit widget->caHMIConfigMouse(rect);
+                    emit widget->caHMIConfigMouseX(point.x());
+                    emit widget->caHMIConfigMouseY(point.y());
+
+                    FormatType fType = FormatType::decimal;
+                    QWidget *w1 = qobject_cast<QWidget *>(widget);
+                    QString xText = QString::number(point.x());
+                    QString yText = QString::number(point.y());
+
+                    if (item->channel().length() == 0 || item->channelB().length() == 0) return;
+
+                    TreatRequestedValue(item->channel(), xText, fType, w1);
+                    TreatRequestedValue(item->channelB(), yText, fType, w1);
+                }
             }
         }
     }

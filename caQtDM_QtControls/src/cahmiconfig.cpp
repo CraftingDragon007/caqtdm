@@ -11,7 +11,7 @@ caHMIConfig::caHMIConfig(QWidget *parent)
     this->thisUUID = QUuid::createUuid();
 }
 
-void caHMIConfig::setShortcutFromSequence(const QKeySequence &key){
+void caHMIConfig::setShortcutFromSequence(const QKeySequence &key) {
     qDebug() << "setShortcut called with << '" << key << "' (isDesignerMode:" << isDesignerMode() << ")";
     this->thisKey = key[0];
     update();
@@ -25,15 +25,35 @@ QKeyCombination caHMIConfig::shortcut() const {
     return this->thisKey;
 }
 
-void caHMIConfig::setChannel(const QString &channel){
-    this->thisChannel = channel;
+void caHMIConfig::setChannel(const QString &channel) {
+    this->thisChannelA = channel;
 }
-
 QString caHMIConfig::channel() const {
-    return this->thisChannel;
+    return this->thisChannelA;
 }
 
-void caHMIConfig::setValue(const QString &value){
+void caHMIConfig::setChannelB(const QString &channel) {
+    this->thisChannelB = channel;
+}
+QString caHMIConfig::channelB() const {
+    return this->thisChannelB;
+}
+
+void caHMIConfig::setChannelC(const QString &channel) {
+    this->thisChannelC = channel;
+}
+QString caHMIConfig::channelC() const {
+    return this->thisChannelC;
+}
+
+void caHMIConfig::setChannelD(const QString &channel) {
+    this->thisChannelD = channel;
+}
+QString caHMIConfig::channelD() const {
+    return this->thisChannelD;
+}
+
+void caHMIConfig::setValue(const QString &value) {
     this->thisValue = value;
 }
 
@@ -41,7 +61,7 @@ QString caHMIConfig::value() const {
     return this->thisValue.toString();
 }
 
-void caHMIConfig::setCalculationType(const calcType &calclationType){
+void caHMIConfig::setCalculationType(const calcType &calclationType) {
     this->thisCalculationType = calclationType;
 }
 
@@ -49,7 +69,7 @@ caHMIConfig::calcType caHMIConfig::calculationType() const {
     return this->thisCalculationType;
 }
 
-void caHMIConfig::setCaptureType(const capType &captureType){
+void caHMIConfig::setCaptureType(const capType &captureType) {
     this->thisCaptureType = captureType;
 }
 
@@ -57,20 +77,37 @@ caHMIConfig::capType caHMIConfig::captureType() const {
     return this->thisCaptureType;
 }
 
+void caHMIConfig::setMouseRectSize(const QSize &rectSize){
+    this->thisMouseRectSize = rectSize;
+}
+
+QSize caHMIConfig::mouseRectSize() const {
+    return this->thisMouseRectSize;
+}
+
+
 QString caHMIConfig::uuid() const {
     return this->thisUUID.toString();
 }
 
-bool caHMIConfig::isDesignerMode(){
+bool caHMIConfig::isDesignerMode() {
     return qApp->property("APP_SOURCE") == QString("DESIGNER");
 }
 
-void caHMIConfig::paintEvent(QPaintEvent *ev){
+void caHMIConfig::paintEvent(QPaintEvent *ev) {
     QWidget::paintEvent(ev);
-    if (this->isDesignerMode()){
+    if (this->isDesignerMode()) {
         QPainter p(this);
         p.setPen(Qt::white);
         p.fillRect(rect(), Qt::blue);
-        p.drawText(rect(), Qt::AlignCenter, QKeySequence(this->thisKey).toString());
+        QString text;
+        QKeySequence key = QKeySequence(this->thisKey);
+        if (!key.isEmpty()) {
+            text = key.toString();
+        }
+        if (text.simplified().isEmpty()){
+            text = this->objectName();
+        }
+        p.drawText(rect(), Qt::AlignCenter, text);
     }
 }

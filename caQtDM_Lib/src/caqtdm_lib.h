@@ -472,7 +472,7 @@ private:
 
     void hmiHandleKeyPressed(QObject *target, QKeyEvent *event);
 
-    void hmiHandleMousePressed(QObject *target, QMouseEvent *event);
+    void hmiHandleMouse(QObject *target, QMouseEvent *event);
 
     void hmiHandleIncomingEvent(QObject* target, QEvent *event);
 

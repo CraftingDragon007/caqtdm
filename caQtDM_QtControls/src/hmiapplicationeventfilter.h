@@ -12,7 +12,7 @@ public:
 
 signals:
     void keyPressed(QObject *target, QKeyEvent *event);
-    void mousePressed(QObject *target, QMouseEvent *event);
+    void mouse(QObject *target, QMouseEvent *event);
     void eventOccurred(QObject *target, QEvent *event);
 
 protected:
