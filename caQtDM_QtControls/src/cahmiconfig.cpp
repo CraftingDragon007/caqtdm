@@ -21,8 +21,18 @@ QKeySequence caHMIConfig::shortcutAsSequence() const {
     return * new QKeySequence(this->thisKey);
 }
 
-QKeyCombination caHMIConfig::shortcut() const {
-    return this->thisKey;
+void caHMIConfig::setOutputA(const QString &outputA) {
+    this->thisOutputA = outputA;
+}
+QString caHMIConfig::outputA() const {
+    return this->thisOutputA;
+}
+
+void caHMIConfig::setOutputB(const QString &outputB) {
+    this->thisOutputB = outputB;
+}
+QString caHMIConfig::outputB() const {
+    return this->thisOutputB;
 }
 
 void caHMIConfig::setChannel(const QString &channel) {
@@ -53,6 +63,10 @@ QString caHMIConfig::channelD() const {
     return this->thisChannelD;
 }
 
+QKeyCombination caHMIConfig::shortcut() const {
+    return this->thisKey;
+}
+
 void caHMIConfig::setValue(const QString &value) {
     this->thisValue = value;
 }
@@ -75,6 +89,14 @@ void caHMIConfig::setCaptureType(const capType &captureType) {
 
 caHMIConfig::capType caHMIConfig::captureType() const {
     return this->thisCaptureType;
+}
+
+void caHMIConfig::setCaptureRange(const capRange &captureRange){
+    this->thisCaptureRange = captureRange;
+}
+
+caHMIConfig::capRange caHMIConfig::captureRange() const {
+    return this->thisCaptureRange;
 }
 
 void caHMIConfig::setMouseRectSize(const QSize &rectSize){

@@ -11,6 +11,12 @@ class caHMIConfigTransferItem : public QObject
 public:
     explicit caHMIConfigTransferItem(QObject *parent = nullptr);
 
+    void setOutputA(const QString &outputA) { this->thisOutputA = outputA; }
+    QString outputA() const { return this->thisOutputA; }
+
+    void setOutputB(const QString &outputB) { this->thisOutputB = outputB; }
+    QString outputB() const { return this->thisOutputB; }
+
     void setChannel(const QString &channel) { this->thisChannelA = channel; }
     QString channel() const { return this->thisChannelA; }
 
@@ -35,6 +41,9 @@ public:
     void setCaptureType(const caHMIConfig::capType captureType) { this->thisCaptureType = captureType; }
     caHMIConfig::capType captureType() const { return this->thisCaptureType; }
 
+    void setCaptureRange(const caHMIConfig::capRange captureRange) { this->thisCaptureRange = captureRange; }
+    caHMIConfig::capRange captureRange() const { return this->thisCaptureRange; }
+
     void setPID(const int pid) { this->thisPID = pid; }
     int pid() const { return this->thisPID; }
 
@@ -44,7 +53,13 @@ public:
     void setWidgetCallback(caHMIConfig* widget) { this->thisWidgetCallback = widget; }
     caHMIConfig* widgetCallback() const { return this->thisWidgetCallback; }
 
+    void setParentWindowCallback(QWidget* parent) { this->parent = parent; }
+    QWidget* parentWindowCallback() const { return this->parent; }
+
+
 private:
+    QString thisOutputA;
+    QString thisOutputB;
     QString thisChannelA;
     QString thisChannelB;
     QString thisChannelC;
@@ -53,9 +68,11 @@ private:
     QVariant thisValue;
     caHMIConfig::calcType thisCalculationType;
     caHMIConfig::capType thisCaptureType;
+    caHMIConfig::capRange thisCaptureRange;
     int thisPID;
     QString thisUUID;
     caHMIConfig* thisWidgetCallback;
+    QWidget* parent;
 
 signals:
 };

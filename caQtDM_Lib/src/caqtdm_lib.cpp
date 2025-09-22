@@ -3357,6 +3357,20 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         qDebug() << "create caHMIConfig";
         w1->setProperty("ObjectType", caHMIConfig_Widget);
 
+        QWidget* parentWindow = Q_NULLPTR;
+        QWidget* currentWidget = hmiConfigWidget;
+        while (currentWidget) {
+            if (qobject_cast<QMainWindow*>(currentWidget) || qobject_cast<QDialog*>(currentWidget)){
+                parentWindow = currentWidget;
+                break;
+            }
+            currentWidget = currentWidget->parentWidget();
+        }
+
+        if (parentWindow != Q_NULLPTR){
+            qDebug() << "Parent window:" << parentWindow->metaObject()->className();
+        } else qDebug() << "Unable to find parent window for caHMIConfig:" << hmiConfigWidget->objectName();
+
         int index = 0;
         if(hmiConfigWidget->channel().size() > 0) {
             int num = addMonitor(myWidget, &kData, hmiConfigWidget->channel(), w1, specData, map, &pv);
@@ -3389,8 +3403,24 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
             hmiConfigWidget->setChannelD(pv);
             index++;
         }
+        if(hmiConfigWidget->outputA().size() > 0) {
+            int num = addMonitor(myWidget, &kData, hmiConfigWidget->outputA(), w1, specData, map, &pv);
+            integerList.append(num);
+            indexList.append(index);
+            hmiConfigWidget->setOutputA(pv);
+            index++;
+        }
+        if(hmiConfigWidget->outputB().size() > 0) {
+            int num = addMonitor(myWidget, &kData, hmiConfigWidget->outputB(), w1, specData, map, &pv);
+            integerList.append(num);
+            indexList.append(index);
+            hmiConfigWidget->setOutputB(pv);
+            index++;
+        }
 
         caHMIConfigTransferItem* transferItem = new caHMIConfigTransferItem(hmiConfigWidget);
+        transferItem->setOutputA(hmiConfigWidget->outputA());
+        transferItem->setOutputB(hmiConfigWidget->outputB());
         transferItem->setChannel(hmiConfigWidget->channel());
         transferItem->setChannelB(hmiConfigWidget->channelB());
         transferItem->setChannelC(hmiConfigWidget->channelC());
@@ -3399,9 +3429,11 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         transferItem->setValue(hmiConfigWidget->value());
         transferItem->setCalculationType(hmiConfigWidget->calculationType());
         transferItem->setCaptureType(hmiConfigWidget->captureType());
+        transferItem->setCaptureRange(hmiConfigWidget->captureRange());
         transferItem->setUUID(hmiConfigWidget->uuid());
         transferItem->setPID(QCoreApplication::applicationPid());
         transferItem->setWidgetCallback(hmiConfigWidget);
+        transferItem->setParentWindowCallback(parentWindow);
         hmiConfigList.append(transferItem);
 
         // insert dataindex list
@@ -6607,9 +6639,23 @@ void CaQtDM_Lib::hmiHandleMouse(QObject *target, QMouseEvent *event){
 void CaQtDM_Lib::hmiHandleIncomingEvent(QObject *target, QEvent *event){
     Q_UNUSED(target);
 
+
+    QWidget *target_widget = qobject_cast<QWidget*>(target);
+    QWidget* window = target_widget;
+    while (window) {
+        if (qobject_cast<QMainWindow*>(window) || qobject_cast<QDialog*>(window)) {
+            break;
+        }
+        window = window->parentWidget();
+    }
+    if (window == Q_NULLPTR) return;
     if (event->type() == QEvent::KeyPress) {
         QKeyEvent *keyEvent = dynamic_cast<QKeyEvent*>(event);
         foreach (caHMIConfigTransferItem *item, hmiConfigList) {
+
+            if (window != item->parentWindowCallback() && item->captureRange() == caHMIConfig::capRange::Local) {
+                continue;
+            }
             if (item->captureType() != caHMIConfig::capType::MouseMove && item->captureType() != caHMIConfig::capType::MousePress) {
                 int key = keyEvent->key();
                 Qt::Key qtKey = static_cast<Qt::Key>(key);
@@ -6638,8 +6684,8 @@ void CaQtDM_Lib::hmiHandleIncomingEvent(QObject *target, QEvent *event){
                                 QString text = item->value().toString();
                                 QWidget *w1 = qobject_cast<QWidget *>(widget);
 
-                                if (item->channel().length() == 0) return;
-                                TreatRequestedValue(item->channel(), text, fType, w1);
+                                if (item->outputA().length() == 0) return;
+                                TreatRequestedValue(item->outputA(), text, fType, w1);
                             } else if (item->calculationType() == caHMIConfig::calcType::Calc) {
                                 QString calc = item->value().toString();
                                 double result;
@@ -6650,8 +6696,8 @@ void CaQtDM_Lib::hmiHandleIncomingEvent(QObject *target, QEvent *event){
                                     QWidget *w1 = qobject_cast<QWidget *>(widget);
                                     QString text = QString::number(result);
 
-                                    if (item->channel().length() == 0) return;
-                                    TreatRequestedValue(item->channel(), text, fType, w1);
+                                    if (item->outputA().length() == 0) return;
+                                    TreatRequestedValue(item->outputA(), text, fType, w1);
                                 }
                             }
                         }
@@ -6663,10 +6709,10 @@ void CaQtDM_Lib::hmiHandleIncomingEvent(QObject *target, QEvent *event){
 
                         emit widget->caHMIConfigKeyPressReceived(shortcut);
 
-                        if (item->channel().length() == 0 || item->channelB().length() == 0) return;
+                        if (item->outputA().length() == 0 || item->outputB().length() == 0) return;
 
-                        TreatRequestedValue(item->channel(), keyText, fType, w1);
-                        TreatRequestedValue(item->channelB(), keyModifiersText, fType, w1);
+                        TreatRequestedValue(item->outputA(), keyText, fType, w1);
+                        TreatRequestedValue(item->outputB(), keyModifiersText, fType, w1);
                     }
                 }
             }
@@ -6674,40 +6720,38 @@ void CaQtDM_Lib::hmiHandleIncomingEvent(QObject *target, QEvent *event){
     } else if (event->type() == QEvent::MouseMove || event->type() == QEvent::MouseButtonPress) {
         QMouseEvent *mouseEvent = dynamic_cast<QMouseEvent*>(event);
         QPoint point = mouseEvent->pos();
-        if (point.x() == 0 && point.y() == 0) return;
         foreach (caHMIConfigTransferItem *item, hmiConfigList) {
+            if (window != item->parentWindowCallback() && item->captureRange() == caHMIConfig::capRange::Local) {
+                continue;
+            }
             if ((item->captureType() == caHMIConfig::capType::MouseMove && event->type() == QEvent::MouseMove) || (item->captureType() == caHMIConfig::capType::MousePress && event->type() == QEvent::MouseButtonPress )) {
                 caHMIConfig* widget = item->widgetCallback();
                 if (widget != Q_NULLPTR){
-                    QRect rect = QRect(point, widget->mouseRectSize());
-                    emit widget->caHMIConfigMouse(point);
+                    QPoint corrected = point;
+                    if (target != window && target_widget != Q_NULLPTR){
+                        corrected = target_widget->mapTo(window, point);
+                    }
+
+                    QRect rect = QRect(corrected, widget->mouseRectSize());
+                    emit widget->caHMIConfigMouse(corrected);
                     emit widget->caHMIConfigMouse(rect);
-                    emit widget->caHMIConfigMouseX(point.x());
-                    emit widget->caHMIConfigMouseY(point.y());
+                    emit widget->caHMIConfigMouseX(corrected.x());
+                    emit widget->caHMIConfigMouseY(corrected.y());
 
                     FormatType fType = FormatType::decimal;
                     QWidget *w1 = qobject_cast<QWidget *>(widget);
-                    QString xText = QString::number(point.x());
-                    QString yText = QString::number(point.y());
+                    QString xText = QString::number(corrected.x());
+                    QString yText = QString::number(corrected.y());
 
-                    if (item->channel().length() == 0 || item->channelB().length() == 0) return;
+                    if (item->outputA().length() == 0 || item->outputB().length() == 0) return;
 
-                    TreatRequestedValue(item->channel(), xText, fType, w1);
-                    TreatRequestedValue(item->channelB(), yText, fType, w1);
+                    TreatRequestedValue(item->outputA(), xText, fType, w1);
+                    TreatRequestedValue(item->outputB(), yText, fType, w1);
                 }
             }
         }
     }
 
-}
-
-void CaQtDM_Lib::Callback_HMIConfigInputReceived(int* value){
-    FormatType fType = FormatType::decimal;
-    QWidget *w1 = qobject_cast<QWidget *>(sender());
-    caHMIConfig *w = qobject_cast<caHMIConfig *>(sender());
-    QString text = QString::number(*value);
-
-    TreatRequestedValue(w->channel(), text, fType, w1);
 }
 
 /**
