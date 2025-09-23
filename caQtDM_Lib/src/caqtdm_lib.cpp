@@ -3887,25 +3887,37 @@ void CaQtDM_Lib::GlobalShortcutWindow() {
     int count = 0;
     foreach (caHMIConfigTransferItem *item, temp) {
         if (item->captureRange() != caHMIConfig::capRange::Global) continue;
-        table->setItem(count, 0, new QTableWidgetItem(item->objectName()));
+        QTableWidgetItem *name = new QTableWidgetItem(item->objectName());
+        name->setFlags(name->flags() & ~Qt::ItemIsEditable);
+        table->setItem(count, 0, name);
 
-        if (item->captureType() == caHMIConfig::capType::KeyboardSet)
-        table->setItem(count, 1, new QTableWidgetItem(QKeySequence(item->shortcut()).toString()));
-        else if (item->captureType() == caHMIConfig::capType::KeyboardValue)
-        table->setItem(count, 1, new QTableWidgetItem("ALL KEYS"));
-        else if (item->captureType() == caHMIConfig::MousePress)
-        table->setItem(count, 1, new QTableWidgetItem("Mouse Press"));
-        else if (item->captureType() == caHMIConfig::capType::MouseMove)
-        table->setItem(count, 1, new QTableWidgetItem("Mouse Move"));
+        QTableWidgetItem *trigger = Q_NULLPTR;
+        if (item->captureType() == caHMIConfig::capType::KeyboardSet) {
+            trigger = new QTableWidgetItem(QKeySequence(item->shortcut()).toString());
+        } else if (item->captureType() == caHMIConfig::capType::KeyboardValue) {
+            trigger = new QTableWidgetItem("ALL KEYS");
+        } else if (item->captureType() == caHMIConfig::MousePress) {
+            trigger = new QTableWidgetItem("Mouse Press");
+        } else if (item->captureType() == caHMIConfig::capType::MouseMove) {
+            trigger = new QTableWidgetItem("Mouse Move");
+        }
+        if (trigger != Q_NULLPTR) {
+            trigger->setFlags(trigger->flags() & ~Qt::ItemIsEditable);
+            table->setItem(count, 1, trigger);
+        }
 
-        table->setItem(count, 2, new QTableWidgetItem(item->fileName()));
-        table->setItem(count, 3, new QTableWidgetItem(item->pid() == QApplication::applicationPid() ? "This (" + QString::number(item->pid()) + ")" : QString::number(item->pid())));
+        QTableWidgetItem *fileName = new QTableWidgetItem(item->fileName());
+        fileName->setFlags(fileName->flags() & ~Qt::ItemIsEditable);
+        table->setItem(count, 2, fileName);
+
+        QTableWidgetItem *process = new QTableWidgetItem(item->pid() == QApplication::applicationPid() ? "This (" + QString::number(item->pid()) + ")" : QString::number(item->pid()));
+        process->setFlags(process->flags() & ~Qt::ItemIsEditable);
+        table->setItem(count, 3, process);
 
         QWidget *wrapper = new QWidget();
         QHBoxLayout *layout = new QHBoxLayout(wrapper);
         QCheckBox *enabled = new QCheckBox(table);
         enabled->setChecked(item->enabled());
-        enabled->setStyleSheet("somehow centered");
 
         connect(enabled, &QCheckBox::checkStateChanged, [item](int state){
             QWriteLocker locker(&hmiConfigListLock);
