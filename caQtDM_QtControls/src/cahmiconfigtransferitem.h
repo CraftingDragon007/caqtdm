@@ -11,6 +11,15 @@ class caHMIConfigTransferItem : public QObject
 public:
     explicit caHMIConfigTransferItem(QObject *parent = nullptr);
 
+    void setEnabled(const bool &enabled) { this->thisEnabled = enabled; }
+    bool enabled() const { return this->thisEnabled; }
+
+    void setObjectName(const QString &name) { this->thisObjectName = name; }
+    QString objectName() const { return this->thisObjectName; }
+
+    void setFileName(const QString &name) { this->thisFileName = name; }
+    QString fileName() const { return this->thisFileName; }
+
     void setOutputA(const QString &outputA) { this->thisOutputA = outputA; }
     QString outputA() const { return this->thisOutputA; }
 
@@ -58,6 +67,9 @@ public:
 
 
 private:
+    bool thisEnabled;
+    QString thisObjectName;
+    QString thisFileName;
     QString thisOutputA;
     QString thisOutputB;
     QString thisChannelA;

@@ -105,6 +105,7 @@
 #define SETCUSTOM       "Set Mono to Spectrum Custom"
 #define KILLPROCESS 	"Kill Process"
 #define UNDEFINEDMACROS "Undefined macros"
+#define GLOBALSHORTCUTS "Global Shortcuts"
 #define PRINTWINDOW 	"Print"
 #define RELOADWINDOW 	"Reload"
 #define RAISEWINDOW 	"Raise main window"
@@ -286,6 +287,9 @@ double CaQtDM_Lib::rTime()
     return (double) 1000000.0 * (double) tt.tv_sec + (double) tt.tv_usec;
 }
 #endif
+
+QList<caHMIConfigTransferItem*> CaQtDM_Lib::hmiConfigList;
+QReadWriteLock CaQtDM_Lib::hmiConfigListLock;
 
 /**
  * CaQtDM_Lib destructor
@@ -536,7 +540,7 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
     this->globalEventFilter = new HMIApplicationEventFilter(this);
 
 
-    if (qApp){
+    if (qApp != Q_NULLPTR){
         qApp->installEventFilter(globalEventFilter);
         connect(this->globalEventFilter, &HMIApplicationEventFilter::keyPressed, this, &CaQtDM_Lib::hmiHandleKeyPressed);
         connect(this->globalEventFilter, &HMIApplicationEventFilter::mouse, this, &CaQtDM_Lib::hmiHandleMouse);
@@ -3419,6 +3423,9 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         }
 
         caHMIConfigTransferItem* transferItem = new caHMIConfigTransferItem(hmiConfigWidget);
+        transferItem->setEnabled(true);
+        transferItem->setFileName(savedFile[level]);
+        transferItem->setObjectName(hmiConfigWidget->objectName());
         transferItem->setOutputA(hmiConfigWidget->outputA());
         transferItem->setOutputB(hmiConfigWidget->outputB());
         transferItem->setChannel(hmiConfigWidget->channel());
@@ -3434,7 +3441,24 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         transferItem->setPID(QCoreApplication::applicationPid());
         transferItem->setWidgetCallback(hmiConfigWidget);
         transferItem->setParentWindowCallback(parentWindow);
+        QWriteLocker locker(&hmiConfigListLock);
         hmiConfigList.append(transferItem);
+
+        connect(hmiConfigWidget, &QObject::destroyed, [transferItem](QObject *sender) {
+            Q_UNUSED(sender);
+            QString uuid = transferItem->uuid();
+
+            QWriteLocker locker(&hmiConfigListLock);
+            auto newEnd = std::remove_if(hmiConfigList.begin(), hmiConfigList.end(),
+            [&](caHMIConfigTransferItem *item) {
+                if (item->uuid() == uuid) {
+                    delete item;
+                    return true;
+                }
+                return false;
+            });
+            hmiConfigList.erase(newEnd, hmiConfigList.end());
+        });
 
         // insert dataindex list
         integerList.insert(0, nbMonitors);
@@ -3826,8 +3850,105 @@ void CaQtDM_Lib::UndefinedMacrosWindow()
     macroWindow->deleteLater();
 }
 
+void CaQtDM_Lib::GlobalShortcutWindow() {
+    int width = 550;
+    int height = 250;
+
+    shortcutWindow = new QDialog();
+    shortcutWindow->setWindowTitle("Global Shortcuts");
+    QVBoxLayout *layout = new QVBoxLayout();
+    QTableWidget *table = new QTableWidget();
+    QPushButton *closeButton = new QPushButton("Close");
+    connect(closeButton, SIGNAL(clicked()), this, SLOT(Callback_GlobalShortcutWindowExit()));
+
+    shortcutWindow->move(this->x() + this->width() / 2 - width / 2, this->y() + this->height() / 2 - height / 2);
+
+    layout->addWidget(table);
+    layout->addWidget(closeButton);
+
+    shortcutWindow->setLayout(layout);
+
+    table->clear();
+    table->setColumnCount(5);
+    table->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Expanding);
+    table->setHorizontalHeaderLabels(QString("caHMIConfig;Trigger;Filename;Process;Enabled").split(";"));
+    table->setAlternatingRowColors(true);
+    table->horizontalHeader()->setStretchLastSection(true);
+
+    QList<caHMIConfigTransferItem*> temp;
+    {
+        QReadLocker locker(&hmiConfigListLock);
+        temp = hmiConfigList;
+    }
+
+    if (temp.count() > 0) table->setRowCount(temp.count());
+    else table->setRowCount(1);
+
+    int count = 0;
+    foreach (caHMIConfigTransferItem *item, temp) {
+        if (item->captureRange() != caHMIConfig::capRange::Global) continue;
+        table->setItem(count, 0, new QTableWidgetItem(item->objectName()));
+
+        if (item->captureType() == caHMIConfig::capType::KeyboardSet)
+        table->setItem(count, 1, new QTableWidgetItem(QKeySequence(item->shortcut()).toString()));
+        else if (item->captureType() == caHMIConfig::capType::KeyboardValue)
+        table->setItem(count, 1, new QTableWidgetItem("ALL KEYS"));
+        else if (item->captureType() == caHMIConfig::MousePress)
+        table->setItem(count, 1, new QTableWidgetItem("Mouse Press"));
+        else if (item->captureType() == caHMIConfig::capType::MouseMove)
+        table->setItem(count, 1, new QTableWidgetItem("Mouse Move"));
+
+        table->setItem(count, 2, new QTableWidgetItem(item->fileName()));
+        table->setItem(count, 3, new QTableWidgetItem(item->pid() == QApplication::applicationPid() ? "This (" + QString::number(item->pid()) + ")" : QString::number(item->pid())));
+
+        QWidget *wrapper = new QWidget();
+        QHBoxLayout *layout = new QHBoxLayout(wrapper);
+        QCheckBox *enabled = new QCheckBox(table);
+        enabled->setChecked(item->enabled());
+        enabled->setStyleSheet("somehow centered");
+
+        connect(enabled, &QCheckBox::checkStateChanged, [item](int state){
+            QWriteLocker locker(&hmiConfigListLock);
+            if (item == Q_NULLPTR) return;
+            if (state == Qt::Checked) {
+                item->setEnabled(true);
+            } else {
+                item->setEnabled(false);
+            }
+        });
+
+        layout->addWidget(enabled, 0, Qt::AlignCenter);
+        layout->setContentsMargins(0, 0, 0, 0);
+        wrapper->setLayout(layout);
+
+        table->setCellWidget(count, 4, wrapper);
+
+        count++;
+    }
+
+    if (temp.count() > 0) table->setRowCount(count);
+
+    table->resizeColumnsToContents();
+
+    int w = 0;
+    count = table->columnCount();
+    for (int i = 0; i < count; i++) w += table->columnWidth(i);
+    int maxW = (w + count + table->verticalHeader()->width() + table->verticalScrollBar()->width());
+    table->setMinimumWidth(maxW + 25);
+
+    shortcutWindow->showNormal();
+    shortcutWindow->exec();
+    if (shortcutWindow == Q_NULLPTR) return;
+    shortcutWindow->close();
+    shortcutWindow->deleteLater();
+}
+
 void CaQtDM_Lib::Callback_UndefinedMacrowindowExit(){
     macroWindow->close();
+}
+
+void CaQtDM_Lib::Callback_GlobalShortcutWindowExit(){
+    shortcutWindow->close();
 }
 
 ControlsInterface * CaQtDM_Lib::getControlInterface(QString plugininterface)
@@ -6649,10 +6770,11 @@ void CaQtDM_Lib::hmiHandleIncomingEvent(QObject *target, QEvent *event){
         window = window->parentWidget();
     }
     if (window == Q_NULLPTR) return;
+    QReadLocker locker(&hmiConfigListLock);
     if (event->type() == QEvent::KeyPress) {
         QKeyEvent *keyEvent = dynamic_cast<QKeyEvent*>(event);
         foreach (caHMIConfigTransferItem *item, hmiConfigList) {
-
+            if (item->enabled() == false) continue;
             if (window != item->parentWindowCallback() && item->captureRange() == caHMIConfig::capRange::Local) {
                 continue;
             }
@@ -6721,6 +6843,7 @@ void CaQtDM_Lib::hmiHandleIncomingEvent(QObject *target, QEvent *event){
         QMouseEvent *mouseEvent = dynamic_cast<QMouseEvent*>(event);
         QPoint point = mouseEvent->pos();
         foreach (caHMIConfigTransferItem *item, hmiConfigList) {
+            if (item->enabled() == false) continue;
             if (window != item->parentWindowCallback() && item->captureRange() == caHMIConfig::capRange::Local) {
                 continue;
             }
@@ -7464,6 +7587,7 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
         //qDebug() << "must be mainwindow?" << w << myWidget->parent()->parent();
         onMain = true;
         myMenu.addAction(UNDEFINEDMACROS);
+        myMenu.addAction(GLOBALSHORTCUTS);
         myMenu.addAction(PRINTWINDOW);
         myMenu.addAction(RELOADWINDOW);
         myMenu.addAction(RAISEWINDOW);
@@ -7934,6 +8058,9 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
 
         } else if(selectedItem->text().contains(PRINTWINDOW)) {
             print();
+
+        } else if(selectedItem->text().contains(GLOBALSHORTCUTS)) {
+            GlobalShortcutWindow();
 
         } else if(selectedItem->text().contains(UNDEFINEDMACROS)) {
             UndefinedMacrosWindow();

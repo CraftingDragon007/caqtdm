@@ -387,6 +387,7 @@ private:
     qreal fontResize(double factX, double factY, QVariantList list, int usedIndex);
     ControlsInterface *getPluginInterface(QWidget *w);
     void UndefinedMacrosWindow();
+    void GlobalShortcutWindow();
 
 #ifdef MOBILE
     bool eventFilter(QObject *obj, QEvent *event);
@@ -414,6 +415,8 @@ private:
     QMap<QString, QString> unknownMacrosList;
     QTableWidget* macroTable;
     QDialog *macroWindow;
+
+    QDialog *shortcutWindow;
 
     int level;
     QString cainclude_path;
@@ -466,7 +469,8 @@ private:
     QMap<int, caStripPlot*> stripList;          // list of stripplots with key group
     QList<int> stripGroupList;                  // group numbers found
 
-    QList<caHMIConfigTransferItem*> hmiConfigList;
+    static QList<caHMIConfigTransferItem*> hmiConfigList;
+    static QReadWriteLock hmiConfigListLock;
     QSharedMemory sharedHmiConfigs;
     QSharedMemory hmiConfigMessaging;
 
@@ -489,6 +493,7 @@ private:
 private slots:
     void Callback_CaCalc(double value) ;
     void Callback_UndefinedMacrowindowExit();
+    void Callback_GlobalShortcutWindowExit();
     void Callback_EApplyNumeric(double value);
     void Callback_ENumeric(double value);
     void Callback_Spinbox(double value);
