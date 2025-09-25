@@ -90,8 +90,10 @@ bool OpcUaCore::connectOpc(const QString &url, std::function<void(bool)> onConne
                         return;
                     }
 
+                    // Add a fallbackEndpoint which is from the provided pv string (url)
                     QOpcUaEndpointDescription fallbackEndpoint = returnedEndpoints.constFirst();
                     fallbackEndpoint.setEndpointUrl(url);
+                    int fallbackPort = QUrl(url).port(4840); // Fallback port is the port given in the pv string or 4840, if none given.
 
                     QVector<QOpcUaEndpointDescription> endpoints = returnedEndpoints;
                     endpoints.append(fallbackEndpoint);
@@ -122,8 +124,8 @@ bool OpcUaCore::connectOpc(const QString &url, std::function<void(bool)> onConne
                                     loop.quit();
                                     for (QTcpSocket* s : sockets) if (s && s->state() == QAbstractSocket::ConnectedState && s != qobject_cast<QTcpSocket*>(QObject::sender())) s->abort();
                                 });
-
-                        sock->connectToHost(url.host(), url.port(4840));
+                        ;
+                        sock->connectToHost(url.host(), url.port(fallbackPort)); // Uses either endoint provided port, or defaults to fallbackPort
                     }
 
                     // Try to connect to all endpoints for a certain time. Due to signal / slot mechanism, the fastest connection will usually be chosen.
