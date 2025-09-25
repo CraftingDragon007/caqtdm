@@ -8413,12 +8413,6 @@ void CaQtDM_Lib::TreatRequestedValue(QString pvo, QString text, FormatType fType
                            plugininterface->pvSetValue((char*) kPtr->pv, 0.0, (int32_t) longValue, textValue, (char*) qasc(w->objectName().toLower()), errmess, 0);
                         }
                     }
-                } else if (plugininterface != (ControlsInterface *) Q_NULLPTR) {
-                    if (plugininterface->pluginName() == "opcua" && (longValue == 0 || longValue == 1)) {
-                       if(!plugininterface->pvSetValue(kPtr,  0.0, (int32_t) longValue, textValue, (char*) qasc(w->objectName().toLower()), errmess, 0)) {
-                            plugininterface->pvSetValue((char*) kPtr->pv, 0.0, (int32_t) longValue, textValue, (char*) qasc(w->objectName().toLower()), errmess, 0);
-                       }
-                    }
                 } else {
                     char asc[MAX_STRING_LENGTH];
                     snprintf(asc, MAX_STRING_LENGTH, "Invalid value: pv=%s value= \"%s\"\n", kPtr->pv, textValue);
