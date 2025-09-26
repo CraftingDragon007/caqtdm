@@ -315,6 +315,11 @@ DEFINES += TARGET_VERSION_STR=\"\\\"$${CAQTDM_VERSION}\\\"\"
 # fix in RPM dependencies
 # cainfo Panel corrections and remove EPICS data requests (avoid unesseary channel searchs)
 # recoloring caDoubleTabWidget via Stylesheets
+# added a CloseOnExit0 for the caScriptbutton
+# added the localisation for characters to caMenu and caMessageButton
+# caMessageButton can now set strings
+# changed the build system that for linux systems to build without RPATH
+
 
 # 4.5.0
 # special character feature handling by CAQTDM_CUSTOM_UNIT_REPLACEMETS
