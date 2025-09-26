@@ -60,7 +60,7 @@ class QTCON_EXPORT caScriptButton : public QWidget
 public:
     void noStyle(QString style) {Q_UNUSED(style);}
 
-    enum defaultDisplay {Invisible, Visible};
+    enum defaultDisplay {Invisible, Visible,CloseOnExit0};
 
     caScriptButton(QWidget *parent);
 
