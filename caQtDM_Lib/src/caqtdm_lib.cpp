@@ -167,7 +167,6 @@
             if (unicode >= 128 && unicode <= 255) {\
                 QByteArray utf8Bytes = QString(ch).toUtf8();\
                 for (int j = 0; j < utf8Bytes.length(); ++j) {\
-                    unsigned char byte = static_cast<unsigned char>(utf8Bytes[j]);\
                     Parameter_2.append(static_cast<unsigned char>(utf8Bytes[j]));\
                 }\
             } else {\
