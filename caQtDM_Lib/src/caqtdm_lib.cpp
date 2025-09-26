@@ -6705,16 +6705,24 @@ void CaQtDM_Lib::Callback_ScriptButton()
     caScriptButton *w = qobject_cast<caScriptButton *>(sender());
     command.append(w->getScriptCommand());
 
+    // this here is needed because of unknown character transformations on Windows
+    // Linux needed to be checked if this is better too. Reason for this implementation
+    // are changes in QProcess qt4 -> qt5
+#ifndef _MSC_VER
     if(w->getScriptParam().size() > 0) {
         command.append("\n\"");
         command.append( w->getScriptParam());
         command.append(" \"");
     }
+#endif
     displayWindow = w->getDisplayShowExecution();
 
     if(w->getAccessW()) {
         processWindow *t = new processWindow(this, displayWindow, w);
         connect(t, SIGNAL(processClose()), this, SLOT(processTerminated()));
+#ifdef _MSC_VER
+        t->setArguments(w->getScriptParam());
+#endif
         t->start(command);
         w->setToolTip("process running, to kill use right mouse button");
         w->setAccessW(false);
