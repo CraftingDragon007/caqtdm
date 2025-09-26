@@ -158,12 +158,25 @@
 
 // used for interfacing epics routines with (pv, text, ...)
 #define QStringsToChars(x,y,z) \
-    char param1[MAXPVLEN], param2[255], param3[80]; \
+    char param1[MAXPVLEN], param2[MAX_STRING_LENGTH], param3[80]; \
     QByteArray Parameter_1 = x.toLatin1().constData(); \
-    QByteArray Parameter_2 = y.toLatin1().constData(); \
+    QByteArray Parameter_2;\
+    for (int i = 0; i < y.length(); ++i) {\
+            QChar ch = y[i];\
+            ushort unicode = ch.unicode();\
+            if (unicode >= 128 && unicode <= 255) {\
+                QByteArray utf8Bytes = QString(ch).toUtf8();\
+                for (int j = 0; j < utf8Bytes.length(); ++j) {\
+                    unsigned char byte = static_cast<unsigned char>(utf8Bytes[j]);\
+                    Parameter_2.append(static_cast<unsigned char>(utf8Bytes[j]));\
+                }\
+            } else {\
+                Parameter_2.append(ch.toLatin1());\
+            }\
+        }\
     QByteArray Parameter_3 = z.toLatin1().constData(); \
     strncpy(param1, Parameter_1.constData(), MAXPVLEN-1); \
-    strncpy(param2, Parameter_2.constData(), 255-1); \
+    strncpy(param2, Parameter_2.constData(), MAX_STRING_LENGTH-1); \
     strncpy(param3, Parameter_3.constData(), 80-1); \
 
 // common code too many widgets; for several reasons we did not try to put similar code in base classes.
