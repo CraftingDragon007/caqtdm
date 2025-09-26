@@ -313,6 +313,16 @@ private:
      _blop empty;
 
      QDateTime lastReloadTime;
+
+
+
+     HMIApplicationEventFilter *globalEventFilter;
+
+     void hmiHandleKeyPressed(QObject *target, QKeyEvent *event);
+
+     void hmiHandleMouse(QObject *target, QMouseEvent *event);
+
+     void hmiHandleIncomingEvent(QObject* target, QEvent *event);
  };
 
  #endif

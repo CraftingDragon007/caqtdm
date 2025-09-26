@@ -471,8 +471,6 @@ private:
 
     static QList<caHMIConfigTransferItem*> hmiConfigList;
     static QReadWriteLock hmiConfigListLock;
-    QSharedMemory sharedHmiConfigs;
-    QSharedMemory hmiConfigMessaging;
 
     HMIApplicationEventFilter *globalEventFilter;
 
@@ -480,7 +478,7 @@ private:
 
     void hmiHandleMouse(QObject *target, QMouseEvent *event);
 
-    void hmiHandleIncomingEvent(QObject* target, QEvent *event);
+    void hmiHandleIncomingEvent(QObject* target, QEvent *event, bool isSourceExternal);
 
     QHash<QString, QString> softvars;                // use a hash list to test if same variable names
 
@@ -532,6 +530,8 @@ private slots:
     void Callback_WriteDetectedValues(QWidget* w);
     void Callback_CopyMarked();
     void clearSelection();
+
+    void Callback_ExternalHmiEventReceived(int eventType, int senderPid, qint64 timestamp, const QByteArray& payload);
 
     void Callback_ReloadWindowL() {
 

@@ -48,6 +48,7 @@ bool HTTPCONFIGURATOR = false;
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <hmisharedeventbus.h>
 
 #include <QFileDialog>
 #include <QString>
@@ -396,6 +397,11 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
     }
 #else
     Q_UNUSED(attach);
+#endif
+#ifndef MOBILE
+    if (!HmiSharedEventBus::instance().setup()) {
+        qCritical() << "Failed to set up HmiSharedEventBus. Unable to receive or send events using this instance (pid:" << QCoreApplication::applicationPid() << ")";
+    }
 #endif
     // when file was specified, open it
     // when called from here on Windows, the actual size of the window

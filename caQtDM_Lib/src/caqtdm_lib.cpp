@@ -33,6 +33,7 @@
 #include <stdlib.h>
 #include <iostream>
 #include <sstream>
+#include "hmisharedeventbus.h"
 
 #ifndef MOBILE_ANDROID
   #include <sys/timeb.h>
@@ -93,6 +94,14 @@
 #define InfoStyle "style='background-color:lightyellow; color:black; white-space: pre-wrap;'"
 #define InfoPrefix "<div " InfoStyle ">"
 #define InfoPostfix "</div>"
+
+#if QT_VERSION > QT_VERSION_CHECK(5,5,15)
+#define QDATASTREAM_VERSION QDataStream::Qt_6_0
+#elif QT_VERSION < QT_VERSION_CHECK(5,5,15)
+#define QDATASTREAM_VERSION QDataStream::Qt_4_0
+#else
+#define QDATASTREAM_VERSION QDataStream::Qt_5_15
+#endif
 
 // context texts
 #define GETINFO         "Get Info"
@@ -541,10 +550,17 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
 
 
     if (qApp != Q_NULLPTR){
+        qDebug() << "GLOBAL EVENT FILTER INSTALLED FOR CAHMICONFIG!!!!!!!!";
         qApp->installEventFilter(globalEventFilter);
         connect(this->globalEventFilter, &HMIApplicationEventFilter::keyPressed, this, &CaQtDM_Lib::hmiHandleKeyPressed);
         connect(this->globalEventFilter, &HMIApplicationEventFilter::mouse, this, &CaQtDM_Lib::hmiHandleMouse);
     }
+
+#ifndef MOBILE
+    if (HmiSharedEventBus::instance().isInitialized()) {
+        connect(&HmiSharedEventBus::instance(), &HmiSharedEventBus::eventReceived, this, &CaQtDM_Lib::Callback_ExternalHmiEventReceived);
+    }
+#endif
 
     level=0;
     cainclude_path="";
@@ -6761,33 +6777,119 @@ void CaQtDM_Lib::Callback_WaveEntryChanged(const QString& text, int index)
     TreatRequestedWave(w->getPV(), text, fType, index, w1);
 }
 
-void CaQtDM_Lib::hmiHandleKeyPressed(QObject *target, QKeyEvent *event){
-    this->hmiHandleIncomingEvent(target, event);
+void CaQtDM_Lib::Callback_ExternalHmiEventReceived(int eventType, int senderPid, qint64 timestamp, const QByteArray& payload)
+{
+    Q_UNUSED(timestamp)
+    if (senderPid == QApplication::applicationPid()) return; // ignore own events
+    if (eventType == EventTypes::ApplicationStarted) {
+        qDebug() << "Another instance of caQDM started pid: " << senderPid;
+    } else if (eventType == EventTypes::KeyPress) {
+        QDataStream in(payload);
+        in.setVersion(QDATASTREAM_VERSION);
+
+        int key;
+        int modifiers;
+
+        in >> key >> modifiers;
+        Qt::KeyboardModifiers qtModifiers = static_cast<Qt::KeyboardModifiers>(modifiers);
+        QKeySequence sequence = QKeySequence(key | modifiers);
+        qDebug() << "received keys " << sequence.toString() << "from" << senderPid;
+        this->hmiHandleIncomingEvent(Q_NULLPTR, new QKeyEvent(QEvent::KeyPress, key, qtModifiers, sequence.toString()), true);
+    } else if (eventType == EventTypes::MouseMove || eventType == EventTypes::MousePress) {
+        QDataStream in(payload);
+        in.setVersion(QDATASTREAM_VERSION);
+
+        int x, y;
+        in >> x >> y;
+        qDebug() << "received mouse " << x << y << "from" << senderPid;
+        QEvent::Type type = QEvent::None;
+        if (eventType == EventTypes::MouseMove) type = QEvent::MouseMove;
+        else if (eventType == EventTypes::MousePress) type = QEvent::MouseButtonPress;
+        this->hmiHandleIncomingEvent(Q_NULLPTR, new QMouseEvent(type, QPointF(x, y), QPointF(x, y), Qt::MouseButton::NoButton, Qt::MouseButton::NoButton, Qt::KeyboardModifier::NoModifier), true);
+    }
 }
 
-void CaQtDM_Lib::hmiHandleMouse(QObject *target, QMouseEvent *event){
-    this->hmiHandleIncomingEvent(target, event);
+void CaQtDM_Lib::hmiHandleKeyPressed(QObject *target, QKeyEvent *event)
+{
+#ifndef MOBILE
+    HmiSharedEventBus& eventBus = HmiSharedEventBus::instance();
+    if (eventBus.isInitialized()) {
+        QByteArray byteArray;
+        QDataStream out(&byteArray, QIODevice::WriteOnly);
+        out.setVersion(QDATASTREAM_VERSION);
+        out << event->key() << event->modifiers();
+
+        eventBus.sendEvent(EventTypes::KeyPress, byteArray);
+    }
+#endif
+    this->hmiHandleIncomingEvent(target, event, false);
 }
 
-void CaQtDM_Lib::hmiHandleIncomingEvent(QObject *target, QEvent *event){
-    Q_UNUSED(target);
-
-
-    QWidget *target_widget = qobject_cast<QWidget*>(target);
-    QWidget* window = target_widget;
-    while (window) {
-        if (qobject_cast<QMainWindow*>(window) || qobject_cast<QDialog*>(window)) {
+void CaQtDM_Lib::hmiHandleMouse(QObject *target, QMouseEvent *event)
+{
+    QWidget* window = Q_NULLPTR;
+    QWidget* target_widget = Q_NULLPTR;
+    target_widget = qobject_cast<QWidget*>(target);
+    window = target_widget;
+    while (window != Q_NULLPTR) {
+        if (window == this) {
             break;
         }
         window = window->parentWidget();
     }
     if (window == Q_NULLPTR) return;
+
+    QPoint point = event->pos();
+    QPoint corrected = point;
+    if (target != window && target_widget != Q_NULLPTR){
+        corrected = target_widget->mapTo(window, point);
+    }
+    QMouseEvent correctedEvent = QMouseEvent(event->type(), corrected, corrected, event->button(), event->buttons(), event->modifiers());
+#ifndef MOBILE
+    HmiSharedEventBus& eventBus = HmiSharedEventBus::instance();
+    if (eventBus.isInitialized()) {
+        QByteArray byteArray;
+        QDataStream out(&byteArray, QIODevice::WriteOnly);
+        out.setVersion(QDATASTREAM_VERSION);
+        out << correctedEvent.pos().x() << correctedEvent.pos().y();
+
+        int type = EventTypes::Unknown;
+
+        if (event->type() == QEvent::MouseMove) {
+            type = EventTypes::MouseMove;
+        } else if (event->type() == QEvent::MouseButtonPress) {
+            type = EventTypes::MousePress;
+        }
+
+        eventBus.sendEvent(type, byteArray);
+    }
+#endif
+    this->hmiHandleIncomingEvent(target, &correctedEvent, false);
+}
+
+void CaQtDM_Lib::hmiHandleIncomingEvent(QObject *target, QEvent *event, bool isSourceExternal)
+{
+    Q_UNUSED(target);
+
+    QWidget* window = Q_NULLPTR;
+    QWidget* target_widget = Q_NULLPTR;
+    if (!isSourceExternal) {
+        target_widget = qobject_cast<QWidget*>(target);
+        window = target_widget;
+        while (window != Q_NULLPTR) {
+            if (window == this) {
+                break;
+            }
+            window = window->parentWidget();
+        }
+        if (window == Q_NULLPTR) return;
+    }
     QReadLocker locker(&hmiConfigListLock);
     if (event->type() == QEvent::KeyPress) {
         QKeyEvent *keyEvent = dynamic_cast<QKeyEvent*>(event);
         foreach (caHMIConfigTransferItem *item, hmiConfigList) {
             if (item->enabled() == false) continue;
-            if (window != item->parentWindowCallback() && item->captureRange() == caHMIConfig::capRange::Local) {
+            if ((isSourceExternal || window != item->parentWindowCallback()) && item->captureRange() == caHMIConfig::capRange::Local) {
                 continue;
             }
             if (item->captureType() != caHMIConfig::capType::MouseMove && item->captureType() != caHMIConfig::capType::MousePress) {
@@ -6854,35 +6956,31 @@ void CaQtDM_Lib::hmiHandleIncomingEvent(QObject *target, QEvent *event){
     } else if (event->type() == QEvent::MouseMove || event->type() == QEvent::MouseButtonPress) {
         QMouseEvent *mouseEvent = dynamic_cast<QMouseEvent*>(event);
         QPoint point = mouseEvent->pos();
+
         foreach (caHMIConfigTransferItem *item, hmiConfigList) {
             if (item->enabled() == false) continue;
-            if (window != item->parentWindowCallback() && item->captureRange() == caHMIConfig::capRange::Local) {
+            if ((isSourceExternal || window != item->parentWindowCallback()) && item->captureRange() == caHMIConfig::capRange::Local) {
                 continue;
             }
             if ((item->captureType() == caHMIConfig::capType::MouseMove && event->type() == QEvent::MouseMove) || (item->captureType() == caHMIConfig::capType::MousePress && event->type() == QEvent::MouseButtonPress )) {
                 caHMIConfig* widget = item->widgetCallback();
-                if (widget != Q_NULLPTR){
-                    QPoint corrected = point;
-                    if (target != window && target_widget != Q_NULLPTR){
-                        corrected = target_widget->mapTo(window, point);
-                    }
 
-                    QRect rect = QRect(corrected, widget->mouseRectSize());
-                    emit widget->caHMIConfigMouse(corrected);
-                    emit widget->caHMIConfigMouse(rect);
-                    emit widget->caHMIConfigMouseX(corrected.x());
-                    emit widget->caHMIConfigMouseY(corrected.y());
+                QRect rect = QRect(point, widget->mouseRectSize());
+                emit widget->caHMIConfigMouse(point);
+                emit widget->caHMIConfigMouse(rect);
+                emit widget->caHMIConfigMouseX(point.x());
+                emit widget->caHMIConfigMouseY(point.y());
 
-                    FormatType fType = FormatType::decimal;
-                    QWidget *w1 = qobject_cast<QWidget *>(widget);
-                    QString xText = QString::number(corrected.x());
-                    QString yText = QString::number(corrected.y());
+                FormatType fType = FormatType::decimal;
+                QWidget *w1 = qobject_cast<QWidget *>(widget);
+                QString xText = QString::number(point.x());
+                QString yText = QString::number(point.y());
 
-                    if (item->outputA().length() == 0 || item->outputB().length() == 0) return;
+                if (item->outputA().length() == 0 || item->outputB().length() == 0) return;
 
-                    TreatRequestedValue(item->outputA(), xText, fType, w1);
-                    TreatRequestedValue(item->outputB(), yText, fType, w1);
-                }
+                TreatRequestedValue(item->outputA(), xText, fType, w1);
+                TreatRequestedValue(item->outputB(), yText, fType, w1);
+
             }
         }
     }
