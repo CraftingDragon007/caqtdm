@@ -64,6 +64,7 @@ public:
     void unsubscribeFromNode(const QString &nodeId);
     void disableMonitoringForNode(const QString &nodeId);
     bool writeValue(const QString &nodeId, double rdata, int32_t idata, char *sdata, char *object, char *errmess, int forceType);
+    QString getDescription(const QString &nodeId);
 
 signals:
     void connected();

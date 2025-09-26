@@ -264,7 +264,7 @@ void OpcUaCore::subscribeToNode(const QString &nodeId)
     });
 
     // Must come after connect
-    node->readAttributes(QOpcUa::NodeAttribute::NodeClass | QOpcUa::NodeAttribute::UserAccessLevel);
+    node->readAttributes(QOpcUa::NodeAttribute::NodeClass | QOpcUa::NodeAttribute::UserAccessLevel | QOpcUa::NodeAttribute::Value | QOpcUa::NodeAttribute::Description);
 }
 
 
@@ -554,5 +554,14 @@ bool OpcUaCore::writeValue(const QString &nodeId, double rdata, int32_t idata, c
 
     node->readValueAttribute();
     return true;
+}
+
+QString OpcUaCore::getDescription(const QString &nodeId) {
+    QOpcUaNode *node = m_subscriptionNodes[nodeId];
+    if (!node) {
+        emit errorOccured("Node is null");
+        return "Node is null";
+    }
+    return node->attribute(QOpcUa::NodeAttribute::Description).value<QOpcUaLocalizedText>().text();
 }
 }
