@@ -42,6 +42,11 @@
 
 namespace opc{
 
+typedef struct {
+    QString nodeid;
+    int samplingIntervalMs;
+} SubscriptionSettings;
+
 class OpcUaCore : public QObject
 {
     Q_OBJECT
@@ -56,7 +61,7 @@ public:
     void fetchDataFromAnyNode();
     void fetchDataFromSingleNode(const QString &nodeId);
     void fetchDataFromMultipleNodes(const QStringList &nodeIds);
-    void subscribeToNode(const QString &nodeId);
+    void subscribeToNode(const SubscriptionSettings &subscriptionSettings);
     void subscribeToMultipleNodes(const QStringList &nodeIds);
     void clearAllSubscriptions();
     void browseRoot();

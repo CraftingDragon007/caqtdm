@@ -146,6 +146,9 @@ int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
         return false;
     };
 
+    int samplingIntervalMs = getUpdateIntervalFromKnobData(kData);
+    opc::SubscriptionSettings pendingSubscription = {nodeId, samplingIntervalMs};
+
     Channelcache.insert(nodeId, index);
 
     std::shared_ptr<opc::OpcUaCore> core;
@@ -188,39 +191,49 @@ int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
     ConnectionState state = m_connectionState[endpoint];
 
     if (state == ConnectionState::Connected) {
-        core->subscribeToNode(nodeId);
+        core->subscribeToNode(pendingSubscription);
     } else {
         // Store subscription to do later
-        m_pendingSubscriptions[endpoint].append(nodeId);
+        m_pendingSubscriptions[endpoint].append(pendingSubscription);
 
         if (state == ConnectionState::NotConnected) {
             m_connectionState[endpoint] = ConnectionState::Connecting;
 
-            // Start connection
-            core->connectOpc(endpoint, [this, endpoint, core](bool success) {
-                QMutexLocker lock(&m_mutex);
-                if (!success) {
-                    m_connectionState[endpoint] = ConnectionState::NotConnected;
-                    if (messageWindowPtr) {
-                        QString err = QString("OPCUA: Failed to connect to %1").arg(endpoint);
-                        messageWindowPtr->postMsgEvent(QtCriticalMsg, (char*)err.toLatin1().constData());
+            auto onConnected = [=](bool success, QOpcUaClient* client) {
+                qDebug() << "onConnected " << success;
+                if (!client && success) {
+                    qDebug() << "No client returned with successfull connection, treating as failed connection.";
+                    success = false;
+                }
+
+                // treat current status change
+                onConnectedStatusChange(success, endpoint, index);
+
+                if (success) {
+                    // Subscribe to all pending nodeIds
+                    for (const auto& pendingSubscription : m_pendingSubscriptions[endpoint]) {
+                        core->subscribeToNode(pendingSubscription);
                     }
-                    return;
+                    m_pendingSubscriptions[endpoint].clear();
+                    // Connection for ongoing status changes
+                     m_statusCallbackConnections[endpoint] = connect(client, &QOpcUaClient::stateChanged, this,
+                            [this, endpoint, index](QOpcUaClient::ClientState state) {
+                                if (state == QOpcUaClient::Connected) {
+                                    this->onConnectedStatusChange(true, endpoint, index);
+                                } else if (state == QOpcUaClient::Disconnected) {
+                                    this->onConnectedStatusChange(false, endpoint, index);
+                                }
+                            });
                 }
+            };
 
-                m_connectionState[endpoint] = ConnectionState::Connected;
+            // Remove old status listener
+            if (m_statusCallbackConnections.contains(endpoint)) {
+                QObject::disconnect(m_statusCallbackConnections[endpoint]);
+            }
 
-                if (messageWindowPtr) {
-                    QString info = QString("OPCUA: Connected to %1").arg(endpoint);
-                    messageWindowPtr->postMsgEvent(QtInfoMsg, (char*)info.toLatin1().constData());
-                }
-
-                // Now subscribe to all pending nodeIds
-                for (const QString& nodeId : m_pendingSubscriptions[endpoint]) {
-                    core->subscribeToNode(nodeId);
-                }
-                m_pendingSubscriptions[endpoint].clear();
-            });
+            // Start connection
+            core->connectOpc(endpoint, onConnected);
         }
     }
 
@@ -270,27 +283,10 @@ int OPCUAPlugin::pvFreeAllocatedData(knobData *kData)
 
 // caQtDM_Lib will call this routine for setting data (see for more detail the epics3 plugin)
 int OPCUAPlugin::pvSetValue(char *pv, double rdata, int32_t idata, char *sdata, char *object, char *errmess, int forceType) {
-    QString key = QString::fromLatin1(pv).trimmed();
-    QString raw = opcua_translation_map.value(key).trimmed();
-
-    if(raw.isEmpty()){
-        raw=key;
+    QString endpoint, nodeId;
+    if (!resolveConnectionString(pv, endpoint, nodeId)) {
+        return false;
     }
-
-    int splitPos = raw.lastIndexOf("/ns=");
-    if (splitPos < 0) {
-        splitPos = raw.lastIndexOf("/i=");
-        if (splitPos < 0) {
-            if (messageWindowPtr) {
-                QString msg = "Invalid OPCUA PV format. Expected <endpoint>/ns=...; got: " + raw;
-                messageWindowPtr->postMsgEvent(QtCriticalMsg, (char*)msg.toLatin1().constData());
-            }
-            return false;
-        }
-    }
-
-    QString endpoint = raw.left(splitPos);
-    QString nodeId = raw.mid(splitPos + 1).trimmed();
 
     if (m_cores.contains(endpoint)) {
         auto& core = m_cores[endpoint];
@@ -331,27 +327,10 @@ int OPCUAPlugin::pvGetTimeStamp(char *pv, char *timestamp) {
 
 // caQtDM_Lib will call this routine for getting a description of the monitor
 int OPCUAPlugin::pvGetDescription(char *pv, char *description) {
-    QString key = QString::fromLatin1(pv).trimmed();
-    QString raw = opcua_translation_map.value(key).trimmed();
-
-    if(raw.isEmpty()){
-        raw=key;
+    QString endpoint, nodeId;
+    if (!resolveConnectionString(pv, endpoint, nodeId)) {
+        return false;
     }
-
-    int splitPos = raw.lastIndexOf("/ns=");
-    if (splitPos < 0) {
-        splitPos = raw.lastIndexOf("/i=");
-        if (splitPos < 0) {
-            if (messageWindowPtr) {
-                QString msg = "Invalid OPCUA PV format. Expected <endpoint>/ns=...; got: " + raw;
-                messageWindowPtr->postMsgEvent(QtCriticalMsg, (char*)msg.toLatin1().constData());
-            }
-            return false;
-        }
-    }
-
-    QString endpoint = raw.left(splitPos);
-    QString nodeId = raw.mid(splitPos + 1).trimmed();
 
     if (m_cores.contains(endpoint)) {
         auto& core = m_cores[endpoint];
@@ -374,7 +353,9 @@ int OPCUAPlugin::pvClearEvent(void * ptr)
 
     knobData *kData = static_cast<knobData *>(ptr);
     QString endpoint, nodeId;
-    if (!resolveConnectionString(kData, endpoint, nodeId)) return false;
+    if (!resolveConnectionString(kData->pv, endpoint, nodeId)) {
+        return false;
+    };
 
     QMutexLocker locker(&m_mutex);
     if (m_cores.contains(endpoint)) {
@@ -390,11 +371,16 @@ int OPCUAPlugin::pvAddEvent(void * ptr)
 
     knobData *kData = static_cast<knobData *>(ptr);
     QString endpoint, nodeId;
-    if (!resolveConnectionString(kData, endpoint, nodeId)) return false;
+    if (!resolveConnectionString(kData->pv, endpoint, nodeId)) {
+        return false;
+    };
+
+    int samplingIntervalMs = getUpdateIntervalFromKnobData(kData);
+    opc::SubscriptionSettings pendingSubscription = {nodeId, samplingIntervalMs};
 
     QMutexLocker locker(&m_mutex);
     if (m_cores.contains(endpoint)) {
-        m_cores[endpoint]->subscribeToNode(nodeId);
+        m_cores[endpoint]->subscribeToNode(pendingSubscription);
         qDebug() << "OPCUAPlugin:pvAddEvent - resumed monitoring for" << nodeId;
     }
 
@@ -406,8 +392,16 @@ int OPCUAPlugin::pvReconnect(knobData *kData)
 {
 
     QString endpoint, nodeId;
-    if (!resolveConnectionString(kData, endpoint, nodeId))
+    if (!resolveConnectionString(kData->pv, endpoint, nodeId)) {
+        if (messageWindowPtr) {
+            QString msg = "Invalid OPCUA PV format. Expected <endpoint>/ns=...; got: " + QString::fromUtf8(kData->pv);
+            messageWindowPtr->postMsgEvent(QtCriticalMsg, (char*)msg.toLatin1().constData());
+        }
         return false;
+    };
+
+    int samplingIntervalMs = getUpdateIntervalFromKnobData(kData);
+    opc::SubscriptionSettings pendingSubscription = {nodeId, samplingIntervalMs};
 
     QMutexLocker lock(&m_mutex);
     if (!m_cores.contains(endpoint))
@@ -417,10 +411,10 @@ int OPCUAPlugin::pvReconnect(knobData *kData)
     core->disconnectOpc();
     m_connectionState[endpoint] = ConnectionState::NotConnected;
 
-    core->connectOpc(endpoint, [=](bool success) {
+    core->connectOpc(endpoint, [=](bool success, QOpcUaClient* client) {
         if (success) {
             m_connectionState[endpoint] = ConnectionState::Connected;
-            core->subscribeToNode(nodeId);
+            core->subscribeToNode(pendingSubscription);
             qDebug() << "OPCUAPlugin: Reconnected and subscribed to" << nodeId;
         } else {
             qWarning() << "OPCUAPlugin: Failed to reconnect to" << endpoint;
@@ -610,6 +604,27 @@ void OPCUAPlugin::onConnectedStatusChange(bool success, QString endpoint, int in
         messageWindowPtr->postMsgEvent(QtInfoMsg, (char*)info.toLatin1().constData());
     }
 };
+
+int OPCUAPlugin::getUpdateIntervalFromKnobData(knobData *kData) {
+    if (!kData) {
+        if (messageWindowPtr) {
+            QString msg = "Received invalid KnobData for OPCUA PV: " + QString::fromUtf8(kData->pv);
+            messageWindowPtr->postMsgEvent(QtCriticalMsg, (char*)msg.toLatin1().constData());
+        }
+        return 1;
+    }
+    int updateRateHz = kData->edata.repRate;
+    if (updateRateHz == 0) {
+        updateRateHz = 1;
+        if (messageWindowPtr) {
+            QString msg = "Invalid OPCUA PV refresh rate of 0 Hz. Defaulted to 1 Hz. PV: " + QString::fromUtf8(kData->pv);
+            messageWindowPtr->postMsgEvent(QtCriticalMsg, (char*)msg.toLatin1().constData());
+        }
+    }
+    int samplingIntervalMs = 1000 / updateRateHz;
+    return samplingIntervalMs;
+}
+
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
 #else
 Q_EXPORT_PLUGIN2(DemoPlugin, DemoPlugin)

@@ -85,7 +85,7 @@ private:
     QMap<QString, QMetaObject::Connection> m_statusCallbackConnections;
     enum class ConnectionState { NotConnected, Connecting, Connected };
     QMap<QString, ConnectionState> m_connectionState;
-    QMap<QString, QList<QString>> m_pendingSubscriptions;
+    QMap<QString, QList<opc::SubscriptionSettings>> m_pendingSubscriptions;
     QMutex m_mutex;
     QList<int> listOfIndexes;
     double initValue;
@@ -94,6 +94,8 @@ private:
     QStringList opcua_database_file;
     QMap<QString, QString> optionsP;
     QMap<QString, QString> opcua_translation_map;
+
+    int getUpdateIntervalFromKnobData(knobData *kData);
 #ifdef HARDWORK
     void updateHardwork();
 #endif

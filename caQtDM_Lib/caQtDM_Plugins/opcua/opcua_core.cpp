@@ -139,7 +139,6 @@ bool OpcUaCore::connectOpc(const QString &url, std::function<void(bool, QOpcUaCl
                     return;
                 }
 
-    }
                 connect(m_client, &QOpcUaClient::stateChanged, this,
                         [this, onConnected](QOpcUaClient::ClientState state) mutable {
                         if (state == QOpcUaClient::Connected || state == QOpcUaClient::Disconnected) {
@@ -197,8 +196,11 @@ void OpcUaCore::disconnectOpc()
 }
 
 
-void OpcUaCore::subscribeToNode(const QString &nodeId)
+void OpcUaCore::subscribeToNode(const SubscriptionSettings &subscriptionSettings)
 {
+    QString nodeId = subscriptionSettings.nodeid;
+    int intervalMs = subscriptionSettings.samplingIntervalMs;
+
     if (!isClientConnected()) {
         emit errorOccured("Client is not connected.");
         return;
@@ -234,7 +236,7 @@ void OpcUaCore::subscribeToNode(const QString &nodeId)
 
         // Enable monitoring
         QOpcUaMonitoringParameters params;
-        params.setSamplingInterval(1000.0);
+        params.setSamplingInterval(intervalMs);
         params.setMonitoringMode(QOpcUaMonitoringParameters::MonitoringMode::Reporting);
         params.setSubscriptionType(QOpcUaMonitoringParameters::SubscriptionType::Shared);
 
