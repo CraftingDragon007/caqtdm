@@ -1,9 +1,9 @@
 #ifndef HMI_COMMON_DEFS_H
 #define HMI_COMMON_DEFS_H
 
-#include <QDateTime> // For timestamp
+#include <QDateTime>
 #include <QByteArray>
-#include <cstring>   // For memset
+#include <cstring>
 
 // Unique keys for shared memory and semaphore
 #define SHARED_MEM_KEY "caQtDM_HmiSharedEventBus_SharedMem"
@@ -14,7 +14,6 @@
 #define EVENT_PAYLOAD_SIZE 256    // Fixed size for event data payload
 #define EVENT_BUFFER_CAPACITY 100 // Max events in the ring buffer
 
-// Define some event types for clarity
 enum EventTypes {
     Unknown = 0,
     ApplicationStarted,
@@ -23,35 +22,30 @@ enum EventTypes {
     MousePress
 };
 
-// Structure for a single event in the shared buffer
+// Structure of an event
 struct EventPayload {
-    int eventType; // An integer ID for the event type (e.g., from EventTypes enum)
+    int eventType;
     int senderPid; // Process ID of the sender
     qint64 timestamp;
-    char data[EVENT_PAYLOAD_SIZE]; // Flexible payload for event-specific data
-    int dataSize; // Actual size of data in payload, up to EVENT_PAYLOAD_SIZE
+    char data[EVENT_PAYLOAD_SIZE];
+    int dataSize; // size of data in payload, up to EVENT_PAYLOAD_SIZE
 
-    // Default constructor for initialization
     EventPayload() : eventType(0), senderPid(0), timestamp(0), dataSize(0) {
         std::memset(data, 0, EVENT_PAYLOAD_SIZE);
     }
 };
 
-// Header for the shared memory segment
 struct SharedHeader {
     int currentWriteIndex;  // Next available slot for writing (0 to EVENT_BUFFER_CAPACITY - 1)
-    int totalEventsWritten; // A monotonically increasing counter of all events ever written.
-    // Used by processes to detect "new" events.
+    int totalEventsWritten;
 
     // Each slot represents a potential active process.
     // pid = 0 means slot is free.
-    // lastReadTotalEvents will track how many events *this specific slot* has consumed.
     struct ProcessSlot {
         int pid;                 // Process ID of the active process in this slot (0 if free)
-        int lastReadTotalEvents; // totalEventsWritten that this process has last read
+        int lastReadTotalEvents; // Amount of events the process has read
     } processSlots[MAX_PROCESS_SLOTS];
 
-    // Default constructor for initialization
     SharedHeader() : currentWriteIndex(0), totalEventsWritten(0) {
         for (int i = 0; i < MAX_PROCESS_SLOTS; ++i) {
             processSlots[i].pid = 0;
