@@ -68,10 +68,11 @@ public:
     int pvDisconnect(knobData *kData);
     int FlushIO();
     int TerminateIO();
-    bool resolveConnectionString(knobData *kData, QString &endpoint, QString &nodeId);
+    bool resolveConnectionString(char* pv, QString &endpoint, QString &nodeId);
     caType generateCaTypeFromVariant(const QVariant &value);
     void updateKnobDataFromVariant(knobData &kData, const QVariant &value);
     void updateKnobDataWithAccessLevel(knobData &kData, const bool &accessR, const bool &accessW);
+    void onConnectedStatusChange(bool success, QString endpoint, int index);
 
 private:
     QMutex mutex;
@@ -81,6 +82,7 @@ private:
     QMultiMap<QString, int> Channelcache;
     QScopedPointer<opc::OpcUaCore> m_core;
     QMap<QString, std::shared_ptr<opc::OpcUaCore>> m_cores;
+    QMap<QString, QMetaObject::Connection> m_statusCallbackConnections;
     enum class ConnectionState { NotConnected, Connecting, Connected };
     QMap<QString, ConnectionState> m_connectionState;
     QMap<QString, QList<QString>> m_pendingSubscriptions;

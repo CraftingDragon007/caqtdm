@@ -135,27 +135,17 @@ int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
     Q_UNUSED(rate);
     Q_UNUSED(skip);
 
-    QString key = QString::fromLatin1(kData->pv).trimmed();
-    QString raw = opcua_translation_map.value(key).trimmed();
 
-    if(raw.isEmpty()){
-        raw=key;
-    }
 
-    int splitPos = raw.lastIndexOf("/ns=");
-    if (splitPos < 0) {
-        splitPos = raw.lastIndexOf("/i=");
-        if (splitPos < 0) {
-            if (messageWindowPtr) {
-                QString msg = "Invalid OPCUA PV format. Expected <endpoint>/ns=...; got: " + raw;
-                messageWindowPtr->postMsgEvent(QtCriticalMsg, (char*)msg.toLatin1().constData());
-            }
-            return false;
+    QString endpoint, nodeId;
+    if (!resolveConnectionString(kData->pv, endpoint, nodeId)) {
+        if (messageWindowPtr) {
+            QString msg = "Invalid OPCUA PV format. Expected <endpoint>/ns=...; got: " + QString::fromUtf8(kData->pv);
+            messageWindowPtr->postMsgEvent(QtCriticalMsg, (char*)msg.toLatin1().constData());
         }
-    }
+        return false;
+    };
 
-    QString endpoint = raw.left(splitPos);
-    QString nodeId = raw.mid(splitPos + 1).trimmed();
     Channelcache.insert(nodeId, index);
 
     std::shared_ptr<opc::OpcUaCore> core;
@@ -441,10 +431,11 @@ int OPCUAPlugin::pvReconnect(knobData *kData)
 
 int OPCUAPlugin::pvDisconnect(knobData *kData)
 {
-
     QString endpoint, nodeId;
-    if (!resolveConnectionString(kData, endpoint, nodeId))
+    if (!resolveConnectionString(kData->pv, endpoint, nodeId)) {
         return false;
+    };
+
 
     QMutexLocker lock(&m_mutex);
     if (m_cores.contains(endpoint)) {
@@ -467,9 +458,6 @@ int OPCUAPlugin::FlushIO() {
 int OPCUAPlugin::TerminateIO()
 {
     qDebug() << "OPCUAPlugin: TerminateIO called.";
-#if DBL_MANT_DIG < LDBL_MANT_DIG
-
- #endif
     QMutexLocker locker(&m_mutex);
 
     for (auto &core : m_cores) {
@@ -495,13 +483,14 @@ QString OPCUAPlugin::findNodeIdByIndex(int index){
     return QString();
 }
 
-bool OPCUAPlugin::resolveConnectionString(knobData *kData, QString &endpoint, QString &nodeId)
+bool OPCUAPlugin::resolveConnectionString(char* pv, QString &endpoint, QString &nodeId)
 {
-    QString logicalKey = QString::fromLatin1(kData->pv).remove("opcua://");
-    QString fullConnection = opcua_translation_map.value(logicalKey, "");
+    QString plainKey = QString::fromLatin1(pv);
+    QString logicalKey = plainKey.remove("opcua://");
+    QString fullConnection = opcua_translation_map.value(plainKey, opcua_translation_map.value(logicalKey, ""));
     if(fullConnection.isEmpty()){
         qWarning() << "OPCUAPlugin: No translation found for " << logicalKey;
-        return false;
+        fullConnection = plainKey;
     }
 
     QString raw = fullConnection.remove("opcua://");
@@ -601,6 +590,26 @@ void OPCUAPlugin::updateKnobDataWithAccessLevel(knobData &kData, const bool &acc
     kData.edata.accessW = accessW;
 }
 
+void OPCUAPlugin::onConnectedStatusChange(bool success, QString endpoint, int index) {
+    qDebug() << "onConnectedStatusChange " << success;
+    QMutexLocker lock(&m_mutex);
+    mutexknobdataP->SetMutexKnobDataConnected(index, success);
+    if (!success) {
+        m_connectionState[endpoint] = ConnectionState::NotConnected;
+        if (messageWindowPtr) {
+            QString err = QString("OPCUA: Failed to connect to %1").arg(endpoint);
+            messageWindowPtr->postMsgEvent(QtCriticalMsg, (char*)err.toLatin1().constData());
+        }
+        return;
+    }
+
+    m_connectionState[endpoint] = ConnectionState::Connected;
+
+    if (messageWindowPtr) {
+        QString info = QString("OPCUA: Connected to %1").arg(endpoint);
+        messageWindowPtr->postMsgEvent(QtInfoMsg, (char*)info.toLatin1().constData());
+    }
+};
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
 #else
 Q_EXPORT_PLUGIN2(DemoPlugin, DemoPlugin)

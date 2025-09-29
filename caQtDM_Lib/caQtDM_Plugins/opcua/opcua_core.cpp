@@ -69,91 +69,91 @@ OpcUaCore::~OpcUaCore()
 }
 
 
-bool OpcUaCore::connectOpc(const QString &url, std::function<void(bool)> onConnected)
+bool OpcUaCore::connectOpc(const QString &url, std::function<void(bool, QOpcUaClient*)> onConnected)
 {
     if (!m_client) {
         emit errorOccured("Client is not initialized.");
-        onConnected(false);
+        onConnected(false, nullptr);
         return false;
     }
 
-    if (!m_endpointsHooked) {
-        connect(m_client, &QOpcUaClient::endpointsRequestFinished, this,
-                [this, url, onConnected](const QVector<QOpcUaEndpointDescription> &returnedEndpoints,
-                                    QOpcUa::UaStatusCode status,
-                                    const QUrl &) {
-                    // If no endpoints are returned at all, there is something fundamentally wrong with the server.
-                    // Thus, not even the fallbackEndpoint is checked from the pv, and we error out here.
-                    if (returnedEndpoints.isEmpty() || status != QOpcUa::UaStatusCode::Good) {
-                        emit errorOccured("No endpoints received or status not good.");
-                        onConnected(false);
-                        return;
-                    }
+    connect(m_client, &QOpcUaClient::endpointsRequestFinished, this,
+            [this, url, onConnected](const QVector<QOpcUaEndpointDescription> &returnedEndpoints,
+                                QOpcUa::UaStatusCode status,
+                                const QUrl &) {
+                // If no endpoints are returned at all, there is something fundamentally wrong with the server.
+                // Thus, not even the fallbackEndpoint is checked from the pv, and we error out here.
+                if (returnedEndpoints.isEmpty() || status != QOpcUa::UaStatusCode::Good) {
+                    emit errorOccured("No endpoints received or status not good.");
+                    onConnected(false, nullptr);
+                    return;
+                }
 
-                    // Add a fallbackEndpoint which is from the provided pv string (url)
-                    QOpcUaEndpointDescription fallbackEndpoint = returnedEndpoints.constFirst();
-                    fallbackEndpoint.setEndpointUrl(url);
-                    int fallbackPort = QUrl(url).port(4840); // Fallback port is the port given in the pv string or 4840, if none given.
+                // Add a fallbackEndpoint which is from the provided pv string (url)
+                QOpcUaEndpointDescription fallbackEndpoint = returnedEndpoints.constFirst();
+                fallbackEndpoint.setEndpointUrl(url);
+                int fallbackPort = QUrl(url).port(4840); // Fallback port is the port given in the pv string or 4840, if none given.
 
-                    QVector<QOpcUaEndpointDescription> endpoints = returnedEndpoints;
-                    endpoints.append(fallbackEndpoint);
+                QVector<QOpcUaEndpointDescription> endpoints = returnedEndpoints;
+                endpoints.append(fallbackEndpoint);
 
-                    QOpcUaEndpointDescription chosenEndpoint;
-                    bool foundWorkingEndpoint = false;
-                    QList<QTcpSocket*> sockets;
-                    QEventLoop loop;
-                    QTimer timer;
-                    std::atomic<bool> found(false);
+                QOpcUaEndpointDescription chosenEndpoint;
+                bool foundWorkingEndpoint = false;
+                QList<QTcpSocket*> sockets;
+                QEventLoop loop;
+                QTimer timer;
+                std::atomic<bool> found(false);
 
-                    timer.setSingleShot(true);
-                    connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
+                timer.setSingleShot(true);
+                connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
 
-                    // For each endpoint returned from the server, try to establish a simple tcp connection. The first endpoint that connects is chosen for further opcua communication.
-                    for (int i = 0; i < endpoints.size(); ++i) {
-                        QOpcUaEndpointDescription ep = endpoints.at(i);
-                        QUrl url = ep.endpointUrl();
-                        QTcpSocket* sock = new QTcpSocket(this);
-                        sockets.append(sock);
+                // For each endpoint returned from the server, try to establish a simple tcp connection. The first endpoint that connects is chosen for further opcua communication.
+                for (int i = 0; i < endpoints.size(); ++i) {
+                    QOpcUaEndpointDescription ep = endpoints.at(i);
+                    QUrl url = ep.endpointUrl();
+                    QTcpSocket* sock = new QTcpSocket(this);
+                    sockets.append(sock);
 
-                        connect(sock, &QTcpSocket::connected, this,
-                                [this, ep, &sockets, &found, &chosenEndpoint, &foundWorkingEndpoint, &timer, &loop]() {
-                                    if (found.exchange(true)) return;
-                                    chosenEndpoint = ep;
-                                    foundWorkingEndpoint = true;
-                                    timer.stop();
-                                    loop.quit();
-                                    for (QTcpSocket* s : sockets) if (s && s->state() == QAbstractSocket::ConnectedState && s != qobject_cast<QTcpSocket*>(QObject::sender())) s->abort();
-                                });
-                        ;
-                        sock->connectToHost(url.host(), url.port(fallbackPort)); // Uses either endoint provided port, or defaults to fallbackPort
-                    }
-
-                    // Try to connect to all endpoints for a certain time. Due to signal / slot mechanism, the fastest connection will usually be chosen.
-                    timer.start(500);
-                    loop.exec();
-
-                    for (QTcpSocket* s : sockets) { if (s) { s->abort(); s->deleteLater(); } }
-
-                    if (!foundWorkingEndpoint) {
-                        emit errorOccured("No reachable endpoint hosts.");
-                        onConnected(false);
-                        return;
-                    }
-
-                    connect(m_client, &QOpcUaClient::stateChanged, this,
-                            [this, onConnected](QOpcUaClient::ClientState state) {
-                                if (state == QOpcUaClient::Connected) {
-                                    onConnected(true);
-                                } else if (state == QOpcUaClient::Disconnected) {
-                                    emit errorOccured("Disconnected during connection.");
-                                    onConnected(false);
-                                }
+                    connect(sock, &QTcpSocket::connected, this,
+                            [this, ep, &sockets, &found, &chosenEndpoint, &foundWorkingEndpoint, &timer, &loop]() {
+                                if (found.exchange(true)) return;
+                                chosenEndpoint = ep;
+                                foundWorkingEndpoint = true;
+                                timer.stop();
+                                loop.quit();
+                                for (QTcpSocket* s : sockets) if (s && s->state() == QAbstractSocket::ConnectedState && s != qobject_cast<QTcpSocket*>(QObject::sender())) s->abort();
                             });
+                    ;
+                    sock->connectToHost(url.host(), url.port(fallbackPort)); // Uses either endoint provided port, or defaults to fallbackPort
+                }
 
-                    m_client->connectToEndpoint(chosenEndpoint);
-                });
-        m_endpointsHooked = true;
+                // Try to connect to all endpoints for a certain time. Due to signal / slot mechanism, the fastest connection will usually be chosen.
+                timer.start(500);
+                loop.exec();
+
+                for (QTcpSocket* s : sockets) { if (s) { s->abort(); s->deleteLater(); } }
+
+                if (!foundWorkingEndpoint) {
+                    emit errorOccured("No reachable endpoint hosts.");
+                    onConnected(false, nullptr);
+                    return;
+                }
+
     }
+                connect(m_client, &QOpcUaClient::stateChanged, this,
+                        [this, onConnected](QOpcUaClient::ClientState state) mutable {
+                        if (state == QOpcUaClient::Connected || state == QOpcUaClient::Disconnected) {
+                            if (state == QOpcUaClient::Connected) {
+                                onConnected(true, this->m_client);
+                            } else {
+                                emit errorOccured("Disconnected during initial connection.");
+                                onConnected(false, nullptr);
+                            }
+                            QObject::disconnect(m_client, &QOpcUaClient::stateChanged, this, nullptr);
+                        }
+                    });
+                m_client->connectToEndpoint(chosenEndpoint);
+        }, Qt::SingleShotConnection);
 
     m_client->requestEndpoints(url);
     return true;
