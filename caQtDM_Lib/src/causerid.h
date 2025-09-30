@@ -1,5 +1,5 @@
-#ifndef USERID_H
-#define USERID_H
+#ifndef CAUSERID_H
+#define CAUSERID_H
 
 #include <QString>
 

@@ -63,9 +63,9 @@ RC_FILE = ./src/caQtDM_Lib.rc
 SOURCES += caqtdm_lib.cpp \
     mutexKnobData.cpp \
     MessageWindow.cpp \
+    src/causerid.cpp \
     src/hmisharedconfiglistmanager.cpp \
     src/hmisharedeventbus.cpp \
-    src/userid.cpp \
     vaPrintf.c \
     myMessageBox.cpp \
     limitsStripplotDialog.cpp \
@@ -85,10 +85,10 @@ HEADERS += caqtdm_lib.h\
     alarmstrings.h \
     MessageWindow.h \
     messageWindowWrapper.h \
+    src/causerid.h \
     src/hmi_common_defs.h \
     src/hmisharedconfiglistmanager.h \
     src/hmisharedeventbus.h \
-    src/userid.h \
     vaPrintf.h \
     myMessageBox.h \
     limitsStripplotDialog.h \
