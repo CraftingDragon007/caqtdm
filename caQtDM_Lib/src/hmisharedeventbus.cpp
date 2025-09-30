@@ -1,5 +1,5 @@
 #include "hmisharedeventbus.h"
-#include "userid.h"
+#include "causerid.h"
 
 HmiSharedEventBus& HmiSharedEventBus::instance() {
     static HmiSharedEventBus bus;
