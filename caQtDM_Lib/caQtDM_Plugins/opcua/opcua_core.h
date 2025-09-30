@@ -55,7 +55,7 @@ public:
     explicit OpcUaCore(QObject *parent = nullptr);
     ~OpcUaCore();
 
-    bool connectOpc(const QString &url, std::function<void(bool, QOpcUaClient*)> onConnected);
+    bool connectOpc(const QString &url);
     void disconnectOpc();
     void fetchDataFromAnyNode();
     void fetchDataFromSingleNode(const QString &nodeId);

@@ -45,6 +45,7 @@ QString OPCUAPlugin::pluginName()
 OPCUAPlugin::OPCUAPlugin()
 {
     qDebug() << "OPCUAPlugin: Create";
+    QLoggingCategory::setFilterRules("qt.opcua.plugins.open62541.sdk*=false");
 }
 
 int OPCUAPlugin::initCommunicationLayer(MutexKnobData *data, MessageWindow *messageWindow, QMap<QString, QString> options)
@@ -202,6 +203,12 @@ int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
                     QString info = QString("OPCUA: Connected to %1").arg(endpoint);
                     messageWindowPtr->postMsgEvent(QtInfoMsg, (char*)info.toLatin1().constData());
                 }
+
+                // Subscribe to all pending nodeIds
+                for (const auto& pendingSubscription : m_pendingSubscriptions[endpoint]) {
+                    core->subscribeToNode(pendingSubscription);
+                }
+                m_pendingSubscriptions[endpoint].clear();
             });
         }
         core = m_cores[endpoint];
@@ -221,29 +228,8 @@ int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
         if (state == ConnectionState::NotConnected) {
             m_connectionState[endpoint] = ConnectionState::Connecting;
 
-            auto onConnected = [=](bool success, QOpcUaClient* client) {
-                qDebug() << "onConnected " << success;
-                if (!client && success) {
-                    qDebug() << "No client returned with successfull connection, treating as failed connection.";
-                    success = false;
-                }
-
-                if (success) {
-                    // Subscribe to all pending nodeIds
-                    for (const auto& pendingSubscription : m_pendingSubscriptions[endpoint]) {
-                        core->subscribeToNode(pendingSubscription);
-                    }
-                    m_pendingSubscriptions[endpoint].clear();
-                } else {
-                    if (messageWindowPtr) {
-                        QString err = QString("OPCUA: Failed to connect to %1").arg(endpoint);
-                        messageWindowPtr->postMsgEvent(QtCriticalMsg, (char*)err.toLatin1().constData());
-                    }
-                }
-            };
-
             // Start connection
-            core->connectOpc(endpoint, onConnected);
+            core->connectOpc(endpoint);
         }
     }
 
@@ -434,16 +420,9 @@ int OPCUAPlugin::pvReconnect(knobData *kData)
     auto core = m_cores[endpoint];
     core->disconnectOpc();
     m_connectionState[endpoint] = ConnectionState::NotConnected;
+    m_pendingSubscriptions[endpoint].append(pendingSubscription);
 
-    core->connectOpc(endpoint, [=](bool success, QOpcUaClient* client) {
-        if (success && client) {
-            m_connectionState[endpoint] = ConnectionState::Connected;
-            core->subscribeToNode(pendingSubscription);
-            qDebug() << "OPCUAPlugin: Reconnected and subscribed to" << nodeId;
-        } else {
-            qWarning() << "OPCUAPlugin: Failed to reconnect to" << endpoint;
-        }
-    });
+    core->connectOpc(endpoint);
     return true;
 }
 

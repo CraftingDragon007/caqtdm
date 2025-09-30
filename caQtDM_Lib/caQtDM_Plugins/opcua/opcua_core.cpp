@@ -120,23 +120,21 @@ OpcUaCore::~OpcUaCore()
 }
 
 
-bool OpcUaCore::connectOpc(const QString &url, std::function<void(bool, QOpcUaClient*)> onConnected)
+bool OpcUaCore::connectOpc(const QString &url)
 {
     if (!m_client) {
         emit errorOccured("Client is not initialized.");
-        onConnected(false, nullptr);
         return false;
     }
 
     QObject::connect(m_client, &QOpcUaClient::endpointsRequestFinished, this,
-            [this, url, onConnected](const QVector<QOpcUaEndpointDescription> &returnedEndpoints,
+            [this, url](const QVector<QOpcUaEndpointDescription> &returnedEndpoints,
                                 QOpcUa::UaStatusCode status,
                                 const QUrl &) {
                 // If no endpoints are returned at all, there is something fundamentally wrong with the server.
                 // Thus, not even the fallbackEndpoint is checked from the pv, and we error out here.
                 if (returnedEndpoints.isEmpty() || status != QOpcUa::UaStatusCode::Good) {
                     emit errorOccured("No endpoints received or status not good.");
-                    onConnected(false, nullptr);
                     return;
                 }
 
@@ -186,22 +184,9 @@ bool OpcUaCore::connectOpc(const QString &url, std::function<void(bool, QOpcUaCl
 
                 if (!foundWorkingEndpoint) {
                     emit errorOccured("No reachable endpoint hosts.");
-                    onConnected(false, nullptr);
                     return;
                 }
 
-                QObject::connect(m_client, &QOpcUaClient::stateChanged, this,
-                        [this, onConnected](QOpcUaClient::ClientState state) mutable {
-                        if (state == QOpcUaClient::Connected || state == QOpcUaClient::Disconnected) {
-                            if (state == QOpcUaClient::Connected) {
-                                onConnected(true, this->m_client);
-                            } else {
-                                emit errorOccured("Disconnected during initial connection.");
-                                onConnected(false, nullptr);
-                            }
-                            QObject::disconnect(m_client, &QOpcUaClient::stateChanged, this, nullptr);
-                        }
-                    });
                 m_client->connectToEndpoint(chosenEndpoint);
                 m_currentEndpointDescription = chosenEndpoint;
         }, Qt::SingleShotConnection);
