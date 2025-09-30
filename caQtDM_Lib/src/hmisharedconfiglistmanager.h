@@ -8,8 +8,9 @@
 #include <QDataStream>
 #include <QByteArray>
 #include <QList>
+#include "caQtDM_Lib_global.h"
 
-class HmiSharedConfigListManager : public QObject
+class CAQTDM_LIBSHARED_EXPORT HmiSharedConfigListManager : public QObject
 {
     Q_OBJECT
 public:

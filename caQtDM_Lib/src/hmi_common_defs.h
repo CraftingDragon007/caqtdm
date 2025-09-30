@@ -15,7 +15,7 @@
 #define EVENT_BUFFER_CAPACITY 100 // Max events in the ring buffer
 
 enum EventTypes {
-    Unknown = 0,
+    Invalid = 0,
     ApplicationStarted,
     NewCaHMIConfig,
     CaHMIConfigDeleted,

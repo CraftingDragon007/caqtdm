@@ -3,8 +3,9 @@
 
 #include <QObject>
 #include <qevent.h>
+#include <qtcontrols_global.h>
 
-class HMIApplicationEventFilter : public QObject
+class QTCON_EXPORT HMIApplicationEventFilter : public QObject
 {
     Q_OBJECT
 public:

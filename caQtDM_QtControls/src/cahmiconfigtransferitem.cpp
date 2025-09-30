@@ -26,3 +26,5 @@ QSharedPointer<caHMIConfigTransferItem> caHMIConfigTransferItem::clone() const
 
     return clone;
 }
+
+#include "moc_cahmiconfigtransferitem.cpp"

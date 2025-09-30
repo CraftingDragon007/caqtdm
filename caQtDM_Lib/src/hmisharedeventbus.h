@@ -7,8 +7,9 @@
 #include <QSharedMemory>
 #include <QSystemSemaphore>
 #include <QTimer>
+#include "caQtDM_Lib_global.h"
 
-class HmiSharedEventBus : public QObject {
+class CAQTDM_LIBSHARED_EXPORT HmiSharedEventBus : public QObject {
     Q_OBJECT
 
 public:

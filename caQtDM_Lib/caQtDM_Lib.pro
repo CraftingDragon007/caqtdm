@@ -7,6 +7,10 @@ include(../caQtDM.pri)
 
 QT += core gui network
 
+win32 {
+    LIBS += -ladvapi32
+}
+
 contains(QT_VER_MAJ, 4) {
    CONFIG += qt thread uitools plugin  qtestlib
 }

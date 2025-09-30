@@ -6919,7 +6919,7 @@ void CaQtDM_Lib::hmiHandleMouse(QObject *target, QMouseEvent *event)
         out.setVersion(QDATASTREAM_VERSION);
         out << correctedEvent.pos().x() << correctedEvent.pos().y();
 
-        int type = EventTypes::Unknown;
+        int type = EventTypes::Invalid;
 
         if (event->type() == QEvent::MouseMove) {
             type = EventTypes::MouseMove;

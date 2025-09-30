@@ -4,8 +4,9 @@
 #include "cahmiconfig.h"
 #include "qvariant.h"
 #include <QObject>
+#include <qtcontrols_global.h>
 
-class caHMIConfigTransferItem : public QObject
+class QTCON_EXPORT caHMIConfigTransferItem : public QObject
 {
     Q_OBJECT
 public:
