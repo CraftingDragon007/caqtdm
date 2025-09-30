@@ -5804,7 +5804,11 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
                     if(ptr != (knobData *) Q_NULLPTR) {
                         // when connected
                         if(ptr->edata.connected) {
-                            valueArray[i] = ptr->edata.rvalue;
+                            if (ptr->edata.fieldtype == caINT) {
+                                valueArray[i] = ptr->edata.ivalue;
+                            } else {
+                                valueArray[i] = ptr->edata.rvalue;
+                            }
                         } else {
                             valueArray[i] = 0.0;
                         }
