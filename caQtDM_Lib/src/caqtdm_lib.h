@@ -133,6 +133,12 @@ public:
     void UpdateGauge(EAbstractGauge *w, const knobData &data);
     ControlsInterface * getControlInterface(QString plugininterface);
 
+    static QList<QSharedPointer<caHMIConfigTransferItem>> externalHmiConfigList;
+    static QReadWriteLock externalHmiConfigListLock;
+
+    static QList<caHMIConfigTransferItem*> hmiConfigList;
+    static QReadWriteLock hmiConfigListLock;
+
     // interface implementation
     int addMonitor(QWidget *thisW, knobData *data, QString pv, QWidget *w, int *specData, QMap<QString, QString> map, QString *pvRep);
     knobData* GetMutexKnobDataPtr(int index);
@@ -468,9 +474,6 @@ private:
 
     QMap<int, caStripPlot*> stripList;          // list of stripplots with key group
     QList<int> stripGroupList;                  // group numbers found
-
-    static QList<caHMIConfigTransferItem*> hmiConfigList;
-    static QReadWriteLock hmiConfigListLock;
 
     HMIApplicationEventFilter *globalEventFilter;
 

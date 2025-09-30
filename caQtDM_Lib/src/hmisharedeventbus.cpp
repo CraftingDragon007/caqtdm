@@ -1,4 +1,5 @@
 #include "hmisharedeventbus.h"
+#include "userid.h"
 
 HmiSharedEventBus& HmiSharedEventBus::instance() {
     static HmiSharedEventBus bus;
@@ -7,9 +8,9 @@ HmiSharedEventBus& HmiSharedEventBus::instance() {
 
 HmiSharedEventBus::HmiSharedEventBus(QObject *parent)
     : QObject(parent),
-    this_sharedMemory(SHARED_MEM_KEY),
+    this_sharedMemory(QString(SHARED_MEM_KEY).arg(getUniqueUserId())),
     // Initialize semaphore with 1 (available) for mutual exclusion (mutex behavior)
-    this_writeLockSemaphore(WRITE_LOCK_SEM_KEY, 1, QSystemSemaphore::Open),
+    this_writeLockSemaphore(QString(WRITE_LOCK_SEM_KEY).arg(getUniqueUserId()), 1, QSystemSemaphore::Open),
     this_header(nullptr),
     this_eventBuffer(nullptr),
     this_currentProcessSlotIndex(-1),
@@ -197,9 +198,10 @@ bool HmiSharedEventBus::sendEvent(int eventType, const QByteArray& payload) {
 
     this_writeLockSemaphore.release();
 
+    /*
     qDebug() << "Process" << QCoreApplication::applicationPid()
              << "sent event" << EventTypes(eventType) << "at index" << writeIndex
-             << "Total events written:" << this_header->totalEventsWritten;
+             << "Total events written:" << this_header->totalEventsWritten; */
 
     return true;
 }

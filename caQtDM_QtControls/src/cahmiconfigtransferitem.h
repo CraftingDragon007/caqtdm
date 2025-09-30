@@ -65,6 +65,59 @@ public:
     void setParentWindowCallback(QWidget* parent) { this->parent = parent; }
     QWidget* parentWindowCallback() const { return this->parent; }
 
+    friend QDataStream& operator<<(QDataStream& out, const caHMIConfigTransferItem& config) {
+        out << config.uuid() << config.pid() << config.enabled() << config.objectName() << config.fileName()
+            << config.outputA() << config.outputB() << config.channel() << config.channelB()
+            << config.channelC() << config.channelD() << config.shortcut() << config.value()
+            << config.calculationType() << config.captureType() << config.captureRange();
+        return out;
+    }
+
+    friend QDataStream& operator>>(QDataStream& in, caHMIConfigTransferItem& config) {
+        QString uuid;
+        int pid;
+        bool enabled;
+        QString objectName;
+        QString fileName;
+        QString outputA;
+        QString outputB;
+        QString channel;
+        QString channelB;
+        QString channelC;
+        QString channelD;
+        QKeyCombination shortcut;
+        QVariant value;
+        caHMIConfig::calcType calculationType;
+        caHMIConfig::capType captureType;
+        caHMIConfig::capRange captureRange;
+
+        in >> uuid >> pid >> enabled >> objectName >> fileName
+            >> outputA >> outputB >> channel >> channelB
+            >> channelC >> channelD >> shortcut >> value
+            >> calculationType >> captureType >> captureRange;
+
+        config.setUUID(uuid);
+        config.setPID(pid);
+        config.setEnabled(enabled);
+        config.setObjectName(objectName);
+        config.setFileName(fileName);
+        config.setOutputA(outputA);
+        config.setOutputB(outputB);
+        config.setChannel(channel);
+        config.setChannelB(channelB);
+        config.setChannelC(channelC);
+        config.setChannelD(channelD);
+        config.setShortcut(shortcut);
+        config.setValue(value);
+        config.setCalculationType(calculationType);
+        config.setCaptureType(captureType);
+        config.setCaptureRange(captureRange);
+
+        return in;
+    }
+
+    virtual QSharedPointer<caHMIConfigTransferItem> clone() const;
+
 
 private:
     bool thisEnabled;

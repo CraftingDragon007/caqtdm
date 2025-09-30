@@ -6,17 +6,20 @@
 #include <cstring>
 
 // Unique keys for shared memory and semaphore
-#define SHARED_MEM_KEY "caQtDM_HmiSharedEventBus_SharedMem"
-#define WRITE_LOCK_SEM_KEY "caQtDM_HmiSharedEventBus_WriteLock"
+#define SHARED_MEM_KEY "caQtDM_HmiSharedEventBus_SharedMem_%1"
+#define WRITE_LOCK_SEM_KEY "caQtDM_HmiSharedEventBus_WriteLock_%1"
 
 // Configuration parameters
-#define MAX_PROCESS_SLOTS 16      // Maximum number of concurrent processes
-#define EVENT_PAYLOAD_SIZE 256    // Fixed size for event data payload
+#define MAX_PROCESS_SLOTS 256      // Maximum number of concurrent processes
+#define EVENT_PAYLOAD_SIZE 8192    // Fixed size for event data payload
 #define EVENT_BUFFER_CAPACITY 100 // Max events in the ring buffer
 
 enum EventTypes {
     Unknown = 0,
     ApplicationStarted,
+    NewCaHMIConfig,
+    CaHMIConfigDeleted,
+    CaHMIConfigEnabledChanged,
     KeyPress,
     MouseMove,
     MousePress

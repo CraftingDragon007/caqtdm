@@ -49,6 +49,7 @@ bool HTTPCONFIGURATOR = false;
 #include <fstream>
 #include <string>
 #include <hmisharedeventbus.h>
+#include <hmisharedconfiglistmanager.h>
 
 #include <QFileDialog>
 #include <QString>
@@ -401,6 +402,68 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
 #ifndef MOBILE
     if (!HmiSharedEventBus::instance().setup()) {
         qCritical() << "Failed to set up HmiSharedEventBus. Unable to receive or send events using this instance (pid:" << QCoreApplication::applicationPid() << ")";
+    } else {
+        connect(&HmiSharedEventBus::instance(), &HmiSharedEventBus::eventReceived, this,
+        [](int eventType, int senderPid, qint64 timestamp, const QByteArray& payload){
+            Q_UNUSED(timestamp)
+            if (senderPid == QApplication::applicationPid()) return; // ignore own events
+            if (eventType == EventTypes::NewCaHMIConfig) {
+                QSharedPointer<caHMIConfigTransferItem> item = QSharedPointer<caHMIConfigTransferItem>::create();
+                QDataStream in(payload);
+                in >> *item;
+
+                bool found = false;
+                QWriteLocker locker(&CaQtDM_Lib::externalHmiConfigListLock);
+                foreach (QSharedPointer<caHMIConfigTransferItem> i, CaQtDM_Lib::externalHmiConfigList) {
+                    if (i->uuid() == item->uuid()) found = true;
+                }
+
+                if (found) return;
+                CaQtDM_Lib::externalHmiConfigList.append(item);
+            } else if (eventType == EventTypes::CaHMIConfigDeleted) {
+                QString uuid;
+                QDataStream in(payload);
+                in >> uuid;
+                QWriteLocker locker(&CaQtDM_Lib::externalHmiConfigListLock);
+                auto it = std::remove_if(CaQtDM_Lib::externalHmiConfigList.begin(), CaQtDM_Lib::externalHmiConfigList.end(),
+                                         [&](const QSharedPointer<caHMIConfigTransferItem>& item) {
+                                             return item->uuid() == uuid;
+                                         });
+                CaQtDM_Lib::externalHmiConfigList.erase(it, CaQtDM_Lib::externalHmiConfigList.end());
+            } else if (eventType == EventTypes::CaHMIConfigEnabledChanged) {
+                QString uuid;
+                bool enabled;
+                QDataStream in(payload);
+                in >> uuid;
+                in >> enabled;
+
+                {
+                    QWriteLocker locker(&CaQtDM_Lib::hmiConfigListLock);
+                    foreach (caHMIConfigTransferItem* item, CaQtDM_Lib::hmiConfigList) {
+                        if (item->uuid() == uuid) {
+                            item->setEnabled(enabled);
+                        }
+                    }
+                }
+
+                {
+                    QWriteLocker locker(&CaQtDM_Lib::externalHmiConfigListLock);
+                    foreach (const QSharedPointer<caHMIConfigTransferItem>& item, CaQtDM_Lib::externalHmiConfigList) {
+                        if (item->uuid() == uuid) {
+                            item->setEnabled(enabled);
+                        }
+                    }
+                }
+            }
+        });
+    }
+    if (!HmiSharedConfigListManager::instance().setup()) {
+        qCritical() << "Failed to set up HmiSharedConfigListManager. Unable to view configured hmiConfigs of other processes (pid:" << QCoreApplication::applicationPid() << ")";
+    } else {
+        QList<QSharedPointer<caHMIConfigTransferItem>> items = HmiSharedConfigListManager::instance().readList();
+
+        QWriteLocker locker(&CaQtDM_Lib::externalHmiConfigListLock);
+        CaQtDM_Lib::externalHmiConfigList.append(items);
     }
 #endif
     // when file was specified, open it

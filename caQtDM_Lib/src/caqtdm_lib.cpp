@@ -34,6 +34,7 @@
 #include <iostream>
 #include <sstream>
 #include "hmisharedeventbus.h"
+#include "hmisharedconfiglistmanager.h"
 
 #ifndef MOBILE_ANDROID
   #include <sys/timeb.h>
@@ -296,6 +297,9 @@ double CaQtDM_Lib::rTime()
     return (double) 1000000.0 * (double) tt.tv_sec + (double) tt.tv_usec;
 }
 #endif
+
+QList<QSharedPointer<caHMIConfigTransferItem>> CaQtDM_Lib::externalHmiConfigList;
+QReadWriteLock CaQtDM_Lib::externalHmiConfigListLock;
 
 QList<caHMIConfigTransferItem*> CaQtDM_Lib::hmiConfigList;
 QReadWriteLock CaQtDM_Lib::hmiConfigListLock;
@@ -3460,6 +3464,20 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         QWriteLocker locker(&hmiConfigListLock);
         hmiConfigList.append(transferItem);
 
+        if (HmiSharedEventBus::instance().isInitialized()) {
+            QByteArray byteArray;
+            QDataStream out(&byteArray, QIODevice::WriteOnly);
+            out << *transferItem;
+            HmiSharedEventBus::instance().sendEvent(EventTypes::NewCaHMIConfig, byteArray);
+        }
+
+        if (HmiSharedConfigListManager::instance().isInitialized()) {
+            QList<QSharedPointer<caHMIConfigTransferItem>> list = HmiSharedConfigListManager::instance().readList();
+            list.append(transferItem->clone());
+
+            HmiSharedConfigListManager::instance().writeList(list);
+        }
+
         connect(hmiConfigWidget, &QObject::destroyed, [transferItem](QObject *sender) {
             Q_UNUSED(sender);
             QString uuid = transferItem->uuid();
@@ -3474,6 +3492,24 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
                 return false;
             });
             hmiConfigList.erase(newEnd, hmiConfigList.end());
+
+            if (HmiSharedEventBus::instance().isInitialized()) {
+                QByteArray byteArray;
+                QDataStream out(&byteArray, QIODevice::WriteOnly);
+                out << uuid;
+                HmiSharedEventBus::instance().sendEvent(EventTypes::CaHMIConfigDeleted, byteArray);
+            }
+
+            if (HmiSharedConfigListManager::instance().isInitialized()) {
+                QList<QSharedPointer<caHMIConfigTransferItem>> list = HmiSharedConfigListManager::instance().readList();
+                auto it = std::remove_if(list.begin(), list.end(),
+                                         [&](const QSharedPointer<caHMIConfigTransferItem>& item) {
+                                             return item->uuid() == uuid;
+                                         });
+                list.erase(it, list.end());
+
+                HmiSharedConfigListManager::instance().writeList(list);
+            }
         });
 
         // insert dataindex list
@@ -3891,18 +3927,36 @@ void CaQtDM_Lib::GlobalShortcutWindow() {
     table->setAlternatingRowColors(true);
     table->horizontalHeader()->setStretchLastSection(true);
 
-    QList<caHMIConfigTransferItem*> temp;
+    QList<QSharedPointer<caHMIConfigTransferItem>> externalItemSharedPointersHolders;
+    QMap<caHMIConfigTransferItem*, bool> globalConfigItems;
+
     {
         QReadLocker locker(&hmiConfigListLock);
-        temp = hmiConfigList;
+        foreach (caHMIConfigTransferItem* item, hmiConfigList) {
+            if (item && item->captureRange() == caHMIConfig::capRange::Global) {
+                globalConfigItems.insert(item, false); // 'false' means it's an internal item
+            }
+        }
     }
 
-    if (temp.count() > 0) table->setRowCount(temp.count());
+    {
+        QReadLocker locker(&externalHmiConfigListLock);
+        foreach (const QSharedPointer<caHMIConfigTransferItem>& item, externalHmiConfigList) {
+            if (!item.isNull() && item->captureRange() == caHMIConfig::capRange::Global) {
+                externalItemSharedPointersHolders.append(item);
+                globalConfigItems.insert(item.data(), true);    // 'true' means it's an external item
+            }
+        }
+    }
+
+    if (globalConfigItems.count() > 0) table->setRowCount(globalConfigItems.count());
     else table->setRowCount(1);
 
     int count = 0;
-    foreach (caHMIConfigTransferItem *item, temp) {
-        if (item->captureRange() != caHMIConfig::capRange::Global) continue;
+    for (auto it = globalConfigItems.constBegin(); it != globalConfigItems.constEnd(); ++it) {
+        caHMIConfigTransferItem *item = it.key(); // The raw pointer to the item
+        bool isExternal = it.value();
+
         QTableWidgetItem *name = new QTableWidgetItem(item->objectName());
         name->setFlags(name->flags() & ~Qt::ItemIsEditable);
         table->setItem(count, 0, name);
@@ -3935,13 +3989,25 @@ void CaQtDM_Lib::GlobalShortcutWindow() {
         QCheckBox *enabled = new QCheckBox(table);
         enabled->setChecked(item->enabled());
 
-        connect(enabled, &QCheckBox::checkStateChanged, [item](int state){
-            QWriteLocker locker(&hmiConfigListLock);
+        connect(enabled, &QCheckBox::checkStateChanged, [item, isExternal, externalItemSharedPointersHolders](int state){
             if (item == Q_NULLPTR) return;
-            if (state == Qt::Checked) {
-                item->setEnabled(true);
+            QString uuid;
+            bool enabled = state == Qt::Checked;
+            if (isExternal) {
+                QWriteLocker locker(&externalHmiConfigListLock);
+                uuid = item->uuid();
+                item->setEnabled(enabled);
             } else {
-                item->setEnabled(false);
+                QWriteLocker locker(&hmiConfigListLock);
+                uuid = item->uuid();
+                item->setEnabled(enabled);
+            }
+
+            if (HmiSharedEventBus::instance().isInitialized()) {
+                QByteArray data;
+                QDataStream out(&data, QIODevice::WriteOnly);
+                out << uuid << enabled;
+                HmiSharedEventBus::instance().sendEvent(EventTypes::CaHMIConfigEnabledChanged, data);
             }
         });
 
@@ -3954,7 +4020,7 @@ void CaQtDM_Lib::GlobalShortcutWindow() {
         count++;
     }
 
-    if (temp.count() > 0) table->setRowCount(count);
+    if (globalConfigItems.count() > 0) table->setRowCount(count);
 
     table->resizeColumnsToContents();
 
@@ -6801,7 +6867,7 @@ void CaQtDM_Lib::Callback_ExternalHmiEventReceived(int eventType, int senderPid,
 
         int x, y;
         in >> x >> y;
-        qDebug() << "received mouse " << x << y << "from" << senderPid;
+        //qDebug() << "received mouse " << x << y << "from" << senderPid;
         QEvent::Type type = QEvent::None;
         if (eventType == EventTypes::MouseMove) type = QEvent::MouseMove;
         else if (eventType == EventTypes::MousePress) type = QEvent::MouseButtonPress;
@@ -6887,6 +6953,7 @@ void CaQtDM_Lib::hmiHandleIncomingEvent(QObject *target, QEvent *event, bool isS
     QReadLocker locker(&hmiConfigListLock);
     if (event->type() == QEvent::KeyPress) {
         QKeyEvent *keyEvent = dynamic_cast<QKeyEvent*>(event);
+        if (keyEvent == Q_NULLPTR) return;
         foreach (caHMIConfigTransferItem *item, hmiConfigList) {
             if (item->enabled() == false) continue;
             if ((isSourceExternal || window != item->parentWindowCallback()) && item->captureRange() == caHMIConfig::capRange::Local) {
