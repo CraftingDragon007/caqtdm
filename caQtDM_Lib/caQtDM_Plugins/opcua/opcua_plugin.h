@@ -53,7 +53,6 @@ public:
     QString pluginName();
     OPCUAPlugin();
 
-    QString findNodeIdByIndex(int index);
     int initCommunicationLayer(MutexKnobData *data, MessageWindow *messageWindow, QMap<QString, QString> options);
     int pvAddMonitor(int index, knobData *kData, int rate, int skip);
     int pvClearMonitor(knobData *kData);
@@ -71,8 +70,7 @@ public:
     bool resolveConnectionString(char* pv, QString &endpoint, QString &nodeId);
     caType generateCaTypeFromVariant(const QVariant &value);
     void updateKnobDataFromVariant(knobData &kData, const QVariant &value);
-    void updateKnobDataWithAccessLevel(knobData &kData, const bool &accessR, const bool &accessW);
-    void onConnectedStatusChange(bool success, QString endpoint, int index);
+    void updateKnobDataWithAccessLevel(knobData &kData, const bool &accessR, const bool &accessW);    
 
 private:
     QMutex mutex;
@@ -81,8 +79,9 @@ private:
     QMap<QString, double> listOfDoubles;
     QMultiMap<QString, int> Channelcache;
     QScopedPointer<opc::OpcUaCore> m_core;
-    QMap<QString, std::shared_ptr<opc::OpcUaCore>> m_cores;
+    QMap<QString, opc::OpcUaCore*> m_cores;
     QMap<QString, QMetaObject::Connection> m_statusCallbackConnections;
+    QMap<QString, QList<int>> m_knobDataIndicesForEndpoint;
     enum class ConnectionState { NotConnected, Connecting, Connected };
     QMap<QString, ConnectionState> m_connectionState;
     QMap<QString, QList<opc::SubscriptionSettings>> m_pendingSubscriptions;

@@ -27,44 +27,95 @@
 #include "qrandom.h"
 #include "qtcpsocket.h"
 #include <QDebug>
+
 namespace opc{
 OpcUaCore::OpcUaCore(QObject *parent)
     : QObject(parent), m_client(nullptr)
 {
-    m_client = m_provider.createClient("open62541");
+    QOpcUaProvider* provider = new QOpcUaProvider();
 
-    QStringList backends = m_provider.availableBackends();
+    QStringList backends = provider->availableBackends();
+    if(!backends.contains("open62541")){
+        emit errorOccured("Open62541 not found. Please make sure the OPCUA QT Plugin is installed.");
+    }
 
+    m_client = provider->createClient("open62541");
     if (!m_client) {
         emit errorOccured("Failed to create OPC UA client instance.");
         return;
     }
 
-    if(!backends.contains("open62541")){
-        emit errorOccured("Open62541 not found. Please make sure the OPCUA QT Plugin is installed.");
-    }
-    connect(m_client, &QOpcUaClient::connected, this, &OpcUaCore::connected);
-    connect(m_client, &QOpcUaClient::disconnected, this, &OpcUaCore::disconnected);
-    connect(m_client, &QOpcUaClient::errorChanged, this,
-            [this](QOpcUaClient::ClientError error) {
-                emit errorOccured(QString("Client error: %1").arg(static_cast<int>(error)));
-            });
+    QObject::connect(m_client, &QOpcUaClient::connected, this, [this]() {
+        emit connected();
 
+        m_reconnecting = false; // stop ongoing reconnect attempts
+        m_attempt = 0;
+        m_timeoutMs = 100;
+
+        for (auto it = m_subscriptionNodes.begin(); it != m_subscriptionNodes.end(); ++it) {
+            QOpcUaNode *node = it.value();
+            if (node) {
+                startMonitoringOfNode(node);
+            }
+        }
+    });
+
+
+    QObject::connect(m_client, &QOpcUaClient::disconnected, this, [this]() {
+        emit disconnected();
+
+        if (m_reconnecting)
+            return;
+
+        m_reconnecting = true;
+        m_attempt = 0;
+        m_timeoutMs = 100;
+
+        QTimer *reconnectTimer = new QTimer(this);
+        reconnectTimer->setSingleShot(true);
+
+        QObject::connect(reconnectTimer, &QTimer::timeout, this, [this, reconnectTimer]() {
+            if (this->isClientConnected()) {
+                m_reconnecting = false;
+                reconnectTimer->deleteLater();
+                return;
+            }
+            if (m_client->state() == QOpcUaClient::Connecting) {
+                // Previous try is still going, restart the current timer.
+                reconnectTimer->start(m_timeoutMs);
+                return;
+            }
+
+            m_client->connectToEndpoint(m_currentEndpointDescription);
+            m_attempt++;
+            m_timeoutMs = qMin(m_timeoutMs * 2, 60000); // Slowly increase timeout
+
+            reconnectTimer->start(m_timeoutMs);
+        });
+
+        reconnectTimer->start(0);
+    });
+
+    QObject::connect(m_client, &QOpcUaClient::errorChanged, this,
+                     [this](QOpcUaClient::ClientError error) {
+                         emit errorOccured(QString("Client error: %1").arg(static_cast<int>(error)));
+                     });
 }
 
 OpcUaCore::~OpcUaCore()
 {
     clearAllSubscriptions();
+    QObject::disconnect(this);
 
     if (m_client) {
+        QObject::disconnect(m_client);
         if (m_client->state() != QOpcUaClient::Disconnected) {
             QEventLoop loop;
-            connect(m_client, &QOpcUaClient::disconnected, &loop, &QEventLoop::quit);
+            QObject::connect(m_client, &QOpcUaClient::disconnected, &loop, &QEventLoop::quit);
             m_client->disconnectFromEndpoint();
             loop.exec();
         }
-        delete m_client;
-        m_client = nullptr;
+        m_client->deleteLater();
     }
 }
 
@@ -77,7 +128,7 @@ bool OpcUaCore::connectOpc(const QString &url, std::function<void(bool, QOpcUaCl
         return false;
     }
 
-    connect(m_client, &QOpcUaClient::endpointsRequestFinished, this,
+    QObject::connect(m_client, &QOpcUaClient::endpointsRequestFinished, this,
             [this, url, onConnected](const QVector<QOpcUaEndpointDescription> &returnedEndpoints,
                                 QOpcUa::UaStatusCode status,
                                 const QUrl &) {
@@ -105,7 +156,7 @@ bool OpcUaCore::connectOpc(const QString &url, std::function<void(bool, QOpcUaCl
                 std::atomic<bool> found(false);
 
                 timer.setSingleShot(true);
-                connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
+                QObject::connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
 
                 // For each endpoint returned from the server, try to establish a simple tcp connection. The first endpoint that connects is chosen for further opcua communication.
                 for (int i = 0; i < endpoints.size(); ++i) {
@@ -114,8 +165,8 @@ bool OpcUaCore::connectOpc(const QString &url, std::function<void(bool, QOpcUaCl
                     QTcpSocket* sock = new QTcpSocket(this);
                     sockets.append(sock);
 
-                    connect(sock, &QTcpSocket::connected, this,
-                            [this, ep, &sockets, &found, &chosenEndpoint, &foundWorkingEndpoint, &timer, &loop]() {
+                    QObject::connect(sock, &QTcpSocket::connected, this,
+                            [&]() {
                                 if (found.exchange(true)) return;
                                 chosenEndpoint = ep;
                                 foundWorkingEndpoint = true;
@@ -139,7 +190,7 @@ bool OpcUaCore::connectOpc(const QString &url, std::function<void(bool, QOpcUaCl
                     return;
                 }
 
-                connect(m_client, &QOpcUaClient::stateChanged, this,
+                QObject::connect(m_client, &QOpcUaClient::stateChanged, this,
                         [this, onConnected](QOpcUaClient::ClientState state) mutable {
                         if (state == QOpcUaClient::Connected || state == QOpcUaClient::Disconnected) {
                             if (state == QOpcUaClient::Connected) {
@@ -152,33 +203,8 @@ bool OpcUaCore::connectOpc(const QString &url, std::function<void(bool, QOpcUaCl
                         }
                     });
                 m_client->connectToEndpoint(chosenEndpoint);
+                m_currentEndpointDescription = chosenEndpoint;
         }, Qt::SingleShotConnection);
-
-    m_client->requestEndpoints(url);
-    return true;
-}
-
-
-bool OpcUaCore::connectOpc(const QString &url)
-{
-    if (!m_client) {
-        emit errorOccured("Client is not initialized.");
-        return false;
-    }
-
-    if (!m_endpointsHooked) {
-        connect(m_client, &QOpcUaClient::endpointsRequestFinished, this,
-                [this](const QVector<QOpcUaEndpointDescription> &endpoints,
-                       QOpcUa::UaStatusCode status,
-                       const QUrl &) {
-                    if (endpoints.isEmpty() || status != QOpcUa::UaStatusCode::Good) {
-                        emit errorOccured("No endpoints received or status not good.");
-                        return;
-                    }
-                    m_client->connectToEndpoint(endpoints.first());
-                });
-        m_endpointsHooked = true;
-    }
 
     m_client->requestEndpoints(url);
     return true;
@@ -216,9 +242,22 @@ void OpcUaCore::subscribeToNode(const SubscriptionSettings &subscriptionSettings
         emit errorOccured("Failed to create node object for subscription: " + nodeId);
         return;
     }
+    m_subscriptionNodes.insert(nodeId, node);
 
-    // Connect first, then request attributes
-    connect(node, &QOpcUaNode::attributeRead, this, [=](QOpcUa::NodeAttributes attrs) {
+    m_intervalMsForNodeId[nodeId] = intervalMs;
+
+    startMonitoringOfNode(node);
+}
+
+void OpcUaCore::startMonitoringOfNode(QOpcUaNode *node) {
+    QString nodeId = node->nodeId();
+    if (m_isConnectingToNode[nodeId]) {
+        return;
+    }
+    m_isConnectingToNode[nodeId] = true;
+    int intervalMs = m_intervalMsForNodeId.value(nodeId, 10);
+
+    QObject::connect(node, &QOpcUaNode::attributeRead, this, [=](QOpcUa::NodeAttributes attrs) {
         if (!attrs.testFlag(QOpcUa::NodeAttribute::NodeClass)) {
             emit errorOccured("Failed to read NodeClass for node: " + nodeId);
             node->deleteLater();
@@ -246,14 +285,13 @@ void OpcUaCore::subscribeToNode(const SubscriptionSettings &subscriptionSettings
             return;
         }
 
-        connect(node, &QOpcUaNode::dataChangeOccurred, this,
-                [this, nodeId](QOpcUa::NodeAttribute attr, const QVariant &value) {
-                    if (attr == QOpcUa::NodeAttribute::Value) {
-                        emit valueRead(nodeId, value);
-                    }
-                });
+        QObject::connect(node, &QOpcUaNode::dataChangeOccurred, this,
+                         [this, nodeId](QOpcUa::NodeAttribute attr, const QVariant &value) {
+                             if (attr == QOpcUa::NodeAttribute::Value) {
+                                 emit valueRead(nodeId, value);
+                             }
+                         });
 
-        m_subscriptionNodes.insert(nodeId, node);
         qDebug() << "[subscribeToNode] Subscribed successfully to:" << nodeId;
 
         QVariant accessLevel = node->attribute(QOpcUa::NodeAttribute::UserAccessLevel);
@@ -263,9 +301,10 @@ void OpcUaCore::subscribeToNode(const SubscriptionSettings &subscriptionSettings
             bool writeAccess = accessLevel.value<quint8>() & static_cast<quint8>(QOpcUa::AccessLevelBit::CurrentWrite);
             emit accessLevelRead(nodeId, readAccess, writeAccess);
         }
+
+        m_isConnectingToNode[nodeId] = false;
     });
 
-    // Must come after connect
     node->readAttributes(QOpcUa::NodeAttribute::NodeClass | QOpcUa::NodeAttribute::UserAccessLevel | QOpcUa::NodeAttribute::Value | QOpcUa::NodeAttribute::Description);
 }
 
@@ -279,7 +318,7 @@ void OpcUaCore::clearAllSubscriptions()
         if (node) {
             node->disableMonitoring(QOpcUa::NodeAttribute::Value);
             node->disconnect(); // disconnect any signals/slots
-            node->deleteLater();
+            unsubscribeFromNode(node->nodeId());
         }
     }
 
@@ -309,7 +348,7 @@ void OpcUaCore::fetchDataFromAnyNode() {
     // ONLY Objects here
     req.setNodeClassMask(QOpcUa::NodeClasses(QOpcUa::NodeClass::Object));
 
-    connect(objectsNode, &QOpcUaNode::browseFinished, this,
+    QObject::connect(objectsNode, &QOpcUaNode::browseFinished, this,
             [this, objectsNode](QVector<QOpcUaReferenceDescription> children,
                                 QOpcUa::UaStatusCode status) {
                 objectsNode->deleteLater();
@@ -361,7 +400,7 @@ void OpcUaCore::browseObjectForVariables(const QString &objectNodeId) {
     // now only Variables
     req.setNodeClassMask(QOpcUa::NodeClasses(QOpcUa::NodeClass::Variable));
 
-    connect(objNode, &QOpcUaNode::browseFinished, this,
+    QObject::connect(objNode, &QOpcUaNode::browseFinished, this,
             [this, objNode](QVector<QOpcUaReferenceDescription> children,
                             QOpcUa::UaStatusCode status) {
                 objNode->deleteLater();
@@ -414,7 +453,7 @@ void OpcUaCore::fetchDataFromSingleNode(const QString &nodeId)
     qInfo() << "Node object created for " << nodeId << ". Setting up and read.";
 
     // Handling
-    connect(node, &QOpcUaNode::attributeRead, this, [this, node, nodeId](QOpcUa::NodeAttributes attrs){
+    QObject::connect(node, &QOpcUaNode::attributeRead, this, [this, node, nodeId](QOpcUa::NodeAttributes attrs){
         qInfo() << "attributeRead signal received for node:" << nodeId << "with attributes:" << attrs;
 
         // Check if the Value attribute was part of this read operation's response.
@@ -439,7 +478,7 @@ void OpcUaCore::fetchDataFromSingleNode(const QString &nodeId)
             emit errorOccured("Read response from server did not include the Value attribute for node: " + nodeId);
         }
         node->deleteLater();
-    }, Qt::UniqueConnection);
+    });
 
 
     int req = node->readValueAttribute();
@@ -452,7 +491,7 @@ void OpcUaCore::fetchDataFromSingleNode(const QString &nodeId)
 
 void OpcUaCore::fetchDataFromMultipleNodes(const QStringList &nodeIds)
 {
-    for(auto node : nodeIds){
+    for(auto &node : nodeIds){
         fetchDataFromSingleNode(node);
     }
 }
@@ -473,12 +512,16 @@ void OpcUaCore::unsubscribeFromNode(const QString &nodeId) {
     if (!m_subscriptionNodes.contains(nodeId))
         return;
 
+    m_intervalMsForNodeId.remove(nodeId);
     QOpcUaNode *node = m_subscriptionNodes[nodeId];
-    if (node) {
-        node->disableMonitoring(QOpcUa::NodeAttribute::Value);
-        node->deleteLater();
-    }
     m_subscriptionNodes.remove(nodeId);
+
+    if (node ) {
+        node->disableMonitoring(QOpcUa::NodeAttribute::Value);
+        if (!(m_client && m_client->deleteNode(node->nodeId()))) {
+            node->deleteLater();
+        }
+    }
 }
 
 void OpcUaCore::disableMonitoringForNode(const QString &nodeId){

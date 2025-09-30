@@ -135,8 +135,6 @@ int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
     Q_UNUSED(rate);
     Q_UNUSED(skip);
 
-
-
     QString endpoint, nodeId;
     if (!resolveConnectionString(kData->pv, endpoint, nodeId)) {
         if (messageWindowPtr) {
@@ -151,41 +149,65 @@ int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
 
     Channelcache.insert(nodeId, index);
 
-    std::shared_ptr<opc::OpcUaCore> core;
+    opc::OpcUaCore *core;
     {
         QMutexLocker lock(&m_mutex);
         if (!m_cores.contains(endpoint)) {
-            m_cores[endpoint] = std::make_shared<opc::OpcUaCore>();
+            m_cores[endpoint] = new opc::OpcUaCore();
             m_connectionState[endpoint] = ConnectionState::NotConnected;
 
             auto core = m_cores[endpoint];
-            QObject::connect(core.get(), &opc::OpcUaCore::valueRead, [=](const QString &nodeId, const QVariant &value) {
+            QObject::connect(core, &opc::OpcUaCore::valueRead, [=](const QString &nodeId, const QVariant &value) {
                 auto range = Channelcache.equal_range(nodeId);
                 for (auto it = range.first; it != range.second; ++it) {
                     int idx = it.value();
                     knobData kData = mutexKnobdataPtr->GetMutexKnobData(idx);
 
                     updateKnobDataFromVariant(kData, value);
-
                     mutexknobdataP->SetMutexKnobData(kData.index, kData);
                     mutexknobdataP->SetMutexKnobDataReceived(&kData);
                 }
             });
 
-            QObject::connect(core.get(), &opc::OpcUaCore::accessLevelRead, [=](const QString &nodeId, const bool &readAccess, const bool &writeAccess) {
+            QObject::connect(core, &opc::OpcUaCore::accessLevelRead, [=](const QString &nodeId, const bool &readAccess, const bool &writeAccess) {
                 auto range = Channelcache.equal_range(nodeId);
                 for (auto it = range.first; it != range.second; ++it) {
                     int idx = it.value();
                     knobData kData = mutexKnobdataPtr->GetMutexKnobData(idx);
 
-                    updateKnobDataWithAccessLevel(kData, readAccess, writeAccess);
+                    updateKnobDataWithAccessLevel(kData,  readAccess, writeAccess);
                     mutexknobdataP->SetMutexKnobData(kData.index, kData);
                     mutexknobdataP->SetMutexKnobDataReceived(&kData);
+                    mutexknobdataP->SetMutexKnobDataConnected(idx, true);
+                }
+            });
+
+            QObject::connect(core, &opc::OpcUaCore::disconnected, [=]() {
+                m_connectionState[endpoint] = ConnectionState::NotConnected;
+                for (int idx: m_knobDataIndicesForEndpoint[endpoint]) {
+                    mutexknobdataP->SetMutexKnobDataConnected(idx, false);
+                }
+
+                if (m_knobDataIndicesForEndpoint[endpoint].length() > 0) {
+                    if (messageWindowPtr) {
+                        QString err = QString("OPCUA: Connection failed for %1").arg(endpoint);
+                        messageWindowPtr->postMsgEvent(QtCriticalMsg, (char*)err.toLatin1().constData());
+                    }
+                }
+            });
+
+            QObject::connect(core, &opc::OpcUaCore::connected, [=]() {
+                m_connectionState[endpoint] = ConnectionState::Connected;
+                if (messageWindowPtr) {
+                    QString info = QString("OPCUA: Connected to %1").arg(endpoint);
+                    messageWindowPtr->postMsgEvent(QtInfoMsg, (char*)info.toLatin1().constData());
                 }
             });
         }
         core = m_cores[endpoint];
     }
+
+    m_knobDataIndicesForEndpoint[endpoint].push_back(index);
 
     QMutexLocker lock(&m_mutex);
     ConnectionState state = m_connectionState[endpoint];
@@ -206,31 +228,19 @@ int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
                     success = false;
                 }
 
-                // treat current status change
-                onConnectedStatusChange(success, endpoint, index);
-
                 if (success) {
                     // Subscribe to all pending nodeIds
                     for (const auto& pendingSubscription : m_pendingSubscriptions[endpoint]) {
                         core->subscribeToNode(pendingSubscription);
                     }
                     m_pendingSubscriptions[endpoint].clear();
-                    // Connection for ongoing status changes
-                     m_statusCallbackConnections[endpoint] = connect(client, &QOpcUaClient::stateChanged, this,
-                            [this, endpoint, index](QOpcUaClient::ClientState state) {
-                                if (state == QOpcUaClient::Connected) {
-                                    this->onConnectedStatusChange(true, endpoint, index);
-                                } else if (state == QOpcUaClient::Disconnected) {
-                                    this->onConnectedStatusChange(false, endpoint, index);
-                                }
-                            });
+                } else {
+                    if (messageWindowPtr) {
+                        QString err = QString("OPCUA: Failed to connect to %1").arg(endpoint);
+                        messageWindowPtr->postMsgEvent(QtCriticalMsg, (char*)err.toLatin1().constData());
+                    }
                 }
             };
-
-            // Remove old status listener
-            if (m_statusCallbackConnections.contains(endpoint)) {
-                QObject::disconnect(m_statusCallbackConnections[endpoint]);
-            }
 
             // Start connection
             core->connectOpc(endpoint, onConnected);
@@ -247,7 +257,14 @@ int OPCUAPlugin::pvClearMonitor(knobData *kData) {
     QMutexLocker lock(&m_mutex);
 
     int index = kData->index;
-    QString nodeId = findNodeIdByIndex(index);
+    QString endpoint, nodeId;
+    if (!resolveConnectionString(kData->pv, endpoint, nodeId)) {
+        if (messageWindowPtr) {
+            QString msg = "Invalid OPCUA PV format. Expected <endpoint>/ns=...; got: " + QString::fromUtf8(kData->pv);
+            messageWindowPtr->postMsgEvent(QtCriticalMsg, (char*)msg.toLatin1().constData());
+        }
+        return false;
+    };
 
     if (nodeId.isEmpty()) {
         if (messageWindowPtr) {
@@ -257,6 +274,13 @@ int OPCUAPlugin::pvClearMonitor(knobData *kData) {
         return false;
     }
 
+    QList<int> listWithIndexRemoved;
+    for (auto oldIndex: m_knobDataIndicesForEndpoint[endpoint]) {
+        if (oldIndex != index) {
+            listWithIndexRemoved.push_back(oldIndex);
+        }
+    }
+    m_knobDataIndicesForEndpoint[endpoint] = listWithIndexRemoved;
     Channelcache.remove(nodeId, index);
 
     // Find which endpoint this node belongs to
@@ -412,7 +436,7 @@ int OPCUAPlugin::pvReconnect(knobData *kData)
     m_connectionState[endpoint] = ConnectionState::NotConnected;
 
     core->connectOpc(endpoint, [=](bool success, QOpcUaClient* client) {
-        if (success) {
+        if (success && client) {
             m_connectionState[endpoint] = ConnectionState::Connected;
             core->subscribeToNode(pendingSubscription);
             qDebug() << "OPCUAPlugin: Reconnected and subscribed to" << nodeId;
@@ -467,14 +491,6 @@ int OPCUAPlugin::TerminateIO()
     Channelcache.clear();           // clear nodeId → index map
 
     return true;
-}
-
-QString OPCUAPlugin::findNodeIdByIndex(int index){
-    for (auto it = Channelcache.begin(); it != Channelcache.end(); ++it) {
-        if (it.value() == index)
-            return it.key();
-    }
-    return QString();
 }
 
 bool OPCUAPlugin::resolveConnectionString(char* pv, QString &endpoint, QString &nodeId)
@@ -583,27 +599,6 @@ void OPCUAPlugin::updateKnobDataWithAccessLevel(knobData &kData, const bool &acc
     kData.edata.accessR = accessR;
     kData.edata.accessW = accessW;
 }
-
-void OPCUAPlugin::onConnectedStatusChange(bool success, QString endpoint, int index) {
-    qDebug() << "onConnectedStatusChange " << success;
-    QMutexLocker lock(&m_mutex);
-    mutexknobdataP->SetMutexKnobDataConnected(index, success);
-    if (!success) {
-        m_connectionState[endpoint] = ConnectionState::NotConnected;
-        if (messageWindowPtr) {
-            QString err = QString("OPCUA: Failed to connect to %1").arg(endpoint);
-            messageWindowPtr->postMsgEvent(QtCriticalMsg, (char*)err.toLatin1().constData());
-        }
-        return;
-    }
-
-    m_connectionState[endpoint] = ConnectionState::Connected;
-
-    if (messageWindowPtr) {
-        QString info = QString("OPCUA: Connected to %1").arg(endpoint);
-        messageWindowPtr->postMsgEvent(QtInfoMsg, (char*)info.toLatin1().constData());
-    }
-};
 
 int OPCUAPlugin::getUpdateIntervalFromKnobData(knobData *kData) {
     if (!kData) {

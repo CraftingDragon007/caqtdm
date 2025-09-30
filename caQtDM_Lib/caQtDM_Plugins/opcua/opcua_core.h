@@ -55,7 +55,6 @@ public:
     explicit OpcUaCore(QObject *parent = nullptr);
     ~OpcUaCore();
 
-    bool connectOpc(const QString &url);
     bool connectOpc(const QString &url, std::function<void(bool, QOpcUaClient*)> onConnected);
     void disconnectOpc();
     void fetchDataFromAnyNode();
@@ -74,20 +73,25 @@ public:
 signals:
     void connected();
     void disconnected();
-    void errorOccured(const QString &message);
-    void valueRead(const QString nodeId, const QVariant &value);
+    void errorOccured(const QString message);
+    void valueRead(const QString nodeId, const QVariant value);
     void valuesRead(const QVector<QVariant> &values);
     void accessLevelRead(const QString nodeId, const bool readAccess, const bool writeAccess);
 
 private:
-    QOpcUaProvider m_provider;
     QOpcUaClient *m_client;
+    QOpcUaEndpointDescription m_currentEndpointDescription;
+    int m_attempt;
+    int m_timeoutMs;
+    bool m_reconnecting;
     bool m_endpointsHooked = false;
     bool isClientConnected();
     void browseObjectForVariables(const QString &objectNodeId);
     QMap<QString, QOpcUaNode*> m_subscriptionNodes;
-    void QOpcUaBrowseResult(QOpcUaNode *, void (*)(QVector<QOpcUaReferenceDescription>, QOpcUa::UaStatusCode), OpcUaCore *, QDebug);
+    QMap<QString, bool> m_isConnectingToNode;
+    QMap<QString, int> m_intervalMsForNodeId;
+    void QOpcUaBrowseResult(QString nodeId, QOpcUaNode *, void (*)(QVector<QOpcUaReferenceDescription>, QOpcUa::UaStatusCode), OpcUaCore *, QDebug);
+    void startMonitoringOfNode(QOpcUaNode *node);
 };
 }
-
 #endif // OPCUA_CLIENT_H
