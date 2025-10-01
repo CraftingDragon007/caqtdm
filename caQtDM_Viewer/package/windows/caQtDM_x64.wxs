@@ -51,7 +51,7 @@
                                 <File Id="NT.DLL" Name="nt.dll" Source="$(env.EPICS_BASE)\bin\$(env.EPICS_HOST_ARCH)\nt.dll" />
                             </Component>
                             <Component Id="ZMQ" Guid="6F1967A1-84CA-4BE4-85DC-8D1B75338BB7" Win64="yes">
-                                <File Id="LIBZMQ.DLL" Name="libzmq.dll" Source="$(env.ZMQLIB)\libzmq.dll" />
+                                <File Id="LIBZMQ.DLL" Name="libzmq.dll" Source="$(env.ZMQ)\$(env.ZMQLIBRARY)" />
                             </Component>
                             <Component Id="qwt_6.2.0" Guid="80321EF0-DC70-4D0A-8E0C-269502A0EACB" Win64="yes">
                                 <File Id="QWT.DLL" Name="qwt.dll" Source="$(env.QWTHOME)\lib\qwt.dll" />
@@ -68,10 +68,6 @@
                                 <IniFile Id="qt_conf_file2" Action="createLine" Key="Plugins" Name="qt.conf" Section="Paths" Value="plugins" Directory="INSTALLDIR_BIN" />
                                 <IniFile Id="qt_conf_file3" Action="createLine" Key="Binaries" Name="qt.conf" Section="Paths" Value="bin/windows-x64/" Directory="INSTALLDIR_BIN" />
                                 <CreateFolder />
-                            </Component>
-                            <Component Id="openssl" Guid="5BA25D42-D318-4410-84EE-153C9EEE1F66" Win64="yes">
-                                <File Id="LIBEAY32.DLL" Name="libeay32.dll" Source="$(env.SSLLIB)\libeay32.dll" />
-                                <File Id="SSLEAY32.DLL" Name="ssleay32.dll" Source="$(env.SSLLIB)\ssleay32.dll" />
                             </Component>
                         </Directory>
                     </Directory>
@@ -100,7 +96,7 @@
                         <?if $(env.CAQTDMQTVER) = QT6 ?>
                         <Directory Id="TLS" Name="tls">
                             <Component Id="tls" Guid="3A184FF7-4600-4A6A-9464-485E8C837D8B" Win64="yes">
-                                <File Id="QOPENSSLBACKEND.DLL" Name="qopensslbackend.dll" Source="$(env.QTHOME)\plugins\tls\qopensslbackend.dll" />
+                                <!---File Id="QOPENSSLBACKEND.DLL" Name="qopensslbackend.dll" Source="$(env.QTHOME)\plugins\tls\qopensslbackend.dll" /-->
                                 <File Id="QSCHANNELBACKEND.DLL" Name="qschannelbackend.dll" Source="$(env.QTHOME)\plugins\tls\qschannelbackend.dll" />
 				<File Id="QCERTONLYBACKEND.DLL" Name="qcertonlybackend.dll" Source="$(env.QTHOME)\plugins\tls\qcertonlybackend.dll" />
                             </Component>
@@ -146,7 +142,6 @@
                         </Component>
                     </Directory>
                 </Directory>
-                <Merge Id="VCRedist" Language="0" SourceFile="C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Redist\MSVC\14.29.30133\MergeModules\Microsoft_VC142_CRT_x64.msm" DiskId="1" />
             </Directory>
             <Directory Id="ProgramMenuFolder">
                 <Directory Id="ProgramMenuDir" Name="caQtDM">
@@ -185,12 +180,8 @@
             <ComponentRef Id="caQtDMHelp" />
             <ComponentRef Id="sqldrivers_c" />
             <ComponentRef Id="qt_conf" />
-            <ComponentRef Id="openssl" />
             <ComponentRef Id="controlsystems" />
             <ComponentRef Id="ZMQ" />
-        </Feature>
-        <Feature Id="VCRedist" Level="1" Title="Visual C++ 12.0 Runtime" AllowAdvertise="no" Display="hidden">
-            <MergeRef Id="VCRedist" />
         </Feature>
     </Product>
 </Wix>

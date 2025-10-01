@@ -108,6 +108,11 @@ void processWindow::closeEvent(QCloseEvent *e)
     e->accept();
 }
 
+void processWindow::setArguments(const QString &newArguments)
+{
+    arguments = newArguments;
+}
+
 
 bool processWindow::isRunning()
 {
@@ -117,16 +122,26 @@ bool processWindow::isRunning()
 void processWindow::start(QString command)
 {
     connect(termProcess, SIGNAL(finished(int, QProcess::ExitStatus)), SLOT(processFinished()));
-    connect(termProcess, SIGNAL(started()), SLOT(processStarted()));
-    connect(termProcess, SIGNAL(error(QProcess::ProcessError)), SLOT(processError(QProcess::ProcessError)));
+    connect(termProcess, SIGNAL(started()),this,  SLOT(processStarted()));
 
+#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
+    connect(termProcess, SIGNAL(error(QProcess::ProcessError)),this, SLOT(processError(QProcess::ProcessError)));
+#else
+    connect(termProcess, SIGNAL(errorOccurred(QProcess::ProcessError )),this, SLOT(processError(QProcess::ProcessError)));
+#endif
     if(displayWindow) {
        connect(termProcess, SIGNAL(readyReadStandardError()), this, SLOT(updateError()));
        connect(termProcess, SIGNAL(readyReadStandardOutput()), this, SLOT(updateText()));
        debugWindow->setText(command);
     }
+    qDebug()<<"command:" << command;
+    if (arguments.isEmpty()){
+        termProcess->start(command);
+    }else{
+        QStringList data=arguments.split(" ");
+        termProcess->start(command,data);
+    }
 
-    termProcess->start(command);
 }
 
 void processWindow::updateError()
@@ -165,6 +180,11 @@ void processWindow::processFinished()
     QTextCursor cursor = outputWindow->textCursor(); // retrieve  cursor
     cursor.movePosition(QTextCursor::End);           // move to the end of text
     outputWindow->setTextCursor(cursor);
+    if (termProcess->exitCode()==0){
+        tryTerminate();
+    }
+
+
 }
 
 void processWindow::processStarted()
