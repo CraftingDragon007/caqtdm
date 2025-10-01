@@ -82,6 +82,10 @@
 #include "myMessageBox.h"
 #include "alarmstrings.h"
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#include <QKeyCombination>
+#endif
+
 #ifdef AUSTRALIAN
 #include <QEWidget.h>
 #endif
@@ -3963,7 +3967,7 @@ void CaQtDM_Lib::GlobalShortcutWindow() {
 
         QTableWidgetItem *trigger = Q_NULLPTR;
         if (item->captureType() == caHMIConfig::capType::KeyboardSet) {
-            trigger = new QTableWidgetItem(QKeySequence(item->shortcut()).toString());
+            trigger = new QTableWidgetItem(item->shortcut().toString(QKeySequence::SequenceFormat::NativeText));
         } else if (item->captureType() == caHMIConfig::capType::KeyboardValue) {
             trigger = new QTableWidgetItem("ALL KEYS");
         } else if (item->captureType() == caHMIConfig::MousePress) {
@@ -6933,6 +6937,26 @@ void CaQtDM_Lib::hmiHandleMouse(QObject *target, QMouseEvent *event)
     this->hmiHandleIncomingEvent(target, &correctedEvent, false);
 }
 
+bool CaQtDM_Lib::containsShortcut(const QKeySequence& sequence, Qt::Key qtKey, Qt::KeyboardModifiers qtModifiers) {
+    for (int i = 0; i < sequence.count(); ++i) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        QKeyCombination combination = sequence[i];
+        if (combination.key() == qtKey && combination.keyboardModifiers() == qtModifiers) {
+            return true;
+        }
+#else
+        int keyVal = sequence[i];
+        Qt::KeyboardModifiers currentModifiers = static_cast<Qt::KeyboardModifiers>(keyVal & Qt::KeyboardModifierMask);
+        Qt::Key currentKey = static_cast<Qt::Key>(keyVal & ~Qt::KeyboardModifierMask);
+
+        if (currentKey == qtKey && currentModifiers == qtModifiers) {
+            return true;
+        }
+#endif
+    }
+    return false;
+}
+
 void CaQtDM_Lib::hmiHandleIncomingEvent(QObject *target, QEvent *event, bool isSourceExternal)
 {
     Q_UNUSED(target);
@@ -6964,11 +6988,11 @@ void CaQtDM_Lib::hmiHandleIncomingEvent(QObject *target, QEvent *event, bool isS
                 Qt::Key qtKey = static_cast<Qt::Key>(key);
                 int modifiers = keyEvent->modifiers();
                 Qt::KeyboardModifiers qtModifiers = static_cast<Qt::KeyboardModifiers>(modifiers);
-                QKeyCombination shortcut = item->shortcut();
+                QKeySequence shortcut = item->shortcut();
                 caHMIConfig *widget = item->widgetCallback();
                 if (widget != Q_NULLPTR) {
                     if (item->captureType() == caHMIConfig::capType::KeyboardSet) {
-                        if (qtKey == shortcut.key() && qtModifiers == shortcut.keyboardModifiers()){
+                        if (containsShortcut(shortcut, qtKey, qtModifiers)) {
                             qDebug() << "Correct key pressed" << widget->objectName() << qtKey;
                             emit widget->caHMIConfigKeyPressReceived(shortcut);
 

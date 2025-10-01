@@ -39,8 +39,8 @@ public:
     void setChannelD(const QString &channel) { this->thisChannelD = channel; }
     QString channelD() const { return this->thisChannelD; }
 
-    void setShortcut(const QKeyCombination &shortcut) { this->thisShortcut = shortcut; }
-    QKeyCombination shortcut() const { return this->thisShortcut; }
+    void setShortcut(const QKeySequence &shortcut) { this->thisShortcut = shortcut; }
+    QKeySequence shortcut() const { return this->thisShortcut; }
 
     void setValue(const QVariant &value) { this->thisValue = value; }
     QVariant value() const { return this->thisValue; }
@@ -86,7 +86,7 @@ public:
         QString channelB;
         QString channelC;
         QString channelD;
-        QKeyCombination shortcut;
+        QKeySequence shortcut;
         QVariant value;
         caHMIConfig::calcType calculationType;
         caHMIConfig::capType captureType;
@@ -130,7 +130,7 @@ private:
     QString thisChannelB;
     QString thisChannelC;
     QString thisChannelD;
-    QKeyCombination thisShortcut;
+    QKeySequence thisShortcut;
     QVariant thisValue;
     caHMIConfig::calcType thisCalculationType;
     caHMIConfig::capType thisCaptureType;

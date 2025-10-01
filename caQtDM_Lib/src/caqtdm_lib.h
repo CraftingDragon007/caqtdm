@@ -475,6 +475,8 @@ private:
     QMap<int, caStripPlot*> stripList;          // list of stripplots with key group
     QList<int> stripGroupList;                  // group numbers found
 
+    bool containsShortcut(const QKeySequence& sequence, Qt::Key qtKey, Qt::KeyboardModifiers qtModifiers);
+
     HMIApplicationEventFilter *globalEventFilter;
 
     void hmiHandleKeyPressed(QObject *target, QKeyEvent *event);

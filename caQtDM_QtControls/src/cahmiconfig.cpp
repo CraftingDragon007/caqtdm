@@ -11,16 +11,6 @@ caHMIConfig::caHMIConfig(QWidget *parent)
     this->thisUUID = QUuid::createUuid();
 }
 
-void caHMIConfig::setShortcutFromSequence(const QKeySequence &key) {
-    qDebug() << "setShortcut called with << '" << key << "' (isDesignerMode:" << isDesignerMode() << ")";
-    this->thisKey = key[0];
-    update();
-}
-
-QKeySequence caHMIConfig::shortcutAsSequence() const {
-    return * new QKeySequence(this->thisKey);
-}
-
 void caHMIConfig::setOutputA(const QString &outputA) {
     this->thisOutputA = outputA;
 }
@@ -63,8 +53,12 @@ QString caHMIConfig::channelD() const {
     return this->thisChannelD;
 }
 
-QKeyCombination caHMIConfig::shortcut() const {
-    return this->thisKey;
+void caHMIConfig::setShortcut(const QKeySequence &shortcut) {
+    this->thisShortcut = shortcut;
+}
+
+QKeySequence caHMIConfig::shortcut() const {
+    return this->thisShortcut;
 }
 
 void caHMIConfig::setValue(const QString &value) {
@@ -123,7 +117,7 @@ void caHMIConfig::paintEvent(QPaintEvent *ev) {
         p.setPen(Qt::white);
         p.fillRect(rect(), Qt::blue);
         QString text;
-        QKeySequence key = QKeySequence(this->thisKey);
+        QKeySequence key = QKeySequence(this->thisShortcut);
         if (!key.isEmpty()) {
             text = key.toString();
         }

@@ -17,7 +17,7 @@ class QTCON_EXPORT caHMIConfig : public QWidget
     Q_PROPERTY(QString channelB READ channelB WRITE setChannelB DESIGNABLE true)
     Q_PROPERTY(QString channelC READ channelC WRITE setChannelC DESIGNABLE true)
     Q_PROPERTY(QString channelD READ channelD WRITE setChannelD DESIGNABLE true)
-    Q_PROPERTY(QKeySequence shortcut READ shortcutAsSequence WRITE setShortcutFromSequence DESIGNABLE true)
+    Q_PROPERTY(QKeySequence shortcut READ shortcut WRITE setShortcut DESIGNABLE true)
     Q_PROPERTY(QString valueOrCalc READ value WRITE setValue DESIGNABLE true)
     Q_PROPERTY(calcType calculationType READ calculationType WRITE setCalculationType DESIGNABLE true)
     Q_PROPERTY(capType captureType READ captureType WRITE setCaptureType DESIGNABLE true)
@@ -32,9 +32,8 @@ public:
     Q_ENUM(capRange);
     explicit caHMIConfig(QWidget *parent = nullptr);
 
-    void setShortcutFromSequence(const QKeySequence &key);
-    QKeySequence shortcutAsSequence() const;
-    QKeyCombination shortcut() const;
+    void setShortcut(const QKeySequence &key);
+    QKeySequence shortcut() const;
 
     void setOutputA(const QString &outputA);
     QString outputA() const;
@@ -80,7 +79,7 @@ private:
     QString thisChannelB;
     QString thisChannelC;
     QString thisChannelD;
-    QKeyCombination thisKey;
+    QKeySequence thisShortcut;
     QVariant thisValue = 1;
     calcType thisCalculationType = calcType::SetValue;
     capType thisCaptureType = capType::KeyboardSet;
@@ -95,7 +94,7 @@ protected:
 
 signals:
     void caHMIConfigInputReceived(int data);
-    void caHMIConfigKeyPressReceived(QKeyCombination data);
+    void caHMIConfigKeyPressReceived(QKeySequence data);
     void caHMIConfigMouseX(int x);
     void caHMIConfigMouseY(int y);
     void caHMIConfigMouse(QRect rect);
