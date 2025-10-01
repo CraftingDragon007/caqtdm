@@ -1,3 +1,5 @@
+#include <QDebug>
+#include <QCoreApplication>
 #include "hmisharedeventbus.h"
 #include "causerid.h"
 

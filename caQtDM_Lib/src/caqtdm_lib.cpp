@@ -100,14 +100,6 @@
 #define InfoPrefix "<div " InfoStyle ">"
 #define InfoPostfix "</div>"
 
-#if QT_VERSION > QT_VERSION_CHECK(5,5,15)
-#define QDATASTREAM_VERSION QDataStream::Qt_6_0
-#elif QT_VERSION < QT_VERSION_CHECK(5,5,15)
-#define QDATASTREAM_VERSION QDataStream::Qt_4_0
-#else
-#define QDATASTREAM_VERSION QDataStream::Qt_5_15
-#endif
-
 // context texts
 #define GETINFO         "Get Info"
 #define SETASIS         "Set Mono/Color as defined"
@@ -3993,7 +3985,11 @@ void CaQtDM_Lib::GlobalShortcutWindow() {
         QCheckBox *enabled = new QCheckBox(table);
         enabled->setChecked(item->enabled());
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
         connect(enabled, &QCheckBox::checkStateChanged, [item, isExternal, externalItemSharedPointersHolders](int state){
+#else
+        connect(enabled, &QCheckBox::stateChanged, [item, isExternal, externalItemSharedPointersHolders](int state){
+#endif
             if (item == Q_NULLPTR) return;
             QString uuid;
             bool enabled = state == Qt::Checked;
@@ -6855,7 +6851,6 @@ void CaQtDM_Lib::Callback_ExternalHmiEventReceived(int eventType, int senderPid,
         qDebug() << "Another instance of caQDM started pid: " << senderPid;
     } else if (eventType == EventTypes::KeyPress) {
         QDataStream in(payload);
-        in.setVersion(QDATASTREAM_VERSION);
 
         int key;
         int modifiers;
@@ -6867,7 +6862,6 @@ void CaQtDM_Lib::Callback_ExternalHmiEventReceived(int eventType, int senderPid,
         this->hmiHandleIncomingEvent(Q_NULLPTR, new QKeyEvent(QEvent::KeyPress, key, qtModifiers, sequence.toString()), true);
     } else if (eventType == EventTypes::MouseMove || eventType == EventTypes::MousePress) {
         QDataStream in(payload);
-        in.setVersion(QDATASTREAM_VERSION);
 
         int x, y;
         in >> x >> y;
@@ -6886,7 +6880,6 @@ void CaQtDM_Lib::hmiHandleKeyPressed(QObject *target, QKeyEvent *event)
     if (eventBus.isInitialized()) {
         QByteArray byteArray;
         QDataStream out(&byteArray, QIODevice::WriteOnly);
-        out.setVersion(QDATASTREAM_VERSION);
         out << event->key() << event->modifiers();
 
         eventBus.sendEvent(EventTypes::KeyPress, byteArray);
@@ -6920,7 +6913,6 @@ void CaQtDM_Lib::hmiHandleMouse(QObject *target, QMouseEvent *event)
     if (eventBus.isInitialized()) {
         QByteArray byteArray;
         QDataStream out(&byteArray, QIODevice::WriteOnly);
-        out.setVersion(QDATASTREAM_VERSION);
         out << correctedEvent.pos().x() << correctedEvent.pos().y();
 
         int type = EventTypes::Invalid;
