@@ -193,8 +193,8 @@ private:
 
     QString	thisPV;
     int	thisColumnSize;
-    char thisFormat[20];
-    char thisFormatC[20];
+    char thisFormat[MAX_STRING_LENGTH];
+    char thisFormatC[MAX_STRING_LENGTH];
     FormatType thisFormatType;
     QString thisFormatUserString;
     bool thisUnsigned;
