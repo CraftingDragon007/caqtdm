@@ -3935,10 +3935,26 @@ void CaQtDM_Lib::GlobalShortcutWindow() {
         }
     }
 
+    QList<QSharedPointer<caHMIConfigTransferItem>> currentExternalItems;
+
+    if (HmiSharedConfigListManager::instance().isInitialized()) {
+        currentExternalItems = HmiSharedConfigListManager::instance().readList();
+    }
+
+    qint64 now = QDateTime::currentMSecsSinceEpoch();
+    qint64 offset = 3000;
+
     {
         QReadLocker locker(&externalHmiConfigListLock);
         foreach (const QSharedPointer<caHMIConfigTransferItem>& item, externalHmiConfigList) {
             if (!item.isNull() && item->captureRange() == caHMIConfig::capRange::Global) {
+                QMutableListIterator<QSharedPointer<caHMIConfigTransferItem>> i(currentExternalItems);
+                while (i.hasNext()) {
+                    auto value = i.next();
+                    if (value->timestamp() < (now - offset)) {
+
+                    }
+                }
                 externalItemSharedPointersHolders.append(item);
                 globalConfigItems.insert(item.data(), true);    // 'true' means it's an external item
             }

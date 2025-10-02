@@ -60,6 +60,9 @@ public:
     void setUUID(const QString uuid) { this->thisUUID = uuid; }
     QString uuid() const { return this->thisUUID; }
 
+    void setTimestamp(const qint64 timestamp) { this->thisTimestamp = timestamp; }
+    qint64 timestamp() const { return this->thisTimestamp; }
+
     void setWidgetCallback(caHMIConfig* widget) { this->thisWidgetCallback = widget; }
     caHMIConfig* widgetCallback() const { return this->thisWidgetCallback; }
 
@@ -70,7 +73,7 @@ public:
         out << config.uuid() << config.pid() << config.enabled() << config.objectName() << config.fileName()
             << config.outputA() << config.outputB() << config.channel() << config.channelB()
             << config.channelC() << config.channelD() << config.shortcut() << config.value()
-            << config.calculationType() << config.captureType() << config.captureRange();
+            << config.calculationType() << config.captureType() << config.captureRange() << config.timestamp();
         return out;
     }
 
@@ -91,11 +94,13 @@ public:
         caHMIConfig::calcType calculationType;
         caHMIConfig::capType captureType;
         caHMIConfig::capRange captureRange;
+        qint64 timestamp;
 
         in >> uuid >> pid >> enabled >> objectName >> fileName
             >> outputA >> outputB >> channel >> channelB
             >> channelC >> channelD >> shortcut >> value
-            >> calculationType >> captureType >> captureRange;
+            >> calculationType >> captureType >> captureRange
+            >> timestamp;
 
         config.setUUID(uuid);
         config.setPID(pid);
@@ -113,6 +118,7 @@ public:
         config.setCalculationType(calculationType);
         config.setCaptureType(captureType);
         config.setCaptureRange(captureRange);
+        config.setTimestamp(timestamp);
 
         return in;
     }
@@ -137,6 +143,7 @@ private:
     caHMIConfig::capRange thisCaptureRange;
     int thisPID;
     QString thisUUID;
+    qint64 thisTimestamp;
     caHMIConfig* thisWidgetCallback;
     QWidget* parent;
 

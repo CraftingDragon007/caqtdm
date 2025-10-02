@@ -464,6 +464,31 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
 
         QWriteLocker locker(&CaQtDM_Lib::externalHmiConfigListLock);
         CaQtDM_Lib::externalHmiConfigList.append(items);
+        heartBeatTimer = new QTimer(this);
+        heartBeatTimer->setInterval(2000);
+        connect(heartBeatTimer, &QTimer::timeout, this, [](){
+            auto sharedList = HmiSharedConfigListManager::instance().readList();
+            qint64 time = QDateTime::currentMSecsSinceEpoch();
+            {
+                QReadLocker locker(&CaQtDM_Lib::hmiConfigListLock);
+                foreach (caHMIConfigTransferItem *config, CaQtDM_Lib::hmiConfigList) {
+                    if (config == Q_NULLPTR) continue;
+                    bool found = false;
+                    foreach (auto item, sharedList) {
+                        if (item == Q_NULLPTR) continue;
+                        if (config->uuid() == item->uuid()) {
+                            item->setTimestamp(time);
+                            found = true;
+                        }
+                    }
+                    if (!found) {
+                        sharedList.append(config->clone());
+                    }
+                }
+            }
+            HmiSharedConfigListManager::instance().writeList(sharedList);
+        });
+        heartBeatTimer->start();
     }
 #endif
     // when file was specified, open it
