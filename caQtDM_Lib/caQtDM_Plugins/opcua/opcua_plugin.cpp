@@ -120,12 +120,9 @@ int OPCUAPlugin::initCommunicationLayer(MutexKnobData *data, MessageWindow *mess
     }
 
     if(messageWindowPtr){
-        QString msg= "Info: OPCUA Plugin has been loaded.";
-        messageWindowPtr->postMsgEvent(QtInfoMsg,(char *) qasc(msg));
+        QString msg= "OPCUA: Make sure the channels dont have semicolons in them. If neccessary, use CAQTDM_OPCUA_DATABASE";
+        messageWindowPtr->postMsgEvent(QtWarningMsg,(char *) qasc(msg));
     }
-
-    if (!m_core)
-        m_core.reset(new opc::OpcUaCore());
 
     return true;
 }
@@ -232,7 +229,6 @@ int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
             core->connectOpc(endpoint);
         }
     }
-
     return true;
 }
 
@@ -483,6 +479,7 @@ bool OPCUAPlugin::resolveConnectionString(char* pv, QString &endpoint, QString &
     }
 
     QString raw = fullConnection.remove("opcua://");
+
     int splitPos = raw.lastIndexOf("/ns=");
     if(splitPos < 0){
         splitPos = raw.lastIndexOf("/i=");
@@ -539,18 +536,22 @@ void OPCUAPlugin::updateKnobDataFromVariant(knobData &kData, const QVariant &val
     switch (detectedType) {
     case caDOUBLE:
         kData.edata.rvalue = value.toDouble();
+        kData.edata.ivalue = kData.edata.rvalue;
         kData.edata.precision=8;
         break;
     case caFLOAT:
         kData.edata.rvalue = value.toDouble();
+        kData.edata.ivalue = kData.edata.rvalue;
         kData.edata.precision=4;
         break;
     case caINT:
         kData.edata.ivalue = value.toInt();
+        kData.edata.rvalue = kData.edata.ivalue;
         kData.edata.precision=0;
         break;
     case caENUM:
         kData.edata.ivalue = value.toBool() ? 1.0 : 0.0;
+        kData.edata.rvalue = kData.edata.ivalue;
         break;
     case caSTRING:
         if (kData.edata.dataB){
@@ -568,6 +569,7 @@ void OPCUAPlugin::updateKnobDataFromVariant(knobData &kData, const QVariant &val
         break;
     default:
         kData.edata.rvalue = 0.0;
+        kData.edata.ivalue = 0;
         break;
     }
 }

@@ -78,7 +78,6 @@ private:
     MessageWindow *messagewindowP;
     QMap<QString, double> listOfDoubles;
     QMultiMap<QString, int> Channelcache;
-    QScopedPointer<opc::OpcUaCore> m_core;
     QMap<QString, opc::OpcUaCore*> m_cores;
     QMap<QString, QMetaObject::Connection> m_statusCallbackConnections;
     QMap<QString, QList<int>> m_knobDataIndicesForEndpoint;
