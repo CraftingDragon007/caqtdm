@@ -3924,40 +3924,54 @@ void CaQtDM_Lib::GlobalShortcutWindow() {
     table->horizontalHeader()->setStretchLastSection(true);
 
     QList<QSharedPointer<caHMIConfigTransferItem>> externalItemSharedPointersHolders;
+
     QMap<caHMIConfigTransferItem*, bool> globalConfigItems;
+    // false = internal item, true = external item
 
     {
         QReadLocker locker(&hmiConfigListLock);
         foreach (caHMIConfigTransferItem* item, hmiConfigList) {
             if (item && item->captureRange() == caHMIConfig::capRange::Global) {
-                globalConfigItems.insert(item, false); // 'false' means it's an internal item
+                globalConfigItems.insert(item, false);
             }
         }
     }
 
-    QList<QSharedPointer<caHMIConfigTransferItem>> currentExternalItems;
+    QSet<QString> uuidsToRemove;
+    qint64 threeSecondsAgo = QDateTime::currentDateTime().addSecs(-3).toMSecsSinceEpoch();
 
     if (HmiSharedConfigListManager::instance().isInitialized()) {
-        currentExternalItems = HmiSharedConfigListManager::instance().readList();
+        auto currentExternalItems = HmiSharedConfigListManager::instance().readList();
+        QMutableListIterator<QSharedPointer<caHMIConfigTransferItem>> iterator(currentExternalItems);
+        while (iterator.hasNext()) {
+            auto item = iterator.next();
+            if (item->timestamp() < threeSecondsAgo) {
+                uuidsToRemove.insert(item->uuid());
+                iterator.remove();
+            }
+        }
+        HmiSharedConfigListManager::instance().writeList(currentExternalItems);
     }
 
-    qint64 now = QDateTime::currentMSecsSinceEpoch();
-    qint64 offset = 3000;
-
     {
-        QReadLocker locker(&externalHmiConfigListLock);
-        foreach (const QSharedPointer<caHMIConfigTransferItem>& item, externalHmiConfigList) {
-            if (!item.isNull() && item->captureRange() == caHMIConfig::capRange::Global) {
-                QMutableListIterator<QSharedPointer<caHMIConfigTransferItem>> i(currentExternalItems);
-                while (i.hasNext()) {
-                    auto value = i.next();
-                    if (value->timestamp() < (now - offset)) {
-
-                    }
-                }
-                externalItemSharedPointersHolders.append(item);
-                globalConfigItems.insert(item.data(), true);    // 'true' means it's an external item
+        QWriteLocker locker(&externalHmiConfigListLock);
+        QMutableListIterator<QSharedPointer<caHMIConfigTransferItem>> iterator(externalHmiConfigList);
+        while (iterator.hasNext()) {
+            auto item = iterator.next();
+            if (item.data() == Q_NULLPTR || uuidsToRemove.contains(item->uuid())) {
+                iterator.remove();
+            } else if (item->captureRange() == caHMIConfig::capRange::Global) {
+                globalConfigItems.insert(item.data(), true);
             }
+        }
+    }
+
+    if (uuidsToRemove.count() > 0 && HmiSharedEventBus::instance().isInitialized()) {
+        foreach (QString uuid, uuidsToRemove) {
+            QByteArray byteArray;
+            QDataStream out(&byteArray, QIODevice::WriteOnly);
+            out << uuid;
+            HmiSharedEventBus::instance().sendEvent(EventTypes::CaHMIConfigDeleted, byteArray);
         }
     }
 

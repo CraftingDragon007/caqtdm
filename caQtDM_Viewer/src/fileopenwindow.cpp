@@ -469,6 +469,8 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
         connect(heartBeatTimer, &QTimer::timeout, this, [](){
             auto sharedList = HmiSharedConfigListManager::instance().readList();
             qint64 time = QDateTime::currentMSecsSinceEpoch();
+
+            qDebug() << "HeartBeatTimer tick" << time;
             {
                 QReadLocker locker(&CaQtDM_Lib::hmiConfigListLock);
                 foreach (caHMIConfigTransferItem *config, CaQtDM_Lib::hmiConfigList) {
@@ -483,6 +485,12 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
                     }
                     if (!found) {
                         sharedList.append(config->clone());
+                        if (HmiSharedEventBus::instance().isInitialized()) {
+                            QByteArray byteArray;
+                            QDataStream out(&byteArray, QIODevice::WriteOnly);
+                            out << *config;
+                            HmiSharedEventBus::instance().sendEvent(EventTypes::NewCaHMIConfig, byteArray);
+                        }
                     }
                 }
             }
