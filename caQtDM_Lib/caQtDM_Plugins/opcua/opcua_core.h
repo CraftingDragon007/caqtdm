@@ -67,7 +67,8 @@ public:
     bool hasSubscription(const QString &nodeId) const;
     void unsubscribeFromNode(const QString &nodeId);
     void disableMonitoringForNode(const QString &nodeId);
-    bool writeValue(const QString &nodeId, double rdata, int32_t idata, char *sdata, char *object, char *errmess, int forceType);
+    bool writeValue(const QString &nodeId, double rdata, int32_t idata, char *sdata, char *errmess, int forceType);
+    bool writeValues(const QString &nodeId, float *fdata, double *ddata, int16_t *data16, int32_t *data32, char *sdata, int nelm, char *errmess);
     QString getDescription(const QString &nodeId);
 
 signals:

@@ -61,7 +61,6 @@ int OPCUAPlugin::initCommunicationLayer(MutexKnobData *data, MessageWindow *mess
     QStringList opcua_database_files;
 
     QString url = (QString) qgetenv("CAQTM_URL_DISPLAY_PATH");
-    qDebug() << "URL: " << url;
     QString database_file = (QString) qgetenv("CAQTDM_OPCUA_DATABASE");
 
     opcua_database_files.append(database_file.split(","));
@@ -133,6 +132,25 @@ int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
     Q_UNUSED(rate);
     Q_UNUSED(skip);
 
+    QString rawPV = QString::fromUtf8(kData->pv);
+    if (rawPV.endsWith(".FTVL")) {
+        QString regularPV = rawPV;
+        regularPV.remove(rawPV.length() - 5, 5);
+        if (!m_epicsWaveformAttributePVs.contains(regularPV)) {
+            m_epicsWaveformAttributePVs[regularPV] = {-1, -1};
+        }
+        m_epicsWaveformAttributePVs[regularPV].FTVL_index = index;
+        return true;
+    } else if (rawPV.endsWith(".NELM")) {
+        QString regularPV = rawPV;
+        regularPV.remove(rawPV.length() - 5, 5);
+        if (!m_epicsWaveformAttributePVs.contains(regularPV)) {
+            m_epicsWaveformAttributePVs[regularPV] = {-1, -1};
+        }
+        m_epicsWaveformAttributePVs[regularPV].NELM_index = index;
+        return true;
+    }
+
     QString endpoint, nodeId;
     if (!resolveConnectionString(kData->pv, endpoint, nodeId)) {
         if (messageWindowPtr) {
@@ -164,6 +182,8 @@ int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
                     updateKnobDataFromVariant(kData, value);
                     mutexknobdataP->SetMutexKnobData(kData.index, kData);
                     mutexknobdataP->SetMutexKnobDataReceived(&kData);
+
+                    updateEpicsWaveformAttributePVs(rawPV, kData);
                 }
             });
 
@@ -177,13 +197,19 @@ int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
                     mutexknobdataP->SetMutexKnobData(kData.index, kData);
                     mutexknobdataP->SetMutexKnobDataReceived(&kData);
                     mutexknobdataP->SetMutexKnobDataConnected(idx, true);
+
+                    updateEpicsWaveformAttributePVs(rawPV, kData);
                 }
             });
 
             QObject::connect(core, &opc::OpcUaCore::disconnected, [=]() {
                 m_connectionState[endpoint] = ConnectionState::NotConnected;
                 for (int idx: m_knobDataIndicesForEndpoint[endpoint]) {
+                    knobData kData = mutexKnobdataPtr->GetMutexKnobData(idx);
+
                     mutexknobdataP->SetMutexKnobDataConnected(idx, false);
+
+                    updateEpicsWaveformAttributePVs(rawPV, kData);
                 }
 
                 if (m_knobDataIndicesForEndpoint[endpoint].length() > 0) {
@@ -235,8 +261,26 @@ int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
 
 // caQtDM_Lib will call this routine for getting rid of a monitor
 int OPCUAPlugin::pvClearMonitor(knobData *kData) {
-
     QMutexLocker lock(&m_mutex);
+
+    QString rawPV = QString::fromUtf8(kData->pv);
+    if (rawPV.endsWith(".FTVL")) {
+        QString regularPV = rawPV;
+        regularPV.remove(rawPV.length() - 5, 5);
+        if (!m_epicsWaveformAttributePVs.contains(regularPV)) {
+            m_epicsWaveformAttributePVs[regularPV] = {-1, -1};
+        }
+        m_epicsWaveformAttributePVs[regularPV].FTVL_index = -1;
+        return true;
+    } else if (rawPV.endsWith(".NELM")) {
+        QString regularPV = rawPV;
+        regularPV.remove(rawPV.length() - 5, 5);
+        if (!m_epicsWaveformAttributePVs.contains(regularPV)) {
+            m_epicsWaveformAttributePVs[regularPV] = {-1, -1};
+        }
+        m_epicsWaveformAttributePVs[regularPV].NELM_index = -1;
+        return true;
+    }
 
     int index = kData->index;
     QString endpoint, nodeId;
@@ -289,6 +333,10 @@ int OPCUAPlugin::pvFreeAllocatedData(knobData *kData)
 
 // caQtDM_Lib will call this routine for setting data (see for more detail the epics3 plugin)
 int OPCUAPlugin::pvSetValue(char *pv, double rdata, int32_t idata, char *sdata, char *object, char *errmess, int forceType) {
+    Q_UNUSED(object);
+
+    QMutexLocker locker(&m_mutex);
+
     QString endpoint, nodeId;
     if (!resolveConnectionString(pv, endpoint, nodeId)) {
         return false;
@@ -296,7 +344,7 @@ int OPCUAPlugin::pvSetValue(char *pv, double rdata, int32_t idata, char *sdata, 
 
     if (m_cores.contains(endpoint)) {
         auto& core = m_cores[endpoint];
-        return core->writeValue(nodeId, rdata, idata, sdata, object, errmess, forceType);
+        return core->writeValue(nodeId, rdata, idata, sdata, errmess, forceType);
     } else {
         if (messageWindowPtr) {
             QString msg = "Tried writing to pv that's not connected correctly: " + endpoint;
@@ -310,17 +358,26 @@ int OPCUAPlugin::pvSetValue(char *pv, double rdata, int32_t idata, char *sdata, 
 
 // caQtDM_Lib will call this routine for setting waveforms data (see for more detail the epics3 plugin)
 int OPCUAPlugin::pvSetWave(char *pv, float *fdata, double *ddata, int16_t *data16, int32_t *data32, char *sdata, int nelm, char *object, char *errmess) {
-    Q_UNUSED(pv);
-    Q_UNUSED(fdata);
-    Q_UNUSED(ddata);
-    Q_UNUSED(data16);
-    Q_UNUSED(data32);
-    Q_UNUSED(sdata);
-    Q_UNUSED(nelm);
     Q_UNUSED(object);
-    Q_UNUSED(errmess);
-    QMutexLocker locker(&mutex);
-    qDebug() << "OPCUAPlugin:pvSetWave";
+
+    QMutexLocker locker(&m_mutex);
+
+    QString endpoint, nodeId;
+    if (!resolveConnectionString(pv, endpoint, nodeId)) {
+        return false;
+    }
+
+    if (m_cores.contains(endpoint)) {
+        auto& core = m_cores[endpoint];
+        return core->writeValues(nodeId, fdata, ddata, data16, data32, sdata, nelm, errmess);
+    } else {
+        if (messageWindowPtr) {
+            QString msg = "Tried writing to pv that's not connected correctly: " + endpoint;
+            messageWindowPtr->postMsgEvent(QtCriticalMsg, (char*)msg.toLatin1().constData());
+        }
+        return false;
+    }
+
     return true;
 }
 
@@ -333,6 +390,12 @@ int OPCUAPlugin::pvGetTimeStamp(char *pv, char *timestamp) {
 
 // caQtDM_Lib will call this routine for getting a description of the monitor
 int OPCUAPlugin::pvGetDescription(char *pv, char *description) {
+    QString rawPV = QString::fromUtf8(pv);
+    if (rawPV.endsWith(".FTVL") || rawPV.endsWith(".NELM")) {
+        qstrcpy(description, "I'm just here for compatibility reasons :)");
+        return true;
+    }
+
     QString endpoint, nodeId;
     if (!resolveConnectionString(pv, endpoint, nodeId)) {
         return false;
@@ -429,7 +492,6 @@ int OPCUAPlugin::pvDisconnect(knobData *kData)
         return false;
     };
 
-
     QMutexLocker lock(&m_mutex);
     if (m_cores.contains(endpoint)) {
         m_cores[endpoint]->disconnectOpc();
@@ -500,77 +562,230 @@ bool OPCUAPlugin::resolveConnectionString(char* pv, QString &endpoint, QString &
 #define QT_VARIANT_TYPE(value) value.type()
 #endif
 
-caType OPCUAPlugin::generateCaTypeFromVariant(const QVariant &value)
+caType OPCUAPlugin::generateCaTypeFromVariant(const QVariant &value, bool &isArray)
 {
-    switch (QT_VARIANT_TYPE(value)) {
-    case QMetaType::Double:
-        return caDOUBLE;
-    case QMetaType::Float:
-        return caFLOAT;
-    case QMetaType::Int:
-    case QMetaType::UInt:
-    case QMetaType::LongLong:
-    case QMetaType::ULongLong:
-    case QMetaType::Short:
-    case QMetaType::Long:
-    case QMetaType::ULong:
-        return caINT;
-    case QMetaType::Bool:
-        return caINT;
-    case QMetaType::QString:
-        return caSTRING;
+    isArray = false;
+    QVariant valuteToCheck = value;
+    if (!qstrncmp("QVariantList", valuteToCheck.typeName(), sizeof("QVariantList"))) {
+        QList<QVariant> list = valuteToCheck.toList();
+        if (list.length() > 0) {
+            valuteToCheck = list.constFirst();
+            isArray = true;
+        }
+    }
+
+    switch (QT_VARIANT_TYPE(valuteToCheck)) {
+        case QMetaType::Double:
+            return caDOUBLE;
+        case QMetaType::Float:
+            return caFLOAT;
+        case QMetaType::Int:
+        case QMetaType::UInt:
+        case QMetaType::LongLong:
+        case QMetaType::ULongLong:
+        case QMetaType::Long:
+        case QMetaType::ULong:
+            return caLONG;
+        case QMetaType::Short:
+        case QMetaType::Bool:
+            return caINT;
+        case QMetaType::QString:
+            return caSTRING;
+        default:
+            return caDOUBLE;
+    }
+}
+
+void OPCUAPlugin::updateKnobDataFromVariantSingle(knobData &kData,
+                                                  const QVariant &value,
+                                                  const caType &detectedType)
+{
+    switch (detectedType) {
+    case caDOUBLE:
+            kData.edata.rvalue = value.toDouble();
+            kData.edata.ivalue = kData.edata.rvalue;
+            kData.edata.precision = 8;
+            break;
+    case caFLOAT:
+            kData.edata.rvalue = value.toFloat();
+            kData.edata.ivalue = kData.edata.rvalue;
+            kData.edata.precision = 4;
+            break;
+    case caLONG:
+            kData.edata.ivalue = value.toInt();
+            kData.edata.rvalue = kData.edata.ivalue;
+            kData.edata.precision = 0;
+            break;
+    case caINT:
+            kData.edata.ivalue = static_cast<int16_t>(value.toInt());
+            kData.edata.rvalue = kData.edata.ivalue;
+            kData.edata.precision = 0;
+            break;
+    case caSTRING:
+            if (kData.edata.dataB && kData.edata.dataSize != (value.toString().length() + 1)) {
+                free(kData.edata.dataB);
+                kData.edata.dataB = Q_NULLPTR;
+            }
+            if (!kData.edata.dataB) {
+                kData.edata.dataSize = value.toString().length() + 1;
+                kData.edata.dataB = (void *) malloc((size_t) kData.edata.dataSize);
+            }
+            memcpy(kData.edata.dataB,
+                   (char *) value.toString().toLatin1().constData(),
+                   (size_t) kData.edata.dataSize);
+            break;
     default:
-        return caDOUBLE;
+            kData.edata.rvalue = 0.0;
+            kData.edata.ivalue = 0;
+            break;
+    }
+}
+
+void OPCUAPlugin::updateEpicsWaveformAttributePVs(QString rawPV, knobData &referenceKnobData) {
+    if (rawPV.endsWith(".FTVL") || rawPV.endsWith(".NELM")) {
+        rawPV.remove(rawPV.length() - 5, 5);
+    }
+    if (m_epicsWaveformAttributePVs.contains(rawPV)) {
+        EpicsWaveformAttributePVs indices = m_epicsWaveformAttributePVs[rawPV];
+        if (indices.FTVL_index != -1) {
+            knobData FTVL_kdata = mutexKnobdataPtr->GetMutexKnobData(indices.FTVL_index);
+            FTVL_kdata.edata.connected = referenceKnobData.edata.connected;
+            FTVL_kdata.edata.ivalue = referenceKnobData.edata.fieldtype;
+            FTVL_kdata.edata.rvalue = FTVL_kdata.edata.ivalue;
+            FTVL_kdata.edata.fieldtype = caINT;
+            mutexknobdataP->SetMutexKnobData(indices.FTVL_index, FTVL_kdata);
+        }
+        if (indices.NELM_index != -1) {
+            knobData NELM_kdata = mutexKnobdataPtr->GetMutexKnobData(indices.NELM_index);
+            NELM_kdata.edata.connected = referenceKnobData.edata.connected;
+            NELM_kdata.edata.ivalue = referenceKnobData.edata.valueCount;
+            NELM_kdata.edata.rvalue = NELM_kdata.edata.ivalue;
+            NELM_kdata.edata.fieldtype = caINT;
+            mutexknobdataP->SetMutexKnobData(indices.FTVL_index, NELM_kdata);
+        }
+    }
+}
+
+void OPCUAPlugin::updateKnobDataFromVariantArray(knobData &kData,
+                                                 const QVariant &value,
+                                                 const caType &detectedType)
+{
+    QList<QVariant> list = value.toList();
+    int num_values = list.count();
+    kData.edata.valueCount = num_values;
+
+    QString rawPV = QString::fromUtf8(kData.pv);
+    updateEpicsWaveformAttributePVs(rawPV, kData);
+
+    switch (detectedType) {
+    case caDOUBLE: {
+            if (kData.edata.dataB && kData.edata.dataSize != num_values * sizeof(double)) {
+                free(kData.edata.dataB);
+                kData.edata.dataB = Q_NULLPTR;
+            }
+
+            if (!kData.edata.dataB) {
+                kData.edata.dataSize = num_values * sizeof(double);
+                kData.edata.dataB = (void *) malloc((size_t) kData.edata.dataSize);
+            }
+
+            double* intBuffer = static_cast<double*>(kData.edata.dataB);
+            for (int i = 0; i < num_values; ++i) {
+                intBuffer[i] = list[i].toDouble();
+            }
+
+            kData.edata.precision = 8;
+            break;
+    } case caFLOAT: {
+            if (kData.edata.dataB && kData.edata.dataSize != num_values * sizeof(float)) {
+                free(kData.edata.dataB);
+                kData.edata.dataB = Q_NULLPTR;
+            }
+
+            if (!kData.edata.dataB) {
+                kData.edata.dataSize = num_values * sizeof(float);
+                kData.edata.dataB = (void *) malloc((size_t) kData.edata.dataSize);
+            }
+
+            float* intBuffer = static_cast<float*>(kData.edata.dataB);
+            for (int i = 0; i < num_values; ++i) {
+                intBuffer[i] = list[i].toFloat();
+            }
+
+            kData.edata.precision = 4;
+            break;
+    } case caLONG: {
+            if (kData.edata.dataB && kData.edata.dataSize != num_values * sizeof(int32_t)) {
+                free(kData.edata.dataB);
+                kData.edata.dataB = Q_NULLPTR;
+            }
+
+            if (!kData.edata.dataB) {
+                kData.edata.dataSize = num_values * sizeof(int32_t);
+                kData.edata.dataB = (void *) malloc((size_t) kData.edata.dataSize);
+            }
+
+            int32_t* intBuffer = static_cast<int32_t*>(kData.edata.dataB);
+            for (int i = 0; i < num_values; ++i) {
+                intBuffer[i] = list[i].toInt();
+            }
+
+            kData.edata.precision = 0;
+            break;
+    }
+    case caINT: {
+            if (kData.edata.dataB && kData.edata.dataSize != num_values * sizeof(int16_t)) {
+                free(kData.edata.dataB);
+                kData.edata.dataB = Q_NULLPTR;
+            }
+
+            if (!kData.edata.dataB) {
+                kData.edata.dataSize = num_values * sizeof(int16_t);
+                kData.edata.dataB = (void *) malloc((size_t) kData.edata.dataSize);
+            }
+
+            int16_t* intBuffer = static_cast<int16_t*>(kData.edata.dataB);
+            for (int i = 0; i < num_values; ++i) {
+                intBuffer[i] = static_cast<int16_t>(list[i].toInt());
+            }
+
+            kData.edata.precision = 0;
+            break;
+    }
+    case caSTRING: {
+            QVariant firstValue = list.constFirst();
+            if (kData.edata.dataB && kData.edata.dataSize != (firstValue.toString().length() + 1)) {
+                free(kData.edata.dataB);
+                kData.edata.dataB = Q_NULLPTR;
+            }
+            if (!kData.edata.dataB) {
+                kData.edata.dataSize = firstValue.toString().length() + 1;
+                kData.edata.dataB = (void *) malloc((size_t) kData.edata.dataSize);
+            }
+            memcpy(kData.edata.dataB,
+                   (char *) firstValue.toString().toLatin1().constData(),
+                   (size_t) kData.edata.dataSize);
+            break;
+    } default:
+            kData.edata.rvalue = 0.0;
+            kData.edata.ivalue = 0;
+            break;
     }
 }
 
 void OPCUAPlugin::updateKnobDataFromVariant(knobData &kData, const QVariant &value)
 {
     QMutexLocker locker((QMutex *)kData.mutex);
-
-    caType detectedType = generateCaTypeFromVariant(value);
+    bool isArray = false;
+    caType detectedType = generateCaTypeFromVariant(value, isArray);
     kData.edata.fieldtype = detectedType;
     kData.edata.connected = 1;
     kData.edata.monitorCount++;
 
-    switch (detectedType) {
-    case caDOUBLE:
-        kData.edata.rvalue = value.toDouble();
-        kData.edata.ivalue = kData.edata.rvalue;
-        kData.edata.precision=8;
-        break;
-    case caFLOAT:
-        kData.edata.rvalue = value.toDouble();
-        kData.edata.ivalue = kData.edata.rvalue;
-        kData.edata.precision=4;
-        break;
-    case caINT:
-        kData.edata.ivalue = value.toInt();
-        kData.edata.rvalue = kData.edata.ivalue;
-        kData.edata.precision=0;
-        break;
-    case caENUM:
-        kData.edata.ivalue = value.toBool() ? 1.0 : 0.0;
-        kData.edata.rvalue = kData.edata.ivalue;
-        break;
-    case caSTRING:
-        if (kData.edata.dataB){
-            if (kData.edata.dataSize != (value.toString().length()+1)){
-                free(kData.edata.dataB);
-                kData.edata.dataB=Q_NULLPTR;
-            }
-        }
-        if (!kData.edata.dataB){
-            kData.edata.dataSize = value.toString().length()+1;
-            kData.edata.dataB = (void*)malloc((size_t)kData.edata.dataSize);
-        }
-        memcpy(kData.edata.dataB, (char*) value.toString().toLatin1().constData()
-           , (size_t)kData.edata.dataSize);
-        break;
-    default:
-        kData.edata.rvalue = 0.0;
-        kData.edata.ivalue = 0;
-        break;
+    if (isArray) {
+        updateKnobDataFromVariantArray(kData, value, detectedType);
+    } else {
+        updateKnobDataFromVariantSingle(kData, value, detectedType);
     }
 }
 

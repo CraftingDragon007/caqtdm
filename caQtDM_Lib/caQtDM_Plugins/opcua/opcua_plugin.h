@@ -41,6 +41,12 @@
 #include <QtConcurrentRun>
 #endif
 
+// Holds the mutexKnobData indices for channels carrying EPICS waveform attributes corresponding to a channel (.NELM, .FTVL)
+typedef struct {
+    int NELM_index;
+    int FTVL_index;
+} EpicsWaveformAttributePVs;
+
 class Q_DECL_EXPORT OPCUAPlugin : public QObject, ControlsInterface
 {
     Q_OBJECT
@@ -68,12 +74,14 @@ public:
     int FlushIO();
     int TerminateIO();
     bool resolveConnectionString(char* pv, QString &endpoint, QString &nodeId);
-    caType generateCaTypeFromVariant(const QVariant &value);
+    caType generateCaTypeFromVariant(const QVariant &value, bool &isArray);
+    void updateKnobDataFromVariantSingle(knobData &kData, const QVariant &value, const caType &detectedType);
+    void updateKnobDataFromVariantArray(knobData &kData, const QVariant &value, const caType &detectedType);
     void updateKnobDataFromVariant(knobData &kData, const QVariant &value);
-    void updateKnobDataWithAccessLevel(knobData &kData, const bool &accessR, const bool &accessW);    
+    void updateKnobDataWithAccessLevel(knobData &kData, const bool &accessR, const bool &accessW);
+    void updateEpicsWaveformAttributePVs(QString rawPV, knobData &referenceKnobData);
 
 private:
-    QMutex mutex;
     MutexKnobData *mutexknobdataP;
     MessageWindow *messagewindowP;
     QMap<QString, double> listOfDoubles;
@@ -84,6 +92,7 @@ private:
     enum class ConnectionState { NotConnected, Connecting, Connected };
     QMap<QString, ConnectionState> m_connectionState;
     QMap<QString, QList<opc::SubscriptionSettings>> m_pendingSubscriptions;
+    QMap<QString, EpicsWaveformAttributePVs> m_epicsWaveformAttributePVs;
     QMutex m_mutex;
     QList<int> listOfIndexes;
     double initValue;
