@@ -21,15 +21,15 @@
  *    Hrvat Leo
  *    Joel Müller
  */
-#ifndef OPCUAPLUGIN_H
-#define OPCUAPLUGIN_H
+#ifndef OPCUA_PLUGIN_H
+#define OPCUA_PLUGIN_H
 
 #pragma once
 
-#include <QObject>
+#include <QList>
 #include <QMap>
 #include <QMutex>
-#include <QList>
+#include <QObject>
 #include <QTimer>
 #include <QtGlobal>
 #include "controlsinterface.h"
@@ -42,7 +42,8 @@
 #endif
 
 // Holds the mutexKnobData indices for channels carrying EPICS waveform attributes corresponding to a channel (.NELM, .FTVL)
-typedef struct {
+typedef struct
+{
     int NELM_index;
     int FTVL_index;
 } EpicsWaveformAttributePVs;
@@ -52,60 +53,77 @@ class Q_DECL_EXPORT OPCUAPlugin : public QObject, ControlsInterface
     Q_OBJECT
     Q_INTERFACES(ControlsInterface)
 #if QT_VERSION > QT_VERSION_CHECK(5, 0, 0)
-    Q_PLUGIN_METADATA(IID "ch.psi.caqtdm.Plugin.ControlsInterface/1.0.democontrols")
+    Q_PLUGIN_METADATA(IID "ch.psi.caqtdm.Plugin.ControlsInterface/1.0.opcua")
 #endif
 
 public:
-    QString pluginName();
     OPCUAPlugin();
 
-    int initCommunicationLayer(MutexKnobData *data, MessageWindow *messageWindow, QMap<QString, QString> options);
+    QString pluginName();
+
+    int initCommunicationLayer(MutexKnobData *data,
+                               MessageWindow *messageWindow,
+                               QMap<QString, QString> options);
     int pvAddMonitor(int index, knobData *kData, int rate, int skip);
     int pvClearMonitor(knobData *kData);
     int pvFreeAllocatedData(knobData *kData);
-    int pvSetValue(char *pv, double rdata, int32_t idata, char *sdata, char *object, char *errmess, int forceType);
-    int pvSetWave(char *pv, float *fdata, double *ddata, int16_t *data16, int32_t *data32, char *sdata, int nelm, char *object, char *errmess);
+    int pvSetValue(char *pv,
+                   double rdata,
+                   int32_t idata,
+                   char *sdata,
+                   char *object,
+                   char *errmess,
+                   int forceType);
+    int pvSetWave(char *pv,
+                  float *fdata,
+                  double *ddata,
+                  int16_t *data16,
+                  int32_t *data32,
+                  char *sdata,
+                  int nelm,
+                  char *object,
+                  char *errmess);
     int pvGetTimeStamp(char *pv, char *timestamp);
     int pvGetDescription(char *pv, char *description);
-    int pvClearEvent(void * ptr);
-    int pvAddEvent(void * ptr);
+    int pvClearEvent(void *ptr);
+    int pvAddEvent(void *ptr);
     int pvReconnect(knobData *kData);
     int pvDisconnect(knobData *kData);
     int FlushIO();
     int TerminateIO();
-    bool resolveConnectionString(char* pv, QString &endpoint, QString &nodeId);
-    caType generateCaTypeFromVariant(const QVariant &value, bool &isArray);
-    void updateKnobDataFromVariantSingle(knobData &kData, const QVariant &value, const caType &detectedType);
-    void updateKnobDataFromVariantArray(knobData &kData, const QVariant &value, const caType &detectedType);
-    void updateKnobDataFromVariant(knobData &kData, const QVariant &value);
-    void updateKnobDataWithAccessLevel(knobData &kData, const bool &accessR, const bool &accessW);
-    void updateEpicsWaveformAttributePVs(QString rawPV, knobData &referenceKnobData);
 
 private:
-    MutexKnobData *mutexknobdataP;
-    MessageWindow *messagewindowP;
-    QMap<QString, double> listOfDoubles;
-    QMultiMap<QString, int> Channelcache;
-    QMap<QString, opc::OpcUaCore*> m_cores;
+    enum class ConnectionState { NotConnected, Connecting, Connected };
+
+    QMutex m_mutex;
+    MutexKnobData *m_mutexKnobDataP;
+    MessageWindow *m_messageWindowP;
+    QMultiMap<QString, int> m_channelCache;
+    QMap<QString, OpcUaCore *> m_cores;
     QMap<QString, QMetaObject::Connection> m_statusCallbackConnections;
     QMap<QString, QList<int>> m_knobDataIndicesForEndpoint;
-    enum class ConnectionState { NotConnected, Connecting, Connected };
     QMap<QString, ConnectionState> m_connectionState;
-    QMap<QString, QList<opc::SubscriptionSettings>> m_pendingSubscriptions;
+    QMap<QString, QList<SubscriptionSettings>> m_pendingSubscriptions;
     QMap<QString, EpicsWaveformAttributePVs> m_epicsWaveformAttributePVs;
-    QMutex m_mutex;
-    QList<int> listOfIndexes;
-    double initValue;
-    QTimer *timer, *timerValues;
 
-    QStringList opcua_database_file;
-    QMap<QString, QString> optionsP;
-    QMap<QString, QString> opcua_translation_map;
+    QMap<QString, QString> m_translationMap;
 
+    caType generateCaTypeFromVariant(const QVariant &value, bool &isArray);
     int getUpdateIntervalFromKnobData(knobData *kData);
+    bool resolveConnectionString(char *pv, QString &endpoint, QString &nodeId);
+    void updateKnobDataFromVariantSingle(knobData &kData,
+                                         const QVariant &value,
+                                         const caType &detectedType);
+    void updateKnobDataFromVariantArray(knobData &kData,
+                                        const QVariant &value,
+                                        const caType &detectedType);
+    void updateKnobDataFromVariant(knobData &kData, const QVariant &value);
+    void updateKnobDataWithAccessLevel(knobData &kData, const bool &accessR, const bool &accessW);
+    void updateEpicsWaveformAttributePVs(QString rawPV, const knobData &referenceKnobData);
+
 #ifdef HARDWORK
     void updateHardwork();
 #endif
 };
 
-#endif
+#endif // OPCUA_PLUGIN_H

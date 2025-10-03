@@ -22,27 +22,25 @@
  *    Joel Müller
  */
 
-#ifndef OPCUA_CLIENT_H
-#define OPCUA_CLIENT_H
+#ifndef OPCUA_CORE_H
+#define OPCUA_CORE_H
 
 #include <QObject>
-#include <QtOpcUa/QOpcUaClient>
-#include <QtOpcUa/QOpcUaProvider>
-#include <QtOpcUa/QOpcUaNode>
+#include <QTimer>
+#include <QUrl>
 #include <QtOpcUa/QOpcUaAddReferenceItem>
-#include <QtOpcUa/QOpcUaExpandedNodeId>
+#include <QtOpcUa/QOpcUaBrowseRequest>
 #include <QtOpcUa/QOpcUaClient>
 #include <QtOpcUa/QOpcUaEndpointDescription>
-#include <QtOpcUa/QOpcUaBrowseRequest>
-#include <QtOpcUa/QOpcUaReferenceDescription>
-#include <QtOpcUa/QOpcUaQualifiedName>
+#include <QtOpcUa/QOpcUaExpandedNodeId>
 #include <QtOpcUa/QOpcUaLocalizedText>
-#include <QUrl>
-#include <QTimer>
+#include <QtOpcUa/QOpcUaNode>
+#include <QtOpcUa/QOpcUaProvider>
+#include <QtOpcUa/QOpcUaQualifiedName>
+#include <QtOpcUa/QOpcUaReferenceDescription>
 
-namespace opc{
-
-typedef struct {
+typedef struct
+{
     QString nodeid;
     int samplingIntervalMs;
 } SubscriptionSettings;
@@ -52,47 +50,52 @@ class OpcUaCore : public QObject
     Q_OBJECT
 
 public:
-    explicit OpcUaCore(QObject *parent = nullptr);
+    explicit OpcUaCore(QObject *parent = Q_NULLPTR);
     ~OpcUaCore();
 
     bool connectOpc(const QString &url);
     void disconnectOpc();
-    void fetchDataFromAnyNode();
-    void fetchDataFromSingleNode(const QString &nodeId);
-    void fetchDataFromMultipleNodes(const QStringList &nodeIds);
     void subscribeToNode(const SubscriptionSettings &subscriptionSettings);
-    void subscribeToMultipleNodes(const QStringList &nodeIds);
     void clearAllSubscriptions();
-    void browseRoot();
     bool hasSubscription(const QString &nodeId) const;
     void unsubscribeFromNode(const QString &nodeId);
     void disableMonitoringForNode(const QString &nodeId);
-    bool writeValue(const QString &nodeId, double rdata, int32_t idata, char *sdata, char *errmess, int forceType);
-    bool writeValues(const QString &nodeId, float *fdata, double *ddata, int16_t *data16, int32_t *data32, char *sdata, int nelm, char *errmess);
+    bool writeValue(const QString &nodeId,
+                    double rdata,
+                    int32_t idata,
+                    char *sdata,
+                    char *errmess,
+                    int forceType);
+    bool writeValues(const QString &nodeId,
+                     float *fdata,
+                     double *ddata,
+                     int16_t *data16,
+                     int32_t *data32,
+                     char *sdata,
+                     int nelm,
+                     char *errmess);
     QString getDescription(const QString &nodeId);
 
 signals:
     void connected();
     void disconnected();
-    void errorOccured(const QString message);
-    void valueRead(const QString nodeId, const QVariant value);
+    void errorOccured(const QString &message);
+    void valueRead(const QString &nodeId, const QVariant &value);
     void valuesRead(const QVector<QVariant> &values);
-    void accessLevelRead(const QString nodeId, const bool readAccess, const bool writeAccess);
+    void accessLevelRead(const QString &nodeId, const bool &readAccess, const bool &writeAccess);
 
 private:
     QOpcUaClient *m_client;
     QOpcUaEndpointDescription m_currentEndpointDescription;
+    QMap<QString, QOpcUaNode *> m_subscriptionNodes;
+    QMap<QString, bool> m_isConnectingToNode;
+    QMap<QString, int> m_intervalMsForNodeId;
     int m_attempt;
     int m_timeoutMs;
     bool m_reconnecting;
-    bool m_endpointsHooked = false;
     bool isClientConnected();
-    void browseObjectForVariables(const QString &objectNodeId);
-    QMap<QString, QOpcUaNode*> m_subscriptionNodes;
-    QMap<QString, bool> m_isConnectingToNode;
-    QMap<QString, int> m_intervalMsForNodeId;
-    void QOpcUaBrowseResult(QString nodeId, QOpcUaNode *, void (*)(QVector<QOpcUaReferenceDescription>, QOpcUa::UaStatusCode), OpcUaCore *, QDebug);
     void startMonitoringOfNode(QOpcUaNode *node);
+    bool writeDataDynamically(QOpcUaNode* node,std::function<QVariant(const QVariant&)> makeValue);
 };
-}
-#endif // OPCUA_CLIENT_H
+
+#endif // OPCUA_CORE_H
