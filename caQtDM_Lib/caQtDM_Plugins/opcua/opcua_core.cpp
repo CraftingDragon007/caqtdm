@@ -25,6 +25,7 @@
 #include "opcua_core.h"
 #include <QDebug>
 #include "qeventloop.h"
+#include "qmetaobject.h"
 #include "qtcpsocket.h"
 
 #define DEFAULT_OPCUA_PORT 4840
@@ -40,8 +41,7 @@ OpcUaCore::OpcUaCore(QObject *parent)
 
     QStringList backends = provider->availableBackends();
     if (!backends.contains("open62541")) {
-        emit errorOccured(
-            "Open62541 not found. Please make sure the OPCUA QT Plugin is installed.");
+        emit errorOccured("Open62541 not found.");
     }
 
     m_client = provider->createClient("open62541");
@@ -267,57 +267,80 @@ void OpcUaCore::startMonitoringOfNode(QOpcUaNode *node)
     m_isConnectingToNode[nodeId] = true;
     int intervalMs = m_intervalMsForNodeId.value(nodeId, 10);
 
-    QObject::connect(node, &QOpcUaNode::attributeRead, this, [=](QOpcUa::NodeAttributes attrs) {
-        if (!attrs.testFlag(QOpcUa::NodeAttribute::NodeClass)) {
-            emit errorOccured("Failed to read NodeClass for node: " + nodeId);
-            node->deleteLater();
-            return;
-        }
+    QObject::connect(
+        node,
+        &QOpcUaNode::attributeRead,
+        this,
+        [=](QOpcUa::NodeAttributes attrs) {
+            // Check for value errors
+            QOpcUa::UaStatusCode statusCode = node->valueAttributeError();
+            if (statusCode && statusCode != QOpcUa::UaStatusCode::Good) {
+                emit attributeGotError(nodeId,
+                                       QString::fromUtf8(
+                                           QMetaEnum::fromType<QOpcUa::UaStatusCode>().valueToKey(
+                                               statusCode)));
+            }
 
-        auto nodeClass = static_cast<QOpcUa::NodeClass>(
-            node->attribute(QOpcUa::NodeAttribute::NodeClass).toInt());
+            if (!attrs.testFlag(QOpcUa::NodeAttribute::NodeClass)) {
+                emit errorOccured("Failed to read NodeClass for node: " + nodeId);
+                node->deleteLater();
+                m_subscriptionNodes.remove(nodeId);
+                m_isConnectingToNode[nodeId] = false;
+                return;
+            }
 
-        if (nodeClass != QOpcUa::NodeClass::Variable) {
-            emit errorOccured("Node " + nodeId + " is not a Variable. Subscription aborted.");
-            node->deleteLater();
-            return;
-        }
+            auto nodeClass = static_cast<QOpcUa::NodeClass>(
+                node->attribute(QOpcUa::NodeAttribute::NodeClass).toInt());
+            if (nodeClass != QOpcUa::NodeClass::Variable) {
+                emit errorOccured("Node " + nodeId + " is not a Variable. Subscription aborted.");
+                node->deleteLater();
+                m_subscriptionNodes.remove(nodeId);
+                m_isConnectingToNode[nodeId] = false;
+                return;
+            }
 
-        // Enable monitoring
-        QOpcUaMonitoringParameters params;
-        params.setSamplingInterval(intervalMs);
-        params.setMonitoringMode(QOpcUaMonitoringParameters::MonitoringMode::Reporting);
-        params.setSubscriptionType(QOpcUaMonitoringParameters::SubscriptionType::Shared);
+            // Enable monitoring
+            QOpcUaMonitoringParameters params;
+            params.setSamplingInterval(intervalMs);
+            params.setMonitoringMode(QOpcUaMonitoringParameters::MonitoringMode::Reporting);
+            params.setSubscriptionType(QOpcUaMonitoringParameters::SubscriptionType::Shared);
 
-        if (!node->enableMonitoring(QOpcUa::NodeAttribute::Value, params)) {
-            emit errorOccured("Failed to enable monitoring for node: " + nodeId);
-            node->deleteLater();
-            return;
-        }
+            if (!node->enableMonitoring(QOpcUa::NodeAttribute::Value, params)) {
+                emit errorOccured("Failed to enable monitoring for node: " + nodeId);
+                node->deleteLater();
+                m_subscriptionNodes.remove(nodeId);
+                m_isConnectingToNode[nodeId] = false;
+                return;
+            }
 
-        QObject::connect(node,
-                         &QOpcUaNode::dataChangeOccurred,
-                         this,
-                         [this, nodeId](QOpcUa::NodeAttribute attr, const QVariant &value) {
-                             if (attr == QOpcUa::NodeAttribute::Value) {
-                                 emit valueRead(nodeId, value);
-                             }
-                         });
+            QObject::connect(node,
+                             &QOpcUaNode::dataChangeOccurred,
+                             this,
+                             [this, nodeId](QOpcUa::NodeAttribute attr, const QVariant &value) {
+                                 if (attr == QOpcUa::NodeAttribute::Value) {
+                                     if (value.isValid()) {
+                                         emit valueRead(nodeId, value);
+                                     } else {
+                                         emit attributeGotError(nodeId, "Invalid Value");
+                                     }
+                                 }
+                             });
 
-        qDebug() << "[subscribeToNode] Subscribed successfully to:" << nodeId;
+            qDebug() << "[subscribeToNode] Subscribed successfully to:" << nodeId;
 
-        QVariant accessLevel = node->attribute(QOpcUa::NodeAttribute::UserAccessLevel);
+            QVariant accessLevel = node->attribute(QOpcUa::NodeAttribute::UserAccessLevel);
 
-        if (accessLevel.isValid()) {
-            bool readAccess = accessLevel.value<quint8>()
-                              & static_cast<quint8>(QOpcUa::AccessLevelBit::CurrentRead);
-            bool writeAccess = accessLevel.value<quint8>()
-                               & static_cast<quint8>(QOpcUa::AccessLevelBit::CurrentWrite);
-            emit accessLevelRead(nodeId, readAccess, writeAccess);
-        }
+            if (accessLevel.isValid()) {
+                bool readAccess = accessLevel.value<quint8>()
+                                  & static_cast<quint8>(QOpcUa::AccessLevelBit::CurrentRead);
+                bool writeAccess = accessLevel.value<quint8>()
+                                   & static_cast<quint8>(QOpcUa::AccessLevelBit::CurrentWrite);
+                emit accessLevelRead(nodeId, readAccess, writeAccess);
+            }
 
-        m_isConnectingToNode[nodeId] = false;
-    });
+            m_isConnectingToNode[nodeId] = false;
+        },
+        Qt::SingleShotConnection);
 
     node->readAttributes(QOpcUa::NodeAttribute::NodeClass | QOpcUa::NodeAttribute::UserAccessLevel
                          | QOpcUa::NodeAttribute::Value | QOpcUa::NodeAttribute::Description);
@@ -426,7 +449,12 @@ bool OpcUaCore::writeDataDynamically(QOpcUaNode *node,
                 emit errorOccured("Value not readable");
                 return;
             }
-            doWrite(node->attribute(QOpcUa::NodeAttribute::Value));
+            QVariant existingValue = node->attribute(QOpcUa::NodeAttribute::Value);
+            if (existingValue.isValid()) {
+                doWrite(existingValue);
+            } else {
+                emit attributeGotError(node->nodeId(), "Invalid Value");
+            }
         },
         Qt::SingleShotConnection);
 

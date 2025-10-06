@@ -84,6 +84,7 @@ signals:
     void valueRead(const QString &nodeId, const QVariant &value);
     void valuesRead(const QVector<QVariant> &values);
     void accessLevelRead(const QString &nodeId, const bool &readAccess, const bool &writeAccess);
+    void attributeGotError(const QString &nodeId, const QString &errorMsg);
 
 private:
     QOpcUaClient *m_client;
@@ -96,7 +97,7 @@ private:
     bool m_reconnecting;
     bool isClientConnected();
     void startMonitoringOfNode(QOpcUaNode *node);
-    bool writeDataDynamically(QOpcUaNode* node,std::function<QVariant(const QVariant&)> makeValue);
+    bool writeDataDynamically(QOpcUaNode *node, std::function<QVariant(const QVariant &)> makeValue);
 };
 
 #endif // OPCUA_CORE_H

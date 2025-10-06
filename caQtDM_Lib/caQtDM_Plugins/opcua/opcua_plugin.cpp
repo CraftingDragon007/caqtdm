@@ -26,6 +26,7 @@
 #include <QSettings>
 #include <QThread>
 #include <QtConcurrent/QtConcurrent>
+#include "alarmdefs.h"
 #include "fileFunctions.h"
 #include "opcua_core.h"
 #include "searchfile.h"
@@ -237,6 +238,21 @@ int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
                 }
                 m_pendingSubscriptions[endpoint].clear();
             });
+
+            QObject::connect(core,
+                             &OpcUaCore::attributeGotError,
+                             [=](const QString &nodeId, const QString &errorMsg) {
+                                 auto range = m_channelCache.equal_range(nodeId);
+                                 for (auto it = range.first; it != range.second; ++it) {
+                                     int idx = it.value();
+                                     knobData kData = m_mutexKnobDataP->GetMutexKnobData(idx);
+
+                                     kData.edata.severity = INVALID_ALARM;
+                                     kData.edata.status = 1; // READ_ALARM
+                                     m_mutexKnobDataP->SetMutexKnobData(kData.index, kData);
+                                     m_mutexKnobDataP->SetMutexKnobDataReceived(&kData);
+                                 }
+                             });
         } else {
             core = m_cores[endpoint];
         }
