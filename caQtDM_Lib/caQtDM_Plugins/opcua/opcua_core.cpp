@@ -557,3 +557,14 @@ QString OpcUaCore::getDescription(const QString &nodeId)
     }
     return node->attribute(QOpcUa::NodeAttribute::Description).value<QOpcUaLocalizedText>().text();
 }
+
+QString OpcUaCore::getTimestamp(const QString &nodeId)
+{
+    QOpcUaNode *node = m_subscriptionNodes[nodeId];
+    if (!node) {
+        emit errorOccured("Node is null");
+        return "Node is null";
+    }
+    QDateTime timestamp = node->serverTimestamp(QOpcUa::NodeAttribute::Value);
+    return "Timestamp: " + timestamp.toString("MMM dd, yyyy HH:mm:ss.zzz");
+}

@@ -75,6 +75,7 @@ public:
                      int nelm,
                      char *errmess);
     QString getDescription(const QString &nodeId);
+    QString getTimestamp(const QString &nodeId);
 
 signals:
     void connected();

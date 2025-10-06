@@ -396,7 +396,28 @@ int OPCUAPlugin::pvSetWave(char *pv,
 int OPCUAPlugin::pvGetTimeStamp(char *pv, char *timestamp)
 {
     Q_UNUSED(pv);
-    qstrcpy(timestamp, "N/A");
+    QString rawPV = QString::fromUtf8(pv);
+    if (rawPV.endsWith(".FTVL") || rawPV.endsWith(".NELM")) {
+        rawPV.remove(rawPV.length() - 5, 5);
+    }
+
+    QString endpoint, nodeId;
+    if (!resolveConnectionString(rawPV.toUtf8().data(), endpoint, nodeId)) {
+        return false;
+    }
+
+    if (m_cores.contains(endpoint)) {
+        auto &core = m_cores[endpoint];
+        QString nodeTimestamp = core->getTimestamp(nodeId);
+        qstrncpy(timestamp, nodeTimestamp.toUtf8().data(), MAX_STRING_LENGTH);
+    } else {
+        if (m_messageWindowP) {
+            QString msg = "[pvGetTimeStamp]: endpoint not configured: " + endpoint;
+            m_messageWindowP->postMsgEvent(QtCriticalMsg, msg.toUtf8().data());
+        }
+        return false;
+    }
+
     return true;
 }
 
@@ -420,7 +441,7 @@ int OPCUAPlugin::pvGetDescription(char *pv, char *description)
         qstrncpy(description, nodeDescription.toUtf8().data(), MAX_STRING_LENGTH);
     } else {
         if (m_messageWindowP) {
-            QString msg = "Tried writing to pv that's not connected correctly: " + endpoint;
+            QString msg = "[pvGetDescription]: endpoint not configured: " + endpoint;
             m_messageWindowP->postMsgEvent(QtCriticalMsg, msg.toUtf8().data());
         }
         return false;
