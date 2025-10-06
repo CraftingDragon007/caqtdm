@@ -55,7 +55,7 @@ bool HTTPCONFIGURATOR = false;
 #include "configDialog.h"
 #include "caQtDM_Lib_global.h"
 
-#ifdef linux
+#if defined(linux) || defined(__FreeBSD__)
 #include <sys/resource.h>
 #include <sys/time.h>
 #include <unistd.h>
@@ -333,7 +333,7 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
 
     #endif
 
-    #ifdef linux
+    #if defined(linux) || defined(__FreeBSD__)
         QString uids = QString::number(getuid());
         uniqueKey.append(":"+ uids);
     #endif
@@ -771,7 +771,7 @@ void FileOpenWindow::timerEvent(QTimerEvent *event)
 
     asc[0] = '\0';
 
-#ifdef linux
+#if defined(linux) || defined(__FreeBSD__)
     struct rusage usage;
     getrusage(RUSAGE_SELF, &usage);
     snprintf(asc, MAX_STRING_LENGTH, "memory: %ld kB,", usage.ru_maxrss);

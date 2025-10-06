@@ -59,7 +59,7 @@
 #  include <unistd.h>
 #endif
 
-#ifdef linux
+#if defined(linux) || defined(__FreeBSD__)
 #  include <sys/wait.h>
 #  include <sys/time.h>
 #  include <unistd.h>
@@ -6875,7 +6875,7 @@ void CaQtDM_Lib::shellCommand(QString command) {
         pv_list.sort();
         command.replace("&D", pv_list.join(" "));
     }
-#ifdef linux
+#if defined(linux) || defined(__FreeBSD__)
     int windid = this->winId();
     command.replace("&X", QString::number(windid));
 #endif

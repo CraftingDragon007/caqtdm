@@ -45,6 +45,10 @@ INCLUDEPATH += ../caQtDM_Lib/src
 INCLUDEPATH += ../caQtDM_Parsers/adlParserSrc
 INCLUDEPATH += ../caQtDM_Parsers/edlParserSrc
 
+freebsd {
+   INCLUDEPATH += /usr/local/include
+}
+
 android {
    INCLUDEPATH += $(ANDROIDFUNCTIONSINCLUDE)
 }
@@ -56,6 +60,9 @@ RC_FILE = ./src/qtcontrols.rc
 #INCLUDEPATH += /opt/intel/parallel/vtune_amplifier_xe_2013/include
 #LIBS += /opt/intel/parallel/vtune_amplifier_xe_2013/lib32/libittnotify.a
 
+freebsd {
+   LIBS += -L/usr/local/lib -lz
+}
 
 PRE_TARGETDEPS += \
      moc/moc_caslider.cpp \
