@@ -598,16 +598,17 @@ bool OPCUAPlugin::resolveConnectionString(char *pv, QString &endpoint, QString &
 caType OPCUAPlugin::generateCaTypeFromVariant(const QVariant &value, bool &isArray)
 {
     isArray = false;
-    QVariant valuteToCheck = value;
-    if (value.canConvert<QVariantList>()) {
-        QList<QVariant> list = valuteToCheck.toList();
+    QVariant valueToCheck = value;
+
+    if (value.canConvert<QVariantList>() && !value.canConvert<QString>()) {
+        QList<QVariant> list = valueToCheck.toList();
         if (list.length() > 0) {
-            valuteToCheck = list.constFirst();
+            valueToCheck = list.constFirst();
             isArray = true;
         }
     }
 
-    switch (QT_VARIANT_TYPE(valuteToCheck)) {
+    switch (QT_VARIANT_TYPE(valueToCheck)) {
     case QMetaType::Double:
         return caDOUBLE;
     case QMetaType::Float:
