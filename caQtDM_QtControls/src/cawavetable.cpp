@@ -174,6 +174,8 @@ void caWaveTable::RedefineRowColumns(int xsav, int ysav, int z, int &x, int &y)
     }
 }
 
+void caWaveTable::noStyle(QString stylesheet){
+    this->setStyleSheet(stylesheet);
 int caWaveTable::getVerticalOffset() const
 {
     return verticalOffset;
