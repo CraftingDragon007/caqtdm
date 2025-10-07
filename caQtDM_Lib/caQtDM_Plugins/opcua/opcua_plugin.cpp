@@ -32,17 +32,17 @@
 #include "searchfile.h"
 #include <memory>
 
-QString OPCUAPlugin::pluginName()
-{
-    return "opcua";
-}
-
 OPCUAPlugin::OPCUAPlugin()
 {
     VERBOSELOG("Create");
     QLoggingCategory::setFilterRules("qt.opcua.plugins.open62541.sdk*=false");
     m_mutexKnobDataP = Q_NULLPTR;
     m_messageWindowP = Q_NULLPTR;
+}
+
+QString OPCUAPlugin::pluginName()
+{
+    return "opcua";
 }
 
 int OPCUAPlugin::initCommunicationLayer(MutexKnobData *data,
@@ -124,7 +124,6 @@ int OPCUAPlugin::initCommunicationLayer(MutexKnobData *data,
     return true;
 }
 
-// caQtDM_Lib will call this routine for defining a monitor
 int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
 {
     Q_UNUSED(rate);
@@ -285,7 +284,6 @@ int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
     return true;
 }
 
-// caQtDM_Lib will call this routine for getting rid of a monitor
 int OPCUAPlugin::pvClearMonitor(knobData *kData)
 {
     QMutexLocker lock(&m_mutex);
@@ -353,7 +351,6 @@ int OPCUAPlugin::pvFreeAllocatedData(knobData *kData)
     return true;
 }
 
-// caQtDM_Lib will call this routine for setting data (see for more detail the epics3 plugin)
 int OPCUAPlugin::pvSetValue(
     char *pv, double rdata, int32_t idata, char *sdata, char *object, char *errmess, int forceType)
 {
@@ -366,10 +363,7 @@ int OPCUAPlugin::pvSetValue(
         return false;
     }
 
-    if (m_cores.contains(endpoint)) {
-        auto &core = m_cores[endpoint];
-        return core->writeValue(nodeId, rdata, idata, sdata, errmess, forceType);
-    } else {
+    if (!m_cores.contains(endpoint)) {
         if (m_messageWindowP) {
             QString msg = "Tried writing to pv that's not connected correctly: " + endpoint;
             m_messageWindowP->postMsgEvent(QtCriticalMsg, msg.toUtf8().data());
@@ -377,10 +371,10 @@ int OPCUAPlugin::pvSetValue(
         return false;
     }
 
-    return true;
+    auto &core = m_cores[endpoint];
+    return core->writeValue(nodeId, rdata, idata, sdata, errmess, forceType);
 }
 
-// caQtDM_Lib will call this routine for setting waveforms data (see for more detail the epics3 plugin)
 int OPCUAPlugin::pvSetWave(char *pv,
                            float *fdata,
                            double *ddata,
@@ -400,10 +394,7 @@ int OPCUAPlugin::pvSetWave(char *pv,
         return false;
     }
 
-    if (m_cores.contains(endpoint)) {
-        auto &core = m_cores[endpoint];
-        return core->writeValues(nodeId, fdata, ddata, data16, data32, sdata, nelm, errmess);
-    } else {
+    if (!m_cores.contains(endpoint)) {
         if (m_messageWindowP) {
             QString msg = "Tried writing to pv that's not connected correctly: " + endpoint;
             m_messageWindowP->postMsgEvent(QtCriticalMsg, msg.toUtf8().data());
@@ -411,10 +402,10 @@ int OPCUAPlugin::pvSetWave(char *pv,
         return false;
     }
 
-    return true;
+    auto &core = m_cores[endpoint];
+    return core->writeValues(nodeId, fdata, ddata, data16, data32, sdata, nelm, errmess);
 }
 
-// caQtDM_Lib will call this routine for getting the timestamp for this monitor
 int OPCUAPlugin::pvGetTimeStamp(char *pv, char *timestamp)
 {
     Q_UNUSED(pv);
@@ -443,7 +434,6 @@ int OPCUAPlugin::pvGetTimeStamp(char *pv, char *timestamp)
     return true;
 }
 
-// caQtDM_Lib will call this routine for getting a description of the monitor
 int OPCUAPlugin::pvGetDescription(char *pv, char *description)
 {
     QString rawPV = QString::fromUtf8(pv);
@@ -472,7 +462,6 @@ int OPCUAPlugin::pvGetDescription(char *pv, char *description)
     return true;
 }
 
-// next two routines are used to stop and restart the monitoring (used in case of tabWidgets in the display)
 int OPCUAPlugin::pvClearEvent(void *ptr)
 {
     knobData *kData = static_cast<knobData *>(ptr);
@@ -510,7 +499,6 @@ int OPCUAPlugin::pvAddEvent(void *ptr)
     return true;
 }
 
-// next two routines are used to connect and disconnect monitors when the application gets suspended and reactivated
 int OPCUAPlugin::pvReconnect(knobData *kData)
 {
     QString endpoint, nodeId;
@@ -555,15 +543,11 @@ int OPCUAPlugin::pvDisconnect(knobData *kData)
     return true;
 }
 
-// flush any io is periodically called (1s timer) in order to flush the disconnection and reconnection
-// used for pv's that will be hidden and shown in case of tabwidgets
 int OPCUAPlugin::FlushIO()
 {
     return true;
 }
 
-// termination (in case of epics3, this is used to destroy the context when the application gets deactivated
-// otherwise probably no meaning
 int OPCUAPlugin::TerminateIO()
 {
     QMutexLocker locker(&m_mutex);
@@ -572,6 +556,7 @@ int OPCUAPlugin::TerminateIO()
         if (core) {
             core->clearAllSubscriptions();
             core->disconnectOpc();
+            core->deleteLater();
         }
     }
 
