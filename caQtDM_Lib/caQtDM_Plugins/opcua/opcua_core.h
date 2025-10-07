@@ -39,6 +39,8 @@
 #include <QtOpcUa/QOpcUaQualifiedName>
 #include <QtOpcUa/QOpcUaReferenceDescription>
 
+#define VERBOSELOG(msg) qDebug().nospace() << "[" << __FUNCTION__ << "]: " << msg
+
 typedef struct
 {
     QString nodeid;
@@ -80,7 +82,6 @@ public:
 signals:
     void connected();
     void disconnected();
-    void errorOccured(const QString &message);
     void valueRead(const QString &nodeId, const QVariant &value);
     void valuesRead(const QVector<QVariant> &values);
     void accessLevelRead(const QString &nodeId, const bool &readAccess, const bool &writeAccess);

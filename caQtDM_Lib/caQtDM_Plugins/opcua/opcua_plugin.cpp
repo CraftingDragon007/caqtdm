@@ -39,7 +39,7 @@ QString OPCUAPlugin::pluginName()
 
 OPCUAPlugin::OPCUAPlugin()
 {
-    qDebug() << "OPCUAPlugin: Create";
+    VERBOSELOG("Create");
     QLoggingCategory::setFilterRules("qt.opcua.plugins.open62541.sdk*=false");
     m_mutexKnobDataP = Q_NULLPTR;
     m_messageWindowP = Q_NULLPTR;
@@ -49,7 +49,7 @@ int OPCUAPlugin::initCommunicationLayer(MutexKnobData *data,
                                         MessageWindow *messageWindow,
                                         QMap<QString, QString> options)
 {
-    qDebug() << "OPCUA Plugin: InitCommunicationLayer with options " << options;
+    VERBOSELOG("Initialized with num options: " << options.size());
 
     m_mutexKnobDataP = data;
     m_messageWindowP = messageWindow;
@@ -174,6 +174,7 @@ int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
             core = m_cores[endpoint];
             QObject::connect(core,
                              &OpcUaCore::valueRead,
+                             this,
                              [=](const QString &nodeId, const QVariant &value) {
                                  auto range = m_channelCache.equal_range(nodeId);
                                  for (auto it = range.first; it != range.second; ++it) {
@@ -190,6 +191,7 @@ int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
 
             QObject::connect(core,
                              &OpcUaCore::accessLevelRead,
+                             this,
                              [=](const QString &nodeId,
                                  const bool &readAccess,
                                  const bool &writeAccess) {
@@ -207,7 +209,7 @@ int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
                                  }
                              });
 
-            QObject::connect(core, &OpcUaCore::disconnected, [=]() {
+            QObject::connect(core, &OpcUaCore::disconnected, this, [=]() {
                 m_connectionState[endpoint] = ConnectionState::NotConnected;
                 for (int idx : m_knobDataIndicesForEndpoint[endpoint]) {
                     knobData kData = m_mutexKnobDataP->GetMutexKnobData(idx);
@@ -225,7 +227,7 @@ int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
                 }
             });
 
-            QObject::connect(core, &OpcUaCore::connected, [=]() {
+            QObject::connect(core, &OpcUaCore::connected, this, [=]() {
                 m_connectionState[endpoint] = ConnectionState::Connected;
                 if (m_messageWindowP) {
                     QString info = QString("OPCUA: Connected to %1").arg(endpoint);
@@ -241,11 +243,14 @@ int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
 
             QObject::connect(core,
                              &OpcUaCore::attributeGotError,
+                             this,
                              [=](const QString &nodeId, const QString &errorMsg) {
                                  auto range = m_channelCache.equal_range(nodeId);
                                  for (auto it = range.first; it != range.second; ++it) {
                                      int idx = it.value();
                                      knobData kData = m_mutexKnobDataP->GetMutexKnobData(idx);
+
+                                     VERBOSELOG("nodeId: " << nodeId << " got error: " << errorMsg);
 
                                      kData.edata.severity = INVALID_ALARM;
                                      kData.edata.status = 1; // READ_ALARM
@@ -275,6 +280,7 @@ int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
             // Start connection
             core->connectOpc(endpoint);
         }
+        // Else the core is already connecting, meaning once it finishes it will subscribe to the stored subscription
     }
     return true;
 }
@@ -478,7 +484,7 @@ int OPCUAPlugin::pvClearEvent(void *ptr)
     QMutexLocker locker(&m_mutex);
     if (m_cores.contains(endpoint)) {
         m_cores[endpoint]->disableMonitoringForNode(nodeId);
-        qDebug() << "OPCUAPlugin:pvClearEvent - paused monitoring for" << nodeId;
+        VERBOSELOG("Paused monitoring for" << nodeId);
     }
 
     return true;
@@ -498,13 +504,13 @@ int OPCUAPlugin::pvAddEvent(void *ptr)
     QMutexLocker locker(&m_mutex);
     if (m_cores.contains(endpoint)) {
         m_cores[endpoint]->subscribeToNode(pendingSubscription);
-        qDebug() << "OPCUAPlugin:pvAddEvent - resumed monitoring for" << nodeId;
+        VERBOSELOG("Resumed monitoring for" << nodeId);
     }
 
     return true;
 }
 
-// next two routines are used to connect and disconnect monitors when the application gest suspended and reactivated
+// next two routines are used to connect and disconnect monitors when the application gets suspended and reactivated
 int OPCUAPlugin::pvReconnect(knobData *kData)
 {
     QString endpoint, nodeId;
@@ -544,7 +550,7 @@ int OPCUAPlugin::pvDisconnect(knobData *kData)
     if (m_cores.contains(endpoint)) {
         m_cores[endpoint]->disconnectOpc();
         m_connectionState[endpoint] = ConnectionState::NotConnected;
-        qDebug() << "OPCUAPlugin: Disconnected from" << endpoint;
+        VERBOSELOG("Disconnected from" << endpoint);
     }
     return true;
 }
@@ -556,25 +562,23 @@ int OPCUAPlugin::FlushIO()
     return true;
 }
 
-// termination (in case of epics3, this is used to destroy the context when the application gest deactivated
-// otherwise probably no meaning; in this demo, we stop the simulation, however it will not be reactivated
-// any more (you may do that through pvReconnect)
+// termination (in case of epics3, this is used to destroy the context when the application gets deactivated
+// otherwise probably no meaning
 int OPCUAPlugin::TerminateIO()
 {
-    qDebug() << "OPCUAPlugin: TerminateIO called.";
     QMutexLocker locker(&m_mutex);
 
     for (auto &core : m_cores) {
         if (core) {
-            core->clearAllSubscriptions(); // gracefully disable monitoring
-            core->disconnectOpc();         // disconnect from server
+            core->clearAllSubscriptions();
+            core->disconnectOpc();
         }
     }
 
-    m_cores.clear();                // remove references
-    m_connectionState.clear();      // reset states
-    m_pendingSubscriptions.clear(); // reset pending list
-    m_channelCache.clear();         // clear nodeId → index map
+    m_cores.clear();
+    m_connectionState.clear();
+    m_pendingSubscriptions.clear();
+    m_channelCache.clear();
 
     return true;
 }
@@ -595,7 +599,7 @@ bool OPCUAPlugin::resolveConnectionString(char *pv, QString &endpoint, QString &
     if (splitPos < 0) {
         splitPos = raw.lastIndexOf("/i=");
         if (splitPos < 0) {
-            qWarning() << "OPCUAPlugin: Invalid connection string: " << fullConnection;
+            VERBOSELOG("Invalid connection string: " << fullConnection);
             return false;
         }
     }

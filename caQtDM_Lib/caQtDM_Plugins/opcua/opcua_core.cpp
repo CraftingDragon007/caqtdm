@@ -37,16 +37,17 @@ OpcUaCore::OpcUaCore(QObject *parent)
     : QObject(parent)
     , m_client(Q_NULLPTR)
 {
-    QOpcUaProvider *provider = new QOpcUaProvider();
+    QOpcUaProvider provider;
 
-    QStringList backends = provider->availableBackends();
+    QStringList backends = provider.availableBackends();
     if (!backends.contains("open62541")) {
-        emit errorOccured("Open62541 not found.");
+        VERBOSELOG("Open62541 not found.");
+        return;
     }
 
-    m_client = provider->createClient("open62541");
+    m_client = provider.createClient("open62541");
     if (!m_client) {
-        emit errorOccured("Failed to create OPC UA client instance.");
+        VERBOSELOG("Failed to create OPC UA client instance.");
         return;
     }
 
@@ -106,8 +107,8 @@ OpcUaCore::OpcUaCore(QObject *parent)
     QObject::connect(m_client,
                      &QOpcUaClient::errorChanged,
                      this,
-                     [this](QOpcUaClient::ClientError error) {
-                         emit errorOccured(QString("Client error: %1").arg(static_cast<int>(error)));
+                     [](QOpcUaClient::ClientError error) {
+                         VERBOSELOG(QString("Client error: %1").arg(static_cast<int>(error)));
                      });
 }
 OpcUaCore::~OpcUaCore()
@@ -130,7 +131,7 @@ OpcUaCore::~OpcUaCore()
 bool OpcUaCore::connectOpc(const QString &url)
 {
     if (!m_client) {
-        emit errorOccured("Client is not initialized.");
+        VERBOSELOG("Client is not initialized.");
         return false;
     }
 
@@ -144,7 +145,7 @@ bool OpcUaCore::connectOpc(const QString &url)
             // If no endpoints are returned at all, there is something fundamentally wrong with the server.
             // Thus, not even the fallbackEndpoint is checked from the pv, and we error out here.
             if (returnedEndpoints.isEmpty() || status != QOpcUa::UaStatusCode::Good) {
-                emit errorOccured("No endpoints received or status not good.");
+                VERBOSELOG("No endpoints received or status not good.");
                 return;
             }
 
@@ -205,7 +206,7 @@ bool OpcUaCore::connectOpc(const QString &url)
             }
 
             if (!foundWorkingEndpoint) {
-                emit errorOccured("No reachable endpoint hosts.");
+                VERBOSELOG("No reachable endpoint hosts.");
                 return;
             }
 
@@ -224,10 +225,10 @@ void OpcUaCore::disconnectOpc()
     if (m_client
         && (m_client->state() == QOpcUaClient::ClientState::Connected
             || m_client->state() == QOpcUaClient::ClientState::Connecting)) {
-        qDebug() << "Disconnecting from OPC UA Server....";
+        VERBOSELOG("Disconnecting from OPC UA Server....");
         m_client->disconnectFromEndpoint();
     } else {
-        qDebug() << "Client not connected or already disconnected.";
+        VERBOSELOG("Client not connected or already disconnected.");
     }
 }
 
@@ -237,18 +238,17 @@ void OpcUaCore::subscribeToNode(const SubscriptionSettings &subscriptionSettings
     int intervalMs = subscriptionSettings.samplingIntervalMs;
 
     if (!isClientConnected()) {
-        emit errorOccured("Client is not connected.");
+        VERBOSELOG("Client is not connected.");
         return;
     }
 
     if (m_subscriptionNodes.contains(nodeId)) {
-        qInfo() << "Already subscribed to node:" << nodeId;
         return;
     }
 
     QOpcUaNode *node = m_client->node(nodeId);
     if (!node) {
-        emit errorOccured("Failed to create node object for subscription: " + nodeId);
+        VERBOSELOG("Failed to create node object for subscription: " << nodeId);
         return;
     }
     m_subscriptionNodes.insert(nodeId, node);
@@ -282,7 +282,7 @@ void OpcUaCore::startMonitoringOfNode(QOpcUaNode *node)
             }
 
             if (!attrs.testFlag(QOpcUa::NodeAttribute::NodeClass)) {
-                emit errorOccured("Failed to read NodeClass for node: " + nodeId);
+                VERBOSELOG("Failed to read NodeClass for node: " << nodeId);
                 node->deleteLater();
                 m_subscriptionNodes.remove(nodeId);
                 m_isConnectingToNode[nodeId] = false;
@@ -292,7 +292,7 @@ void OpcUaCore::startMonitoringOfNode(QOpcUaNode *node)
             auto nodeClass = static_cast<QOpcUa::NodeClass>(
                 node->attribute(QOpcUa::NodeAttribute::NodeClass).toInt());
             if (nodeClass != QOpcUa::NodeClass::Variable) {
-                emit errorOccured("Node " + nodeId + " is not a Variable. Subscription aborted.");
+                VERBOSELOG("Node " << nodeId << " is not a Variable. Subscription aborted.");
                 node->deleteLater();
                 m_subscriptionNodes.remove(nodeId);
                 m_isConnectingToNode[nodeId] = false;
@@ -306,7 +306,7 @@ void OpcUaCore::startMonitoringOfNode(QOpcUaNode *node)
             params.setSubscriptionType(QOpcUaMonitoringParameters::SubscriptionType::Shared);
 
             if (!node->enableMonitoring(QOpcUa::NodeAttribute::Value, params)) {
-                emit errorOccured("Failed to enable monitoring for node: " + nodeId);
+                VERBOSELOG("Failed to enable monitoring for node: " << nodeId);
                 node->deleteLater();
                 m_subscriptionNodes.remove(nodeId);
                 m_isConnectingToNode[nodeId] = false;
@@ -326,7 +326,7 @@ void OpcUaCore::startMonitoringOfNode(QOpcUaNode *node)
                                  }
                              });
 
-            qDebug() << "[subscribeToNode] Subscribed successfully to:" << nodeId;
+            VERBOSELOG("Subscribed successfully to:" << nodeId);
 
             QVariant accessLevel = node->attribute(QOpcUa::NodeAttribute::UserAccessLevel);
 
@@ -348,8 +348,6 @@ void OpcUaCore::startMonitoringOfNode(QOpcUaNode *node)
 
 void OpcUaCore::clearAllSubscriptions()
 {
-    qInfo() << "Clearing all OPC UA subscriptions...";
-
     for (auto it = m_subscriptionNodes.begin(); it != m_subscriptionNodes.end(); ++it) {
         QOpcUaNode *node = it.value();
         if (node) {
@@ -360,13 +358,12 @@ void OpcUaCore::clearAllSubscriptions()
     }
 
     m_subscriptionNodes.clear();
-    qInfo() << "All OPC UA subscriptions have been cleared.";
+    VERBOSELOG("All OPC UA subscriptions have been cleared.");
 }
 
 bool OpcUaCore::isClientConnected()
 {
     if (!m_client || m_client->state() != QOpcUaClient::Connected) {
-        emit errorOccured("Client is not connected.");
         return false;
     }
     return true;
@@ -416,7 +413,7 @@ bool OpcUaCore::writeDataDynamically(QOpcUaNode *node,
     auto doWrite = [&](const QVariant &ref) {
         QVariant valueToWrite = makeValue(ref);
         if (!valueToWrite.isValid()) {
-            emit errorOccured("Unsupported type");
+            VERBOSELOG("Unsupported type");
             return;
         }
 
@@ -426,7 +423,7 @@ bool OpcUaCore::writeDataDynamically(QOpcUaNode *node,
             this,
             [=](QOpcUa::NodeAttribute attr, QOpcUa::UaStatusCode status) {
                 if (attr == QOpcUa::NodeAttribute::Value && status != QOpcUa::Good) {
-                    emit errorOccured("Write failed: " + QOpcUa::statusToString(status));
+                    VERBOSELOG("Write failed: " << QOpcUa::statusToString(status));
                 }
             },
             Qt::SingleShotConnection);
@@ -446,7 +443,7 @@ bool OpcUaCore::writeDataDynamically(QOpcUaNode *node,
         this,
         [=](QOpcUa::NodeAttributes attrs) {
             if (!attrs.testFlag(QOpcUa::NodeAttribute::Value)) {
-                emit errorOccured("Value not readable");
+                VERBOSELOG("Value not readable");
                 return;
             }
             QVariant existingValue = node->attribute(QOpcUa::NodeAttribute::Value);
@@ -469,13 +466,13 @@ bool OpcUaCore::writeValue(
     Q_UNUSED(errmess)
 
     if (!m_subscriptionNodes.contains(nodeId)) {
-        emit errorOccured("Node not found");
+        VERBOSELOG("Node not found");
         return false;
     }
 
     QOpcUaNode *node = m_subscriptionNodes[nodeId];
     if (!node) {
-        emit errorOccured("Node is null");
+        VERBOSELOG("Node is null");
         return false;
     }
 
@@ -517,13 +514,13 @@ bool OpcUaCore::writeValues(const QString &nodeId,
     Q_UNUSED(errmess)
 
     if (!m_subscriptionNodes.contains(nodeId)) {
-        emit errorOccured("Node not found");
+        VERBOSELOG("Node not found");
         return false;
     }
 
     QOpcUaNode *node = m_subscriptionNodes[nodeId];
     if (!node) {
-        emit errorOccured("Node is null");
+        VERBOSELOG("Node is null");
         return false;
     }
 
@@ -531,8 +528,8 @@ bool OpcUaCore::writeValues(const QString &nodeId,
         QList<QVariant> values;
 
         if (!ref.canConvert<QVariantList>()) {
-            qDebug() << "[makeValue] tried writing array data to a variable that didn't return an "
-                        "array last time";
+            VERBOSELOG(
+                "Tried writing array data to a variable that didn't return an array last time");
             return values;
         }
 
@@ -580,7 +577,7 @@ QString OpcUaCore::getDescription(const QString &nodeId)
 {
     QOpcUaNode *node = m_subscriptionNodes[nodeId];
     if (!node) {
-        emit errorOccured("Node is null");
+        VERBOSELOG("Node is null");
         return "Node is null";
     }
     return node->attribute(QOpcUa::NodeAttribute::Description).value<QOpcUaLocalizedText>().text();
@@ -590,7 +587,7 @@ QString OpcUaCore::getTimestamp(const QString &nodeId)
 {
     QOpcUaNode *node = m_subscriptionNodes[nodeId];
     if (!node) {
-        emit errorOccured("Node is null");
+        VERBOSELOG("Node is null");
         return "Node is null";
     }
     QDateTime timestamp = node->serverTimestamp(QOpcUa::NodeAttribute::Value);
