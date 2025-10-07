@@ -29,15 +29,11 @@
 Name:    caqtdm 
 Summary: Qt Widgets for Technical Applications
 Version: 4.6.0
-Release: 0.1%{?dist}
+Release: 0.2%{?dist}
 #############################################################################
 License: GPLv3
 URL:     https://github.com/caqtdm/caqtdm
 Source:  https://github.com/caqtdm/caqtdm/%{name}/%{name}-%{version}.tar.gz
-
-%if 0%{?qt6}
-Patch0: no_rpath.patch
-%endif
 
 %if 0%{?qt5}
 # Requires: caqtdm_archiver
@@ -135,7 +131,6 @@ Requires: qt5-assistant
 Requires: qt5-designer
 Requires: qwt-qt5 zeromq
 Requires: epics-base%{EPICS_TARGET_VERSION}
-Obsoletes:  caqtdm
 %define qt_vers qt5
 %if 0%{?rhel} <  8
 Requires: python==3.12
@@ -164,7 +159,6 @@ Conflicts: %{name}-qt4
 Summary: caQtDM built against Qt 6.
 Requires: qt6-qttools
 Requires: qwt-qt6 zeromq
-Obsoletes:  caqtdm
 %define qt_vers qt6
 Requires: epics-base%{EPICS_TARGET_VERSION}
 Requires: qt6-qt5compat
@@ -196,6 +190,9 @@ mkdir -p %{_builddir}/%{name}-%{version}/build/opt/caqtdm/lib/qt5
 export CAQTDM_MODBUS=1
 export CAQTDM_GPS=1
 export CAQTDM_COLLECT=%{_builddir}/%{name}-%{version}/build/opt/caqtdm/lib/qt5
+%if 0%{?rhel} > 8
+export CAQTDM_NORPATH=1
+%endif
 export QTDM_RPATH=/opt/caqtdm/lib/qt5
 export QTCONTROLS_LIBS=%{_builddir}/%{name}-%{version}/build/opt/caqtdm/lib/qt5
 export QTBASE=%{_builddir}/%{name}-%{version}/build/opt/caqtdm/lib/qt5
@@ -213,6 +210,9 @@ export EPICSINCLUDE=${EPICS_BASE}/include
 export EPICSLIB=${EPICS_BASE}/lib/$EPICS_HOST_ARCH
 %if 0%{?rhel} >  7
 export PYTHONVERSION=$(python3 --version 2>&1 | cut -d ' ' -f 2 | cut -d '.' -f 1-2)
+%if  0%{?rhel} ==  8
+export PYTHONVERSION=$(python3 --version 2>&1 | cut -d ' ' -f 2 | cut -d '.' -f 1-2)m
+%endif
 %else
 export PYTHONVERSION=2.7
 %endif
@@ -385,6 +385,11 @@ popd
 	cp %{_builddir}/%{name}-%{version}/caQtDM_QtControls/doc/*.css     %{buildroot}/opt/caqtdm/doc
 
 	cp -R %{_builddir}/%{name}-%{version}/build/* %{buildroot}
+	# Copy the lucida font to the installation directory
+	mkdir -p %{buildroot}/usr/share/fonts/caqtdm/
+	cp %{_builddir}/%{name}-%{version}/caQtDM_Viewer/lucida-sans-typewriter.ttf  %{buildroot}/usr/share/fonts/caqtdm/
+
+
 %if 0%{?qt4}
         echo "#!/bin/bash" >>  %{buildroot}/opt/caqtdm/lib/qt4/caqtdm_designer
         echo "SOURCE=\"\${BASH_SOURCE[0]}\"" >>  %{buildroot}/opt/caqtdm/lib/qt4/caqtdm_designer
@@ -428,6 +433,16 @@ popd
         echo "fi" >>  %{buildroot}/opt/caqtdm/lib/qt5/caqtdm
         echo " " >>  %{buildroot}/opt/caqtdm/lib/qt5/caqtdm
 
+
+%if  0%{?rhel} >  8
+        # Create ld.so.conf.d/caqtdm.conf file because there is no rpath in the binaries
+        mkdir -p %{buildroot}/etc/ld.so.conf.d
+        echo "/opt/caqtdm/lib/qt5" > %{buildroot}/etc/ld.so.conf.d/caqtdm.conf
+        echo "/opt/caqtdm/lib/qt5/designer" >> %{buildroot}/etc/ld.so.conf.d/caqtdm.conf
+        echo "/opt/caqtdm/lib/qt5/controlsystems" >> %{buildroot}/etc/ld.so.conf.d/caqtdm.conf
+        echo "/usr/local/epics/base%{EPICS_TARGET_VERSION}/lib/RHEL9-x86_64" >> %{buildroot}/etc/ld.so.conf.d/caqtdm.conf
+%endif
+
 %endif
 
 %if 0%{?qt6}
@@ -461,7 +476,7 @@ popd
         echo "/opt/caqtdm/lib/qt6" > %{buildroot}/etc/ld.so.conf.d/caqtdm.conf
         echo "/opt/caqtdm/lib/qt6/designer" >> %{buildroot}/etc/ld.so.conf.d/caqtdm.conf
         echo "/opt/caqtdm/lib/qt6/controlsystems" >> %{buildroot}/etc/ld.so.conf.d/caqtdm.conf
-
+        echo "/usr/local/epics/base%{EPICS_TARGET_VERSION}/lib/RHEL9-x86_64" >> %{buildroot}/etc/ld.so.conf.d/caqtdm.conf
 %endif
 
 
@@ -533,6 +548,11 @@ fi
 %defattr(755,root,root)
 /opt/caqtdm/lib/qt5/caqtdm_designer
 /opt/caqtdm/lib/qt5/caqtdm
+/usr/share/fonts/caqtdm
+%if 0%{?rhel} > 8
+/etc/ld.so.conf.d/caqtdm.conf
+%endif
+
 %files qt5
 /usr/local/bin
 
@@ -570,6 +590,7 @@ fi
 %defattr(755,root,root)
 /opt/caqtdm/lib/qt6/caqtdm_designer
 /opt/caqtdm/lib/qt6/caqtdm
+/usr/share/fonts/caqtdm
 %files qt6
 /usr/local/bin
 

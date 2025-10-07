@@ -15,7 +15,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with the caQtDM Framework.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  Copyright (c) 2010 - 2014
+ *  Copyright (c) 2010 - 2025
  *
  *  Author:
  *    Anton Mezger
@@ -23,6 +23,8 @@
  *    anton.mezger@psi.ch
  */
 
+
+#include "qscrollbar.h"
 #if defined(_MSC_VER)
 #define NOMINMAX
 #include <windows.h>
@@ -35,14 +37,15 @@
 #include <QClipboard>
 #include <qnumeric.h>
 #include "cawavetable.h"
+#include "cawavetablemodel.h"
 #include "alarmdefs.h"
+
 
 #if defined(_MSC_VER)
     #ifndef snprintf
      #define snprintf _snprintf
     #endif
 #endif
-
 
 caWaveTable::caWaveTable(QWidget *parent) : QTableWidget(parent)
 {
@@ -63,10 +66,17 @@ caWaveTable::caWaveTable(QWidget *parent) : QTableWidget(parent)
 
     setAlternatingRowColors(true);
     setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Expanding);
+
+    verticalOffset=1;
+    horizontalOffset=1;
     verticalHeader()->setDefaultSectionSize(20);
     verticalHeader()->setSortIndicatorShown(false);
+    caWaveTableModel* d=new caWaveTableModel(0,0,this);
+    verticalHeader()->setModel(d);
+    horizontalHeader()->setModel(d);
 
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+
+ #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     horizontalHeader()->setResizeMode(QHeaderView::Stretch);
 #else
     horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
@@ -114,6 +124,9 @@ caWaveTable::caWaveTable(QWidget *parent) : QTableWidget(parent)
 
     connect(this, SIGNAL(currentCellChanged(int, int, int, int)), this,  SLOT(cellChange(int,int, int, int)));
 
+    connect(this->verticalScrollBar(),SIGNAL(valueChanged(int)),this, SLOT(vscrollbarInput(int)));
+    connect(this->horizontalScrollBar(),SIGNAL(valueChanged(int)),this, SLOT(hscrollbarInput(int)));
+
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     defaultForeColor = palette().foreground().color();
 #else
@@ -129,6 +142,17 @@ caWaveTable::caWaveTable(QWidget *parent) : QTableWidget(parent)
     setNumberOfColumns(1);
     setFocusPolicy(Qt::ClickFocus);
 }
+
+void caWaveTable::vscrollbarInput(int scrollvalue)
+{
+    emit verticalScrollbarChanged(scrollvalue);
+}
+void caWaveTable::hscrollbarInput(int scrollvalue)
+{
+    emit verticalScrollbarChanged(scrollvalue);
+}
+
+
 
 void caWaveTable::RedefineRowColumns(int xsav, int ysav, int z, int &x, int &y)
 {
@@ -152,6 +176,70 @@ void caWaveTable::RedefineRowColumns(int xsav, int ysav, int z, int &x, int &y)
 
 void caWaveTable::noStyle(QString stylesheet){
     this->setStyleSheet(stylesheet);
+int caWaveTable::getVerticalOffset() const
+{
+    return verticalOffset;
+}
+
+void caWaveTable::setVerticalOffset(int newVerticalOffset)
+{
+    if (verticalOffset == newVerticalOffset)
+        return;
+    verticalOffset = newVerticalOffset;
+    setupItems(rowcount, colcount);
+    emit verticalOffsetChanged();
+}
+
+void caWaveTable::vscrollbarControl(int scrollvalue)
+{
+    verticalScrollBar()->setValue(scrollvalue);
+}
+
+void caWaveTable::hscrollbarControl(int scrollvalue)
+{
+    horizontalScrollBar()->setValue(scrollvalue);
+}
+
+int caWaveTable::getHorizontalOffset() const
+{
+    return horizontalOffset;
+}
+
+void caWaveTable::setHorizontalOffset(int newHorizontalOffset)
+{
+    if (horizontalOffset == newHorizontalOffset)
+        return;
+    horizontalOffset = newHorizontalOffset;
+    setupItems(rowcount, colcount);
+    emit horizontalOffsetChanged();
+}
+
+QString caWaveTable::getVerticalString() const
+{
+    return verticalString;
+}
+
+void caWaveTable::setVerticalString(const QString &newVerticalString)
+{
+    if (verticalString == newVerticalString)
+        return;
+    verticalString = newVerticalString;
+    setupItems(rowcount, colcount);
+    emit verticalStringChanged();
+}
+
+QString caWaveTable::getHorizontalString() const
+{
+    return horizontalString;
+}
+
+void caWaveTable::setHorizontalString(const QString &newHorizontalString)
+{
+    if (horizontalString == newHorizontalString)
+        return;
+    horizontalString = newHorizontalString;
+    setupItems(rowcount, colcount);
+    emit horizontalStringChanged();
 }
 
 void caWaveTable::setNumberOfRows(int nbRows)
@@ -180,9 +268,25 @@ void caWaveTable::setupItems(int nbRows, int nbCols)
     }
     clear();
 
+
     // setup table with alignment of items
     setColumnCount(nbCols);
     setRowCount(nbRows);
+    QAbstractItemModel* temp_data=verticalHeader()->model();
+
+    caWaveTableModel* dt=new caWaveTableModel(nbRows,nbCols,this);
+    dt->setHorizontalOffset(this->horizontalOffset);
+    dt->setVerticalOffset(this->verticalOffset);
+    dt->setHorizontalString(this->horizontalString);
+    dt->setVerticalString(this->verticalString);
+    verticalHeader()->setModel(dt);
+    horizontalHeader()->setModel(dt);
+
+    verticalHeader()->update();
+    horizontalHeader()->update();
+
+    if (temp_data) delete(temp_data);
+
     for(int i=0; i<nbRows; i++) {
         for(int j=0; j<nbCols; j++) {
 
@@ -207,6 +311,7 @@ void caWaveTable::setupItems(int nbRows, int nbCols)
     keepData.clear();
     keepText.resize(rowcount*colcount+1);
     keepData.resize(rowcount*colcount+1);
+
 }
 
 void caWaveTable::cellChange(int currentRow, int currentColumn, int previousRow, int previousColumn) {
@@ -348,7 +453,12 @@ void caWaveTable::setFormat(DataType dataType)
         case octal:
             strcpy(thisFormat, "O%o");
             break;
+
+        case user_defined_format:
+            qstrncpy(thisFormat,thisFormatUserString.toLatin1().data(),MAX_STRING_LENGTH);
+            break;
         }
+
 
     } else if (dataType == longs) {
         switch (thisFormatType) {
@@ -365,6 +475,10 @@ void caWaveTable::setFormat(DataType dataType)
         case octal:
             strcpy(thisFormat, "O%o");
             break;
+        case user_defined_format:
+            qstrncpy(thisFormat,thisFormatUserString.toLatin1().data(),MAX_STRING_LENGTH);
+            break;
+
         }
     } else if(dataType == characters) {
         switch (thisFormatType) {
@@ -383,6 +497,9 @@ void caWaveTable::setFormat(DataType dataType)
             break;
         case octal:
             strcpy(thisFormat, "O%o");
+            break;
+        case user_defined_format:
+            qstrncpy(thisFormat,thisFormatUserString.toLatin1().data(),MAX_STRING_LENGTH);
             break;
         }
     }

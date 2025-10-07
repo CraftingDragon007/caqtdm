@@ -158,12 +158,24 @@
 
 // used for interfacing epics routines with (pv, text, ...)
 #define QStringsToChars(x,y,z) \
-    char param1[MAXPVLEN], param2[255], param3[80]; \
+    char param1[MAXPVLEN], param2[MAX_STRING_LENGTH], param3[80]; \
     QByteArray Parameter_1 = x.toLatin1().constData(); \
-    QByteArray Parameter_2 = y.toLatin1().constData(); \
+    QByteArray Parameter_2;\
+    for (int i = 0; i < y.length(); ++i) {\
+            QChar ch = y[i];\
+            ushort unicode = ch.unicode();\
+            if (unicode >= 128 && unicode <= 255) {\
+                QByteArray utf8Bytes = QString(ch).toUtf8();\
+                for (int j = 0; j < utf8Bytes.length(); ++j) {\
+                    Parameter_2.append(static_cast<unsigned char>(utf8Bytes[j]));\
+                }\
+            } else {\
+                Parameter_2.append(ch.toLatin1());\
+            }\
+        }\
     QByteArray Parameter_3 = z.toLatin1().constData(); \
     strncpy(param1, Parameter_1.constData(), MAXPVLEN-1); \
-    strncpy(param2, Parameter_2.constData(), 255-1); \
+    strncpy(param2, Parameter_2.constData(), MAX_STRING_LENGTH-1); \
     strncpy(param3, Parameter_3.constData(), 80-1); \
 
 // common code too many widgets; for several reasons we did not try to put similar code in base classes.
@@ -6651,11 +6663,31 @@ void CaQtDM_Lib::Callback_MessageButton(int type)
     if(!w->isEnabled()) return;
 
     if(type == 0) {         // pressed
-        if(w->getPressMessage().size() > 0)
-            TreatRequestedValue(w->getPV(), w->getPressMessage(), decimal, w1);
+        if(w->getPressMessage().size() > 0){
+            bool isdouble = false;
+            bool isint = false;
+            bool ishex = false;
+            w->getPressMessage().toDouble(&isdouble);
+            w->getPressMessage().toLong(&isint);
+            w->getPressMessage().toLong(&ishex,16);
+            if (isdouble || isint ||ishex)
+                TreatRequestedValue(w->getPV(), w->getPressMessage(), decimal, w1);
+            else
+                TreatRequestedValue(w->getPV(), w->getPressMessage(), string, w1);
+        }
     } else if(type == 1) {  // released
-        if(w->getReleaseMessage().size() > 0)
-            TreatRequestedValue(w->getPV(), w->getReleaseMessage(), decimal, w1);
+        if(w->getReleaseMessage().size() > 0){
+            bool isdouble = false;
+            bool isint = false;
+            bool ishex = false;
+            w->getReleaseMessage().toDouble(&isdouble);
+            w->getReleaseMessage().toLong(&isint);
+            w->getReleaseMessage().toLong(&ishex,16);
+            if (isdouble || isint ||ishex)
+                TreatRequestedValue(w->getPV(), w->getReleaseMessage(), decimal, w1);
+            else
+                TreatRequestedValue(w->getPV(), w->getReleaseMessage(), string, w1);
+        }
     }
 }
 
@@ -6693,16 +6725,24 @@ void CaQtDM_Lib::Callback_ScriptButton()
     caScriptButton *w = qobject_cast<caScriptButton *>(sender());
     command.append(w->getScriptCommand());
 
+    // this here is needed because of unknown character transformations on Windows
+    // Linux needed to be checked if this is better too. Reason for this implementation
+    // are changes in QProcess qt4 -> qt5
+#ifndef _MSC_VER
     if(w->getScriptParam().size() > 0) {
         command.append("\n\"");
         command.append( w->getScriptParam());
         command.append(" \"");
     }
+#endif
     displayWindow = w->getDisplayShowExecution();
 
     if(w->getAccessW()) {
         processWindow *t = new processWindow(this, displayWindow, w);
         connect(t, SIGNAL(processClose()), this, SLOT(processTerminated()));
+#ifdef _MSC_VER
+        t->setArguments(w->getScriptParam());
+#endif
         t->start(command);
         w->setToolTip("process running, to kill use right mouse button");
         w->setAccessW(false);
@@ -8370,7 +8410,20 @@ void CaQtDM_Lib::TreatRequestedValue(QString pvo, QString text, FormatType fType
         //qDebug() << "set string" << text << plugininterface->pluginName();
         if(plugininterface != (ControlsInterface *) Q_NULLPTR) {
            if(!plugininterface->pvSetValue(kPtr,  0.0, 0, (char*) qasc(text), (char*) qasc(w->objectName()), errmess, 0)) {
-              plugininterface->pvSetValue(kPtr->pv, 0.0, 0, (char*) qasc(text), (char*) qasc(w->objectName()), errmess, 0);
+               QByteArray data;
+               for (int i = 0; i < text.length(); ++i) {
+                   QChar ch = text[i];
+                   ushort unicode = ch.unicode();
+                   if (unicode >= 128 && unicode <= 255) {
+                       QByteArray utf8Bytes = QString(ch).toUtf8();
+                       for (int j = 0; j < utf8Bytes.length(); ++j) {
+                           data.append(static_cast<unsigned char>(utf8Bytes[j]));
+                       }
+                   } else {
+                       data.append(ch.toLatin1());
+                   }
+               }
+              plugininterface->pvSetValue(kPtr->pv, 0.0, 0, (char*) data.constData() , (char*) qasc(w->objectName()), errmess, 0);
            }
         }
         break;
@@ -8439,7 +8492,20 @@ void CaQtDM_Lib::TreatRequestedValue(QString pvo, QString text, FormatType fType
                //qDebug() << "set string" << text;
                if(plugininterface != (ControlsInterface *) 0) {
                    if(!plugininterface->pvSetValue(kPtr,  0.0, 0, (char*) qasc(text), (char*) qasc(w->objectName().toLower()), errmess, 0)) {
-                      plugininterface->pvSetValue((char*) kPtr->pv, 0.0, 0, (char*) qasc(text), (char*) qasc(w->objectName().toLower()), errmess, 0);
+                       QByteArray data;
+                       for (int i = 0; i < text.length(); ++i) {
+                           QChar ch = text[i];
+                           ushort unicode = ch.unicode();
+                           if (unicode >= 128 && unicode <= 255) {
+                               QByteArray utf8Bytes = QString(ch).toUtf8();
+                               for (int j = 0; j < utf8Bytes.length(); ++j) {
+                                   data.append(static_cast<unsigned char>(utf8Bytes[j]));
+                               }
+                           } else {
+                               data.append(ch.toLatin1());
+                           }
+                       }
+                      plugininterface->pvSetValue((char*) kPtr->pv, 0.0, 0, (char*) data.constData(), (char*) qasc(w->objectName().toLower()), errmess, 0);
                    }
                }
             } else {  // single char written through its ascii code while character entered
