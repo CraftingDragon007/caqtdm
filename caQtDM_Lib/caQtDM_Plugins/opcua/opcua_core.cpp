@@ -54,8 +54,8 @@ OpcUaCore::OpcUaCore(QObject *parent)
     QObject::connect(m_client, &QOpcUaClient::connected, this, [this]() {
         emit connected();
         m_reconnecting = false; // stop ongoing reconnect attempts
-        m_attempt = 0;
-        m_timeoutMs = INITIAL_RECONNECTION_TIMEOUT;
+        m_reconnectionAttempt = 0;
+        m_reconnectionTimeoutMs = INITIAL_RECONNECTION_TIMEOUT;
 
         for (auto it = m_subscriptionNodes.begin(); it != m_subscriptionNodes.end(); ++it) {
             QOpcUaNode *node = it.value();
@@ -74,8 +74,8 @@ OpcUaCore::OpcUaCore(QObject *parent)
             return;
 
         m_reconnecting = true;
-        m_attempt = 0;
-        m_timeoutMs = INITIAL_RECONNECTION_TIMEOUT;
+        m_reconnectionAttempt = 0;
+        m_reconnectionTimeoutMs = INITIAL_RECONNECTION_TIMEOUT;
 
         QTimer *reconnectTimer = new QTimer(this);
         reconnectTimer->setSingleShot(true);
@@ -88,17 +88,17 @@ OpcUaCore::OpcUaCore(QObject *parent)
             }
             if (m_client->state() == QOpcUaClient::Connecting) {
                 // Previous try is still going, restart the current timer.
-                reconnectTimer->start(m_timeoutMs);
+                reconnectTimer->start(m_reconnectionTimeoutMs);
                 return;
             }
 
             m_client->connectToEndpoint(m_currentEndpointDescription);
-            m_attempt++;
-            m_timeoutMs = qMin(
-                m_timeoutMs * RECONNECTION_TIMEOUT_FACTOR,
+            m_reconnectionAttempt++;
+            m_reconnectionTimeoutMs = qMin(
+                m_reconnectionTimeoutMs * RECONNECTION_TIMEOUT_FACTOR,
                 MAX_RECONNECTION_TIMEOUT); // Timeout is multiplied on each retry until some maxium timeout is reached
 
-            reconnectTimer->start(m_timeoutMs);
+            reconnectTimer->start(m_reconnectionTimeoutMs);
         });
 
         reconnectTimer->start(0);
@@ -460,19 +460,18 @@ bool OpcUaCore::writeDataDynamically(QOpcUaNode *node,
 }
 
 bool OpcUaCore::writeValue(
-    const QString &nodeId, double rdata, int32_t idata, char *sdata, char *errmess, int forceType)
+    const QString &nodeId, double rdata, int32_t idata, char *sdata, char *errmess)
 {
-    Q_UNUSED(forceType);
-    Q_UNUSED(errmess)
-
     if (!m_subscriptionNodes.contains(nodeId)) {
         VERBOSELOG("Node not found");
+        qstrcpy(errmess, "Node not found");
         return false;
     }
 
     QOpcUaNode *node = m_subscriptionNodes[nodeId];
     if (!node) {
         VERBOSELOG("Node is null");
+        qstrcpy(errmess, "Node is null");
         return false;
     }
 
@@ -511,16 +510,16 @@ bool OpcUaCore::writeValues(const QString &nodeId,
                             int nelm,
                             char *errmess)
 {
-    Q_UNUSED(errmess)
-
     if (!m_subscriptionNodes.contains(nodeId)) {
         VERBOSELOG("Node not found");
+        qstrcpy(errmess, "Node not found");
         return false;
     }
 
     QOpcUaNode *node = m_subscriptionNodes[nodeId];
     if (!node) {
         VERBOSELOG("Node is null");
+        qstrcpy(errmess, "Node is null");
         return false;
     }
 
@@ -530,6 +529,8 @@ bool OpcUaCore::writeValues(const QString &nodeId,
         if (!ref.canConvert<QVariantList>()) {
             VERBOSELOG(
                 "Tried writing array data to a variable that didn't return an array last time");
+            qstrcpy(errmess,
+                    "Tried writing array data to a variable that didn't return an array last time");
             return values;
         }
 

@@ -57,16 +57,58 @@ class Q_DECL_EXPORT OPCUAPlugin : public QObject, ControlsInterface
 #endif
 
 public:
+    /**
+     * @brief Creates plugin and disables open62541 logging
+     */
     OPCUAPlugin();
 
+    /**
+     * @brief Returns the plugin name
+     * @return "opcua"
+     */
     QString pluginName();
-
+    /**
+     * @brief Initializes mutexKnobData and messageWindow pointers, loads translation map
+     * @param data: mutexKnobData pointer
+     * @param messageWindow: messageWindow pointer
+     * @param options: optional options for the plugin
+     * @return true
+     */
     int initCommunicationLayer(MutexKnobData *data,
                                MessageWindow *messageWindow,
                                QMap<QString, QString> options);
+    /**
+     * @brief Subscribes to a new variable, connects to the endpoint if not already done
+     * @param index: knobData index of the pv
+     * @param kData: knobData for the pv, pv must contain valid connection string
+     * @param rate: not used, update rate is taken directly from kData
+     * @param skip: not used
+     * @return true if the connection to the variable was initiated, else false (connection may still fail)
+     */
     int pvAddMonitor(int index, knobData *kData, int rate, int skip);
+    /**
+     * @brief Unsubscribes from the given node
+     * @param kData: knobData containing the pv with the connection string
+     * @return true if the pv ends with .NELM/.FTVL or the node was unsubscribed
+     */
     int pvClearMonitor(knobData *kData);
+    /**
+     * @brief Frees the data allocated to kData->edata.dataB, sets it to Q_NULLPTR
+     * @param kData: knobData whose dataB should be freed
+     * @return true
+     */
     int pvFreeAllocatedData(knobData *kData);
+    /**
+     * @brief Updates a simple variable, auto-detects the correct type based on last OpcUa value
+     * @param pv: has the connection string
+     * @param rdata: double (8 bytes) data
+     * @param idata: integer data (cast to int32_t or int16_t depending on previous OpcUa value)
+     * @param sdata: string data
+     * @param object: not used, can be null
+     * @param errmess: output where an optional error message is copied to
+     * @param forceType: not used
+     * @return true if the write was successfully initiated, else false (write may still be rejected from OpcUa server)
+     */
     int pvSetValue(char *pv,
                    double rdata,
                    int32_t idata,
@@ -74,6 +116,19 @@ public:
                    char *object,
                    char *errmess,
                    int forceType);
+    /**
+     * @brief Updates a waveform variable, auto-detects the correct type based on last OpcUa value
+     * @param pv: has the connection string
+     * @param fdata: float (4 byte per var) data
+     * @param ddata: double (8 byte per var) data
+     * @param data16: int16_t data
+     * @param data32: int32_t data
+     * @param sdata: string data
+     * @param nelm: number of elements
+     * @param object: not used, can be null
+     * @param errmess: output where an optional error message is copied to
+     * @return true if the write was successfully initiated, else false (write may still be rejected from OpcUa server)
+     */
     int pvSetWave(char *pv,
                   float *fdata,
                   double *ddata,
@@ -83,13 +138,53 @@ public:
                   int nelm,
                   char *object,
                   char *errmess);
+    /**
+     * @brief Gets the OpcUa timestamp for the last received value of a variable
+     * @param pv: has the connection string
+     * @param timestamp: output where the description is copied to (MAX_STRING_LENGTH is maximum length copied)
+     * @return true if the endpoint is registered (and the timestamp is set), else false
+     */
     int pvGetTimeStamp(char *pv, char *timestamp);
+    /**
+     * @brief Gets the OpcUa description field
+     * @param pv: has the connection string
+     * @param description: output where the description is copied to (MAX_STRING_LENGTH is maximum length copied)
+     * @return true if the endpoint is registered (and the description is set), else false
+     */
     int pvGetDescription(char *pv, char *description);
+    /**
+     * @brief Disables the monitoring of a node
+     * @param ptr: void pointer castable to a knobData* with pv to disable monitoring for
+     * @return true if the pv is a valid connection string, else false
+     */
     int pvClearEvent(void *ptr);
+    /**
+     * @brief Subscribes to a variable if not already subscribed
+     * @param ptr: void pointer castable to a knobData* with pv to subscribe
+     * @return true if pv is a valid connection string, else false
+     */
     int pvAddEvent(void *ptr);
+    /**
+     * @brief Disconnects and reconnects the endpoint associate to the variable; (re-)subscribes to the variable
+     * @param kData: knobData containing the pv with the endpoint encoded in it
+     * @return true if the endpoint is already registered and the pv is a valid connection string, else false
+     */
     int pvReconnect(knobData *kData);
+    /**
+     * @brief Disconnects the endpoint associated to a variable (not just the variable itself)
+     * @param kData: knobData containing the pv with the endpoint encoded in it
+     * @return false if the pv is a valid connection string, else true
+     */
     int pvDisconnect(knobData *kData);
+    /**
+     * @brief Not Implemented
+     * @return true
+     */
     int FlushIO();
+    /**
+     * @brief Stops all connections, deletes all associated variables
+     * @return true
+     */
     int TerminateIO();
 
 private:
@@ -98,27 +193,78 @@ private:
     QMutex m_mutex;
     MutexKnobData *m_mutexKnobDataP;
     MessageWindow *m_messageWindowP;
+    // Maps nodeId to knobData index
     QMultiMap<QString, int> m_channelCache;
+    // Maps nodeId to core (multiple nodeId > core possible)
     QMap<QString, OpcUaCore *> m_cores;
-    QMap<QString, QMetaObject::Connection> m_statusCallbackConnections;
+    // Maps endpoint to all knobData indices handled by it
     QMap<QString, QList<int>> m_knobDataIndicesForEndpoint;
+    // Maps endpoint to connectionstate
     QMap<QString, ConnectionState> m_connectionState;
+    // Maps endpoint to list of SubscriptionSettings to subscribe to
     QMap<QString, QList<SubscriptionSettings>> m_pendingSubscriptions;
+    // Maps pv (without .NELM /.FTVL) to struct containing knobData indices of those channel extensions
     QMap<QString, EpicsWaveformAttributePVs> m_epicsWaveformAttributePVs;
-
+    // Maps pvs (as keys)) to values that should be used instead of them in the OpcUa context
     QMap<QString, QString> m_translationMap;
 
+    /**
+     * @brief Creates a caType corresponding to a QVariant value
+     * @param value: the QVariant value to check
+     * @param isArray: output boolean that will be set to true if value is an array, else to false
+     * @return caType corresponding to the QVariant value
+     */
     caType generateCaTypeFromVariant(const QVariant &value, bool &isArray);
+    /**
+     * @brief Converts the update interval specified in a knobData (in Hz) and returns the milliseconds)
+     * @param kData: knobData pointer to check
+     * @return Update interval calculated in milliseconds, or 1000 milliseconds if invalid Hz specified (e.g. 0)
+     */
     int getUpdateIntervalFromKnobData(knobData *kData);
+    /**
+     * @brief Resolves a connection string to an endpoint and a nodeId
+     * @param pv: pv string to resolve
+     * @param endpoint: output where the resolved endpoint will be copied to
+     * @param nodeId: output where the resolved nodeId will be copied to
+     * @return true if the outputs were both successfully extracted, else false
+     */
     bool resolveConnectionString(char *pv, QString &endpoint, QString &nodeId);
+    /**
+     * @brief Updates knobData with a single value
+     * @param kData: knobData to update
+     * @param value: Value to store
+     * @param detectedType: caType detected for the value
+     */
     void updateKnobDataFromVariantSingle(knobData &kData,
                                          const QVariant &value,
                                          const caType &detectedType);
+    /**
+     * @brief Updates knobData with a 1D-array of values (waveform)
+     * @param kData: knobData to update
+     * @param value: Value (waveform) to store
+     * @param detectedType: caType detected for each variable in the 1D-array
+     */
     void updateKnobDataFromVariantArray(knobData &kData,
                                         const QVariant &value,
                                         const caType &detectedType);
+    /**
+     * @brief Updates knobData with a value, auto detects if it's a waveform and the type the element holds
+     * @param kData: knobData to update
+     * @param value: Value to store
+     */
     void updateKnobDataFromVariant(knobData &kData, const QVariant &value);
+    /**
+     * @brief Updates knobData to store the access level possible to an OpcUa variable
+     * @param kData: knobData to update
+     * @param accessR: Whether or not read access is possible
+     * @param accessW: Whether or not write access is possible
+     */
     void updateKnobDataWithAccessLevel(knobData &kData, const bool &accessR, const bool &accessW);
+    /**
+     * @brief Updates extension PVs holding EPICS-record data associated with the pv (.FTVL/.NELM)
+     * @param rawPV: Base pv for which the extension PVs should be updated
+     * @param referenceKnobData: knobData of the base pv
+     */
     void updateEpicsWaveformAttributePVs(QString rawPV, const knobData &referenceKnobData);
 
 #ifdef HARDWORK

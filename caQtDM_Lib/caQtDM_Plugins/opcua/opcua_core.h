@@ -52,22 +52,72 @@ class OpcUaCore : public QObject
     Q_OBJECT
 
 public:
+    /**
+     * @brief Creates the core, instantiates a QOpcUaClient, connects signal/slots for error and reconnection handling
+     * @param parent: parent object passed to super (QObject) constructor
+     */
     explicit OpcUaCore(QObject *parent = Q_NULLPTR);
     ~OpcUaCore();
 
+    /**
+     * @brief Tries to connect to the given endpoint
+     * Following the OpcUa protocol, first all available endpoints are fetched by the provided url. Then, a connection is established to the endpoint which connects the quickest.
+     * @param url: url of the endpoint to connect to
+     * @return true if connection attemt was started, else false (may still fail)
+     */
     bool connectOpc(const QString &url);
+    /**
+     * @brief Disconnects from a given endpoint
+     */
     void disconnectOpc();
+    /**
+     * @brief Subscribes to a node and starts monitoring it
+     * @param subscriptionSettings: A SubscriptionSettings struct containing nodeId and fetch interval
+     */
     void subscribeToNode(const SubscriptionSettings &subscriptionSettings);
+    /**
+     * @brief Disconnects all nodes (variables) and unsubscribes from them, "forgetting" about them completely
+     */
     void clearAllSubscriptions();
+    /**
+     * @brief Checks whether or not a nodeId is stored for subscribing
+     * @param nodeId: nodeId to check
+     * @return true if nodeId is stored as a subscription node, else false
+     */
     bool hasSubscription(const QString &nodeId) const;
+    /**
+     * @brief Unsubscribes from a node and disables monitoring
+     * @param nodeId: the nodeId to unsubscribe from
+     */
     void unsubscribeFromNode(const QString &nodeId);
+    /**
+     * @brief disables monitoring for a node
+     * @param nodeId: the nodeId to disable monitoring for
+     */
     void disableMonitoringForNode(const QString &nodeId);
-    bool writeValue(const QString &nodeId,
-                    double rdata,
-                    int32_t idata,
-                    char *sdata,
-                    char *errmess,
-                    int forceType);
+    /**
+     * @brief Tries to write a simple value via OpcUa, based on previously received value from the node
+     * @param nodeId: nodeId to write the value to
+     * @param rdata: double data (8 bytes)
+     * @param idata: integer data (is cast to int16_t or int32_t based on previous value)
+     * @param sdata: string data
+     * @param errmess: output an optional error message is copied to
+     * @return true if the write was initiated successfully, false if not (may still fail)
+     */
+    bool writeValue(const QString &nodeId, double rdata, int32_t idata, char *sdata, char *errmess);
+    /**
+     * @brief Tries to write a 1D-Array of simple values via OpcUa, based on previously received value from the node
+     * @param nodeId: nodeId to write the value to
+     * @param fdata: float data
+     * @param fdata: float (4 byte per var) data
+     * @param ddata: double (8 byte per var) data
+     * @param data16: int16_t data
+     * @param data32: int32_t data
+     * @param sdata: string data
+     * @param nelm: number of elements
+     * @param errmess: output an optional error message is copied to
+     * @return true if the write was initiated successfully, false if not (may still fail)
+     */
     bool writeValues(const QString &nodeId,
                      float *fdata,
                      double *ddata,
@@ -76,28 +126,83 @@ public:
                      char *sdata,
                      int nelm,
                      char *errmess);
+    /**
+     * @brief Returns the OpcUa description field
+     * @param nodeId: nodeId to get the description for
+     * @return Description
+     */
     QString getDescription(const QString &nodeId);
+    /**
+     * @brief Returns the timestamp for the last value received via OpcUa
+     * @param nodeId: nodeId to get the timestamp for
+     * @return Timestamp with date and time, millisecond-precision
+     */
     QString getTimestamp(const QString &nodeId);
 
 signals:
+    /**
+     * @brief Emitted when the OpcUa client has successfully connected to an endpoint
+     */
     void connected();
+    /**
+     * @brief Emitted when the OpcUa client has been disconnected from and endpoint, no matter the reason
+     */
     void disconnected();
+    /**
+     * @brief Emitted when a simple value monitored from a subscription was read via OpcUa
+     * @param nodeId: nodeId the value was read for
+     * @param value: Value itself
+     */
     void valueRead(const QString &nodeId, const QVariant &value);
+    /**
+     * @brief Emitted when an array value monitored from a subscription was read via OpcUa
+     * @param values: Array of values read
+     */
     void valuesRead(const QVector<QVariant> &values);
+    /**
+     * @brief Emitted when the access level was read for a nodeId
+     * @param nodeId: the nodeId the access level was read for
+     * @param readAccess: Whether or not read access is possible
+     * @param writeAccess Whether or not write access is possible
+     */
     void accessLevelRead(const QString &nodeId, const bool &readAccess, const bool &writeAccess);
+    /**
+     * @brief Emitted when a value monitored from a subscription was read as invalid via OpcUa
+     * @param nodeId: the nodeId the value was read for
+     * @param errorMsg: Explanation / status code
+     */
     void attributeGotError(const QString &nodeId, const QString &errorMsg);
 
 private:
     QOpcUaClient *m_client;
+    // Holds information about the endpoint the core is currently connected to
     QOpcUaEndpointDescription m_currentEndpointDescription;
+    // Map of nodeId to node with all nodes that are configured to be subscribed to
     QMap<QString, QOpcUaNode *> m_subscriptionNodes;
+    // Map of nodeId to wether or not the nodeId is currently being connected to
     QMap<QString, bool> m_isConnectingToNode;
+    // Map of nodeId to interval in Ms for its subscription
     QMap<QString, int> m_intervalMsForNodeId;
-    int m_attempt;
-    int m_timeoutMs;
+    int m_reconnectionAttempt;
+    int m_reconnectionTimeoutMs;
     bool m_reconnecting;
+
+    /**
+     * @brief Checks if the clients state is connected
+     * @return true if the client is initialized and its state() is Connected, else false
+     */
     bool isClientConnected();
+    /**
+     * @brief Starts monitoring an already configured node
+     * @param node: Node to monitor
+     */
     void startMonitoringOfNode(QOpcUaNode *node);
+    /**
+     * @brief Checks the previously read value from a node and updates it using the provided function
+     * @param node: Node to read/update the value for
+     * @param makeValue: Function that takes the existing value and returns the new value to be written
+     * @return true if the update was successfully initiated, else false (update may still be rejected from OpcUa)
+     */
     bool writeDataDynamically(QOpcUaNode *node, std::function<QVariant(const QVariant &)> makeValue);
 };
 
