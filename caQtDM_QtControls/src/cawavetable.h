@@ -60,7 +60,7 @@ class QTCON_EXPORT caWaveTable : public QTableWidget
 
     Q_PROPERTY(FormatType formatType READ getFormatType WRITE setFormatType)
     Q_PROPERTY(QString formatString READ getFormatString WRITE setFormatString)
-    // this will prevent user interference
+
     Q_PROPERTY(QString styleSheet READ styleSheet WRITE noStyle)
 
     Q_ENUMS(FormatType)
