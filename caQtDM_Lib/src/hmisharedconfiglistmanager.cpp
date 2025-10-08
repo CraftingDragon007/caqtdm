@@ -142,7 +142,7 @@ bool HmiSharedConfigListManager::writeList(const QList<QSharedPointer<caHMIConfi
         memcpy(this_sharedMemory.data(), &dataSize, sizeof(quint32));
         memcpy(static_cast<char*>(this_sharedMemory.data()) + sizeof(quint32), serializedData.constData(), dataSize);
         this_sharedMemory.unlock();
-        qDebug() << PREFIX << "List successfully written to shared memory. Size:" << dataSize << "bytes.";
+        //qDebug() << PREFIX << "List successfully written to shared memory. Size:" << dataSize << "bytes.";
         emit dataChanged();
         // Note: This signal is only emitted within the current process.
     } else {

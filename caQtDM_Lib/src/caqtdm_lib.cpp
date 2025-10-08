@@ -550,7 +550,7 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
 
 
     if (qApp != Q_NULLPTR){
-        qDebug() << "GLOBAL EVENT FILTER INSTALLED FOR CAHMICONFIG!!!!!!!!";
+        //qDebug() << "GLOBAL EVENT FILTER INSTALLED FOR CAHMICONFIG!!!!!!!!";
         qApp->installEventFilter(globalEventFilter);
         connect(this->globalEventFilter, &HMIApplicationEventFilter::keyPressed, this, &CaQtDM_Lib::hmiHandleKeyPressed);
         connect(this->globalEventFilter, &HMIApplicationEventFilter::mouse, this, &CaQtDM_Lib::hmiHandleMouse);
@@ -3374,7 +3374,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         scan2dWidget->setProperty("Taken", true);
     } else if(caHMIConfig* hmiConfigWidget = qobject_cast<caHMIConfig *>(w1)) {
         QList<QVariant> indexList;
-        qDebug() << "create caHMIConfig";
+        //qDebug() << "create caHMIConfig";
         w1->setProperty("ObjectType", caHMIConfig_Widget);
 
         QWidget* parentWindow = Q_NULLPTR;
@@ -3388,8 +3388,8 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         }
 
         if (parentWindow != Q_NULLPTR){
-            qDebug() << "Parent window:" << parentWindow->metaObject()->className();
-        } else qDebug() << "Unable to find parent window for caHMIConfig:" << hmiConfigWidget->objectName();
+            //qDebug() << "Parent window:" << parentWindow->metaObject()->className();
+        } else qWarning() << "Unable to find parent window for caHMIConfig:" << hmiConfigWidget->objectName();
 
         int index = 0;
         if(hmiConfigWidget->channel().size() > 0) {
@@ -6877,9 +6877,7 @@ void CaQtDM_Lib::Callback_ExternalHmiEventReceived(int eventType, int senderPid,
 {
     Q_UNUSED(timestamp)
     if (senderPid == QApplication::applicationPid()) return; // ignore own events
-    if (eventType == EventTypes::ApplicationStarted) {
-        qDebug() << "Another instance of caQDM started pid: " << senderPid;
-    } else if (eventType == EventTypes::KeyPress) {
+    if (eventType == EventTypes::KeyPress) {
         QDataStream in(payload);
 
         int key;
@@ -6888,7 +6886,7 @@ void CaQtDM_Lib::Callback_ExternalHmiEventReceived(int eventType, int senderPid,
         in >> key >> modifiers;
         Qt::KeyboardModifiers qtModifiers = static_cast<Qt::KeyboardModifiers>(modifiers);
         QKeySequence sequence = QKeySequence(key | modifiers);
-        qDebug() << "received keys " << sequence.toString() << "from" << senderPid;
+        //qDebug() << "received keys" << sequence.toString() << "from" << senderPid;
         this->hmiHandleIncomingEvent(Q_NULLPTR, new QKeyEvent(QEvent::KeyPress, key, qtModifiers, sequence.toString()), true);
     } else if (eventType == EventTypes::MouseMove || eventType == EventTypes::MousePress) {
         QDataStream in(payload);
@@ -7015,7 +7013,7 @@ void CaQtDM_Lib::hmiHandleIncomingEvent(QObject *target, QEvent *event, bool isS
                 if (widget != Q_NULLPTR) {
                     if (item->captureType() == caHMIConfig::capType::KeyboardSet) {
                         if (containsShortcut(shortcut, qtKey, qtModifiers)) {
-                            qDebug() << "Correct key pressed" << widget->objectName() << qtKey;
+                            //qDebug() << "Correct key pressed" << widget->objectName() << qtKey;
                             emit widget->caHMIConfigKeyPressReceived(shortcut);
 
                             if (item->calculationType() == caHMIConfig::calcType::SetValue) {

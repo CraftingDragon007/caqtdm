@@ -18,7 +18,6 @@
 
 enum EventTypes {
     Invalid = 0,
-    ApplicationStarted,
     NewCaHMIConfig,
     CaHMIConfigDeleted,
     CaHMIConfigEnabledChanged,
