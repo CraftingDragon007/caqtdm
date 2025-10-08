@@ -20,7 +20,7 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y build-essential devscripts dh-make debhelper
 
-    - name: Install epics dependencies
+    - name: Install dependencies
       run: |
         sudo apt-get install -y \
           libncurses-dev libreadline-dev \
@@ -30,21 +30,32 @@ jobs:
       run: |
         cd caQtDM_Viewer/package/debian/epics-base
         ./create-deb.sh
-        sudo dpkg -i epics-base_*.deb
+        sudo dpkg -i *.deb
 
     - name: Build DEB package
       run: |
         cd caQtDM_Viewer/package/debian/caqtdm
         ./create-deb.sh
-        ls -l caqtdm_*.deb
+        ls -l *.deb
 
     - name: Install DEB package
       run: |
         cd caQtDM_Viewer/package/debian/caqtdm
-        sudo dpkg -i caqtdm_*.deb
+        sudo dpkg -i *.deb
+
+    - name: Upload epics-base package as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: epics-base_deb-package
+        path: caQtDM_Viewer/package/debian/epics-base/*.deb
 
     - name: Upload DEB package as artifact
       uses: actions/upload-artifact@v4
       with:
-        name: caqtdm-deb-package
+        name: caqtdm_deb-package
         path: caQtDM_Viewer/package/debian/caqtdm/*.deb
+
+    - name: Verify caQtDM installation
+      run: |
+        which caQtDM
+        caQtDM -help
