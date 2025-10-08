@@ -103,11 +103,11 @@ QList<QSharedPointer<caHMIConfigTransferItem>> HmiSharedConfigListManager::readL
     if (!rawDataFromSharedMemory.isEmpty()) {
         QDataStream stream(&rawDataFromSharedMemory, QIODevice::ReadOnly);
         quint32 count = 0;
-        stream >> count; // Read the count of items
+        stream >> count;
 
         for (quint32 i = 0; i < count; ++i) {
             QSharedPointer<caHMIConfigTransferItem> config = QSharedPointer<caHMIConfigTransferItem>::create();
-            stream >> *config.data(); // Deserialize directly into the object
+            stream >> *config.data();
             list.append(config);
         }
     }
@@ -118,12 +118,10 @@ bool HmiSharedConfigListManager::writeList(const QList<QSharedPointer<caHMIConfi
     QByteArray serializedData;
     QDataStream stream(&serializedData, QIODevice::WriteOnly);
 
-    // Write the count of items first
     stream << static_cast<quint32>(newList.size());
 
-    // Then write each item directly
     foreach(QSharedPointer<caHMIConfigTransferItem> item, newList) {
-        stream << *item; // Dereference the QSharedPointer and serialize the object
+        stream << *item;
     }
 
     quint32 dataSize = static_cast<quint32>(serializedData.size());

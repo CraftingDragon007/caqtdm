@@ -1,7 +1,7 @@
 #ifndef HMISHAREDEVENTBUS_H
 #define HMISHAREDEVENTBUS_H
 
-#include "hmi_common_defs.h"
+#include "hmi_common_event_defs.h"
 
 #include <QObject>
 #include <QSharedMemory>

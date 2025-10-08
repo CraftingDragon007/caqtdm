@@ -90,7 +90,7 @@ HEADERS += caqtdm_lib.h\
     MessageWindow.h \
     messageWindowWrapper.h \
     src/causerid.h \
-    src/hmi_common_defs.h \
+    src/hmi_common_event_defs.h \
     src/hmisharedconfiglistmanager.h \
     src/hmisharedeventbus.h \
     vaPrintf.h \

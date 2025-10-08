@@ -1,5 +1,5 @@
-#ifndef HMI_COMMON_DEFS_H
-#define HMI_COMMON_DEFS_H
+#ifndef HMI_COMMON_EVENT_DEFS_H
+#define HMI_COMMON_EVENT_DEFS_H
 
 #include <QDateTime>
 #include <QByteArray>
@@ -13,6 +13,8 @@
 #define MAX_PROCESS_SLOTS 256      // Maximum number of concurrent processes
 #define EVENT_PAYLOAD_SIZE 8192    // Fixed size for event data payload
 #define EVENT_BUFFER_CAPACITY 100 // Max events in the ring buffer
+
+#define PREFIX "HmiSharedEventBus"
 
 enum EventTypes {
     Invalid = 0,
@@ -59,4 +61,4 @@ struct SharedHeader {
 
 // Total size of shared memory needed:
 // sizeof(SharedHeader) + EVENT_BUFFER_CAPACITY * sizeof(EventPayload)
-#endif // HMI_COMMON_DEFS_H
+#endif // HMI_COMMON_EVENT_DEFS_H
