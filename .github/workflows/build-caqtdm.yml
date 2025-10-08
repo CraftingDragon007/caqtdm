@@ -81,20 +81,58 @@ jobs:
     - name: Install AUR dependencies (qwt-qt6, epics-base)
       run: |
         export AUR_DIR="$(pwd)/aur_packages"
+        mkdir -p "$AUR_DIR"
+
         sudo -u builder bash -c "
-          cd \"$AUR_DIR\"
+          # Function to clone an AUR package with a fallback to the GitHub mirror
+          git_clone_aur_with_fallback() {
+            local package_name=\"\$1\"
+            local primary_aur_url=\"https://aur.archlinux.org/\${package_name}.git\"
+            local github_mirror_url=\"https://github.com/archlinux/aur.git\"
+            local target_dir=\"\$(pwd)/\${package_name}\"
 
-          echo 'Installing qwt-qt6 from AUR as builder user...'
-          git clone https://aur.archlinux.org/qwt-qt6.git
-          cd qwt-qt6
-          makepkg -si --noconfirm
-          cd \"$AUR_DIR\"
+            echo \"Attempting to clone '\${package_name}' from primary AUR...\"
+            if git clone --depth 1 \"\$primary_aur_url\" \"\$target_dir\" &> /dev/null; then
+              echo \"Successfully cloned '\${package_name}' from primary AUR.\"
+              return 0
+            else
+              echo \"Failed to clone '\${package_name}' from primary AUR. Trying GitHub mirror...\"
+              # Clean up incomplete directory from failed primary attempt
+              rm -rf \"\$target_dir\"
 
-          echo 'Installing epics-base from AUR as builder user...'
-          git clone https://aur.archlinux.org/epics-base.git
-          cd epics-base
-          makepkg -si --noconfirm
-          cd \"$AUR_DIR\"
+              # Clone from GitHub mirror, using the package name as a branch
+              if git clone --depth 1 --branch \"\$package_name\" --single-branch \"\$github_mirror_url\" \"\$target_dir\" &> /dev/null; then
+                echo \"Successfully cloned '\${package_name}' from GitHub mirror.\"
+                return 0
+              else
+                echo \"Failed to clone '\${package_name}' from both primary AUR and GitHub mirror.\"
+                return 1
+              fi
+            fi
+          }
+
+          # Function to install a single AUR package
+          install_aur_package() {
+            local package_name=\"\$1\"
+            echo \"Installing '\${package_name}' from AUR as builder user...\"
+
+            # Ensure we are in the correct base directory ($AUR_DIR) before attempting to clone
+            cd \"\$AUR_DIR\" || { echo \"Error: Could not change to \$AUR_DIR.\"; exit 1; }
+
+            if git_clone_aur_with_fallback \"\$package_name\"; then
+              cd \"\$package_name\" || { echo \"Error: Could not change to \${package_name} directory.\"; exit 1; }
+              makepkg -si --noconfirm
+              # After building, return to the base AUR_DIR for the next package
+              cd \"\$AUR_DIR\" || { echo \"Error: Could not change back to \$AUR_DIR.\"; exit 1; }
+            else
+              echo \"Skipping '\${package_name}' due to cloning failure.\"
+            fi
+          }
+
+          cd \"\$AUR_DIR\" || { echo \"Error: Initial change to \$AUR_DIR failed.\"; exit 1; }
+          
+          install_aur_package qwt-qt6
+          install_aur_package epics-base
         "
       shell: bash
 
