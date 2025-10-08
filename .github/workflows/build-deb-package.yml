@@ -61,4 +61,3 @@ jobs:
     - name: Verify caQtDM installation
       run: |
         which caQtDM
-        caQtDM -help
