@@ -11,6 +11,7 @@ jobs:
     name: Build DEB package
     runs-on: ${{ matrix.ubuntu-version }}
     strategy:
+      fail-fast: false
       matrix:
         ubuntu-version: [ubuntu-22.04, ubuntu-24.04]
 

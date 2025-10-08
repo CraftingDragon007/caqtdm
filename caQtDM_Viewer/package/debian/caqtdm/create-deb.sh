@@ -55,6 +55,7 @@ else
   mkdir -p caqtdm_${PACKAGE_VERSION}
   cd caqtdm_${PACKAGE_VERSION}
   tar -xf ../caqtdm_${PACKAGE_VERSION}.orig.tar.gz
+  cd ..
 fi
 
 mkdir -p caqtdm-${PACKAGE_VERSION}/
