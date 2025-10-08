@@ -193,19 +193,19 @@ jobs:
         echo "EPICS_HOST_ARCH=${local_epics_host_arch}" >> $GITHUB_ENV
         echo "QTHOME=${local_qthome}" >> $GITHUB_ENV
         echo "QWTHOME=${local_qwthome}" >> $GITHUB_ENV
-        echo "QWTLIB=${local_qwtnamelib}" >> $GITHUB_ENV # Corrected
+        echo "QWTLIB=${local_qwtnamelib}" >> $GITHUB_ENV
         echo "QWTVERSION=${local_qwtversion}" >> $GITHUB_ENV
-        echo "EPICSINCLUDE=${local_epicsinclude}" >> $GITHUB_ENV # Corrected
-        echo "EPICSLIB=${local_epicslib}" >> $GITHUB_ENV         # Corrected
-        echo "EPICSEXTENSIONS=${local_epicsextensions}" >> $GITHUB_ENV # Corrected
-        echo "QTCONTROLS_LIBS=${local_qtcontrols_libs}" >> $GITHUB_ENV # Corrected
-        echo "CAQTDM_COLLECT=${local_caqtdm_collect}" >> $GITHUB_ENV   # Corrected
-        echo "QTBASE=${local_qtbase}" >> $GITHUB_ENV               # Corrected
-        echo "CAQTDM_CA_ARCHIVELIBS=${local_caqtdm_ca_archivelibs}" >> $GITHUB_ENV # Corrected
-        echo "CAQTDM_LOGGING_ARCHIVELIBS=${local_caqtdm_logging_archivelibs}" >> $GITHUB_ENV # Corrected
-        echo "QTDM_LIBINSTALL=${local_qtdm_libinstall}" >> $GITHUB_ENV # Corrected
-        echo "QTDM_BININSTALL=${local_qtdm_bininstall}" >> $GITHUB_ENV # Corrected
-        echo "PYTHONINCLUDE=${local_pythoninclude}" >> $GITHUB_ENV # Corrected
+        echo "EPICSINCLUDE=${local_epicsinclude}" >> $GITHUB_ENV
+        echo "EPICSLIB=${local_epicslib}" >> $GITHUB_ENV
+        echo "EPICSEXTENSIONS=${local_epicsextensions}" >> $GITHUB_ENV
+        echo "QTCONTROLS_LIBS=${local_qtcontrols_libs}" >> $GITHUB_ENV
+        echo "CAQTDM_COLLECT=${local_caqtdm_collect}" >> $GITHUB_ENV
+        echo "QTBASE=${local_qtbase}" >> $GITHUB_ENV
+        echo "CAQTDM_CA_ARCHIVELIBS=${local_caqtdm_ca_archivelibs}" >> $GITHUB_ENV
+        echo "CAQTDM_LOGGING_ARCHIVELIBS=${local_caqtdm_logging_archivelibs}" >> $GITHUB_ENV
+        echo "QTDM_LIBINSTALL=${local_qtdm_libinstall}" >> $GITHUB_ENV
+        echo "QTDM_BININSTALL=${local_qtdm_bininstall}" >> $GITHUB_ENV
+        echo "PYTHONINCLUDE=${local_pythoninclude}" >> $GITHUB_ENV
         echo "PYTHONLIB=${local_pythonlib}" >> $GITHUB_ENV
                      
       shell: bash
