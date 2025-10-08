@@ -1,4 +1,5 @@
 name: caQtDM DEB Package Build
+
 on:
   workflow_dispatch:
   pull_request:
@@ -16,12 +17,12 @@ jobs:
 
     - name: Set up build environment
       run: |
-        apt-get update
-        apt-get install -y build-essential devscripts dh-make debhelper
+        sudo apt-get update
+        sudo apt-get install -y build-essential devscripts dh-make debhelper
 
     - name: Install epics dependencies
       run: |
-        apt-get install -y \
+        sudo apt-get install -y \
           libncurses-dev libreadline-dev \
           qtbase5-dev qt5-qmake libqwt-qt5-dev epics-dev python3-dev qttools5-dev qttools5-dev libqt5svg5-dev libqt5designer5 libqt5svg5 libqt5x11extras5-dev libzmq3-dev libqt5serialbus5-dev qtpositioning5-dev
     
@@ -29,7 +30,7 @@ jobs:
       run: |
         cd caQtDM_Viewer/package/debian/epics-base
         ./create-deb.sh
-        dpkg -i epics-base_*.deb
+        sudo dpkg -i epics-base_*.deb
 
     - name: Build DEB package
       run: |
@@ -40,7 +41,7 @@ jobs:
     - name: Install DEB package
       run: |
         cd caQtDM_Viewer/package/debian/caqtdm
-        dpkg -i caqtdm_*.deb
+        sudo dpkg -i caqtdm_*.deb
 
     - name: Upload DEB package as artifact
       uses: actions/upload-artifact@v4
