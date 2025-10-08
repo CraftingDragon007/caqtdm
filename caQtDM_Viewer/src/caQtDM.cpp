@@ -48,7 +48,7 @@
 #include <QtGui/QApplication>
 #endif
 
-#ifdef linux
+#if defined(linux) || defined(__FreeBSD__)
 #if QT_VERSION < QT_VERSION_CHECK(5,0,0)
    #define CAQTDM_X11 Q_WS_X11
 #else

@@ -144,7 +144,7 @@ public:
     void grabSwipeGesture(Qt::GestureType fingerSwipeGestureTypeID);
 #endif
 
-#ifdef linux
+#if defined(linux) || defined(__FreeBSD__)
     QString getDefaultPrinterFromSystem() {
         QProcess Process;
         QString exec = "lpstat";
@@ -194,11 +194,11 @@ public:
     void print()
     {
 #ifndef MOBILE
-#ifdef linux
+#if defined(linux) || defined(__FreeBSD__)
         QString defaultPrinter =  getDefaultPrinterFromSystem();
 #endif
         QPrinter *printer = new QPrinter;
-#ifdef linux
+#if defined(linux) || defined(__FreeBSD__)
         printer->setPrinterName(defaultPrinter);
         printer->setOutputFileName(0);
         printer->setPrintProgram("lpr");
@@ -212,7 +212,7 @@ public:
         printer->setOutputFormat(QPrinter::NativeFormat);
         QPrintDialog *printDialog = new QPrintDialog(printer, this);
 
-#ifdef linux
+#if defined(linux) || defined(__FreeBSD__)
         QList<QWidget*> childWidgets = printDialog->findChildren<QWidget*>(QLatin1String("printers"));
         if (childWidgets.count() == 1) {
             QComboBox* comboBox(qobject_cast<QComboBox*>(childWidgets.at(0)));
