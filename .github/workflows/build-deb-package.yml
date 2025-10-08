@@ -38,7 +38,7 @@ jobs:
     - name: Build DEB package
       run: |
         cd caQtDM_Viewer/package/debian/caqtdm
-        ./create-deb.sh
+        ./create-deb.sh --debdev
         ls -l *.deb
 
     - name: Install DEB package
