@@ -84,6 +84,8 @@ jobs:
         mkdir -p "$AUR_DIR"
 
         sudo -u builder bash -c "
+          export AUR_DIR='$AUR_DIR'
+          
           # Function to clone an AUR package with a fallback to the GitHub mirror
           git_clone_aur_with_fallback() {
             local package_name=\"\$1\"
