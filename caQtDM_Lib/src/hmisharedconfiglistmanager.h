@@ -21,7 +21,7 @@ public:
     bool isInitialized() const;
 
     QList<QSharedPointer<caHMIConfigTransferItem>> readList();
-    bool writeList(const QList<QSharedPointer<caHMIConfigTransferItem>> newList);
+    bool writeList(const QList<QSharedPointer<caHMIConfigTransferItem>> &newList);
 
 private:
     explicit HmiSharedConfigListManager(QObject *parent = nullptr);

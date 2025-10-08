@@ -10,6 +10,7 @@
 
 HmiSharedConfigListManager::HmiSharedConfigListManager(QObject *parent)
     : QObject{parent},
+    this_isInitialized(false),
     this_sharedMemory(QString(SHARED_MEMORY_LIST_KEY).arg(getUniqueUserId())),
     this_semaphore(QString(LIST_SEMAPHORE_KEY).arg(getUniqueUserId()), 1, QSystemSemaphore::Open)
 {}
@@ -113,7 +114,7 @@ QList<QSharedPointer<caHMIConfigTransferItem>> HmiSharedConfigListManager::readL
     return list;
 }
 
-bool HmiSharedConfigListManager::writeList(const QList<QSharedPointer<caHMIConfigTransferItem>> newList) {
+bool HmiSharedConfigListManager::writeList(const QList<QSharedPointer<caHMIConfigTransferItem>> &newList) {
     QByteArray serializedData;
     QDataStream stream(&serializedData, QIODevice::WriteOnly);
 
