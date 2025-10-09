@@ -8,7 +8,7 @@ on:
 
 env:
   QT_VERSION: '6.10.0'
-  QT_MODULES: 'qtserialbus qtsvg qtpositioning'
+  QT_MODULES: 'qtserialbus qtpositioning'
 
   DEPS_INSTALL_ROOT: C:\deps
 
