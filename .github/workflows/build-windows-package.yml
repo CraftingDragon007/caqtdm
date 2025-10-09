@@ -76,8 +76,9 @@ jobs:
       - name: Configure, Build and Install Qwt
         working-directory: ${{ github.workspace }}/qwt-src
         run: |
-          powershell -Command "(Get-Content qwtconfig.pri) -replace '^QWT_INSTALL_PREFIX.*$', 'QWT_INSTALL_PREFIX = ${{ env.QWT_INSTALL_DIR }}' | Set-Content qwtconfig.pri"
-          qmake qwt.pro
+          powershell -Command "(Get-Content qwtbuild.pri) -replace '^#CONFIG.*debug_and_release.*$', 'CONFIG += debug_and_release' | Set-Content qwtbuild.pri"
+          powershell -Command "(Get-Content qwtbuild.pri) -replace '^#CONFIG.*build_all.*$', 'CONFIG += build_all' | Set-Content qwtbuild.pri"
+          qmake QWT_INSTALL_PREFIX="${{ env.QWT_INSTALL_DIR }}" qwt.pro
           jom.exe -j%NUMBER_OF_PROCESSORS%
           jom.exe install
           echo QWT_INSTALL_DIR=${{ env.QWT_INSTALL_DIR }}>> %GITHUB_ENV%
