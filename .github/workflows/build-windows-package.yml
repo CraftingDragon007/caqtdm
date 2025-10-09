@@ -132,6 +132,7 @@ jobs:
       - name: Clone ZeroMQ
         run: |
           git clone https://github.com/zeromq/libzmq.git libzmq-src
+          cd libzmq-src
           git checkout v4.3.5
         working-directory: ${{ github.workspace }}
 
