@@ -52,10 +52,14 @@ jobs:
           mkdir C:\jom
           tar -xf jom.zip -C C:\jom
           dir C:\jom
-          echo C:\jom >> %GITHUB_PATH%
+
+      - name: Add JOM to PATH
+        shell: pwsh
+        run: echo "C:\jom" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Verify JOM installation
         run: |
+          echo %PATH%
           jom.exe --version || echo "Error: JOM not found or not in PATH"
 
       - name: Set up Visual Studio shell
