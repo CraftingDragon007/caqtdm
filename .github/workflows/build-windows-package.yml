@@ -8,7 +8,7 @@ on:
 
 env:
   QT_VERSION: '6.10.0'
-  QT_MODULES: 'qtserialbus qtpositioning'
+  QT_MODULES: 'qtserialbus qtpositioning qtcore5compat'
 
   DEPS_INSTALL_ROOT: C:\deps
 
@@ -134,8 +134,8 @@ jobs:
           echo QMAKESPEC=${{ env.QT_ROOT_DIR }}\mkspecs\win32-msvc>> %GITHUB_ENV%
           echo TIMESTAMPER=http://timestamp.digicert.com>> %GITHUB_ENV%
           echo CAQTDM_SIGNER=Paul Scherrer Institut>> %GITHUB_ENV%
-          echo CAQTDM_GPS=1>> %GITHUB_ENV%
-          echo CAQTDM_MODBUS=1>> %GITHUB_ENV%
+          echo CAQTDM_GPS=1 >> %GITHUB_ENV%
+          echo CAQTDM_MODBUS=1 >> %GITHUB_ENV%
 
       - name: Configure and Build caQtDM
         working-directory: ${{ env.CAQTDM_DIR }}
