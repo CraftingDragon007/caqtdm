@@ -52,10 +52,7 @@ jobs:
           mkdir C:\jom
           tar -xf jom.zip -C C:\jom
           dir C:\jom
-
-      - name: Add JOM to PATH
-        shell: pwsh
-        run: Write-Host "::add-path::C:\jom"
+          echo "C:\jom" >> %GITHUB_PATH%
 
       - name: Verify JOM installation
         run: |
