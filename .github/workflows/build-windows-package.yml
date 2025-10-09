@@ -12,9 +12,9 @@ env:
 
   DEPS_INSTALL_ROOT: C:\deps
 
-  QWT_INSTALL_DIR: ${{ env.DEPS_INSTALL_ROOT }}\qwt
-  ZEROMQ_INSTALL_DIR: ${{ env.DEPS_INSTALL_ROOT }}\zeromq
-  EPICS_BASE_DIR: ${{ env.DEPS_INSTALL_ROOT }}\epics-base
+  QWT_INSTALL_DIR: C:\deps\qwt
+  ZEROMQ_INSTALL_DIR: C:\deps\zeromq
+  EPICS_BASE_DIR: C:\deps\epics-base
   CAQTDM_DIR: ${{ github.workspace }}\caqtdm
 
 jobs:
