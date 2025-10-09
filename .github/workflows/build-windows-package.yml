@@ -79,8 +79,8 @@ jobs:
           powershell -Command "(Get-Content qwtbuild.pri) -replace '^#CONFIG.*debug_and_release.*$', 'CONFIG += debug_and_release' | Set-Content qwtbuild.pri"
           powershell -Command "(Get-Content qwtbuild.pri) -replace '^#CONFIG.*build_all.*$', 'CONFIG += build_all' | Set-Content qwtbuild.pri"
           qmake QWT_INSTALL_PREFIX="${{ env.QWT_INSTALL_DIR }}" qwt.pro
-          jom.exe -j%NUMBER_OF_PROCESSORS%
-          jom.exe install
+          nmake
+          nmake install
           echo QWT_INSTALL_DIR=${{ env.QWT_INSTALL_DIR }}>> %GITHUB_ENV%
 
       - name: Clone ZeroMQ
@@ -154,7 +154,7 @@ jobs:
         run: |
           mkdir project_x64
           cd project_x64
-          candle ../caQtDM_x64.wxs -ext WixUIExtension -ext WixUtilExtension
+          candle ..\caQtDM_x64.wxs -ext WixUIExtension -ext WixUtilExtension
           light caQtDM_x64.wixobj -ext WixUIExtension -ext WixUtilExtension
           copy caQtDM_x64.msi ${{ github.workspace }}\caQtDM_x64.msi
 
