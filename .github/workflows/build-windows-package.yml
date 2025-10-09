@@ -50,7 +50,8 @@ jobs:
         run: |
           curl -L -o jom.zip https://download.qt.io/official_releases/jom/jom_1_1_4.zip
           tar -xf jom.zip -C C:\
-          echo "C:\jom" >> %GITHUB_PATH%
+          dir C:\jom
+          echo "::add-path::C:\jom"
           echo "JOM should now be on PATH."
           jom.exe --version || echo "Warning: JOM not found or not in PATH, QMake parallel builds might fall back to NMake."
 
