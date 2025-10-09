@@ -113,7 +113,7 @@ jobs:
 
           (Get-Content qwtbuild.pri) -replace '^#CONFIG.*debug_and_release.*$', 'CONFIG += debug_and_release' | Set-Content qwtbuild.pri
           (Get-Content qwtbuild.pri) -replace '^#CONFIG.*build_all.*$', 'CONFIG += build_all' | Set-Content qwtbuild.pri
-          (Get-Content qwtconfig.pri) -replace '^QWT_INSTALL_PREFIX.*$', 'QWT_INSTALL_PREFIX = ${{ env.QWT_INSTALL_DIR }}' | Set-Content qwtconfig.pri
+          (Get-Content qwtconfig.pri) -replace '^\s*QWT_INSTALL_PREFIX\s*=.*$', '    QWT_INSTALL_PREFIX = ${{ env.QWT_INSTALL_DIR }}' | Set-Content qwtconfig.pri
           qmake qwt.pro
 
           Invoke-WithRetry -Operation "Qwt build" -ScriptBlock {
@@ -194,7 +194,7 @@ jobs:
           qmake all.pro
           
           Invoke-WithRetry -Operation "caQtDM build" -ScriptBlock {
-              $process = Start-Process -FilePath "jom.exe" -ArgumentList "-j$env:NUMBER_OF_PROCESSORS", "1", "release" -Wait -PassThru -NoNewWindow
+              $process = Start-Process -FilePath "jom.exe" -ArgumentList "-j$env:NUMBER_OF_PROCESSORS", "release" -Wait -PassThru -NoNewWindow
               if ($process.ExitCode -ne 0) {
                   throw "Build failed with exit code $($process.ExitCode)"
               }
