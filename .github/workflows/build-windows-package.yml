@@ -52,7 +52,10 @@ jobs:
           mkdir C:\jom
           tar -xf jom.zip -C C:\jom
           dir C:\jom
-          echo "::add-path::C:\jom"
+
+      - name: Add JOM to PATH
+        shell: pwsh
+        run: Write-Host "::add-path::C:\jom"
 
       - name: Verify JOM installation
         run: |
