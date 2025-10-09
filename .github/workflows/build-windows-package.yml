@@ -8,7 +8,7 @@ on:
 
 env:
   QT_VERSION: '6.10.0'
-  QT_MODULES: 'qtserialbus qtpositioning qt5compat'
+  QT_MODULES: 'qtserialbus qtpositioning qt5compat qtserialport'
 
   DEPS_INSTALL_ROOT: C:\deps
 
@@ -114,6 +114,12 @@ jobs:
           (Get-Content qwtbuild.pri) -replace '^#CONFIG.*debug_and_release.*$', 'CONFIG += debug_and_release' | Set-Content qwtbuild.pri
           (Get-Content qwtbuild.pri) -replace '^#CONFIG.*build_all.*$', 'CONFIG += build_all' | Set-Content qwtbuild.pri
           (Get-Content qwtconfig.pri) -replace '^\s*QWT_INSTALL_PREFIX\s*=.*$', '    QWT_INSTALL_PREFIX = ${{ env.QWT_INSTALL_DIR }}' | Set-Content qwtconfig.pri
+          
+          # Disable examples, playground, and tests to reduce build time in CI
+          (Get-Content qwtconfig.pri) -replace '^QWT_CONFIG\s*\+=\s*QwtExamples.*$', '# QWT_CONFIG += QwtExamples' | Set-Content qwtconfig.pri
+          (Get-Content qwtconfig.pri) -replace '^QWT_CONFIG\s*\+=\s*QwtPlayground.*$', '# QWT_CONFIG += QwtPlayground' | Set-Content qwtconfig.pri
+          (Get-Content qwtconfig.pri) -replace '^QWT_CONFIG\s*\+=\s*QwtTests.*$', '# QWT_CONFIG += QwtTests' | Set-Content qwtconfig.pri
+          
           qmake qwt.pro
 
           Invoke-WithRetry -Operation "Qwt build" -ScriptBlock {
