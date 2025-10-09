@@ -148,9 +148,6 @@ jobs:
           set /a timemins=(%timerstop%-%timerstart%)/60
           echo caQtDM compile time seconds: %timeseks% -- minutes: %timemins%
 
-      - name: Install WiX Toolset via Chocolatey
-        run: choco install wixtoolset -y
-
       - name: Create caQtDM Windows package
         working-directory: ${{ env.CAQTDM_DIR }}\caQtDM_Viewer\package\windows
         run: |
