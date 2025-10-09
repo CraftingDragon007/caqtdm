@@ -81,12 +81,12 @@ jobs:
           (Get-Content qwtbuild.pri) -replace '^#CONFIG.*build_all.*$', 'CONFIG += build_all' | Set-Content qwtbuild.pri
           (Get-Content qwtconfig.pri) -replace '^QWT_INSTALL_PREFIX.*$', 'QWT_INSTALL_PREFIX = ${{ env.QWT_INSTALL_DIR }}' | Set-Content qwtconfig.pri
           qmake qwt.pro
-          $buildProcess = Start-Process -FilePath "jom.exe" -ArgumentList "-j$env:NUMBER_OF_PROCESSORS", "-k", "1" -Wait -PassThru -NoNewWindow
+          $buildProcess = Start-Process -FilePath "jom.exe" -ArgumentList "-j$env:NUMBER_OF_PROCESSORS", "-k" -Wait -PassThru -NoNewWindow
           if ($buildProcess.ExitCode -ne 0) {
             Write-Error "Qwt build failed with exit code $($buildProcess.ExitCode)"
             exit 1
           }
-          $installProcess = Start-Process -FilePath "jom.exe" -ArgumentList "-j$env:NUMBER_OF_PROCESSORS", "-k", "1", "install" -Wait -PassThru -NoNewWindow
+          $installProcess = Start-Process -FilePath "jom.exe" -ArgumentList "-j$env:NUMBER_OF_PROCESSORS", "-k",  "install" -Wait -PassThru -NoNewWindow
           if ($installProcess.ExitCode -ne 0) {
             Write-Error "Qwt install failed with exit code $($installProcess.ExitCode)"
             exit 1
