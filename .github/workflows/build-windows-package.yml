@@ -59,8 +59,7 @@ jobs:
 
       - name: Verify JOM installation
         run: |
-          echo %PATH%
-          jom.exe --version || echo "Error: JOM not found or not in PATH"
+          jom.exe /VERSION || echo "Error: JOM not found or not in PATH"
 
       - name: Set up Visual Studio shell
         uses: egor-tensin/vs-shell@v2
