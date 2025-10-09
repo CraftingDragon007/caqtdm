@@ -46,7 +46,42 @@ jobs:
           set-env: true
           cache: true
 
+      - name: Cache Qwt
+        id: cache-qwt
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.QWT_INSTALL_DIR }}
+          key: qwt-${{ env.QWT_VERSION }}-qt${{ env.QT_VERSION }}-${{ runner.os }}-${{ runner.arch }}
+          restore-keys: |
+            qwt-${{ env.QWT_VERSION }}-qt${{ env.QT_VERSION }}-${{ runner.os }}-
+
+      - name: Cache ZeroMQ
+        id: cache-zeromq
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.ZEROMQ_INSTALL_DIR }}
+          key: zeromq-${{ env.ZEROMQ_VERSION }}-${{ runner.os }}-${{ runner.arch }}
+          restore-keys: |
+            zeromq-${{ env.ZEROMQ_VERSION }}-${{ runner.os }}-
+
+      - name: Cache EPICS Base
+        id: cache-epics
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.EPICS_BASE_DIR }}
+          key: epics-${{ env.EPICS_VERSION }}-${{ runner.os }}-${{ runner.arch }}
+          restore-keys: |
+            epics-${{ env.EPICS_VERSION }}-${{ runner.os }}-
+
+      - name: Cache JOM
+        id: cache-jom
+        uses: actions/cache@v4
+        with:
+          path: C:\jom
+          key: jom-1.1.4-${{ runner.os }}
+
       - name: Download jom
+        if: steps.cache-jom.outputs.cache-hit != 'true'
         run: |
           curl -L -o jom.zip https://download.qt.io/official_releases/jom/jom_1_1_4.zip
           mkdir C:\jom
@@ -102,10 +137,12 @@ jobs:
         run: mkdir ${{ env.DEPS_INSTALL_ROOT }}
 
       - name: Clone Qwt
+        if: steps.cache-qwt.outputs.cache-hit != 'true'
         run: git clone https://git.code.sf.net/p/qwt/git --single-branch --branch qwt-6.3 qwt-src
         working-directory: ${{ github.workspace }}
 
       - name: Configure, Build and Install Qwt
+        if: steps.cache-qwt.outputs.cache-hit != 'true'
         working-directory: ${{ github.workspace }}/qwt-src
         shell: pwsh
         run: |
@@ -133,9 +170,12 @@ jobs:
           if ($installProcess.ExitCode -ne 0) {
             throw "Qwt install failed with exit code $($installProcess.ExitCode)"
           }
-          echo "QWT_INSTALL_DIR=${{ env.QWT_INSTALL_DIR }}" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Set Qwt environment variable
+        run: echo QWT_INSTALL_DIR=${{ env.QWT_INSTALL_DIR }}>> %GITHUB_ENV%
 
       - name: Clone ZeroMQ
+        if: steps.cache-zeromq.outputs.cache-hit != 'true'
         run: |
           git clone https://github.com/zeromq/libzmq.git libzmq-src
           cd libzmq-src
@@ -143,30 +183,39 @@ jobs:
         working-directory: ${{ github.workspace }}
 
       - name: Build and Install ZeroMQ
+        if: steps.cache-zeromq.outputs.cache-hit != 'true'
         working-directory: ${{ github.workspace }}\libzmq-src
         run: |
           mkdir build && cd build
           cmake .. -DCMAKE_INSTALL_PREFIX=${{ env.ZEROMQ_INSTALL_DIR }} -DZMQ_BUILD_PROGRAMS=OFF -D WITH_PERF_TOOL=OFF -DZMQ_BUILD_TESTS=OFF -DCMAKE_GENERATOR_PLATFORM=x64
           cmake --build . --config Release
           cmake --install . --config Release
-          echo ZEROMQ_INSTALL_DIR=${{ env.ZEROMQ_INSTALL_DIR }}>> %GITHUB_ENV%
+
+      - name: Set ZeroMQ environment variable  
+        run: echo ZEROMQ_INSTALL_DIR=${{ env.ZEROMQ_INSTALL_DIR }}>> %GITHUB_ENV%
 
       - name: Create EPICS Base directory
+        if: steps.cache-epics.outputs.cache-hit != 'true'
         run: mkdir ${{ env.EPICS_BASE_DIR }}
       
       - name: Clone EPICS Base
+        if: steps.cache-epics.outputs.cache-hit != 'true'
         run: |
           git clone https://github.com/epics-base/epics-base.git .
           git checkout R7.0.9
         working-directory: ${{ env.EPICS_BASE_DIR }}
 
       - name: Configure and Build EPICS Base
+        if: steps.cache-epics.outputs.cache-hit != 'true'
         working-directory: ${{ env.EPICS_BASE_DIR }}
         run: |
           echo "T_A = windows-x64" > configure\CONFIG_SITE.local
           set EPICS_HOST_ARCH=windows-x64
           make -s -j%NUMBER_OF_PROCESSORS%
-          echo EPICS_BASE=%cd%>> %GITHUB_ENV%
+
+      - name: Set EPICS environment variables
+        run: |
+          echo EPICS_BASE=${{ env.EPICS_BASE_DIR }}>> %GITHUB_ENV%
           echo EPICS_HOST_ARCH=windows-x64>> %GITHUB_ENV%
 
       - name: Set caQtDM build environment variables
