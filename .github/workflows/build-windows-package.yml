@@ -52,7 +52,7 @@ jobs:
           mkdir C:\jom
           tar -xf jom.zip -C C:\jom
           dir C:\jom
-          echo "C:\jom" >> %GITHUB_PATH%
+          echo C:\jom >> %GITHUB_PATH%
 
       - name: Verify JOM installation
         run: |
