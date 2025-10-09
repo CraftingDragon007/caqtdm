@@ -117,19 +117,16 @@ jobs:
           qmake qwt.pro
 
           Invoke-WithRetry -Operation "Qwt build" -ScriptBlock {
-              $buildProcess = Start-Process -FilePath "jom.exe" -ArgumentList "-j$env:NUMBER_OF_PROCESSORS", "-k" -Wait -PassThru -NoNewWindow
+              $buildProcess = Start-Process -FilePath "jom.exe" -ArgumentList "-j$env:NUMBER_OF_PROCESSORS" -Wait -PassThru -NoNewWindow
               if ($buildProcess.ExitCode -ne 0) {
                   throw "Qwt build failed with exit code $($buildProcess.ExitCode)"
               }
           }
 
-          Invoke-WithRetry -Operation "Qwt install" -ScriptBlock {
-              $installProcess = Start-Process -FilePath "jom.exe" -ArgumentList "-j$env:NUMBER_OF_PROCESSORS", "-k", "install" -Wait -PassThru -NoNewWindow
-              if ($installProcess.ExitCode -ne 0) {
-                  throw "Qwt install failed with exit code $($installProcess.ExitCode)"
-              }
+          $installProcess = Start-Process -FilePath "jom.exe" -ArgumentList "-j$env:NUMBER_OF_PROCESSORS", "install" -Wait -PassThru -NoNewWindow
+          if ($installProcess.ExitCode -ne 0) {
+            throw "Qwt install failed with exit code $($installProcess.ExitCode)"
           }
-
           echo "QWT_INSTALL_DIR=${{ env.QWT_INSTALL_DIR }}" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Clone ZeroMQ
@@ -197,7 +194,7 @@ jobs:
           qmake all.pro
           
           Invoke-WithRetry -Operation "caQtDM build" -ScriptBlock {
-              $process = Start-Process -FilePath "jom.exe" -ArgumentList "-j$env:NUMBER_OF_PROCESSORS", "-k", "1", "release" -Wait -PassThru -NoNewWindow
+              $process = Start-Process -FilePath "jom.exe" -ArgumentList "-j$env:NUMBER_OF_PROCESSORS", "1", "release" -Wait -PassThru -NoNewWindow
               if ($process.ExitCode -ne 0) {
                   throw "Build failed with exit code $($process.ExitCode)"
               }
