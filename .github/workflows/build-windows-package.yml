@@ -75,13 +75,23 @@ jobs:
 
       - name: Configure, Build and Install Qwt
         working-directory: ${{ github.workspace }}/qwt-src
+        shell: pwsh
         run: |
-          powershell -Command "(Get-Content qwtbuild.pri) -replace '^#CONFIG.*debug_and_release.*$', 'CONFIG += debug_and_release' | Set-Content qwtbuild.pri"
-          powershell -Command "(Get-Content qwtbuild.pri) -replace '^#CONFIG.*build_all.*$', 'CONFIG += build_all' | Set-Content qwtbuild.pri"
-          qmake QWT_INSTALL_PREFIX="${{ env.QWT_INSTALL_DIR }}" qwt.pro
-          nmake
-          nmake install
-          echo QWT_INSTALL_DIR=${{ env.QWT_INSTALL_DIR }}>> %GITHUB_ENV%
+          (Get-Content qwtbuild.pri) -replace '^#CONFIG.*debug_and_release.*$', 'CONFIG += debug_and_release' | Set-Content qwtbuild.pri
+          (Get-Content qwtbuild.pri) -replace '^#CONFIG.*build_all.*$', 'CONFIG += build_all' | Set-Content qwtbuild.pri
+          (Get-Content qwtconfig.pri) -replace '^QWT_INSTALL_PREFIX.*$', 'QWT_INSTALL_PREFIX = ${{ env.QWT_INSTALL_DIR }}' | Set-Content qwtconfig.pri
+          qmake qwt.pro
+          $buildProcess = Start-Process -FilePath "jom.exe" -ArgumentList "-j$env:NUMBER_OF_PROCESSORS", "-k", "1" -Wait -PassThru -NoNewWindow
+          if ($buildProcess.ExitCode -ne 0) {
+            Write-Error "Qwt build failed with exit code $($buildProcess.ExitCode)"
+            exit 1
+          }
+          $installProcess = Start-Process -FilePath "jom.exe" -ArgumentList "-j$env:NUMBER_OF_PROCESSORS", "-k", "1", "install" -Wait -PassThru -NoNewWindow
+          if ($installProcess.ExitCode -ne 0) {
+            Write-Error "Qwt install failed with exit code $($installProcess.ExitCode)"
+            exit 1
+          }
+          echo "QWT_INSTALL_DIR=${{ env.QWT_INSTALL_DIR }}" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Clone ZeroMQ
         run: git clone https://github.com/zeromq/libzmq.git --single-branch --branch zeromq4-x libzmq-src
@@ -140,14 +150,18 @@ jobs:
 
       - name: Configure and Build caQtDM
         working-directory: ${{ env.CAQTDM_DIR }}
+        shell: pwsh
         run: |
-          set /a timerstart=(((1%time:~0,2%-100)*60*60)+((1%time:~3,2%-100)*60)+(1%time:~6,2%-100)^)
+          $timerstart = Get-Date
           qmake all.pro
-          jom.exe -j%NUMBER_OF_PROCESSORS% release
-          set /a timerstop=(((1%time:~0,2%-100)*60*60)+((1%time:~3,2%-100)*60)+(1%time:~6,2%-100)^)
-          set /a timeseks=(%timerstop%-%timerstart%)
-          set /a timemins=(%timerstop%-%timerstart%)/60
-          echo caQtDM compile time seconds: %timeseks% -- minutes: %timemins%
+          $process = Start-Process -FilePath "jom.exe" -ArgumentList "-j$env:NUMBER_OF_PROCESSORS", "-k", "1", "release" -Wait -PassThru -NoNewWindow
+          if ($process.ExitCode -ne 0) {
+            Write-Error "Build failed with exit code $($process.ExitCode)"
+            exit 1
+          }
+          $timerstop = Get-Date
+          $elapsed = $timerstop - $timerstart
+          Write-Host "caQtDM compile time: $($elapsed.TotalSeconds) seconds -- $($elapsed.TotalMinutes) minutes"
 
       - name: Create caQtDM Windows package
         working-directory: ${{ env.CAQTDM_DIR }}\caQtDM_Viewer\package\windows
