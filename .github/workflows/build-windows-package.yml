@@ -43,9 +43,8 @@ jobs:
           modules: ${{ env.QT_MODULES }}
           host: windows
           target: desktop
-          arch: win64_msvc2022_64
           set-env: true
-          cache: true
+          cache: false
       
       - name: Add JOM to PATH
         run: |
