@@ -96,6 +96,9 @@ jobs:
           cmake --build . --config Release
           cmake --install . --config Release
           echo ZEROMQ_INSTALL_DIR=${{ env.ZEROMQ_INSTALL_DIR }} >> %GITHUB_ENV%
+
+      - name: Create EPICS Base directory
+        run: mkdir ${{ env.EPICS_BASE_DIR }}
       
       - name: Clone EPICS Base
         run: |
