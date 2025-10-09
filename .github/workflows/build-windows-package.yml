@@ -51,6 +51,8 @@ jobs:
           curl -L -o jom.zip https://download.qt.io/official_releases/jom/jom_1_1_4.zip
           tar -xf jom.zip -C C:\
           echo "C:\jom" >> %GITHUB_PATH%
+          echo "JOM should now be on PATH."
+          jom.exe --version || echo "Warning: JOM not found or not in PATH, QMake parallel builds might fall back to NMake."
 
       - name: Set up Visual Studio shell
         uses: egor-tensin/vs-shell@v2
@@ -69,8 +71,8 @@ jobs:
         run: |
           powershell -Command "(Get-Content qwtconfig.pri) -replace '^QWT_INSTALL_PREFIX.*$', 'QWT_INSTALL_PREFIX = ${{ env.QWT_INSTALL_DIR }}' | Set-Content qwtconfig.pri"
           qmake qwt.pro
-          jom -j%NUMBER_OF_PROCESSORS%
-          jom install
+          jom.exe -j%NUMBER_OF_PROCESSORS%
+          jom.exe install
           echo "QWT_INSTALL_DIR=${{ env.QWT_INSTALL_DIR }}" >> %GITHUB_ENV%
 
       - name: Clone ZeroMQ
@@ -130,7 +132,7 @@ jobs:
         run: |
           set /a timerstart=(((1%time:~0,2%-100)*60*60)+((1%time:~3,2%-100)*60)+(1%time:~6,2%-100)^)
           qmake all.pro
-          jom -j%NUMBER_OF_PROCESSORS% release
+          jom.exe -j%NUMBER_OF_PROCESSORS% release
           set /a timerstop=(((1%time:~0,2%-100)*60*60)+((1%time:~3,2%-100)*60)+(1%time:~6,2%-100)^)
           set /a timeseks=(%timerstop%-%timerstart%)
           set /a timemins=(%timerstop%-%timerstart%)/60
