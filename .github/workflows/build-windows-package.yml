@@ -48,7 +48,7 @@ jobs:
       
       - name: Add JOM to PATH
         run: |
-          for /d %%i in ("${{ env.QT_HOST_PATH }}") do (
+          for /d %%i in ("${{ env.QT_ROOT_DIR }}") do (
               echo "%%i\bin" >> %GITHUB_PATH%
           )
           echo "JOM should now be on PATH."
