@@ -33,8 +33,11 @@
 #include <stdlib.h>
 #include <iostream>
 #include <sstream>
+
+#ifndef MOBILE
 #include "hmisharedeventbus.h"
 #include "hmisharedconfiglistmanager.h"
+#endif
 
 #ifndef MOBILE_ANDROID
   #include <sys/timeb.h>
@@ -548,7 +551,7 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
 
     this->globalEventFilter = new HMIApplicationEventFilter(this);
 
-
+#ifndef MOBILE
     if (qApp != Q_NULLPTR){
         //qDebug() << "GLOBAL EVENT FILTER INSTALLED FOR CAHMICONFIG!!!!!!!!";
         qApp->installEventFilter(globalEventFilter);
@@ -556,7 +559,6 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
         connect(this->globalEventFilter, &HMIApplicationEventFilter::mouse, this, &CaQtDM_Lib::hmiHandleMouse);
     }
 
-#ifndef MOBILE
     if (HmiSharedEventBus::instance().isInitialized()) {
         connect(&HmiSharedEventBus::instance(), &HmiSharedEventBus::eventReceived, this, &CaQtDM_Lib::Callback_ExternalHmiEventReceived);
     }
@@ -3373,9 +3375,11 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
         scan2dWidget->setProperty("Taken", true);
     } else if(caHMIConfig* hmiConfigWidget = qobject_cast<caHMIConfig *>(w1)) {
-        QList<QVariant> indexList;
         //qDebug() << "create caHMIConfig";
         w1->setProperty("ObjectType", caHMIConfig_Widget);
+
+#ifndef MOBILE
+        QList<QVariant> indexList;
 
         QWidget* parentWindow = Q_NULLPTR;
         QWidget* currentWidget = hmiConfigWidget;
@@ -3513,6 +3517,8 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         indexList.insert(0, nbMonitors);
         hmiConfigWidget->setProperty("MonitorList", integerList);
         hmiConfigWidget->setProperty("IndexList", indexList);
+
+    #endif
 
         hmiConfigWidget->setProperty("Taken", true);
     }

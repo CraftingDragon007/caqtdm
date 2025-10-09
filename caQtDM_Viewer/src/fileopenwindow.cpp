@@ -48,8 +48,11 @@ bool HTTPCONFIGURATOR = false;
 #include <iostream>
 #include <fstream>
 #include <string>
+
+#ifndef MOBILE
 #include <hmisharedeventbus.h>
 #include <hmisharedconfiglistmanager.h>
+#endif
 
 #include <QFileDialog>
 #include <QString>
