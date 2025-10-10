@@ -24,11 +24,11 @@ env:
 jobs:
   build:
     name: Build windows package
-    runs-on: ${{ matrix.windows-version}}
+    runs-on: ${{ matrix.windows-version }}
     strategy:
       fail-fast: false
       matrix:
-        windows-version: ['windows-2025', 'windows-2022']
+        windows-version: ['self-hosted']
         
     defaults:
       run:
@@ -175,9 +175,6 @@ jobs:
             throw "Qwt install failed with exit code $($installProcess.ExitCode)"
           }
 
-      - name: Set Qwt environment variable
-        run: echo QWT_INSTALL_DIR=${{ env.QWT_INSTALL_DIR }}>> %GITHUB_ENV%
-
       - name: Clone ZeroMQ
         if: steps.cache-zeromq.outputs.cache-hit != 'true'
         run: |
@@ -194,9 +191,6 @@ jobs:
           cmake .. -DCMAKE_INSTALL_PREFIX=${{ env.ZEROMQ_INSTALL_DIR }} -DZMQ_BUILD_PROGRAMS=OFF -D WITH_PERF_TOOL=OFF -DZMQ_BUILD_TESTS=OFF -DCMAKE_GENERATOR_PLATFORM=x64 -DBUILD_SHARED=ON -DBUILD_STATIC=OFF
           cmake --build . --config Release
           cmake --install . --config Release
-
-      - name: Set ZeroMQ environment variable  
-        run: echo ZEROMQ_INSTALL_DIR=${{ env.ZEROMQ_INSTALL_DIR }}>> %GITHUB_ENV%
 
       - name: Create EPICS Base directory
         if: steps.cache-epics.outputs.cache-hit != 'true'
