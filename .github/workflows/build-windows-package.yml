@@ -138,7 +138,7 @@ jobs:
           '@ | Out-File -FilePath "${{ github.workspace }}\retry-helper.ps1" -Encoding utf8
 
       - name: Create dependencies install directory
-        run: mkdir ${{ env.DEPS_INSTALL_ROOT }}
+        run: if not exist ${{ env.DEPS_INSTALL_ROOT }} mkdir ${{ env.DEPS_INSTALL_ROOT }}
 
       - name: Clone Qwt
         if: steps.cache-qwt.outputs.cache-hit != 'true'
