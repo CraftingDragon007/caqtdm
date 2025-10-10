@@ -1093,8 +1093,8 @@ Define_ZMQ_Lib{
 	     }
 	    ReleaseBuild {
                 # Dynamically construct ZeroMQ library name
-                isEmpty(ZMQ_LIB_NAME) {
-                    ZMQ_VERSION = $$(ZEROMQ_VERSION)
+                isEmpty($$ZMQ_LIB_NAME) {
+                    ZMQ_VERSION = $$(ZMQ_VERSION)
                     isEmpty(ZMQ_VERSION): ZMQ_VERSION = 4_3_5
 
                     ZMQ_VER = $$replace(ZMQ_VER, \., _)
