@@ -9,8 +9,9 @@ if [ "$1" == "--help" ]; then
   echo "Buildscript for caQtDM on Debian "
   echo "" 
   echo "Examples:" 
-  echo "./create-deb.sh              # Normal git checkout + using spec file from git " 
-  echo "./create-deb.sh --debdev     # use the current caqtdm.spec in this directory  " 
+  echo "./create-deb.sh               # Normal git checkout + using debian config file from git " 
+  echo "./create-deb.sh --debdev      # use the current debian config in this directory " 
+  echo "./create-deb.sh --no-checkout # use the current directory as source, do not checkout from git "
   echo "" 
   echo "" 
   echo "" 
@@ -25,6 +26,8 @@ REPOSITORY=https://github.com/caqtdm/$REPOSITORY_NAME.git
 BRANCH_OR_TAG=Development
 
 rm -rf caqtdm-${PACKAGE_VERSION}  || true
+if [ "$1" != "--no-checkout" ]; then
+
 
 if [ "$1" != "--debdev" ]; then
   #### Clone and build caqtdm sources
@@ -42,6 +45,18 @@ if [ "$1" != "--debdev" ]; then
   cd ..
 fi
 
+else
+  echo "Using current directory as source, not checking out from git"
+  currentdir=$(pwd)
+  cd ../../../../
+  tar -czf ../caqtdm_${PACKAGE_VERSION}.orig.tar.gz  --exclude=.git . 
+  mv ../caqtdm_${PACKAGE_VERSION}.orig.tar.gz ${currentdir}/caqtdm_${PACKAGE_VERSION}.orig.tar.gz
+  cd ${currentdir}
+  mkdir -p caqtdm_${PACKAGE_VERSION}
+  cd caqtdm_${PACKAGE_VERSION}
+  tar -xf ../caqtdm_${PACKAGE_VERSION}.orig.tar.gz
+  cd ..
+fi
 
 mkdir -p caqtdm-${PACKAGE_VERSION}/
 cd caqtdm-${PACKAGE_VERSION}
