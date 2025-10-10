@@ -160,6 +160,8 @@ jobs:
           (Get-Content qwtconfig.pri) -replace '^QWT_CONFIG\s*\+=\s*QwtExamples.*$', '# QWT_CONFIG += QwtExamples' | Set-Content qwtconfig.pri
           (Get-Content qwtconfig.pri) -replace '^QWT_CONFIG\s*\+=\s*QwtPlayground.*$', '# QWT_CONFIG += QwtPlayground' | Set-Content qwtconfig.pri
           (Get-Content qwtconfig.pri) -replace '^QWT_CONFIG\s*\+=\s*QwtTests.*$', '# QWT_CONFIG += QwtTests' | Set-Content qwtconfig.pri
+          (Get-Content qwtconfig.pri) -replace '^QWT_CONFIG\s*\+=\s*QwtDesigner.*$', '# QWT_CONFIG += QwtDesigner' | Set-Content qwtconfig.pri
+          (Get-Content qwtconfig.pri) -replace '^    QWT_CONFIG\s*\+=\s*QwtDesignerSelfContained.*$', '#     QWT_CONFIG += QwtDesignerSelfContained' | Set-Content qwtconfig.pri
           
           qmake qwt.pro
 
