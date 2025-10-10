@@ -28,7 +28,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        windows-version: ['self-hosted']
+        windows-version: ['windows-2022', 'windows-2025']
         
     defaults:
       run:

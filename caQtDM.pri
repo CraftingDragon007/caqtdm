@@ -1093,9 +1093,7 @@ Define_ZMQ_Lib{
 	     }
 	    ReleaseBuild {
                 _ZMQ_CONSTRUCTED_LIB_NAME = ""
-
-                ZMQ_VERSION_ENV_VALUE = $$(ZMQ_VERSION)
-
+                
                 ZMQ_VERSION = $$(ZMQ_VERSION)
 
                 isEmpty(ZMQ_VERSION) {
