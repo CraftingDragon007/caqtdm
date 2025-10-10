@@ -10,6 +10,10 @@ env:
   QT_VERSION: '6.10.0'
   QT_MODULES: 'qtserialbus qtpositioning qt5compat qtserialport'
 
+  QWT_VERSION: '6.3'
+  ZEROMQ_VERSION: '4.3.5'
+  EPICS_VERSION: 'R7.0.9'
+
   DEPS_INSTALL_ROOT: C:\deps
 
   QWT_INSTALL_DIR: C:\deps\qwt
@@ -138,7 +142,7 @@ jobs:
 
       - name: Clone Qwt
         if: steps.cache-qwt.outputs.cache-hit != 'true'
-        run: git clone https://git.code.sf.net/p/qwt/git --single-branch --branch qwt-6.3 qwt-src
+        run: git clone https://git.code.sf.net/p/qwt/git --single-branch --branch qwt-${{ env.QWT_VERSION }} qwt-src
         working-directory: ${{ github.workspace }}
 
       - name: Configure, Build and Install Qwt
@@ -179,7 +183,7 @@ jobs:
         run: |
           git clone https://github.com/zeromq/libzmq.git libzmq-src
           cd libzmq-src
-          git checkout v4.3.5
+          git checkout v${{ env.ZEROMQ_VERSION }}
         working-directory: ${{ github.workspace }}
 
       - name: Build and Install ZeroMQ
@@ -202,7 +206,7 @@ jobs:
         if: steps.cache-epics.outputs.cache-hit != 'true'
         run: |
           git clone https://github.com/epics-base/epics-base.git .
-          git checkout R7.0.9
+          git checkout ${{ env.EPICS_VERSION }}
         working-directory: ${{ env.EPICS_BASE_DIR }}
 
       - name: Configure and Build EPICS Base
@@ -230,6 +234,7 @@ jobs:
           echo ZMQ=${{ env.ZEROMQ_INSTALL_DIR }}>> %GITHUB_ENV%
           echo ZMQINC=${{ env.ZEROMQ_INSTALL_DIR }}\include>> %GITHUB_ENV%
           echo ZMQLIB=${{ env.ZEROMQ_INSTALL_DIR }}\lib>> %GITHUB_ENV%
+          echo ZMQ_VERSION=${{ env.ZEROMQ_VERSION }}>> %GITHUB_ENV%
           echo EPICSINCLUDE=${{ env.EPICS_BASE }}\include>> %GITHUB_ENV%
           echo QTCONTROLS_LIBS=${{ env.CAQTDM_DIR }}\caQtDM_Binaries>> %GITHUB_ENV%
           echo CAQTDM_COLLECT=${{ env.CAQTDM_DIR }}\caQtDM_Binaries>> %GITHUB_ENV%
