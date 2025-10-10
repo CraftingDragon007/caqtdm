@@ -166,7 +166,7 @@ jobs:
           qmake qwt.pro
 
           Invoke-WithRetry -Operation "Qwt build" -ScriptBlock {
-              $buildProcess = Start-Process -FilePath "jom.exe" -ArgumentList "-j$env:NUMBER_OF_PROCESSORS" -Wait -PassThru -NoNewWindow
+              $buildProcess = Start-Process -FilePath "jom.exe" -ArgumentList "-j$env:NUMBER_OF_PROCESSORS", "release" -Wait -PassThru -NoNewWindow
               if ($buildProcess.ExitCode -ne 0) {
                   throw "Qwt build failed with exit code $($buildProcess.ExitCode)"
               }
