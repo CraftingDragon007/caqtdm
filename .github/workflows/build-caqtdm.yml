@@ -81,20 +81,60 @@ jobs:
     - name: Install AUR dependencies (qwt-qt6, epics-base)
       run: |
         export AUR_DIR="$(pwd)/aur_packages"
+        mkdir -p "$AUR_DIR"
+
         sudo -u builder bash -c "
-          cd \"$AUR_DIR\"
+          export AUR_DIR='$AUR_DIR'
+          
+          # Function to clone an AUR package with a fallback to the GitHub mirror
+          git_clone_aur_with_fallback() {
+            local package_name=\"\$1\"
+            local primary_aur_url=\"https://aur.archlinux.org/\${package_name}.git\"
+            local github_mirror_url=\"https://github.com/archlinux/aur.git\"
+            local target_dir=\"\$(pwd)/\${package_name}\"
 
-          echo 'Installing qwt-qt6 from AUR as builder user...'
-          git clone https://aur.archlinux.org/qwt-qt6.git
-          cd qwt-qt6
-          makepkg -si --noconfirm
-          cd \"$AUR_DIR\"
+            echo \"Attempting to clone '\${package_name}' from primary AUR...\"
+            if git clone --depth 1 \"\$primary_aur_url\" \"\$target_dir\" &> /dev/null; then
+              echo \"Successfully cloned '\${package_name}' from primary AUR.\"
+              return 0
+            else
+              echo \"Failed to clone '\${package_name}' from primary AUR. Trying GitHub mirror...\"
+              # Clean up incomplete directory from failed primary attempt
+              rm -rf \"\$target_dir\"
 
-          echo 'Installing epics-base from AUR as builder user...'
-          git clone https://aur.archlinux.org/epics-base.git
-          cd epics-base
-          makepkg -si --noconfirm
-          cd \"$AUR_DIR\"
+              # Clone from GitHub mirror, using the package name as a branch
+              if git clone --depth 1 --branch \"\$package_name\" --single-branch \"\$github_mirror_url\" \"\$target_dir\" &> /dev/null; then
+                echo \"Successfully cloned '\${package_name}' from GitHub mirror.\"
+                return 0
+              else
+                echo \"Failed to clone '\${package_name}' from both primary AUR and GitHub mirror.\"
+                return 1
+              fi
+            fi
+          }
+
+          # Function to install a single AUR package
+          install_aur_package() {
+            local package_name=\"\$1\"
+            echo \"Installing '\${package_name}' from AUR as builder user...\"
+
+            # Ensure we are in the correct base directory ($AUR_DIR) before attempting to clone
+            cd \"\$AUR_DIR\" || { echo \"Error: Could not change to \$AUR_DIR.\"; exit 1; }
+
+            if git_clone_aur_with_fallback \"\$package_name\"; then
+              cd \"\$package_name\" || { echo \"Error: Could not change to \${package_name} directory.\"; exit 1; }
+              makepkg -si --noconfirm
+              # After building, return to the base AUR_DIR for the next package
+              cd \"\$AUR_DIR\" || { echo \"Error: Could not change back to \$AUR_DIR.\"; exit 1; }
+            else
+              echo \"Skipping '\${package_name}' due to cloning failure.\"
+            fi
+          }
+
+          cd \"\$AUR_DIR\" || { echo \"Error: Initial change to \$AUR_DIR failed.\"; exit 1; }
+          
+          install_aur_package qwt-qt6
+          install_aur_package epics-base
         "
       shell: bash
 
@@ -153,19 +193,19 @@ jobs:
         echo "EPICS_HOST_ARCH=${local_epics_host_arch}" >> $GITHUB_ENV
         echo "QTHOME=${local_qthome}" >> $GITHUB_ENV
         echo "QWTHOME=${local_qwthome}" >> $GITHUB_ENV
-        echo "QWTLIB=${local_qwtnamelib}" >> $GITHUB_ENV # Corrected
+        echo "QWTLIB=${local_qwtnamelib}" >> $GITHUB_ENV
         echo "QWTVERSION=${local_qwtversion}" >> $GITHUB_ENV
-        echo "EPICSINCLUDE=${local_epicsinclude}" >> $GITHUB_ENV # Corrected
-        echo "EPICSLIB=${local_epicslib}" >> $GITHUB_ENV         # Corrected
-        echo "EPICSEXTENSIONS=${local_epicsextensions}" >> $GITHUB_ENV # Corrected
-        echo "QTCONTROLS_LIBS=${local_qtcontrols_libs}" >> $GITHUB_ENV # Corrected
-        echo "CAQTDM_COLLECT=${local_caqtdm_collect}" >> $GITHUB_ENV   # Corrected
-        echo "QTBASE=${local_qtbase}" >> $GITHUB_ENV               # Corrected
-        echo "CAQTDM_CA_ARCHIVELIBS=${local_caqtdm_ca_archivelibs}" >> $GITHUB_ENV # Corrected
-        echo "CAQTDM_LOGGING_ARCHIVELIBS=${local_caqtdm_logging_archivelibs}" >> $GITHUB_ENV # Corrected
-        echo "QTDM_LIBINSTALL=${local_qtdm_libinstall}" >> $GITHUB_ENV # Corrected
-        echo "QTDM_BININSTALL=${local_qtdm_bininstall}" >> $GITHUB_ENV # Corrected
-        echo "PYTHONINCLUDE=${local_pythoninclude}" >> $GITHUB_ENV # Corrected
+        echo "EPICSINCLUDE=${local_epicsinclude}" >> $GITHUB_ENV
+        echo "EPICSLIB=${local_epicslib}" >> $GITHUB_ENV
+        echo "EPICSEXTENSIONS=${local_epicsextensions}" >> $GITHUB_ENV
+        echo "QTCONTROLS_LIBS=${local_qtcontrols_libs}" >> $GITHUB_ENV
+        echo "CAQTDM_COLLECT=${local_caqtdm_collect}" >> $GITHUB_ENV
+        echo "QTBASE=${local_qtbase}" >> $GITHUB_ENV
+        echo "CAQTDM_CA_ARCHIVELIBS=${local_caqtdm_ca_archivelibs}" >> $GITHUB_ENV
+        echo "CAQTDM_LOGGING_ARCHIVELIBS=${local_caqtdm_logging_archivelibs}" >> $GITHUB_ENV
+        echo "QTDM_LIBINSTALL=${local_qtdm_libinstall}" >> $GITHUB_ENV
+        echo "QTDM_BININSTALL=${local_qtdm_bininstall}" >> $GITHUB_ENV
+        echo "PYTHONINCLUDE=${local_pythoninclude}" >> $GITHUB_ENV
         echo "PYTHONLIB=${local_pythonlib}" >> $GITHUB_ENV
                      
       shell: bash
