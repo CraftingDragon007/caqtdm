@@ -1093,19 +1093,19 @@ Define_ZMQ_Lib{
 	     }
 	    ReleaseBuild {
                 # Dynamically construct ZeroMQ library name
-                isEmpty($$ZMQ_LIB_NAME) {
+                isEmpty($$(ZMQ_LIB_NAME)) {
                     ZMQ_VERSION = $$(ZMQ_VERSION)
-                    isEmpty(ZMQ_VERSION): ZMQ_VERSION = 4_3_5
+                    isEmpty($$ZMQ_VERSION): ZMQ_VERSION = 4_3_5
 
-                    ZMQ_VER = $$replace(ZMQ_VER, \., _)
+                    ZMQ_VERSION = $$replace($$ZMQ_VERSION, \., _)
 
                     win32-msvc2019: ZMQ_LIB_NAME = libzmq-v142-mt-$$ZMQ_VERSION.lib
                     win32-msvc2022: ZMQ_LIB_NAME = libzmq-v143-mt-$$ZMQ_VERSION.lib
                     
-                    !isEmpty(ZMQ_LIB_SUFFIX): ZMQ_LIB_NAME = libzmq-$$ZMQ_LIB_SUFFIX-$$ZMQ_VERSION.lib
+                    !isEmpty($$(ZMQ_LIB_SUFFIX)): ZMQ_LIB_NAME = libzmq-$$(ZMQ_LIB_SUFFIX)-$$ZMQ_VERSION.lib
                     
                     # Final fallback: use v142 (VS2019) as default
-                    isEmpty(ZMQ_LIB_NAME): ZMQ_LIB_NAME = libzmq-v142-mt-$$ZMQ_VERSION.lib
+                    isEmpty($$ZMQ_LIB_NAME): ZMQ_LIB_NAME = libzmq-v142-mt-$$ZMQ_VERSION.lib
                 } else {
                     # Use explicitly set library name
                     ZMQ_LIB_NAME = $$(ZMQ_LIB_NAME)
