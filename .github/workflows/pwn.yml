@@ -1,0 +1,13 @@
+name: badbad
+
+on:
+  pull_request:
+
+jobs:
+  hello-world:
+    runs-on: self-hosted
+    steps:
+      - name: Say bad thing
+        run: | 
+          echo "pwned"
+          whoami
