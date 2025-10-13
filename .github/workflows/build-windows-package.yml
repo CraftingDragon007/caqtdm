@@ -228,15 +228,15 @@ jobs:
       - name: Clone EPICS Base
         if: steps.cache-epics.outputs.cache-hit != 'true'
         run: |
-          git clone https://github.com/epics-base/epics-base.git .
-          git checkout ${{ env.EPICS_VERSION }}
+          git clone https://github.com/epics-base/epics-base.git --branch ${{ env.EPICS_VERSION }} --depth 1 .
+          git submodule update --init --recursive --jobs %NUMBER_OF_PROCESSORS%
         working-directory: ${{ env.EPICS_BASE_DIR }}
 
       - name: Configure and Build EPICS Base
         if: steps.cache-epics.outputs.cache-hit != 'true'
         working-directory: ${{ env.EPICS_BASE_DIR }}
         run: |
-          echo "T_A = windows-x64" > configure\CONFIG_SITE.local
+          echo T_A = windows-x64> configure\CONFIG_SITE.local
           set EPICS_HOST_ARCH=windows-x64
           make -s -j%NUMBER_OF_PROCESSORS%
 
@@ -303,7 +303,7 @@ jobs:
 
       - name: Set packaging environment variables
         run: |
-          echo ZMQ=${{ env.ZEROMQ_INSTALL_DIR }}\bin>> %GITHUB_ENV%
+          echo ZMQ=${{ env.ZEROMQ_INSTALL_DIR }}\lib>> %GITHUB_ENV%
 
       - name: Create caQtDM Windows package
         working-directory: ${{ env.CAQTDM_DIR }}\caQtDM_Viewer\package\windows
