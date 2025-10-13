@@ -247,10 +247,10 @@ jobs:
         run: |
           $qtVersion = "${{ matrix.qt-version }}"
           $majorVersion = $qtVersion.Split('.')[0]
-          $caqtdmVer = "QT$majorVersion"
-          
-          Add-Content -Path $env:GITHUB_ENV -Value "CAQTDMVER=$caqtdmVer"
-          Write-Host "Set CAQTDMVER=$caqtdmVer for Qt version $qtVersion"
+          $caqtdmQtVer = "QT$majorVersion"
+
+          Add-Content -Path $env:GITHUB_ENV -Value "CAQTDMQTVER=$caqtdmQtVer"
+          Write-Host "Set CAQTDMQTVER=$caqtdmQtVer for Qt version $qtVersion"
 
       - name: Set caQtDM build environment variables
         run: |
