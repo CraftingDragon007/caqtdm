@@ -84,17 +84,13 @@ jobs:
           path: ${{ github.workspace }}\jom
           key: jom-1.1.4-${{ runner.os }}
 
-      - name: Download jom
+      - name: Download jom & set up JOM
         if: steps.cache-jom.outputs.cache-hit != 'true'
         run: |
           curl -L -o jom.zip https://download.qt.io/official_releases/jom/jom_1_1_4.zip
           mkdir ${{ github.workspace }}\jom
           tar -xf jom.zip -C ${{ github.workspace }}\jom
-          dir ${{ github.workspace }}\jom
-
-      - name: Add JOM to PATH
-        shell: pwsh
-        run: echo "${{ github.workspace }}\jom" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          echo ${{ github.workspace }}\jom>> %GITHUB_ENV%
 
       - name: Verify JOM installation
         run: |
@@ -236,9 +232,8 @@ jobs:
         if: steps.cache-epics.outputs.cache-hit != 'true'
         working-directory: ${{ env.EPICS_BASE_DIR }}
         run: |
-          echo T_A = windows-x64> configure\CONFIG_SITE.local
           set EPICS_HOST_ARCH=windows-x64
-          make -s -j%NUMBER_OF_PROCESSORS%
+          make -j%NUMBER_OF_PROCESSORS%
 
       - name: Set EPICS environment variables
         run: |
