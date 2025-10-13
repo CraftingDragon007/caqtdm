@@ -140,9 +140,9 @@ bool OpcUaCore::connectOpc(const QString &url)
         m_client,
         &QOpcUaClient::endpointsRequestFinished,
         this,
-        [this, url, conn](const QVector<QOpcUaEndpointDescription> &returnedEndpoints,
+        [this, conn](const QVector<QOpcUaEndpointDescription> &returnedEndpoints,
                     QOpcUa::UaStatusCode status,
-                    const QUrl &) {
+                    const QUrl &url) {
             QObject::disconnect(conn);
             // If no endpoints are returned at all, there is something fundamentally wrong with the server.
             // Thus, not even the fallbackEndpoint is checked from the pv, and we error out here.
@@ -150,10 +150,9 @@ bool OpcUaCore::connectOpc(const QString &url)
                 VERBOSELOG("No endpoints received or status not good.");
                 return;
             }
-
             // Add a fallbackEndpoint which is from the provided pv string (url)
             QOpcUaEndpointDescription fallbackEndpoint = returnedEndpoints.constFirst();
-            fallbackEndpoint.setEndpointUrl(url);
+            fallbackEndpoint.setEndpointUrl(url.toString());
             int fallbackPort = QUrl(url).port(
                 DEFAULT_OPCUA_PORT); // Fallback port is the port given in the pv string or the hardcoded default, if none given.
 
@@ -387,9 +386,7 @@ void OpcUaCore::unsubscribeFromNode(const QString &nodeId)
 
     if (node) {
         node->disableMonitoring(QOpcUa::NodeAttribute::Value);
-        if (!(m_client && m_client->deleteNode(node->nodeId()))) {
-            node->deleteLater();
-        }
+        node->deleteLater();
     }
 }
 
