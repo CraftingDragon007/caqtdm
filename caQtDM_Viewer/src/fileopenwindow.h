@@ -286,6 +286,8 @@ private:
      QTableWidget* pvTable;
      QTimer *timer;
 
+     QTimer *heartBeatTimer;
+
      bool mustOpenFile;
 
      QString lastFilePath;

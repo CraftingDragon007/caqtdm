@@ -60,6 +60,8 @@
 #include <QPrinter>
 #include <QPrintDialog>
 #endif
+#include <cahmiconfigtransferitem.h>
+#include <hmiapplicationeventfilter.h>
 #include <QClipboard>
 
 #include <QUiLoader>
@@ -130,6 +132,12 @@ public:
     void ComputeNumericMaxMinPrec(QWidget* widget, const knobData &data);
     void UpdateGauge(EAbstractGauge *w, const knobData &data);
     ControlsInterface * getControlInterface(QString plugininterface);
+
+    static QList<QSharedPointer<caHMIConfigTransferItem>> externalHmiConfigList;
+    static QReadWriteLock externalHmiConfigListLock;
+
+    static QList<caHMIConfigTransferItem*> hmiConfigList;
+    static QReadWriteLock hmiConfigListLock;
 
     // interface implementation
     int addMonitor(QWidget *thisW, knobData *data, QString pv, QWidget *w, int *specData, QMap<QString, QString> map, QString *pvRep);
@@ -385,6 +393,7 @@ private:
     qreal fontResize(double factX, double factY, QVariantList list, int usedIndex);
     ControlsInterface *getPluginInterface(QWidget *w);
     void UndefinedMacrosWindow();
+    void GlobalShortcutWindow();
 
 #ifdef MOBILE
     bool eventFilter(QObject *obj, QEvent *event);
@@ -412,6 +421,8 @@ private:
     QMap<QString, QString> unknownMacrosList;
     QTableWidget* macroTable;
     QDialog *macroWindow;
+
+    QDialog *shortcutWindow;
 
     int level;
     QString cainclude_path;
@@ -463,6 +474,17 @@ private:
 
     QMap<int, caStripPlot*> stripList;          // list of stripplots with key group
     QList<int> stripGroupList;                  // group numbers found
+
+    bool containsShortcut(const QKeySequence& sequence, Qt::Key qtKey, Qt::KeyboardModifiers qtModifiers);
+
+    HMIApplicationEventFilter *globalEventFilter;
+
+    void hmiHandleKeyPressed(QObject *target, QKeyEvent *event);
+
+    void hmiHandleMouse(QObject *target, QMouseEvent *event);
+
+    void hmiHandleIncomingEvent(QObject* target, QEvent *event, bool isSourceExternal);
+
     QHash<QString, QString> softvars;                // use a hash list to test if same variable names
 
     QString defaultPlugin;
@@ -474,6 +496,7 @@ private:
 private slots:
     void Callback_CaCalc(double value) ;
     void Callback_UndefinedMacrowindowExit();
+    void Callback_GlobalShortcutWindowExit();
     void Callback_EApplyNumeric(double value);
     void Callback_ENumeric(double value);
     void Callback_Spinbox(double value);
@@ -512,6 +535,8 @@ private slots:
     void Callback_WriteDetectedValues(QWidget* w);
     void Callback_CopyMarked();
     void clearSelection();
+
+    void Callback_ExternalHmiEventReceived(int eventType, int senderPid, qint64 timestamp, const QByteArray& payload);
 
     void Callback_ReloadWindowL() {
 
