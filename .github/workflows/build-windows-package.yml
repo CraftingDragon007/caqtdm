@@ -251,7 +251,7 @@ jobs:
           echo QWTLIB=${{ env.QWT_INSTALL_DIR }}\lib>> %GITHUB_ENV%
           echo QWTVERSION=6.1>> %GITHUB_ENV%
           echo QWTLIBNAME=qwt>> %GITHUB_ENV%
-          echo CAQTDMVER=QT6>> %GITHUB_ENV%
+          echo CAQTDMQTVER=QT6>> %GITHUB_ENV%
           echo ZMQ=${{ env.ZEROMQ_INSTALL_DIR }}>> %GITHUB_ENV%
           echo ZMQINC=${{ env.ZEROMQ_INSTALL_DIR }}\include>> %GITHUB_ENV%
           echo ZMQLIB=${{ env.ZEROMQ_INSTALL_DIR }}\lib>> %GITHUB_ENV%
