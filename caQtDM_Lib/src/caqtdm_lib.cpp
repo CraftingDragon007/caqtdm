@@ -7074,11 +7074,11 @@ void CaQtDM_Lib::hmiHandleIncomingEvent(QObject *target, QEvent *event, bool isS
 
                         emit widget->caHMIConfigKeyPressReceived(shortcut);
 
-                        if (item->outputA().length() == 0 ) {
+                        if (item->outputA().length() != 0 ) {
                             TreatRequestedValue(item->outputA(), keyText, fType, w1);
                         }
 
-                        if (item->outputB().length() == 0) {
+                        if (item->outputB().length() != 0) {
                             TreatRequestedValue(item->outputB(), keyModifiersText, fType, w1);
                         }
                     }
