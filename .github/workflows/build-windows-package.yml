@@ -7,12 +7,7 @@ on:
     - cron: '0 2 * * *'
 
 env:
-  QT_VERSION: '6.10.0'
   QT_MODULES: 'qtserialbus qtpositioning qt5compat qtserialport qtmultimedia qtsensors qtwebsockets qtimageformats qtwebview'
-
-  QWT_VERSION: '6.3'
-  ZEROMQ_VERSION: '4.3.5'
-  EPICS_VERSION: 'R7.0.9'
 
   DEPS_INSTALL_ROOT: ${{ github.workspace }}\deps
 
@@ -29,6 +24,10 @@ jobs:
       fail-fast: false
       matrix:
         windows-version: ['windows-2025']
+        qt-version: ['6.10.0']
+        qwt-version: ['6.3']
+        zeromq-version: ['4.3.5']
+        epics-version: ['R7.0.9']
         
     defaults:
       run:
@@ -40,10 +39,10 @@ jobs:
         with:
           path: caqtdm
 
-      - name: Install Qt ${{ env.QT_VERSION }}
+      - name: Install Qt ${{ matrix.qt-version }}
         uses: jurplel/install-qt-action@v4
         with:
-          version: ${{ env.QT_VERSION }}
+          version: ${{ matrix.qt-version }}
           modules: ${{ env.QT_MODULES }}
           host: windows
           target: desktop
@@ -55,27 +54,27 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.QWT_INSTALL_DIR }}
-          key: qwt-${{ env.QWT_VERSION }}-qt${{ env.QT_VERSION }}-${{ matrix.windows-version }}-${{ runner.arch }}
+          key: qwt-${{ matrix.qwt-version }}-qt${{ matrix.qt-version }}-${{ matrix.windows-version }}-${{ runner.arch }}
           restore-keys: |
-            qwt-${{ env.QWT_VERSION }}-qt${{ env.QT_VERSION }}-${{ matrix.windows-version }}-
+            qwt-${{ matrix.qwt-version }}-qt${{ matrix.qt-version }}-${{ matrix.windows-version }}-
 
       - name: Cache ZeroMQ
         id: cache-zeromq
         uses: actions/cache@v4
         with:
           path: ${{ env.ZEROMQ_INSTALL_DIR }}
-          key: zeromq-${{ env.ZEROMQ_VERSION }}-${{ matrix.windows-version }}-${{ runner.arch }}
+          key: zeromq-${{ matrix.zeromq-version }}-${{ matrix.windows-version }}-${{ runner.arch }}
           restore-keys: |
-            zeromq-${{ env.ZEROMQ_VERSION }}-${{ matrix.windows-version }}-
+            zeromq-${{ matrix.zeromq-version }}-${{ matrix.windows-version }}-
 
       - name: Cache EPICS Base
         id: cache-epics
         uses: actions/cache@v4
         with:
           path: ${{ env.EPICS_BASE_DIR }}
-          key: epics-${{ env.EPICS_VERSION }}-${{ matrix.windows-version }}-${{ runner.arch }}
+          key: epics-${{ matrix.epics-version }}-${{ matrix.windows-version }}-${{ runner.arch }}
           restore-keys: |
-            epics-${{ env.EPICS_VERSION }}-${{ matrix.windows-version }}-
+            epics-${{ matrix.epics-version }}-${{ matrix.windows-version }}-
 
       - name: Cache JOM
         id: cache-jom
@@ -141,7 +140,7 @@ jobs:
 
       - name: Clone Qwt
         if: steps.cache-qwt.outputs.cache-hit != 'true'
-        run: git clone https://git.code.sf.net/p/qwt/git --single-branch --branch qwt-${{ env.QWT_VERSION }} qwt-src
+        run: git clone https://git.code.sf.net/p/qwt/git --single-branch --branch qwt-${{ matrix.qwt-version }} qwt-src
         working-directory: ${{ github.workspace }}
 
       - name: Configure, Build and Install Qwt
@@ -181,7 +180,7 @@ jobs:
         run: |
           git clone https://github.com/zeromq/libzmq.git libzmq-src
           cd libzmq-src
-          git checkout v${{ env.ZEROMQ_VERSION }}
+          git checkout v${{ matrix.zeromq-version }}
         working-directory: ${{ github.workspace }}
 
       - name: Build and Install ZeroMQ
@@ -216,7 +215,7 @@ jobs:
       - name: Set ZeroMQ environment variables
         shell: pwsh
         run : |
-          $zmqVersionUnderscore = "${{ env.ZEROMQ_VERSION }}".Replace(".", "_")
+          $zmqVersionUnderscore = "${{ matrix.zeromq-version }}".Replace(".", "_")
           Add-Content -Path $env:GITHUB_ENV -Value "ZMQLIBRARY=libzmq-${{ env.MSVC_SUFFIX }}-mt-$zmqVersionUnderscore.lib"
           Add-Content -Path $env:GITHUB_ENV -Value "ZMQ_LIB_NAME=libzmq-${{ env.MSVC_SUFFIX }}-mt-$zmqVersionUnderscore.lib"
 
@@ -227,7 +226,7 @@ jobs:
       - name: Clone EPICS Base
         if: steps.cache-epics.outputs.cache-hit != 'true'
         run: |
-          git clone https://github.com/epics-base/epics-base.git --branch ${{ env.EPICS_VERSION }} --depth 1 .
+          git clone https://github.com/epics-base/epics-base.git --branch ${{ matrix.epics-version }} --depth 1 .
           git submodule update --init --recursive --jobs %NUMBER_OF_PROCESSORS%
         working-directory: ${{ env.EPICS_BASE_DIR }}
 
@@ -243,6 +242,16 @@ jobs:
           echo EPICS_BASE=${{ env.EPICS_BASE_DIR }}>> %GITHUB_ENV%
           echo EPICS_HOST_ARCH=windows-x64>> %GITHUB_ENV%
 
+      - name: Set Qt version mapping
+        shell: pwsh
+        run: |
+          $qtVersion = "${{ matrix.qt-version }}"
+          $majorVersion = $qtVersion.Split('.')[0]
+          $caqtdmVer = "QT$majorVersion"
+          
+          Add-Content -Path $env:GITHUB_ENV -Value "CAQTDMVER=$caqtdmVer"
+          Write-Host "Set CAQTDMVER=$caqtdmVer for Qt version $qtVersion"
+
       - name: Set caQtDM build environment variables
         run: |
           echo QTHOME=${{ env.QT_ROOT_DIR }}>> %GITHUB_ENV%
@@ -251,11 +260,10 @@ jobs:
           echo QWTLIB=${{ env.QWT_INSTALL_DIR }}\lib>> %GITHUB_ENV%
           echo QWTVERSION=6.1>> %GITHUB_ENV%
           echo QWTLIBNAME=qwt>> %GITHUB_ENV%
-          echo CAQTDMQTVER=QT6>> %GITHUB_ENV%
           echo ZMQ=${{ env.ZEROMQ_INSTALL_DIR }}>> %GITHUB_ENV%
           echo ZMQINC=${{ env.ZEROMQ_INSTALL_DIR }}\include>> %GITHUB_ENV%
           echo ZMQLIB=${{ env.ZEROMQ_INSTALL_DIR }}\lib>> %GITHUB_ENV%
-          echo ZMQ_VERSION=${{ env.ZEROMQ_VERSION }}>> %GITHUB_ENV%
+          echo ZMQ_VERSION=${{ matrix.zeromq-version }}>> %GITHUB_ENV%
           echo EPICSINCLUDE=${{ env.EPICS_BASE }}\include>> %GITHUB_ENV%
           echo QTCONTROLS_LIBS=${{ env.CAQTDM_DIR }}\caQtDM_Binaries>> %GITHUB_ENV%
           echo CAQTDM_COLLECT=${{ env.CAQTDM_DIR }}\caQtDM_Binaries>> %GITHUB_ENV%
@@ -302,5 +310,5 @@ jobs:
       - name: Upload caQtDM Windows package artifact
         uses: actions/upload-artifact@v4
         with:
-          name: caQtDM_x64_${{ matrix.windows-version }}
+          name: caQtDM_x64_${{ matrix.windows-version }}_qt${{ matrix.qt-version }}_qwt${{ matrix.qwt-version }}_zmq${{ matrix.zeromq-version }}_epics${{ matrix.epics-version }}
           path: ${{ github.workspace }}\caQtDM_x64.msi
