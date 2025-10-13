@@ -55,27 +55,27 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.QWT_INSTALL_DIR }}
-          key: qwt-${{ env.QWT_VERSION }}-qt${{ env.QT_VERSION }}-${{ runner.os }}-${{ runner.arch }}
+          key: qwt-${{ env.QWT_VERSION }}-qt${{ env.QT_VERSION }}-${{ matrix.windows-version }}-${{ runner.arch }}
           restore-keys: |
-            qwt-${{ env.QWT_VERSION }}-qt${{ env.QT_VERSION }}-${{ runner.os }}-
+            qwt-${{ env.QWT_VERSION }}-qt${{ env.QT_VERSION }}-${{ matrix.windows-version }}-
 
       - name: Cache ZeroMQ
         id: cache-zeromq
         uses: actions/cache@v4
         with:
           path: ${{ env.ZEROMQ_INSTALL_DIR }}
-          key: zeromq-${{ env.ZEROMQ_VERSION }}-${{ runner.os }}-${{ runner.arch }}
+          key: zeromq-${{ env.ZEROMQ_VERSION }}-${{ matrix.windows-version }}-${{ runner.arch }}
           restore-keys: |
-            zeromq-${{ env.ZEROMQ_VERSION }}-${{ runner.os }}-
+            zeromq-${{ env.ZEROMQ_VERSION }}-${{ matrix.windows-version }}-
 
       - name: Cache EPICS Base
         id: cache-epics
         uses: actions/cache@v4
         with:
           path: ${{ env.EPICS_BASE_DIR }}
-          key: epics-${{ env.EPICS_VERSION }}-${{ runner.os }}-${{ runner.arch }}
+          key: epics-${{ env.EPICS_VERSION }}-${{ matrix.windows-version }}-${{ runner.arch }}
           restore-keys: |
-            epics-${{ env.EPICS_VERSION }}-${{ runner.os }}-
+            epics-${{ env.EPICS_VERSION }}-${{ matrix.windows-version }}-
 
       - name: Cache JOM
         id: cache-jom
