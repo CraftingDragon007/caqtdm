@@ -194,6 +194,31 @@ jobs:
           cmake --build . --config Release
           cmake --install . --config Release
 
+      - name: Set MSVC_SUFFIX environment variable
+        shell: pwsh
+        run: |
+          $MSVC_SUFFIX = ""
+          if ($env:VC_TOOLS_VERSION) {
+            $vcToolParts = $env:VC_TOOLS_VERSION.Split('.'); if ($vcToolParts.Length -ge 2 -and $vcToolParts[0] -eq "14") {
+            if ($vcToolParts[1] -eq "2") { $MSVC_SUFFIX = "v142" } elseif ($vcToolParts[1] -eq "3") { $MSVC_SUFFIX = "v143" }
+            }
+          }
+          if (-not $MSVC_SUFFIX) {
+            if ($env:VisualStudioVersion) {
+            if ($env:VisualStudioVersion -like "17.*") { $MSVC_SUFFIX = "v143" } elseif ($env:VisualStudioVersion -like "16.*") { $MSVC_SUFFIX = "v142" }
+            }
+          }
+          if (-not $MSVC_SUFFIX) {
+            Write-Warning "Could not determine MSVC suffix. Defaulting to v143."; $MSVC_SUFFIX = "v143"
+          }
+          Add-Content -Path $env:GITHUB_ENV -Value "MSVC_SUFFIX=$MSVC_SUFFIX"
+          Write-Host "Exported MSVC_SUFFIX=$MSVC_SUFFIX to GITHUB_ENV"
+
+      - name: Set ZeroMQ environment variables
+        run : |
+          echo ZMQLIBRARY=libzmq-${{ env.MSVC_SUFFIX }}-mt-${{ env.ZEROMQ_VERSION }}.lib>> %GITHUB_ENV%
+          echo ZMQ_LIB_NAME=libzmq-${{ env.MSVC_SUFFIX }}-mt-${{ env.ZEROMQ_VERSION }}.lib>> %GITHUB_ENV%
+
       - name: Create EPICS Base directory
         if: steps.cache-epics.outputs.cache-hit != 'true'
         run: mkdir ${{ env.EPICS_BASE_DIR }}
