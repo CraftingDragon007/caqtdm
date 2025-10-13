@@ -215,9 +215,11 @@ jobs:
           Write-Host "Exported MSVC_SUFFIX=$MSVC_SUFFIX to GITHUB_ENV"
 
       - name: Set ZeroMQ environment variables
+        shell: pwsh
         run : |
-          echo ZMQLIBRARY=libzmq-${{ env.MSVC_SUFFIX }}-mt-${{ env.ZEROMQ_VERSION }}.lib>> %GITHUB_ENV%
-          echo ZMQ_LIB_NAME=libzmq-${{ env.MSVC_SUFFIX }}-mt-${{ env.ZEROMQ_VERSION }}.lib>> %GITHUB_ENV%
+          $zmqVersionUnderscore = "${{ env.ZEROMQ_VERSION }}".Replace(".", "_")
+          Add-Content -Path $env:GITHUB_ENV -Value "ZMQLIBRARY=libzmq-${{ env.MSVC_SUFFIX }}-mt-$zmqVersionUnderscore.lib"
+          Add-Content -Path $env:GITHUB_ENV -Value "ZMQ_LIB_NAME=libzmq-${{ env.MSVC_SUFFIX }}-mt-$zmqVersionUnderscore.lib"
 
       - name: Create EPICS Base directory
         if: steps.cache-epics.outputs.cache-hit != 'true'
