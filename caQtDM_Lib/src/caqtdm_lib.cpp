@@ -7108,11 +7108,11 @@ void CaQtDM_Lib::hmiHandleIncomingEvent(QObject *target, QEvent *event, bool isS
                 QString xText = QString::number(point.x());
                 QString yText = QString::number(point.y());
 
-                if (item->outputA().length() == 0 ) {
+                if (item->outputA().length() != 0 ) {
                     TreatRequestedValue(item->outputA(), xText, fType, w1);
                 }
 
-                if (item->outputB().length() == 0) {
+                if (item->outputB().length() != 0) {
                     TreatRequestedValue(item->outputB(), yText, fType, w1);
                 }
 
