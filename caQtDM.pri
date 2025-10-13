@@ -1092,8 +1092,45 @@ Define_ZMQ_Lib{
                 LIBS += $$(ZMQLIB)/libzmq.lib
 	     }
 	    ReleaseBuild {
-                LIBS += $$(ZMQLIB)/libzmq-v142-mt-4_3_5.lib
-	    }
+                _ZMQ_CONSTRUCTED_LIB_NAME = ""
+                
+                ZMQ_VERSION = $$(ZMQ_VERSION)
+
+                isEmpty(ZMQ_VERSION) {
+                    ZMQ_VERSION = 4_3_5
+                }
+
+                _ZMQ_VERSION_PARTS = $$split(ZMQ_VERSION, ".")
+				ZMQ_VERSION = $$join(_ZMQ_VERSION_PARTS, "_")
+                message(ZeroMQ version: $${ZMQ_VERSION})
+
+                greaterThan(QMAKE_MSC_VER, 1929): \ 
+                win32 {
+                    _ZMQ_CONSTRUCTED_LIB_NAME = libzmq-v143-mt-$${ZMQ_VERSION}.lib
+                } else: greaterThan(QMAKE_MSC_VER, 1919): \
+                win32 {
+                    _ZMQ_CONSTRUCTED_LIB_NAME = libzmq-v142-mt-$${ZMQ_VERSION}.lib
+                }
+
+                message(Visual Studio version detected: $${_ZMQ_CONSTRUCTED_LIB_NAME})
+
+                ZMQ_LIB_SUFFIX = $$(ZMQ_LIB_SUFFIX)
+                !isEmpty(ZMQ_LIB_SUFFIX) {
+                    _ZMQ_CONSTRUCTED_LIB_NAME = libzmq-$$(ZMQ_LIB_SUFFIX)-$${ZMQ_VERSION}.lib
+                }
+                
+                isEmpty(_ZMQ_CONSTRUCTED_LIB_NAME): _ZMQ_CONSTRUCTED_LIB_NAME = libzmq-v142-mt-$${ZMQ_VERSION}.lib
+
+                _ZMQ_OVERRIDE_LIB_NAME = $$(ZMQ_LIB_NAME)
+                isEmpty(_ZMQ_OVERRIDE_LIB_NAME) {
+                    ZMQ_LIB_NAME = $${_ZMQ_CONSTRUCTED_LIB_NAME}
+                } else {
+                    ZMQ_LIB_NAME = $${_ZMQ_OVERRIDE_LIB_NAME}
+                }
+                
+                message(Using ZeroMQ library: $${ZMQ_LIB_NAME})
+                LIBS += $$(ZMQLIB)/$${ZMQ_LIB_NAME}
+            }
 	}
 }
 
