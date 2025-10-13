@@ -7074,10 +7074,13 @@ void CaQtDM_Lib::hmiHandleIncomingEvent(QObject *target, QEvent *event, bool isS
 
                         emit widget->caHMIConfigKeyPressReceived(shortcut);
 
-                        if (item->outputA().length() == 0 || item->outputB().length() == 0) return;
+                        if (item->outputA().length() == 0 ) {
+                            TreatRequestedValue(item->outputA(), keyText, fType, w1);
+                        }
 
-                        TreatRequestedValue(item->outputA(), keyText, fType, w1);
-                        TreatRequestedValue(item->outputB(), keyModifiersText, fType, w1);
+                        if (item->outputB().length() == 0) {
+                            TreatRequestedValue(item->outputB(), keyModifiersText, fType, w1);
+                        }
                     }
                 }
             }
@@ -7105,10 +7108,13 @@ void CaQtDM_Lib::hmiHandleIncomingEvent(QObject *target, QEvent *event, bool isS
                 QString xText = QString::number(point.x());
                 QString yText = QString::number(point.y());
 
-                if (item->outputA().length() == 0 || item->outputB().length() == 0) return;
+                if (item->outputA().length() == 0 ) {
+                    TreatRequestedValue(item->outputA(), xText, fType, w1);
+                }
 
-                TreatRequestedValue(item->outputA(), xText, fType, w1);
-                TreatRequestedValue(item->outputB(), yText, fType, w1);
+                if (item->outputB().length() == 0) {
+                    TreatRequestedValue(item->outputB(), yText, fType, w1);
+                }
 
             }
         }
