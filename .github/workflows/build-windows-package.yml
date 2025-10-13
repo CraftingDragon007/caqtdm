@@ -84,6 +84,9 @@ jobs:
           path: ${{ github.workspace }}\jom
           key: jom-1.1.4-${{ runner.os }}
 
+      - name: Create GITHUB_ENV if not exists
+        run: if not exist %GITHUB_ENV% type nul > %GITHUB_ENV%
+
       - name: Download jom & set up JOM
         if: steps.cache-jom.outputs.cache-hit != 'true'
         run: |
