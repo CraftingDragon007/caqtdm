@@ -3414,45 +3414,46 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
             indexList.append(index);
             hmiConfigWidget->setChannel(pv);
             nbMonitors++;
-            index++;
         }
+        index++;
         if(hmiConfigWidget->channelB().size() > 0) {
             int num = addMonitor(myWidget, &kData, hmiConfigWidget->channelB(), w1, specData, map, &pv);
             integerList.append(num);
             indexList.append(index);
             hmiConfigWidget->setChannelB(pv);
             nbMonitors++;
-            index++;
         }
+        index++;
         if(hmiConfigWidget->channelC().size() > 0) {
             int num = addMonitor(myWidget, &kData, hmiConfigWidget->channelC(), w1, specData, map, &pv);
             integerList.append(num);
             indexList.append(index);
             hmiConfigWidget->setChannelC(pv);
             nbMonitors++;
-            index++;
         }
+        index++;
         if(hmiConfigWidget->channelD().size() > 0) {
             int num = addMonitor(myWidget, &kData, hmiConfigWidget->channelD(), w1, specData, map, &pv);
             integerList.append(num);
             indexList.append(index);
             hmiConfigWidget->setChannelD(pv);
-            index++;
+            nbMonitors++;
         }
+        index++;
         if(hmiConfigWidget->outputA().size() > 0) {
             int num = addMonitor(myWidget, &kData, hmiConfigWidget->outputA(), w1, specData, map, &pv);
             integerList.append(num);
             indexList.append(index);
             hmiConfigWidget->setOutputA(pv);
-            index++;
         }
+        index++;
         if(hmiConfigWidget->outputB().size() > 0) {
             int num = addMonitor(myWidget, &kData, hmiConfigWidget->outputB(), w1, specData, map, &pv);
             integerList.append(num);
             indexList.append(index);
             hmiConfigWidget->setOutputB(pv);
-            index++;
         }
+        index++;
 
         caHMIConfigTransferItem* transferItem = new caHMIConfigTransferItem(hmiConfigWidget);
         transferItem->setEnabled(true);
