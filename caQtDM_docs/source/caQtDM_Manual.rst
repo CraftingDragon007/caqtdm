@@ -2490,6 +2490,7 @@ has no equivalent in MEDM
    can be configured just like any other object in Qt Designer.
 
 
+   **Properties:**
    The following properties are available:
 
    ``outputA``
@@ -2521,7 +2522,8 @@ has no equivalent in MEDM
       Type: Qt key sequence string (e.g. "Ctrl+H" or "Ctrl+H", "Ctrl+Shift+H").
 
    ``valueOrCalc``
-      Selects whether to use a literal value or a calculated epics calc expression. Channels A-D can be used in the expression.
+      Specify either a literal value or a calculated epics calc expression. Channels A-D can be used in the epics calc expression.
+      Wheter to handle it as a static value or as an epics calc string can be configured by setting ``calculationType``.
       This only applies if ``captureType`` is set to ``KeyboardSet``.
 
       Type: QVariant (string or numeric).
@@ -2540,7 +2542,7 @@ has no equivalent in MEDM
 
       Type: enum. Valid values:
 
-      - ``KeyboardValue`` — capture keyboard input and emit the entered value. (Will write the key into ``outputA`` and potential modifiers into ``outputB``).
+      - ``KeyboardValue`` — capture keyboard input and emit the entered value. (Will write the key into ``outputA`` and potential modifiers into ``outputB``.) (Both values are hex numbers, the mapping for the keys can be found `here <https://doc.qt.io/qt-6/qt.html#Key-enum>`_ and the mapping for the modifiers `here <https://doc.qt.io/qt-6/qt.html#KeyboardModifier-enum>`_)
       - ``KeyboardSet`` — capture keyboard input and apply/set the value if the received shortcut equals the ``shortcut`` property. (Can be a literal value or a calculated epics calc expression that is defined in the ``valueOrCalc`` property.)
       - ``MouseMove`` — capture mouse movement events.
       - ``MousePress`` — capture mouse press/click events.
@@ -2550,17 +2552,17 @@ has no equivalent in MEDM
 
       Type: enum. Valid values:
 
-      - ``Local`` — capture within the local widget/window context. (When capturing mouse events, this means within the parent container of the caHMIConfig widget (e.g. ``caFrame``, ``MainWindow``, etc.) (``0,0`` will be the top-left corner of the parent container). When capturing keyboard events, this means when the parent window has focus. )
-      - ``Global`` — capture caQtDM application-wide and beyond (including other instances of caQtDM, useful for setting global keyboard shortcuts. This is limited to the current user session and only to caQtDM processes).
+      - ``Local`` — capture within the local widget/window context. (When capturing mouse events, this means within the parent container of the caHMIConfig widget (e.g. ``caFrame``, ``MainWindow``, etc.) ``0,0`` will be the top-left corner of the parent container). When capturing keyboard events, this means when the parent window has focus. )
+      - ``Global`` — capture caQtDM application-wide and beyond (including other instances of caQtDM, useful for setting global keyboard shortcuts. This is limited to the current user session and only to caQtDM processes). (When capturing mouse events this will capture the mouse events of all open caQtDM windows, ``0,0`` will be the cursors position inside the interacted window.)
 
    ``mouseSignalRectSize``
-      Size of the mouse signal interaction rectangle in pixels. This allows you to pass a custom size with the ``void caHMIConfigMouse(QRect rect)`` signal.
+      Size of the mouse signal interaction rectangle in pixels. This allows you to pass a custom size with the ``caHMIConfigMouse(QRect rect)`` signal.
       This only applies if ``captureType`` is set to ``MouseMove`` or ``MousePress`` and the before mentioned signal is used.
 
       Type: ``QSize`` (width × height).
 
 
-
+   **Signals:**
    The following signals are emitted by the caHMIConfig widget:
 
    ``caHMIConfigKeyPressReceived(QKeySequence data)``
@@ -2580,6 +2582,20 @@ has no equivalent in MEDM
 
    ``caHMIConfigValueSet(QVariant value)``
       Emitted when a value is determined by the widget (either a literal SetValue or a calculated result). The ``QVariant`` carries the value, can be numeric or a string.
+
+   **Type of Output Channel Data**
+   The type of output varies depending on the configuration, here is a table depicting different output scenarios:
+
+   .. csv-table:: Output scenarios
+      :header: "outputA", "outputB", "captureType", "calculationType"
+
+      "pressed Key (`Mapping <https://doc.qt.io/qt-6/qt.html#Key-enum>`_)", "keyboard Modifiers (`Mapping <https://doc.qt.io/qt-6/qt.html#KeyboardModifier-enum>`_)", "KeyboardValue", "n/a"
+      "the literal value of valueOrCalc", "n/a", "KeyboardSet", "SetValue"
+      "result of the epics calc expression", "n/a", "KeyboardSet", "Calc"
+      "x coordinate of the mouse position", "y coordinate of the mouse position", "MouseMove", "n/a",
+      "x coordinate of the mouse position", "y coordinate of the mouse position", "MousePress", "n/a"
+
+
 
 
 --------------
