@@ -93,7 +93,6 @@ protected:
     void paintEvent(QPaintEvent *ev) override;
 
 signals:
-    void caHMIConfigInputReceived(int data);
     void caHMIConfigKeyPressReceived(QKeySequence data);
     void caHMIConfigMouseX(int x);
     void caHMIConfigMouseY(int y);

@@ -475,6 +475,8 @@ private:
     QMap<int, caStripPlot*> stripList;          // list of stripplots with key group
     QList<int> stripGroupList;                  // group numbers found
 
+    bool hasCommonParent(QObject *origin, QObject *target);
+
     bool containsShortcut(const QKeySequence& sequence, Qt::Key qtKey, Qt::KeyboardModifiers qtModifiers);
 
     HMIApplicationEventFilter *globalEventFilter;
@@ -483,7 +485,7 @@ private:
 
     void hmiHandleMouse(QObject *target, QMouseEvent *event);
 
-    void hmiHandleIncomingEvent(QObject* target, QEvent *event, bool isSourceExternal);
+    void hmiHandleIncomingEvent(QObject* target, QEvent *event, QEvent *originalEvent, bool isSourceExternal);
 
     QHash<QString, QString> softvars;                // use a hash list to test if same variable names
 
