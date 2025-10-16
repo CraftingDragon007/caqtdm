@@ -1,6 +1,6 @@
-=============
+==============
 caQtDM Manual
-=============
+==============
 
 | **Anton Mezger/Helge Brands**
 | **May 2025**
@@ -154,7 +154,7 @@ Min:
    -  Wix 3.0
 
 Max:
-   -  Qt 6.9.0
+   -  Qt 6.10.0
    -  Qwt 6.3.0
    -  EPICS 7.0.9
    -  MS Visual Studio 2022
@@ -2473,6 +2473,114 @@ represents a simplified Wheelswitch
 
    :ref:`geometry` is used for any object
    **Description:**
+
+--------------
+
+.. _caHMIConfig:
+
+``caHMIConfig``
+~~~~~~~~~~~~~~~
+has no equivalent in MEDM
+
+   **Description:**
+   The caHMIConfig object is used to configure what to do with certain
+   Human Machine Interface (HMI) events. This means it supports
+   capturing mouse events and keyboard shortcuts. The object itself is
+   invisible at runtime and does not interact with the user. It
+   can be configured just like any other object in Qt Designer.
+
+
+   The following properties are available:
+
+   ``outputA``
+      1st Output, primary output route.
+      Type: channel name/identifier (string)
+
+   ``outputB``
+      2nd Output, secondary/alternative output route.
+      Type: channel name/identifier (string)
+
+   ``channel``
+      Primary input channel/PV name.
+      Type: channel name/identifier (string)
+
+   ``channelB``
+      Secondary input channel.
+      Type: channel name/identifier (string)
+
+   ``channelC``
+      Tertiary input channel.
+      Type: channel name/identifier (string)
+
+   ``channelD``
+      Quaternary input channel.
+      Type: channel name/identifier (string)
+
+   ``shortcut``
+      Keyboard shortcut to trigger an action. Can be multiple different shortcuts (e.g. "Ctrl+H", "Ctrl+Shift+H") \
+      Type: Qt key sequence string (e.g. "Ctrl+H" or "Ctrl+H", "Ctrl+Shift+H").
+
+   ``valueOrCalc``
+      Selects whether to use a literal value or a calculated epics calc expression. Channels A-D can be used in the expression.
+      This only applies if ``captureType`` is set to ``KeyboardSet``.
+
+      Type: QVariant (string or numeric).
+
+   ``calculationType``
+      Calculation mode for determining the output value.
+      This only applies if ``captureType`` is set to ``KeyboardSet``.
+
+      Type: enum. Valid values:
+
+      - ``SetValue`` — use a literal/static value.
+      - ``Calc`` — compute the value from an epics calc expression.
+
+   ``captureType``
+      Capture event type (e.g., what to capture/respond to).
+
+      Type: enum. Valid values:
+
+      - ``KeyboardValue`` — capture keyboard input and emit the entered value. (Will write the key into ``outputA`` and potential modifiers into ``outputB``).
+      - ``KeyboardSet`` — capture keyboard input and apply/set the value if the received shortcut equals the ``shortcut`` property. (Can be a literal value or a calculated epics calc expression that is defined in the ``valueOrCalc`` property.)
+      - ``MouseMove`` — capture mouse movement events.
+      - ``MousePress`` — capture mouse press/click events.
+
+   ``captureRange``
+      Capture range/scope for the selected capture type.
+
+      Type: enum. Valid values:
+
+      - ``Local`` — capture within the local widget/window context. (When capturing mouse events, this means within the parent container of the caHMIConfig widget (e.g. ``caFrame``, ``MainWindow``, etc.) (``0,0`` will be the top-left corner of the parent container). When capturing keyboard events, this means when the parent window has focus. )
+      - ``Global`` — capture caQtDM application-wide and beyond (including other instances of caQtDM, useful for setting global keyboard shortcuts. This is limited to the current user session and only to caQtDM processes).
+
+   ``mouseSignalRectSize``
+      Size of the mouse signal interaction rectangle in pixels. This allows you to pass a custom size with the ``void caHMIConfigMouse(QRect rect)`` signal.
+      This only applies if ``captureType`` is set to ``MouseMove`` or ``MousePress`` and the before mentioned signal is used.
+
+      Type: ``QSize`` (width × height).
+
+
+
+   The following signals are emitted by the caHMIConfig widget:
+
+   ``caHMIConfigKeyPressReceived(QKeySequence data)``
+      Emitted when a key press matching the configured shortcut is received. The ``QKeySequence`` carries the key combination.
+
+   ``caHMIConfigMouseX(int x)``
+      Emitted on mouse capture to report the X coordinate in pixels.
+
+   ``caHMIConfigMouseY(int y)``
+      Emitted on mouse capture to report the Y coordinate in pixels.
+
+   ``caHMIConfigMouse(QRect rect)``
+      Emitted on mouse capture to report a selected rectangle region. The ``QRect`` carries the rectangle (x, y, width, height). The width and height are determined by the ``mouseSignalRectSize`` property.
+
+   ``caHMIConfigMouse(QPoint point)``
+      Emitted on mouse capture to report a single point position. The ``QPoint`` carries the point (x, y).
+
+   ``caHMIConfigValueSet(QVariant value)``
+      Emitted when a value is determined by the widget (either a literal SetValue or a calculated result). The ``QVariant`` carries the value, can be numeric or a string.
+
 
 --------------
 
