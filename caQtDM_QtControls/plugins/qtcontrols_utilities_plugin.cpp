@@ -37,7 +37,6 @@
 #include <QtDesigner/QtDesigner>
 #endif
 #include <QtPlugin>
-
 #include "designerPluginTexts.h"
 
 typedef char strng[40];
@@ -266,6 +265,26 @@ QWidget *caHMIConfigInterface::createWidget(QWidget *parent){
     return new caHMIConfig(parent);
 }
 
+wmSignalRescaleInterface::wmSignalRescaleInterface(QObject *parent): CustomWidgetInterface_Utilities(parent)
+{
+    strng name[2], type[2] = {"", ""};
+    longtext text[2] = {"", ""};
+
+    qstrncpy(name[0], "softChannelA", sizeof(name[0]));
+    qstrncpy(name[1], "softChannelB", sizeof(name[1]));
+
+    d_domXml = XmlFunc("wmSignalRescale", "wmsignalrescale", 0, 0, 100, 22, name, type, text, 2);
+    d_toolTip = "[Receive notice of rescaling]";
+    d_name = "wmSignalRescale";
+    d_include = "wmSignalRescale";
+    QPixmap qpixmap = QPixmap(":pixmaps/wmrescale.png");
+    d_icon = qpixmap.scaled(70, 70, Qt::IgnoreAspectRatio, Qt::FastTransformation);
+}
+
+QWidget *wmSignalRescaleInterface::createWidget(QWidget *parent) {
+    return new wmSignalRescale(parent);
+}
+
 CustomWidgetCollectionInterface_Utilities::CustomWidgetCollectionInterface_Utilities(QObject *parent): QObject(parent)
 {
     d_plugins.append(new replaceMacroInterface(this));
@@ -274,6 +293,7 @@ CustomWidgetCollectionInterface_Utilities::CustomWidgetCollectionInterface_Utili
     d_plugins.append(new caScriptButtonInterface(this));
     d_plugins.append(new caMimeDisplayInterface(this));
     d_plugins.append(new caHMIConfigInterface(this));
+    d_plugins.append(new wmSignalRescaleInterface(this));
 }
 
 QList<QDesignerCustomWidgetInterface*> CustomWidgetCollectionInterface_Utilities::customWidgets(void) const
