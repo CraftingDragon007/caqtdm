@@ -273,7 +273,7 @@ wmSignalRescaleInterface::wmSignalRescaleInterface(QObject *parent): CustomWidge
     qstrncpy(name[0], "softChannelA", sizeof(name[0]));
     qstrncpy(name[1], "softChannelB", sizeof(name[1]));
 
-    d_domXml = XmlFunc("wmSignalRescale", "wmsignalrescale", 0, 0, 100, 22, name, type, text, 2);
+    d_domXml = XmlFunc("wmSignalRescale", "wmsignalrescale", 0, 0, 110, 22, name, type, text, 2);
     d_toolTip = "[Receive notice of rescaling]";
     d_name = "wmSignalRescale";
     d_include = "wmSignalRescale";
