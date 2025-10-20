@@ -776,7 +776,7 @@ void MutexKnobData::timerEvent(QTimerEvent *)
         }
 
         // use specified repetition rate (normally 5Hz)
-        if( ((kPtr->index != -1) && (kPtr->edata.monitorCount > kPtr->edata.displayCount) && (diff >= (1.0/(double)repRate)))){
+        if( ((kPtr->index != -1) && (kPtr->edata.monitorCount != kPtr->edata.displayCount) && (diff >= (1.0/(double)repRate)))){
 /*
             printf("<%s> index=%d mcount=%d dcount=%d value=%f ivalue=%d datasize=%d valuecount=%d\n", kPtr->pv, kPtr->index, kPtr->edata.monitorCount,
                                                                       kPtr->edata.displayCount, kPtr->edata.rvalue, kPtr->edata.ivalue,
