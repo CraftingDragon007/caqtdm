@@ -3533,6 +3533,39 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
     #endif
 
         hmiConfigWidget->setProperty("Taken", true);
+    } if(wmSignalRescale* wmSignalRescaleWidget = qobject_cast<wmSignalRescale *>(w1)) {
+        qDebug() << "create wmSignalRescale";
+        w1->setProperty("ObjectType", wmSignalRescale_Widget);
+
+        QString outputA = wmHandleSoftChannel(wmSignalRescaleWidget->softChannelA(), map, doNothing, w1->objectName());
+        QString outputB = wmHandleSoftChannel(wmSignalRescaleWidget->softChannelB(), map, doNothing, w1->objectName());
+
+        wmSignalRescaleWidget->setSoftChannelA(outputA);
+        wmSignalRescaleWidget->setSoftChannelB(outputB);
+
+        if (outputA.length() > 0) {
+            int num = addMonitor(myWidget, &kData, outputA, w1, specData, map, &pv);
+            integerList.append(num);
+            nbMonitors++;
+        }
+
+        if (outputB.length() > 0) {
+            int num = addMonitor(myWidget, &kData, outputB, w1, specData, map, &pv);
+            integerList.append(num);
+            nbMonitors++;
+        }
+
+        QWidget* container = wmSignalRescaleWidget->parentWidget();
+
+        if (container != Q_NULLPTR) {
+            container->installEventFilter(wmSignalRescaleWidget);
+        }
+
+        connect(wmSignalRescaleWidget, &wmSignalRescale::internalResizeEvent, this, &CaQtDM_Lib::wmHandleResize);
+
+        integerList.insert(0, nbMonitors);
+        wmSignalRescaleWidget->setProperty("MonitorList", integerList);
+        wmSignalRescaleWidget->setProperty("Taken", true);
     }
 
     //==================================================================================================================
@@ -6417,6 +6450,8 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
 
     } else if (caHMIConfig *cahmiConfigWidget = qobject_cast<caHMIConfig*>(w)) {
         Q_UNUSED(cahmiConfigWidget)
+    } else if (wmSignalRescale *wmSignalRescaleWidget = qobject_cast<wmSignalRescale*>(w)) {
+        Q_UNUSED(wmSignalRescaleWidget)
     } else {
         // something else (user defined monitors with non ca imageWidgets ?) ==============================================
         qDebug() << "unrecognized widget" << w->metaObject()->className();
@@ -7114,6 +7149,33 @@ void CaQtDM_Lib::hmiHandleIncomingEvent(QObject *target, QEvent *event, bool isS
         }
     }
 
+}
+
+void CaQtDM_Lib::wmHandleResize(QObject* target, QWidget* wmSignalRescaleWidget, QResizeEvent *event, const QString &channelA, const QString &channelB)
+{
+    Q_UNUSED(target)
+    QSize size = event->size();
+    if (channelA.length() > 0) {
+        TreatRequestedValue(channelA, QString::number(size.width()), FormatType::decimal, wmSignalRescaleWidget);
+    }
+    if (channelB.length() > 0) {
+        TreatRequestedValue(channelB, QString::number(size.height()), FormatType::decimal, wmSignalRescaleWidget);
+    }
+}
+
+QString CaQtDM_Lib::wmHandleSoftChannel(QString channel, QMap<QString, QString> map, bool doNothing, QString objectName)
+{
+    channel = channel.trimmed();
+    if (channel.isEmpty()) return channel;
+    channel = treatMacro(map, channel, &doNothing, objectName);
+
+    auto foundIt = softvars.find(channel);
+    if (foundIt != softvars.end()) {
+        return foundIt.key();
+    } else {
+        qWarning() << "wmSignalRescale output channel" << channel << "in file" << savedFile[level] << "is not a softPV, output to soft channel is now disabled";
+        return QString();
+    }
 }
 
 /**
