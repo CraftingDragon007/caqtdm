@@ -7177,7 +7177,7 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
 #else
             QRegularExpressionMatch match = re.match(macro_list[k]);
             if (match.hasMatch()) {
-                QString macroFile = match.captured();
+                QString macroFile = match.captured(1);
 #endif
                 if(macroFile.length() > 0) {
                     searchFile *s = new searchFile(macroFile);
