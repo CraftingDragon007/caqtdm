@@ -2489,6 +2489,8 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         //printf("\n treatMacro:%s\n", qasc(macros));
         QStringList macroList = macros.split(";", SKIP_EMPTY_PARTS);
 
+        macroList=treat_read_MacroCommand(macroList);
+        //qDebug()<< macroList;
         int adjustMargin = includeWidget->getMargin();
 
         // loop on this include with different macro
@@ -7160,55 +7162,7 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
     // special case where macros are coming from a macro definition file
     // when specified with %(read filename) in the argument list
 
-    QString pattern="^\\s*\\%\\s*\\(\\s*read\\s+(.+)\\)$";
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    QRegExp re(pattern);
-#else
-    QRegularExpression re(pattern);
-#endif
-    for (int j = 0; j < args.count(); ++j) {
-        QStringList macro_list = args[j].split(",");
-        QStringList macro_list_expanded;
-        for (int k = 0; k < macro_list.count(); ++k) {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-            int match = re.indexIn(macro_list[k]);
-            if (match >= 0) {
-                QString macroFile = re.cap(1);
-#else
-            QRegularExpressionMatch match = re.match(macro_list[k]);
-            if (match.hasMatch()) {
-                QString macroFile = match.captured(1);
-#endif
-                if(macroFile.length() > 0) {
-                    searchFile *s = new searchFile(macroFile);
-                    QString fileNameFound = s->findFile();
-                    char asc[MAX_STRING_LENGTH];
-                    if(fileNameFound.isNull()) {
-                        snprintf(asc, MAX_STRING_LENGTH, "macro definition file %s could not be loaded for related display", qasc(macroFile));
-                        postMessage(QtCriticalMsg, asc);
-                    }
-                    else {
-                        snprintf(asc, MAX_STRING_LENGTH, "macro definition file %s loaded for related display", qasc(macroFile));
-                        postMessage(QtWarningMsg, asc);
-                        QFile file(fileNameFound);
-                        file.open(QFile::ReadOnly);
-                        QString macroString = QLatin1String(file.readAll());
-                        macroString = macroString.simplified().trimmed();
-                        file.close();
-                        QStringList macro_list_from_file = macroString.split(",");
-                        macro_list_expanded = macro_list_expanded + macro_list_from_file;
-                    }
-                }
-            }
-            else {
-                macro_list_expanded.append(macro_list[k]);
-            }
-        }
-        args[j] = macro_list_expanded.join(",");
-    }
-
-    //qDebug() << "files:" << files;
-    //qDebug() << "args" <<  w->getArgs() << args;
+    args=treat_read_MacroCommand(args);
 
     // get global macro, replace specified keys and build the macro string of caRelatedDisplay, but
     // only when some replacement is requested; otherwise we may get a clash when a macrokey is used with other value
@@ -10549,6 +10503,68 @@ ControlsInterface * CaQtDM_Lib::getPluginInterface(QWidget *w)
     }
 }
 
+QStringList CaQtDM_Lib::treat_read_MacroCommand(QStringList args){
+
+    // special case where macros are coming from a macro definition file
+    // when specified with %(read filename) in the argument list
+
+    QString pattern="^\\s*\\%\\s*\\(\\s*read\\s+(.+)\\)$";
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    QRegExp re(pattern);
+#else
+    QRegularExpression re(pattern);
+#endif
+    for (int j = 0; j < args.count(); ++j) {
+        QStringList macro_list = args[j].split(",");
+        QStringList macro_list_expanded;
+        for (int k = 0; k < macro_list.count(); ++k) {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+            int match = re.indexIn(macro_list[k]);
+            if (match >= 0) {
+                QString macroFile = re.cap(1);
+#else
+            QRegularExpressionMatch match = re.match(macro_list[k]);
+            if (match.hasMatch()) {
+                QString macroFile = match.captured(1);
+#endif
+                if(macroFile.length() > 0) {
+                    searchFile *s = new searchFile(macroFile);
+                    QString fileNameFound = s->findFile();
+                    char asc[MAX_STRING_LENGTH];
+                    if(fileNameFound.isNull()) {
+                        snprintf(asc, MAX_STRING_LENGTH, "macro definition file %s could not be loaded for related display", qasc(macroFile));
+                        postMessage(QtCriticalMsg, asc);
+                    }
+                    else {
+                        snprintf(asc, MAX_STRING_LENGTH, "macro definition file %s loaded for related display", qasc(macroFile));
+                        postMessage(QtWarningMsg, asc);
+                        QFile file(fileNameFound);
+                        file.open(QFile::ReadOnly);
+                        QString macroString = QLatin1String(file.readAll());
+                        macroString = macroString.simplified().trimmed();
+                        macroString.replace(" ",",");
+                        file.close();
+                        QStringList macro_list_from_file = macroString.split(",");
+                        macro_list_expanded = macro_list_expanded + macro_list_from_file;
+                    }
+                }
+            }
+            else {
+                macro_list_expanded.append(macro_list[k]);
+            }
+        }
+        args[j] = macro_list_expanded.join(",");
+    }
+    //to resolve macros from the files and configured object
+    for( int i=0; i<args.count(); ++i )
+    {
+         bool doNothing;
+         QMap<QString, QString> include_map = createMap(args[i]);
+         args[i] = treatMacro(include_map, args[i], &doNothing, "");
+    }
+
+    return args;
+}
 #include "loadPlugins.h"
 #include "ui_main.h"
 
