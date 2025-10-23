@@ -2413,6 +2413,34 @@ is the equivalent of the Related Display in MEDM
    |                     | item to toggle the marking of hidden buttons  |
    |                     | in case the user cannot find them.            |
    +---------------------+-----------------------------------------------+
+   **Properties:**
+   The following properties are available:
+
+   ``lable``
+      String to define a lable in the menue-Mode. The icon that is display can be removed with adding a "-" in the beginning of the string
+      Type: name/identifier (string)
+
+   ``lablesList``
+      List of strings to name the buttons/menu entries.
+      Type: name/identifier (string)
+
+   ``filesList``
+      List of strings of UI files to be loaded.
+      Type: name/identifier (string)
+
+   ``argsList``
+      List of strings to define macros. As in the commandline multiple macros have to be seperated by commas. If it is needed 
+      you can load a macrolist from a text file with the command %(read <path>/<filename>)
+      Type: name/identifier (string)
+
+   ``fontScaleMode``
+      Menue to define the behavior of the lables during rescaling.
+      Type: options (enum)
+
+   ``stackingMode``
+      To define the stacking generated buttons on the display (Menue/Row/Column/RowColumn/Hidden.  
+      The hidden option can be used when the loading gets triggered by signal.
+      Type: options (enum)
 
 --------------
 
