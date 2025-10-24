@@ -33,12 +33,14 @@ jobs:
     - name: Build and install epics-base
       run: |
         cd caQtDM_Viewer/package/debian/epics-base
+        chmod +x ./create-deb.sh
         ./create-deb.sh
         sudo dpkg -i *.deb
 
     - name: Build DEB package
       run: |
         cd caQtDM_Viewer/package/debian/caqtdm_qt5
+        chmod +x ./create-deb.sh
         ./create-deb.sh --no-checkout
         ls -l *.deb
 
