@@ -45,6 +45,10 @@ INCLUDEPATH += ../caQtDM_Lib/src
 INCLUDEPATH += ../caQtDM_Parsers/adlParserSrc
 INCLUDEPATH += ../caQtDM_Parsers/edlParserSrc
 
+freebsd {
+   INCLUDEPATH += /usr/local/include
+}
+
 android {
    INCLUDEPATH += $(ANDROIDFUNCTIONSINCLUDE)
 }
@@ -56,13 +60,17 @@ RC_FILE = ./src/qtcontrols.rc
 #INCLUDEPATH += /opt/intel/parallel/vtune_amplifier_xe_2013/include
 #LIBS += /opt/intel/parallel/vtune_amplifier_xe_2013/lib32/libittnotify.a
 
+freebsd {
+   LIBS += -L/usr/local/lib -lz
+}
 
 PRE_TARGETDEPS += \
      moc/moc_caslider.cpp \
      moc/moc_cacartesianplot.cpp \
      moc/moc_castripplot.cpp \
      moc/moc_cameter.cpp \
-     moc/moc_caclock.cpp
+     moc/moc_caclock.cpp \
+     moc/moc_cahmiconfigtransferitem.cpp
 
 contains(QWT_VER_MIN, 1)|contains(QWT_VER_MIN, 2) {
   PRE_TARGETDEPS += moc/moc_qwt_thermo_marker_61.cpp
@@ -70,10 +78,13 @@ contains(QWT_VER_MIN, 1)|contains(QWT_VER_MIN, 2) {
 
 SOURCES	+= \
     src/caframe.cpp \
+    src/cahmiconfig.cpp \
+    src/cahmiconfigtransferitem.cpp \
     src/cainclude.cpp \
     src/caimage.cpp \
     src/cagraphics.cpp \
     src/capolyline.cpp \
+    src/hmiapplicationeventfilter.cpp \
     src/searchfile.cpp \
     src/elabel.cpp \
     src/esimplelabel.cpp \
@@ -164,7 +175,10 @@ XDR_HACK {
 
 QT += network
 HEADERS += src/networkaccess.h src/fileFunctions.h \
+    src/cahmiconfig.h \
+    src/cahmiconfigtransferitem.h \
     src/calinedraw.h \
+    src/hmiapplicationeventfilter.h \
     src/plotHelperClasses.h \
     src/wmsignalpropagator.h \
     src/replacemacro.h \

@@ -32,6 +32,10 @@
 #include <QApplication>
 #include <eng_notation.h>
 
+#if defined(__FreeBSD__)
+	#include <cmath>
+#endif
+
 #include <QtDebug>
 
 #define ORANGE QColor(243, 186, 7)
@@ -278,7 +282,7 @@ void EAbstractGauge::configure()
 	for (int i = 0; i < m_numMajorTicks; i++)
 	{
         double representedValue;
-#if defined(_MSC_VER)||defined(__APPLE__)||defined(__ANDROID__)
+#if defined(_MSC_VER)||defined(__APPLE__)||defined(__ANDROID__)||defined(__FreeBSD__)
 		d_logarithmicScale ? representedValue  = pow(10,val) : representedValue  = val;
 #else
 		d_logarithmicScale ? representedValue  = exp10(val) : representedValue  = val;

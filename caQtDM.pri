@@ -2,14 +2,24 @@
 archive_plugin {
         CONFIG += Define_ControlsysTargetDir Define_Build_objDirs
 
-        unix:!macx:!ios:!android {
-                message("archive_plugin configuration unix:!macx:!ios:!android")
+        unix:!macx:!ios:!android:!freebsd {
+                message("archive_plugin configuration unix:!macx:!ios:!android:!freebsd")
                 LIBS += -L$(CAQTDM_COLLECT) -lcaQtDM_Lib
                 caqtdm_rpath {
                     LIBS += -Wl,-rpath,$(QTDM_RPATH)
                 }
                 CONFIG += release
         }
+
+	freebsd {
+		message("archive_plugin configuration freebsd")
+                LIBS += -L$(CAQTDM_COLLECT) -lcaQtDM_Lib
+                caqtdm_rpath {
+                    LIBS += -Wl,-rpath,$(QTDM_RPATH)
+                }
+		LIBS += -lz
+                CONFIG += release
+	}
 
         macx {
                 message("archive_plugin configuration macx")
@@ -177,8 +187,8 @@ bsread_Plugin {
 epics3_plugin {
         CONFIG += Define_ControlsysTargetDir Define_Build_objDirs
 
-        unix:!macx:!ios:!android  {
-                message("epics3_plugin configuration unix:!macx:!ios:!android ")
+        unix:!macx:!ios:!android:!freebsd {
+                message("epics3_plugin configuration unix:!macx:!ios:!android:!freebsd")
  		INCLUDEPATH   += $(EPICSINCLUDE)/os/Linux
 #for epics 3.15 and gcc we need this
                 INCLUDEPATH   += $(EPICSINCLUDE)/compiler/gcc
@@ -189,6 +199,20 @@ epics3_plugin {
                     LIBS += -Wl,-rpath,$(QTDM_RPATH)
                 }
  		CONFIG += release
+	}
+
+	freebsd {
+		message("epics3_plugin configuration freebsd ")
+		INCLUDEPATH += $(EPICSINCLUDE)/os/freebsd
+		INCLUDEPATH += $(EPICSINCLUDE)/compiler/clang
+		LIBS += -L$(EPICSLIB)  -lca -lCom
+                LIBS += -L$(QTBASE)  -lcaQtDM_Lib
+                caqtdm_rpath {
+                    LIBS +=  -Wl,-rpath,$(EPICSLIB)
+                    LIBS += -Wl,-rpath,$(QTDM_RPATH)
+                }
+                CONFIG += release
+
 	}
 
         macx {
@@ -308,10 +332,10 @@ environment_Plugin {
 epics4_plugin {
         CONFIG += Define_ControlsysTargetDir Define_Build_objDirs
 
-        unix:!macx:!ios:!android {
+        unix:!macx:!ios:!android:!freebsd {
 
         epics7 {
-                message("epics4_plugin (with epics version 7) configuration unix:!macx:!ios:!android")
+                message("epics4_plugin (with epics version 7) configuration unix:!macx:!ios:!android:!freebsd")
                 INCLUDEPATH   += $(EPICSINCLUDE)
                 INCLUDEPATH   += $(EPICSINCLUDE)/pv
                 INCLUDEPATH += $(EPICSINCLUDE)/os/Linux
@@ -351,6 +375,38 @@ epics4_plugin {
           }
 
 	}
+
+	freebsd {
+
+        epics7 {
+                message("epics4_plugin (with epics version 7) configuration freebsd")
+                INCLUDEPATH   += $(EPICSINCLUDE)
+                INCLUDEPATH   += $(EPICSINCLUDE)/pv
+                INCLUDEPATH += $(EPICSINCLUDE)/os/freebsd
+                INCLUDEPATH   += $(EPICSINCLUDE)/compiler/clang
+
+                !EPICS4_STATICBUILD {
+                   message( "epics4_plugin build with shared object libraries of epics4" )
+                    LIBS += -L$(EPICSLIB) -lca -lCom -lpvAccess -lpvAccessCA -lpvData -lpvaClient -lnt
+                    LIBS += -L$(QTBASE) -lcaQtDM_Lib
+                    caqtdm_rpath {
+                       LIBS += -Wl,-rpath,$(EPICSLIB)
+                       LIBS += -Wl,-rpath,$(QTDM_RPATH)
+                    }
+                }
+                EPICS4_STATICBUILD  {
+                   message( "epics4_plugin build with static libraries of epics4" )
+                   LIBS += $(EPICSLIB)/libpvAccess.a
+                   LIBS += $(EPICSLIB)/libpvData.a
+                   LIBS += $(EPICSLIB)/libpvaClient.a
+                   LIBS += $(EPICSLIB)/libnt.a
+                   LIBS += -L$(EPICSLIB) -lca -lCom
+                }
+                CONFIG += release
+        }
+
+        }
+
 	
         macx {
                 message("epics4_plugin configuration macx")
@@ -475,8 +531,8 @@ caQtDM_QtControls {
 
 #==========================================================================================================
 caQtDM_Lib {
-        unix:!macx:!ios:!android  {
-                message("caQtDM_Lib configuration : unix:!macx:!ios:!android")
+        unix:!macx:!ios:!android:!freebsd  {
+                message("caQtDM_Lib configuration : unix:!macx:!ios:!android:!freebsd")
                 LIBS += -L$(EPICSLIB) -lCom
                 LIBS += -L$(CAQTDM_COLLECT) -lqtcontrols
                 caqtdm_rpath {
@@ -493,6 +549,23 @@ caQtDM_Lib {
                 QMAKE_CFLAGS_RELEASE += "-g"
                 CONFIG += Define_Build_Python
    	}
+
+	freebsd {
+		message("caQtDM_Lib configuration : freebsd")
+		LIBS += -L$(EPICSLIB) -lCom
+		LIBS += -L$(CAQTDM_COLLECT) -lqtcontrols
+		caqtdm_rpath {
+			LIBS += -Wl,-rpath,$(EPICSLIB)
+			LIBS += -Wl,-rpath,$(QTDM_RPATH)
+		}
+		INCLUDEPATH += $(EPICSINCLUDE)/os/freebsd
+		INCLUDEPATH   += $(EPICSINCLUDE)/compiler/clang
+		OBJECTS_DIR = ./obj
+		DESTDIR = $(CAQTDM_COLLECT)
+		QMAKE_CXXFLAGS += "-g"
+		QMAKE_CFLAGS_RELEASE += "-g"
+		CONFIG += Define_Build_Python
+	}
 
         macx {
                 message("caQtDM_Lib configuration : macx")
@@ -1019,8 +1092,45 @@ Define_ZMQ_Lib{
                 LIBS += $$(ZMQLIB)/libzmq.lib
 	     }
 	    ReleaseBuild {
-                LIBS += $$(ZMQLIB)/libzmq-v142-mt-4_3_5.lib
-	    }
+                _ZMQ_CONSTRUCTED_LIB_NAME = ""
+                
+                ZMQ_VERSION = $$(ZMQ_VERSION)
+
+                isEmpty(ZMQ_VERSION) {
+                    ZMQ_VERSION = 4_3_5
+                }
+
+                _ZMQ_VERSION_PARTS = $$split(ZMQ_VERSION, ".")
+				ZMQ_VERSION = $$join(_ZMQ_VERSION_PARTS, "_")
+                message(ZeroMQ version: $${ZMQ_VERSION})
+
+                greaterThan(QMAKE_MSC_VER, 1929): \ 
+                win32 {
+                    _ZMQ_CONSTRUCTED_LIB_NAME = libzmq-v143-mt-$${ZMQ_VERSION}.lib
+                } else: greaterThan(QMAKE_MSC_VER, 1919): \
+                win32 {
+                    _ZMQ_CONSTRUCTED_LIB_NAME = libzmq-v142-mt-$${ZMQ_VERSION}.lib
+                }
+
+                message(Visual Studio version detected: $${_ZMQ_CONSTRUCTED_LIB_NAME})
+
+                ZMQ_LIB_SUFFIX = $$(ZMQ_LIB_SUFFIX)
+                !isEmpty(ZMQ_LIB_SUFFIX) {
+                    _ZMQ_CONSTRUCTED_LIB_NAME = libzmq-$$(ZMQ_LIB_SUFFIX)-$${ZMQ_VERSION}.lib
+                }
+                
+                isEmpty(_ZMQ_CONSTRUCTED_LIB_NAME): _ZMQ_CONSTRUCTED_LIB_NAME = libzmq-v142-mt-$${ZMQ_VERSION}.lib
+
+                _ZMQ_OVERRIDE_LIB_NAME = $$(ZMQ_LIB_NAME)
+                isEmpty(_ZMQ_OVERRIDE_LIB_NAME) {
+                    ZMQ_LIB_NAME = $${_ZMQ_CONSTRUCTED_LIB_NAME}
+                } else {
+                    ZMQ_LIB_NAME = $${_ZMQ_OVERRIDE_LIB_NAME}
+                }
+                
+                message(Using ZeroMQ library: $${ZMQ_LIB_NAME})
+                LIBS += $$(ZMQLIB)/$${ZMQ_LIB_NAME}
+            }
 	}
 }
 
