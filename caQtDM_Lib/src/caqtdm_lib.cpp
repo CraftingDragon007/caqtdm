@@ -2489,6 +2489,8 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         //printf("\n treatMacro:%s\n", qasc(macros));
         QStringList macroList = macros.split(";", SKIP_EMPTY_PARTS);
 
+        macroList=treat_read_MacroCommand(macroList);
+        //qDebug()<< macroList;
         int adjustMargin = includeWidget->getMargin();
 
         // loop on this include with different macro
@@ -3408,51 +3410,52 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         } else qWarning() << "Unable to find parent window for caHMIConfig:" << hmiConfigWidget->objectName();
 
         int index = 0;
-        if(hmiConfigWidget->channel().size() > 0) {
+        if (hmiConfigWidget->channel().size() > 0) {
             int num = addMonitor(myWidget, &kData, hmiConfigWidget->channel(), w1, specData, map, &pv);
             integerList.append(num);
             indexList.append(index);
             hmiConfigWidget->setChannel(pv);
             nbMonitors++;
-            index++;
         }
-        if(hmiConfigWidget->channelB().size() > 0) {
+        index++;
+        if (hmiConfigWidget->channelB().size() > 0) {
             int num = addMonitor(myWidget, &kData, hmiConfigWidget->channelB(), w1, specData, map, &pv);
             integerList.append(num);
             indexList.append(index);
             hmiConfigWidget->setChannelB(pv);
             nbMonitors++;
-            index++;
         }
-        if(hmiConfigWidget->channelC().size() > 0) {
+        index++;
+        if (hmiConfigWidget->channelC().size() > 0) {
             int num = addMonitor(myWidget, &kData, hmiConfigWidget->channelC(), w1, specData, map, &pv);
             integerList.append(num);
             indexList.append(index);
             hmiConfigWidget->setChannelC(pv);
             nbMonitors++;
-            index++;
         }
-        if(hmiConfigWidget->channelD().size() > 0) {
+        index++;
+        if (hmiConfigWidget->channelD().size() > 0) {
             int num = addMonitor(myWidget, &kData, hmiConfigWidget->channelD(), w1, specData, map, &pv);
             integerList.append(num);
             indexList.append(index);
             hmiConfigWidget->setChannelD(pv);
-            index++;
+            nbMonitors++;
         }
-        if(hmiConfigWidget->outputA().size() > 0) {
+        index++;
+        if (hmiConfigWidget->outputA().size() > 0) {
             int num = addMonitor(myWidget, &kData, hmiConfigWidget->outputA(), w1, specData, map, &pv);
             integerList.append(num);
             indexList.append(index);
             hmiConfigWidget->setOutputA(pv);
-            index++;
         }
-        if(hmiConfigWidget->outputB().size() > 0) {
+        index++;
+        if (hmiConfigWidget->outputB().size() > 0) {
             int num = addMonitor(myWidget, &kData, hmiConfigWidget->outputB(), w1, specData, map, &pv);
             integerList.append(num);
             indexList.append(index);
             hmiConfigWidget->setOutputB(pv);
-            index++;
         }
+        index++;
 
         caHMIConfigTransferItem* transferItem = new caHMIConfigTransferItem(hmiConfigWidget);
         transferItem->setEnabled(true);
@@ -6940,7 +6943,8 @@ void CaQtDM_Lib::Callback_ExternalHmiEventReceived(int eventType, int senderPid,
         Qt::KeyboardModifiers qtModifiers = static_cast<Qt::KeyboardModifiers>(modifiers);
         QKeySequence sequence = QKeySequence(key | modifiers);
         //qDebug() << "received keys" << sequence.toString() << "from" << senderPid;
-        this->hmiHandleIncomingEvent(Q_NULLPTR, new QKeyEvent(QEvent::KeyPress, key, qtModifiers, sequence.toString()), true);
+        QEvent *constructed = new QKeyEvent(QEvent::KeyPress, key, qtModifiers, sequence.toString());
+        this->hmiHandleIncomingEvent(Q_NULLPTR, constructed, constructed, true);
     } else if (eventType == EventTypes::MouseMove || eventType == EventTypes::MousePress) {
         QDataStream in(payload);
 
@@ -6950,7 +6954,8 @@ void CaQtDM_Lib::Callback_ExternalHmiEventReceived(int eventType, int senderPid,
         QEvent::Type type = QEvent::None;
         if (eventType == EventTypes::MouseMove) type = QEvent::MouseMove;
         else if (eventType == EventTypes::MousePress) type = QEvent::MouseButtonPress;
-        this->hmiHandleIncomingEvent(Q_NULLPTR, new QMouseEvent(type, QPointF(x, y), QPointF(x, y), Qt::MouseButton::NoButton, Qt::MouseButton::NoButton, Qt::KeyboardModifier::NoModifier), true);
+        QEvent *constructed = new QMouseEvent(type, QPointF(x, y), QPointF(x, y), Qt::MouseButton::NoButton, Qt::MouseButton::NoButton, Qt::KeyboardModifier::NoModifier);
+        this->hmiHandleIncomingEvent(Q_NULLPTR, constructed, constructed, true);
     }
 }
 
@@ -6966,7 +6971,7 @@ void CaQtDM_Lib::hmiHandleKeyPressed(QObject *target, QKeyEvent *event)
         eventBus.sendEvent(EventTypes::KeyPress, byteArray);
     }
 #endif
-    this->hmiHandleIncomingEvent(target, event, false);
+    this->hmiHandleIncomingEvent(target, event, event, false);
 }
 
 void CaQtDM_Lib::hmiHandleMouse(QObject *target, QMouseEvent *event)
@@ -7007,7 +7012,7 @@ void CaQtDM_Lib::hmiHandleMouse(QObject *target, QMouseEvent *event)
         eventBus.sendEvent(type, byteArray);
     }
 #endif
-    this->hmiHandleIncomingEvent(target, &correctedEvent, false);
+    this->hmiHandleIncomingEvent(target, &correctedEvent, event, false);
 }
 
 bool CaQtDM_Lib::containsShortcut(const QKeySequence& sequence, Qt::Key qtKey, Qt::KeyboardModifiers qtModifiers) {
@@ -7030,7 +7035,19 @@ bool CaQtDM_Lib::containsShortcut(const QKeySequence& sequence, Qt::Key qtKey, Q
     return false;
 }
 
-void CaQtDM_Lib::hmiHandleIncomingEvent(QObject *target, QEvent *event, bool isSourceExternal)
+bool CaQtDM_Lib::hasCommonParent(QObject *origin, QObject *target) {
+    if (origin == Q_NULLPTR || target == Q_NULLPTR) return false;
+    QObject* parent = origin->parent();
+
+    QObject* next = target;
+    while (next != Q_NULLPTR) {
+        if (next == parent) return true;
+        next = next->parent();
+    }
+    return false;
+}
+
+void CaQtDM_Lib::hmiHandleIncomingEvent(QObject *target, QEvent *event, QEvent *originalEvent, bool isSourceExternal)
 {
     Q_UNUSED(target);
 
@@ -7047,13 +7064,14 @@ void CaQtDM_Lib::hmiHandleIncomingEvent(QObject *target, QEvent *event, bool isS
         }
         if (window == Q_NULLPTR) return;
     }
+
     QReadLocker locker(&hmiConfigListLock);
     if (event->type() == QEvent::KeyPress) {
         QKeyEvent *keyEvent = dynamic_cast<QKeyEvent*>(event);
         if (keyEvent == Q_NULLPTR) return;
         foreach (caHMIConfigTransferItem *item, hmiConfigList) {
             if (item->enabled() == false) continue;
-            if ((isSourceExternal || window != item->parentWindowCallback()) && item->captureRange() == caHMIConfig::capRange::Local) {
+            if ((isSourceExternal || (window != item->parentWindowCallback() && window != this)) && item->captureRange() == caHMIConfig::capRange::Local) {
                 continue;
             }
             if (item->captureType() != caHMIConfig::capType::MouseMove && item->captureType() != caHMIConfig::capType::MousePress) {
@@ -7063,55 +7081,57 @@ void CaQtDM_Lib::hmiHandleIncomingEvent(QObject *target, QEvent *event, bool isS
                 Qt::KeyboardModifiers qtModifiers = static_cast<Qt::KeyboardModifiers>(modifiers);
                 QKeySequence shortcut = item->shortcut();
                 caHMIConfig *widget = item->widgetCallback();
-                if (widget != Q_NULLPTR) {
-                    if (item->captureType() == caHMIConfig::capType::KeyboardSet) {
-                        if (containsShortcut(shortcut, qtKey, qtModifiers)) {
-                            //qDebug() << "Correct key pressed" << widget->objectName() << qtKey;
-                            emit widget->caHMIConfigKeyPressReceived(shortcut);
+                if (widget == Q_NULLPTR) continue;
+                if (item->captureType() == caHMIConfig::capType::KeyboardSet) {
+                    if (containsShortcut(shortcut, qtKey, qtModifiers)) {
+                        //qDebug() << "Correct key pressed" << widget->objectName() << qtKey;
+                        emit widget->caHMIConfigKeyPressReceived(shortcut);
 
-                            if (item->calculationType() == caHMIConfig::calcType::SetValue) {
-                                FormatType fType;
-                                if (item->value().canConvert<double>()){
-                                    fType = FormatType::decimal;
-                                    QVariant value = QVariant(item->value().toDouble());
-                                    emit widget->caHMIConfigValueSet(value);
-                                } else {
-                                    fType = FormatType::string;
-                                    QVariant value = item->value();
-                                    emit widget->caHMIConfigValueSet(value);
-                                }
+                        if (item->calculationType() == caHMIConfig::calcType::SetValue) {
+                            FormatType fType;
+                            if (item->value().canConvert<double>()){
+                                fType = FormatType::decimal;
+                                QVariant value = QVariant(item->value().toDouble());
+                                emit widget->caHMIConfigValueSet(value);
+                            } else {
+                                fType = FormatType::string;
+                                QVariant value = item->value();
+                                emit widget->caHMIConfigValueSet(value);
+                            }
 
-                                QString text = item->value().toString();
+                            QString text = item->value().toString();
+                            QWidget *w1 = qobject_cast<QWidget *>(widget);
+
+                            if (item->outputA().length() == 0) return;
+                            TreatRequestedValue(item->outputA(), text, fType, w1);
+                        } else if (item->calculationType() == caHMIConfig::calcType::Calc) {
+                            QString calc = item->value().toString();
+                            double result;
+                            bool valid;
+                            CalcVisibility(widget, result, valid);
+                            if (valid){
+                                FormatType fType = FormatType::decimal;
                                 QWidget *w1 = qobject_cast<QWidget *>(widget);
+                                QString text = QString::number(result);
 
                                 if (item->outputA().length() == 0) return;
                                 TreatRequestedValue(item->outputA(), text, fType, w1);
-                            } else if (item->calculationType() == caHMIConfig::calcType::Calc) {
-                                QString calc = item->value().toString();
-                                double result;
-                                bool valid;
-                                CalcVisibility(widget, result, valid);
-                                if (valid){
-                                    FormatType fType = FormatType::decimal;
-                                    QWidget *w1 = qobject_cast<QWidget *>(widget);
-                                    QString text = QString::number(result);
-
-                                    if (item->outputA().length() == 0) return;
-                                    TreatRequestedValue(item->outputA(), text, fType, w1);
-                                }
                             }
                         }
-                    } else if (item->captureType() == caHMIConfig::capType::KeyboardValue) {
-                        FormatType fType = FormatType::decimal;
-                        QWidget *w1 = qobject_cast<QWidget *>(widget);
-                        QString keyText = QString::number(key);
-                        QString keyModifiersText = QString::number(qtModifiers);
+                    }
+                } else if (item->captureType() == caHMIConfig::capType::KeyboardValue) {
+                    FormatType fType = FormatType::decimal;
+                    QWidget *w1 = qobject_cast<QWidget *>(widget);
+                    QString keyText = QString::number(key);
+                    QString keyModifiersText = QString::number(qtModifiers);
 
-                        emit widget->caHMIConfigKeyPressReceived(shortcut);
+                    emit widget->caHMIConfigKeyPressReceived(shortcut);
 
-                        if (item->outputA().length() == 0 || item->outputB().length() == 0) return;
-
+                    if (item->outputA().length() != 0 ) {
                         TreatRequestedValue(item->outputA(), keyText, fType, w1);
+                    }
+
+                    if (item->outputB().length() != 0) {
                         TreatRequestedValue(item->outputB(), keyModifiersText, fType, w1);
                     }
                 }
@@ -7123,11 +7143,20 @@ void CaQtDM_Lib::hmiHandleIncomingEvent(QObject *target, QEvent *event, bool isS
 
         foreach (caHMIConfigTransferItem *item, hmiConfigList) {
             if (item->enabled() == false) continue;
-            if ((isSourceExternal || window != item->parentWindowCallback()) && item->captureRange() == caHMIConfig::capRange::Local) {
+            if ((isSourceExternal || !hasCommonParent(item->widgetCallback(), target)) && item->captureRange() == caHMIConfig::capRange::Local) {
                 continue;
             }
             if ((item->captureType() == caHMIConfig::capType::MouseMove && event->type() == QEvent::MouseMove) || (item->captureType() == caHMIConfig::capType::MousePress && event->type() == QEvent::MouseButtonPress )) {
-                caHMIConfig* widget = item->widgetCallback();
+                caHMIConfig *widget = item->widgetCallback();
+                if (widget == Q_NULLPTR) continue;
+
+                if (item->captureRange() == caHMIConfig::capRange::Local) {
+                    mouseEvent = dynamic_cast<QMouseEvent*>(originalEvent);
+                    QWidget *parent = widget->parentWidget();
+                    if (parent != Q_NULLPTR && target_widget != Q_NULLPTR) {
+                        point = target_widget->mapTo(parent, mouseEvent->pos());
+                    } else point = mouseEvent->pos();
+                }
 
                 QRect rect = QRect(point, widget->mouseRectSize());
                 emit widget->caHMIConfigMouse(point);
@@ -7140,10 +7169,13 @@ void CaQtDM_Lib::hmiHandleIncomingEvent(QObject *target, QEvent *event, bool isS
                 QString xText = QString::number(point.x());
                 QString yText = QString::number(point.y());
 
-                if (item->outputA().length() == 0 || item->outputB().length() == 0) return;
+                if (item->outputA().length() != 0 ) {
+                    TreatRequestedValue(item->outputA(), xText, fType, w1);
+                }
 
-                TreatRequestedValue(item->outputA(), xText, fType, w1);
-                TreatRequestedValue(item->outputB(), yText, fType, w1);
+                if (item->outputB().length() != 0) {
+                    TreatRequestedValue(item->outputB(), yText, fType, w1);
+                }
 
             }
         }
@@ -7192,55 +7224,7 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
     // special case where macros are coming from a macro definition file
     // when specified with %(read filename) in the argument list
 
-    QString pattern="^\\s*\\%\\s*\\(\\s*read\\s+(.+)\\)$";
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    QRegExp re(pattern);
-#else
-    QRegularExpression re(pattern);
-#endif
-    for (int j = 0; j < args.count(); ++j) {
-        QStringList macro_list = args[j].split(",");
-        QStringList macro_list_expanded;
-        for (int k = 0; k < macro_list.count(); ++k) {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-            int match = re.indexIn(macro_list[k]);
-            if (match >= 0) {
-                QString macroFile = re.cap(1);
-#else
-            QRegularExpressionMatch match = re.match(macro_list[k]);
-            if (match.hasMatch()) {
-                QString macroFile = match.captured();
-#endif
-                if(macroFile.length() > 0) {
-                    searchFile *s = new searchFile(macroFile);
-                    QString fileNameFound = s->findFile();
-                    char asc[MAX_STRING_LENGTH];
-                    if(fileNameFound.isNull()) {
-                        snprintf(asc, MAX_STRING_LENGTH, "macro definition file %s could not be loaded for related display", qasc(macroFile));
-                        postMessage(QtCriticalMsg, asc);
-                    }
-                    else {
-                        snprintf(asc, MAX_STRING_LENGTH, "macro definition file %s loaded for related display", qasc(macroFile));
-                        postMessage(QtWarningMsg, asc);
-                        QFile file(fileNameFound);
-                        file.open(QFile::ReadOnly);
-                        QString macroString = QLatin1String(file.readAll());
-                        macroString = macroString.simplified().trimmed();
-                        file.close();
-                        QStringList macro_list_from_file = macroString.split(",");
-                        macro_list_expanded = macro_list_expanded + macro_list_from_file;
-                    }
-                }
-            }
-            else {
-                macro_list_expanded.append(macro_list[k]);
-            }
-        }
-        args[j] = macro_list_expanded.join(",");
-    }
-
-    //qDebug() << "files:" << files;
-    //qDebug() << "args" <<  w->getArgs() << args;
+    args=treat_read_MacroCommand(args);
 
     // get global macro, replace specified keys and build the macro string of caRelatedDisplay, but
     // only when some replacement is requested; otherwise we may get a clash when a macrokey is used with other value
@@ -10581,6 +10565,68 @@ ControlsInterface * CaQtDM_Lib::getPluginInterface(QWidget *w)
     }
 }
 
+QStringList CaQtDM_Lib::treat_read_MacroCommand(QStringList args){
+
+    // special case where macros are coming from a macro definition file
+    // when specified with %(read filename) in the argument list
+
+    QString pattern="^\\s*\\%\\s*\\(\\s*read\\s+(.+)\\)$";
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    QRegExp re(pattern);
+#else
+    QRegularExpression re(pattern);
+#endif
+    for (int j = 0; j < args.count(); ++j) {
+        QStringList macro_list = args[j].split(",");
+        QStringList macro_list_expanded;
+        for (int k = 0; k < macro_list.count(); ++k) {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+            int match = re.indexIn(macro_list[k]);
+            if (match >= 0) {
+                QString macroFile = re.cap(1);
+#else
+            QRegularExpressionMatch match = re.match(macro_list[k]);
+            if (match.hasMatch()) {
+                QString macroFile = match.captured(1);
+#endif
+                if(macroFile.length() > 0) {
+                    searchFile *s = new searchFile(macroFile);
+                    QString fileNameFound = s->findFile();
+                    char asc[MAX_STRING_LENGTH];
+                    if(fileNameFound.isNull()) {
+                        snprintf(asc, MAX_STRING_LENGTH, "macro definition file %s could not be loaded for related display", qasc(macroFile));
+                        postMessage(QtCriticalMsg, asc);
+                    }
+                    else {
+                        snprintf(asc, MAX_STRING_LENGTH, "macro definition file %s loaded for related display", qasc(macroFile));
+                        postMessage(QtWarningMsg, asc);
+                        QFile file(fileNameFound);
+                        file.open(QFile::ReadOnly);
+                        QString macroString = QLatin1String(file.readAll());
+                        macroString = macroString.simplified().trimmed();
+                        macroString.replace(" ",",");
+                        file.close();
+                        QStringList macro_list_from_file = macroString.split(",");
+                        macro_list_expanded = macro_list_expanded + macro_list_from_file;
+                    }
+                }
+            }
+            else {
+                macro_list_expanded.append(macro_list[k]);
+            }
+        }
+        args[j] = macro_list_expanded.join(",");
+    }
+    //to resolve macros from the files and configured object
+    for( int i=0; i<args.count(); ++i )
+    {
+         bool doNothing;
+         QMap<QString, QString> include_map = createMap(args[i]);
+         args[i] = treatMacro(include_map, args[i], &doNothing, "");
+    }
+
+    return args;
+}
 #include "loadPlugins.h"
 #include "ui_main.h"
 

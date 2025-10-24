@@ -475,6 +475,8 @@ private:
     QMap<int, caStripPlot*> stripList;          // list of stripplots with key group
     QList<int> stripGroupList;                  // group numbers found
 
+    bool hasCommonParent(QObject *origin, QObject *target);
+
     bool containsShortcut(const QKeySequence& sequence, Qt::Key qtKey, Qt::KeyboardModifiers qtModifiers);
 
     HMIApplicationEventFilter *globalEventFilter;
@@ -483,7 +485,7 @@ private:
 
     void hmiHandleMouse(QObject *target, QMouseEvent *event);
 
-    void hmiHandleIncomingEvent(QObject* target, QEvent *event, bool isSourceExternal);
+    void hmiHandleIncomingEvent(QObject* target, QEvent *event, QEvent *originalEvent, bool isSourceExternal);
 
     void wmHandleResize(QObject* target, QWidget* wmSignalRescaleWidget, QResizeEvent *event, const QString &channelA, const QString &channelB);
 
@@ -497,6 +499,8 @@ private:
     QString handle_Macro_withConst(QString key, QString value, QString Text);
     QString handle_Macro_Scan(QString Text, QMap<QString, QString> map, macro_parser parse);
     QString handle_Macro_Constants(QString Text);
+    QStringList treat_read_MacroCommand(QStringList args);
+
 private slots:
     void Callback_CaCalc(double value) ;
     void Callback_UndefinedMacrowindowExit();

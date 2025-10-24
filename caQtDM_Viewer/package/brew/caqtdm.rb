@@ -8,7 +8,12 @@ class Caqtdm < Formula
 
   license "GPLv3"
 
-  depends_on "qt"
+  depends_on "qtbase"
+  depends_on "qt5compat"
+  depends_on "qtpositioning"
+  depends_on "qtserialbus"
+  depends_on "qtimageformats"
+  depends_on "qtnetworkauth"
   depends_on "qwt"
   depends_on "epicsbase"
 
