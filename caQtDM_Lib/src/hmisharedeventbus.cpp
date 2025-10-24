@@ -212,26 +212,31 @@ void HmiSharedEventBus::checkForNewEvents() {
     }
 
     // Snapshot global and local counters to ensure consistency during processing.
-    int currentTotalEvents = this_header->totalEventsWritten;
-    int& lastReadTotalEvents = this_header->processSlots[this_currentProcessSlotIndex].lastReadTotalEvents;
+    quint64 currentTotalEvents = this_header->totalEventsWritten;
+    quint64& lastReadTotalEvents = this_header->processSlots[this_currentProcessSlotIndex].lastReadTotalEvents;
 
-    if (currentTotalEvents > lastReadTotalEvents) {
-        int eventsToReadCount = currentTotalEvents - lastReadTotalEvents;
+    quint64 unreadGlobalEvents = currentTotalEvents - lastReadTotalEvents;
 
-        int readStartIndex = (this_header->currentWriteIndex - eventsToReadCount + EVENT_BUFFER_CAPACITY * 2) % EVENT_BUFFER_CAPACITY;
-
-        for (int i = 0; i < eventsToReadCount; ++i) {
-            int eventBufferIndex = (readStartIndex + i) % EVENT_BUFFER_CAPACITY;
-            const EventPayload& event = this_eventBuffer[eventBufferIndex];
-
-            QByteArray payloadData;
-            if (event.dataSize > 0) {
-                payloadData = QByteArray(event.data, event.dataSize);
-            }
-
-            emit eventReceived(event.eventType, event.senderPid, event.timestamp, payloadData);
-
-            lastReadTotalEvents++;
-        }
+    if (unreadGlobalEvents == 0) {
+        return; // No new events available
     }
+
+    quint64 eventsToProcess = std::min(unreadGlobalEvents, (quint64)EVENT_BUFFER_CAPACITY);
+
+    int readBufferStartIndex = (this_header->currentWriteIndex - eventsToProcess + EVENT_BUFFER_CAPACITY * 2) % EVENT_BUFFER_CAPACITY;
+
+
+    for (quint64 i = 0; i < eventsToProcess; ++i) {
+        int eventBufferIndex = (readBufferStartIndex + i) % EVENT_BUFFER_CAPACITY;
+        const EventPayload& event = this_eventBuffer[eventBufferIndex];
+
+        QByteArray payloadData;
+        if (event.dataSize > 0) {
+            payloadData = QByteArray(event.data, event.dataSize);
+        }
+
+        emit eventReceived(event.eventType, event.senderPid, event.timestamp, payloadData);
+    }
+
+    lastReadTotalEvents = currentTotalEvents;
 }
