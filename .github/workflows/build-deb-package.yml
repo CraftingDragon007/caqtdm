@@ -44,7 +44,7 @@ jobs:
 
     - name: Install DEB package
       run: |
-        cd caQtDM_Viewer/package/debian/caqtdm
+        cd caQtDM_Viewer/package/debian/caqtdm_qt5
         sudo dpkg -i *.deb
 
     - name: Upload epics-base package as artifact
@@ -57,7 +57,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: caqtdm_deb-package-${{ matrix.ubuntu-version }}
-        path: caQtDM_Viewer/package/debian/caqtdm/*.deb
+        path: caQtDM_Viewer/package/debian/caqtdm_qt5/*.deb
 
     - name: Verify caQtDM installation
       run: |
