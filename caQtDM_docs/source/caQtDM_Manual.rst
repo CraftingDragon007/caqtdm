@@ -2654,7 +2654,7 @@ has no equivalent in MEDM
 
 
    **Signals:**
-   The following signals are emitted by the caHMIConfig widget:
+   The following signals are emitted by the wmSignalRescale widget:
 
    ``emitSignal(QRect rect)``
       Emitted on rescale events to report the current size and the position defined in the ``rectSignalPosition`` property. The ``QRect`` carries the rectangle (x, y, width, height).
