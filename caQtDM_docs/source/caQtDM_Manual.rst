@@ -2628,7 +2628,7 @@ has no equivalent in MEDM
 .. _wmSignalRescale:
 
 ``wmSignalRescale``
-~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
 has no equivalent in MEDM
 
    **Description:**
