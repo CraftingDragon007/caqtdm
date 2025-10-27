@@ -3537,7 +3537,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
         hmiConfigWidget->setProperty("Taken", true);
     } if(wmSignalRescale* wmSignalRescaleWidget = qobject_cast<wmSignalRescale *>(w1)) {
-        qDebug() << "create wmSignalRescale";
+        // qDebug() << "create wmSignalRescale";
         w1->setProperty("ObjectType", wmSignalRescale_Widget);
 
         QString outputA = wmHandleSoftChannel(wmSignalRescaleWidget->softChannelA(), map, doNothing, w1->objectName());
