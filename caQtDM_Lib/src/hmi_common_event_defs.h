@@ -12,7 +12,7 @@
 // Configuration parameters
 #define MAX_PROCESS_SLOTS 256      // Maximum number of concurrent processes
 #define EVENT_PAYLOAD_SIZE 8192    // Fixed size for event data payload
-#define EVENT_BUFFER_CAPACITY 500 // Max events in the ring buffer
+#define EVENT_BUFFER_CAPACITY 512 // Max events in the ring buffer
 
 #define PREFIX "HmiSharedEventBus"
 
