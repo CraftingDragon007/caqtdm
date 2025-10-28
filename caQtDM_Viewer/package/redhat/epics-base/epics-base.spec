@@ -133,7 +133,7 @@ sed -i '1s|^.*$|#!/usr/bin/env python3|' ${EPICS_INSTALL}/bin/${EPICS_HOST_ARCH}
 # Copy the license file to the appropriate location
 cp -a %{_builddir}/base-7.0.9/LICENSE ${EPICS_LICENSES}/LICENSE
 # Copy the license file into the source directory
-cp -a %{_builddir}/base-7.0.9/LICENSE %{_builddir}/../../SOURCES/
+cp -a %{_builddir}/base-7.0.9/LICENSE %{_sourcedir}/
 # Copy the documentation to the appropriate location
 cp -a ${EPICS_STAGING}/html ${EPICS_DOC}
 

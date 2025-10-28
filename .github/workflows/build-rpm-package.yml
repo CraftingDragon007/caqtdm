@@ -18,9 +18,6 @@ jobs:
         linux-version: [fedora:44, redhat/ubi10:latest, rockylinux:9]
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v5
-
     - name: Determine package manager
       id: pkg-manager
       run: |
@@ -36,8 +33,11 @@ jobs:
     - name: Install build dependencies for epics-base
       run: |
         ${{ steps.pkg-manager.outputs.cmd }} \
-          gcc make patch perl readline-devel ncurses-devel \
-          wget rpmdevtools
+          gcc make patch perl libedit-devel ncurses-devel \
+          wget rpmdevtools git
+
+    - name: Checkout repository
+      uses: actions/checkout@v5
 
     - name: Build epics-base RPM
       run: |
@@ -48,9 +48,11 @@ jobs:
 
         # Download source
         wget https://epics-controls.org/download/base/base-7.0.9.tar.gz
+        wget https://epics-controls.org/download/base/base-7.0.9.tar.gz.asc
 
         # Copy source and patches to rpmbuild directories
         cp base-7.0.9.tar.gz ~/rpmbuild/SOURCES/
+        cp base-7.0.9.tar.gz.asc ~/rpmbuild/SOURCES/
         cp *.patch ~/rpmbuild/SOURCES/
         cp epics-base.spec ~/rpmbuild/SPECS/
         
