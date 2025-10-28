@@ -55,9 +55,12 @@ jobs:
         cp base-7.0.9.tar.gz.asc ~/rpmbuild/SOURCES/
         cp *.patch ~/rpmbuild/SOURCES/
         cp epics-base.spec ~/rpmbuild/SPECS/
+
+        cd ~/rpmbuild/SPECS
+        # Patch epics-base.spec to replace readline-devel dependency with libedit-devel
+        sed -i 's/readline-devel/libedit-devel/g' epics-base.spec
         
         # Build the RPM package
-        cd ~/rpmbuild/SPECS
         rpmbuild -ba epics-base.spec
 
     - name: Install epics-base RPM
