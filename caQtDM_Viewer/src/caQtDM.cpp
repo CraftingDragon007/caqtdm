@@ -217,6 +217,8 @@ int main(int argc, char *argv[])
     bool savetoimage = false;
     bool resizing = true;
     bool server = false;
+    quint16 port = 5900;
+    quint16 web_port = port + 1000;
 
     for (numargs = argc, in = 1; in < numargs; in++) {
         qDebug() << argv[in];
@@ -312,6 +314,18 @@ int main(int argc, char *argv[])
             createMap(options, QString(argv[in]));
         } else if (strcmp (argv[in], "-server") == 0) {
             server = true;
+        } else if (strcmp (argv[in], "-server_port") == 0) {
+            in++;
+            bool valid;
+            port = QString(argv[in]).toUShort(&valid);
+            if (!valid) {
+                printf("caQtDM -- Invalid port %s specified, not enabling server mode", argv[in]);
+                server = false;
+            } else {
+                if (port > std::numeric_limits<quint16>::max() - 1000) {
+                    web_port = port - 1000;
+                } else web_port = port + 1000;
+            }
         } else if (strncmp (argv[in], "-" , 1) == 0) {
             /* unknown application argument */
             printf("caQtDM -- Argument %d = [%s] is unknown!, possible -attach -macro -noMsg -stylefile -dg -x -print -httpconfig -noResize -option\n",in,argv[in]);
@@ -328,7 +342,7 @@ int main(int argc, char *argv[])
             if (dimensions.height <= 0 || dimensions.width <= 0) {
                 printf("caQtDM -- Negative or zero ui width / height found (%sx%s), not enabling server mode!", QString::number(dimensions.width).toUtf8().data(), QString::number(dimensions.height).toUtf8().data());
                 server = false;
-            } else qputenv("QT_QPA_PLATFORM", ("vnc:size=" + QString::number(dimensions.width) + "x" + QString::number(dimensions.height) + ":depth=16").toStdString());
+            } else qputenv("QT_QPA_PLATFORM", ("vnc:size=" + QString::number(dimensions.width) + "x" + QString::number(dimensions.height) + ":depth=16:port=" + QString::number(port)).toStdString());
         }
     } else if (server) {
         printf("No ui file was specified, not enabling server mode!");
@@ -429,7 +443,7 @@ int main(int argc, char *argv[])
     }
 #endif
 
-    FileOpenWindow fileOpenWindow (0, fileName, macroString, attach, minimize, geometry, printscreen, resizing, options);
+    FileOpenWindow fileOpenWindow (0, fileName, macroString, attach, minimize, geometry, printscreen, resizing, web_port, options);
     fileOpenWindow.setWindowIcon (QIcon(":/caQtDM.ico"));
     if (savetoimage) fileOpenWindow.setProperty("savetoimage", true);
     fileOpenWindow.show();

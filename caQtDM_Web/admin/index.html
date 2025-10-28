@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>caQtDM Web - Admin Panel</title>
+    <style>
+      body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; margin: 20px; }
+      #status { margin: 8px 0; font-weight: 600; }
+      #ws-url { color: #666; font-size: 0.9em; }
+      #log { white-space: pre-wrap; background: #111; color: #dcdcdc; padding: 12px; border-radius: 6px; height: 320px; overflow: auto; font-family: monospace; }
+      #controls { margin-top: 8px; }
+      button { margin-right: 8px; }
+    </style>
+  </head>
+  <body>
+    <h1>caQtDM Web - Admin Panel</h1>
+    <p>Welcome to the caQtDM Web administration panel.</p>
+
+    <div id="status">Status: <span id="conn">—</span> <span id="ws-url"></span></div>
+
+    <div id="log" aria-live="polite" aria-atomic="false"></div>
+
+    <div id="controls">
+      <button id="clear">Clear log</button>
+      <button id="reconnect">Reconnect</button>
+    </div>
+
+    <script>
+      // Small contract:
+      // - Reads URL param 'ws' or 'path' to determine websocket path (default '/instance1/admin')
+      // - Opens a WebSocket to that path on the current host using ws/wss depending on page protocol
+      // - Appends received messages to #log with prefix 'LOG>'
+
+      (function () {
+        const statusEl = document.getElementById('conn');
+        const wsUrlEl = document.getElementById('ws-url');
+        const logEl = document.getElementById('log');
+        const clearBtn = document.getElementById('clear');
+        const reconnectBtn = document.getElementById('reconnect');
+
+        function getWsPath() {
+          const params = new URLSearchParams(window.location.search);
+          const p = params.get('ws') || params.get('path') || '/instance/0/admin';
+          // ensure it starts with /
+          return p.startsWith('/') ? p : '/' + p;
+        }
+
+        let socket = null;
+        let currentUrl = null;
+
+        function buildWsUrl(path) {
+          const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
+          return proto + '://' + window.location.host + path;
+        }
+
+        function appendLog(text) {
+          const line = 'LOG> ' + text;
+          const shouldScroll = (logEl.scrollTop + logEl.clientHeight) >= (logEl.scrollHeight - 20);
+          // Append
+          const node = document.createElement('div');
+          node.textContent = line;
+          logEl.appendChild(node);
+          // Trim to last 2000 lines to avoid runaway memory usage
+          while (logEl.children.length > 2000) {
+            logEl.removeChild(logEl.firstChild);
+          }
+          if (shouldScroll) logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function setStatus(text) { statusEl.textContent = text; }
+
+        function connect() {
+          const path = getWsPath();
+          currentUrl = buildWsUrl(path);
+          wsUrlEl.textContent = '(' + currentUrl + ')';
+          setStatus('connecting...');
+
+          try {
+            socket = new WebSocket(currentUrl);
+          } catch (err) {
+            setStatus('error');
+            appendLog('WebSocket constructor error: ' + (err && err.message));
+            return;
+          }
+
+          socket.addEventListener('open', () => {
+            setStatus('connected');
+            appendLog('connected to ' + path);
+          });
+
+          socket.addEventListener('message', (ev) => {
+            // Prefer to show text directly. If it's not a string, try JSON stringify.
+            let msg = ev.data;
+            if (typeof msg !== 'string') {
+              try { msg = JSON.stringify(msg); } catch (e) { msg = String(msg); }
+            }
+            appendLog(msg);
+          });
+
+          socket.addEventListener('close', (ev) => {
+            setStatus('closed (code ' + ev.code + ')');
+            appendLog('socket closed, code=' + ev.code + (ev.reason ? ' reason=' + ev.reason : ''));
+          });
+
+          socket.addEventListener('error', (ev) => {
+            setStatus('error');
+            appendLog('socket error');
+          });
+        }
+
+        clearBtn.addEventListener('click', () => { logEl.textContent = ''; });
+
+        reconnectBtn.addEventListener('click', () => {
+          if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
+            try { socket.close(); } catch (e) {}
+          }
+          connect();
+        });
+
+        // start automatically
+        connect();
+      })();
+    </script>
+  </body>
+</html>

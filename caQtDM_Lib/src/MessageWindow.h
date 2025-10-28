@@ -87,6 +87,9 @@ public:
     void clearText();
     QString getMessageBoxContents();
     QString getLogFilePath();
+
+signals:
+    void newMessageReceivedEvent(QString text);
 };
 
 class CAQTDM_LIBSHARED_EXPORT MessageEvent: public QEvent

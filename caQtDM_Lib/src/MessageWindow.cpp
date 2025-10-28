@@ -196,6 +196,9 @@ void MessageWindow::postMsgEvent(QtMsgType type, char* msg)
         qmsg.append("</FONT>");
         break;
     }
+
+
+    emit MessageWindow::newMessageReceivedEvent(qmsg);
     //it's impossible to change GUI directly from thread other than the main thread
     //so post message encapsulated by MessageEvent to the main thread's event queue
 #ifdef __MINGW32__

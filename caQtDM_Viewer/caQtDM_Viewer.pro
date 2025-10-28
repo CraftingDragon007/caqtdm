@@ -34,7 +34,7 @@ unix:!macx:!ios:!android{
 }
 
 contains(QT_VER_MAJ, 6) {
-    QT     += core gui svg uitools network opengl
+    QT     += core gui svg uitools network opengl websockets
     CONFIG += qt warn_on thread widgets
     modbus{
        QT += serialbus
@@ -80,13 +80,17 @@ SOURCES +=\
     fileopenwindow.cpp \
     messagebox.cpp \
     configDialog.cpp \
-    pipereader.cpp
+    pipereader.cpp \
+    src/sharedvnclistmanager.cpp \
+    src/websocketserver.cpp
 
 HEADERS  +=  \
     messagebox.h \
     fileopenwindow.h \
     configDialog.h \
-    pipereader.h
+    pipereader.h \
+    src/sharedvnclistmanager.h \
+    src/websocketserver.h
 
 FORMS += main.ui
 

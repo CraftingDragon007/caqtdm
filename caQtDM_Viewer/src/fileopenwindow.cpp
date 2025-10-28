@@ -111,7 +111,7 @@ int setenv(const char *name, const char *value, int overwrite)
   #include <mach/vm_statistics.h>
 #endif
 
-
+#define IS_VNC qgetenv("QT_QPA_PLATFORM").startsWith("vnc")
 
 
 #if QT_VERSION > 0x050000
@@ -202,7 +202,7 @@ void FileOpenWindow::TerminateAllInterfaces()
  */
 FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString macroString,
                                bool attach, bool minimize, QString geometry, bool printscreen, bool resizing,
-                               QMap<QString, QString> options): QMainWindow(parent)
+                               quint16 web_port, QMap<QString, QString> options): QMainWindow(parent)
 {
     // definitions for last opened file
     debugWindow = true;
@@ -284,6 +284,25 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
     ui.setupUi(this);
     setGeometry(0,0, 300, 150);
     this->statusBar()->show();
+
+#ifndef MOBILE
+    // disable buttons that shouldn't be used when in vnc
+    if (IS_VNC) {
+        webSocketServer = new WebSocketServer(web_port, this);
+
+        connect(messageWindow, &MessageWindow::newMessageReceivedEvent, [this](QString text){
+            webSocketServer->sendLog(text);
+        });
+
+        ui.fileAction->setEnabled(false);
+        ui.timedAction->setEnabled(false);
+        ui.directAction->setEnabled(false);
+
+        if (!SharedVNCListManager::instance().setup()) {
+            qCritical() << "Failed to set up SharedVNCListManager, unable to coordinate opening of related displays (pid:" << QCoreApplication::applicationPid() << ")";
+        }
+    }
+#endif
 
     // connect action buttons
     connect( this->ui.fileAction, SIGNAL( triggered() ), this, SLOT(Callback_OpenButton()) );
