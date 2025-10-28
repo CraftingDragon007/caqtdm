@@ -130,6 +130,7 @@
 
 #define POPUPDEFENITION "popup.ui"
 
+#define IS_VNC qgetenv("QT_QPA_PLATFORM").startsWith("vnc")
 
 // used for calculating visibility for several types of widgets
 #define ComputeVisibility(x, obj)  {  \
@@ -1703,7 +1704,9 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
         // finish tooltip
         tooltip.append(ToolTipPostfix);
-        cameraWidget->setToolTip(tooltip);
+
+        if (!IS_VNC)
+            cameraWidget->setToolTip(tooltip);
 
         cameraWidget->setProperty("Taken", true);
 
@@ -3061,7 +3064,8 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
         // finish tooltip
         tooltip.append(ToolTipPostfix);
-        cartesianplotWidget->setToolTip(tooltip);
+        if (!IS_VNC)
+            cartesianplotWidget->setToolTip(tooltip);
 
         // reaffect titles
         title = cartesianplotWidget->getTitlePlot();
@@ -3121,7 +3125,8 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
         // finish tooltip
         tooltip.append(ToolTipPostfix);
-        waterfallplotWidget->setToolTip(tooltip);
+        if (!IS_VNC)
+            waterfallplotWidget->setToolTip(tooltip);
 
         // insert dataindex list
         integerList.insert(0, nbMonitors);
@@ -3202,7 +3207,8 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
         // finish tooltip
         tooltip.append(ToolTipPostfix);
-        stripplotWidget->setToolTip(tooltip);
+        if (!IS_VNC)
+            stripplotWidget->setToolTip(tooltip);
 
         title = stripplotWidget->getTitlePlot();
         if(reaffectText(map, &title, w1)) stripplotWidget->setTitlePlot(title);
@@ -3382,7 +3388,8 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
         // finish tooltip
         tooltip.append(ToolTipPostfix);
-        scan2dWidget->setToolTip(tooltip);
+        if (!IS_VNC)
+            scan2dWidget->setToolTip(tooltip);
 
         integerList.insert(0, nbMonitors); /* set property into stripplotWidget */
         scan2dWidget->setProperty("MonitorList", integerList);
@@ -4292,7 +4299,8 @@ int CaQtDM_Lib::addMonitor(QWidget *thisW, knobData *kData, QString pv, QWidget 
     }
 
     tooltip.append(ToolTipPostfix);
-    w->setToolTip(tooltip);
+    if (!IS_VNC)
+        w->setToolTip(tooltip);
 
     memcpy(kData->specData, specData, sizeof(int) * NBSPECS);
     kData->thisW = (void*) thisW;
@@ -8618,7 +8626,8 @@ int CaQtDM_Lib::InitVisibility(QWidget* widget, knobData* kData, QMap<QString, Q
         }
     }
     tooltip.append(ToolTipPostfix);
-    if(nbMon> 0) widget->setToolTip(tooltip);
+    if (!IS_VNC)
+        if(nbMon> 0) widget->setToolTip(tooltip);
 
     // replace macros for imagecalc
     if (caImage *imageWidget = qobject_cast<caImage *>(widget)) {

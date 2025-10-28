@@ -103,6 +103,70 @@ static void createMap(QMap<QString, QString> &map, const QString& option)
     //qDebug() << "resulting map=" << map;
 }
 
+struct WidgetDimensions {
+    bool found = false;
+    int width = -1;
+    int height = -1;
+};
+
+
+
+WidgetDimensions getWidgetDimensionsFromUi(const QString& uiFilePath) {
+    QFile file(uiFilePath);
+    if (!file.open(QFile::ReadOnly | QSaveFile::Text)) {
+        qWarning() << "Error: Cannot open UI file" << uiFilePath << ":" << file.errorString();
+        return {};
+    }
+
+    QXmlStreamReader xml(&file);
+    WidgetDimensions dims;
+
+    bool inTargetWidget = false;
+    bool inGeometryProperty = false;
+    bool inRectElement = false;
+
+    while (!xml.atEnd() && !xml.hasError()) {
+        QXmlStreamReader::TokenType token = xml.readNext();
+
+        if (token == QXmlStreamReader::StartElement) {
+            if (xml.name() == "widget" && (xml.attributes().value("class") == "QMainWindow" || xml.attributes().value("class") == "QDialog")) {
+                inTargetWidget = true;
+            } else if (inTargetWidget && xml.name() == "property" && xml.attributes().value("name") == "geometry") {
+                inGeometryProperty = true;
+            } else if (inGeometryProperty && xml.name() == "rect") {
+                inRectElement = true;
+            } else if (inRectElement && xml.name() == "width") {
+                xml.readNext();
+                if (xml.tokenType() == QXmlStreamReader::Characters) {
+                    dims.width = xml.text().toString().toInt();
+                }
+            } else if (inRectElement && xml.name() == "height") {
+                xml.readNext();
+                if (xml.tokenType() == QXmlStreamReader::Characters) {
+                    dims.height = xml.text().toString().toInt();
+                    dims.found = true;
+                    break;
+                }
+            }
+        } else if (token == QXmlStreamReader::EndElement) {
+            if (xml.name() == "widget" && inTargetWidget) {
+                inTargetWidget = false;
+                if (dims.found) break;
+            } else if (xml.name() == "property" && inGeometryProperty) {
+                inGeometryProperty = false;
+            } else if (xml.name() == "rect" && inRectElement) {
+                inRectElement = false;
+            }
+        }
+    }
+
+    if (xml.hasError()) {
+        qWarning() << "Error parsing UI file:" << xml.errorString();
+    }
+    file.close();
+    return dims;
+}
+
 int main(int argc, char *argv[])
 {
     Q_INIT_RESOURCE(caQtDM);
@@ -117,11 +181,6 @@ int main(int argc, char *argv[])
     QGuiApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
 #endif
 #endif
-
-    QApplication app(argc, argv);
-    QApplication::setOrganizationName("Paul Scherrer Institut");
-    QApplication::setApplicationName("caQtDM");
-
 
 
 #ifdef MOBILE_ANDROID
@@ -151,26 +210,13 @@ int main(int argc, char *argv[])
     }
 #endif
 
-    searchFile *searchDefaultStyleSheet = new searchFile("caQtDM_stylesheet.qss");
-    QString fileNameFound = searchDefaultStyleSheet->findFile();
-    if(fileNameFound.isNull()) {
-        printf("caQtDM -- file <caQtDM_stylesheet.qss> could not be loaded, is 'CAQTDM_DISPLAY_PATH' <%s> defined?\n", qasc(searchDefaultStyleSheet->displayPath()));
-    } else {
-        QFile file(fileNameFound);
-        file.open(QFile::ReadOnly);
-        QString StyleSheet = QLatin1String(file.readAll());
-        printf("caQtDM -- file <caQtDM_stylesheet.qss> loaded as the default application stylesheet\n");
-        app.setStyleSheet(StyleSheet);
-        file.close();
-    }
-    delete searchDefaultStyleSheet;
-
     int	in, numargs;
     bool attach = false;
     bool minimize= false;
     bool printscreen = false;
     bool savetoimage = false;
     bool resizing = true;
+    bool server = false;
 
     for (numargs = argc, in = 1; in < numargs; in++) {
         qDebug() << argv[in];
@@ -264,6 +310,8 @@ int main(int argc, char *argv[])
             in++;
             printf("caQtDM -- option <%s>\n", argv[in]);
             createMap(options, QString(argv[in]));
+        } else if (strcmp (argv[in], "-server") == 0) {
+            server = true;
         } else if (strncmp (argv[in], "-" , 1) == 0) {
             /* unknown application argument */
             printf("caQtDM -- Argument %d = [%s] is unknown!, possible -attach -macro -noMsg -stylefile -dg -x -print -httpconfig -noResize -option\n",in,argv[in]);
@@ -273,6 +321,37 @@ int main(int argc, char *argv[])
             break;
         }
     }
+
+    if (server && fileName.length() > 0) {
+        WidgetDimensions dimensions = getWidgetDimensionsFromUi(fileName);
+        if (dimensions.found) {
+            if (dimensions.height <= 0 || dimensions.width <= 0) {
+                printf("caQtDM -- Negative or zero ui width / height found (%sx%s), not enabling server mode!", QString::number(dimensions.width).toUtf8().data(), QString::number(dimensions.height).toUtf8().data());
+                server = false;
+            } else qputenv("QT_QPA_PLATFORM", ("vnc:size=" + QString::number(dimensions.width) + "x" + QString::number(dimensions.height) + ":depth=16").toStdString());
+        }
+    } else if (server) {
+        printf("No ui file was specified, not enabling server mode!");
+        server = false;
+    }
+
+    QApplication app(argc, argv);
+    QApplication::setOrganizationName("Paul Scherrer Institut");
+    QApplication::setApplicationName("caQtDM");
+
+    searchFile *searchDefaultStyleSheet = new searchFile("caQtDM_stylesheet.qss");
+    QString fileNameFound = searchDefaultStyleSheet->findFile();
+    if(fileNameFound.isNull()) {
+        printf("caQtDM -- file <caQtDM_stylesheet.qss> could not be loaded, is 'CAQTDM_DISPLAY_PATH' <%s> defined?\n", qasc(searchDefaultStyleSheet->displayPath()));
+    } else {
+        QFile file(fileNameFound);
+        file.open(QFile::ReadOnly);
+        QString StyleSheet = QLatin1String(file.readAll());
+        printf("caQtDM -- file <caQtDM_stylesheet.qss> loaded as the default application stylesheet\n");
+        app.setStyleSheet(StyleSheet);
+        file.close();
+    }
+    delete searchDefaultStyleSheet;
 
     // get data from pipe if any (ui data can be piped to this application, for linux at this time)
     // only when no file is given, attaching is not allowed, in order to get rid of the temporary file when exit
