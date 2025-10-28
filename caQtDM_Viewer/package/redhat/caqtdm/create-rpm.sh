@@ -18,6 +18,7 @@ if [ "$1" == "--help" ]; then
   echo "Examples:" 
   echo "./create-rpm.sh              # Normal git checkout + using spec file from git " 
   echo "./create-rpm.sh --rpmdev     # use the current caqtdm.spec in this directory  " 
+  echo "./create-rpm.sh --no-checkout # use the current directory as source, do not checkout from git "
   echo "" 
   echo "" 
   echo "" 
@@ -26,34 +27,44 @@ fi
 
 if ! [ -f "./caqtdm-${PACKAGE_VERSION}.tar.gz" ]; then
 
-#### Clone and build caqtdm sources
-git clone $REPOSITORY
-cd $REPOSITORY_NAME
-# TODO Enable this again for serious builds
-git checkout $BRANCH_OR_TAG
-rm -rf .git
-cd ..
-if [ "$1" != "--rpmdev" ]; then
-    mv ./caqtdm.spec "./caqtdm.spec_$(date +"%Y_%m_%d_%I_%M")"
-    cp ./caqtdm/caQtDM_Viewer/package/rhel/caqtdm.spec ./
+if [ "$1" != "--no-checkout" ]; then
+  #### Clone and build caqtdm sources
+  git clone $REPOSITORY
+  cd $REPOSITORY_NAME
+  # TODO Enable this again for serious builds
+  git checkout $BRANCH_OR_TAG
+  rm -rf .git
+  cd ..
+  if [ "$1" != "--rpmdev" ]; then
+      mv ./caqtdm.spec "./caqtdm.spec_$(date +"%Y_%m_%d_%I_%M")"
+      cp ./caqtdm/caQtDM_Viewer/package/rhel/caqtdm.spec ./
+  fi
+
+
+
+  find ./caqtdm/caQtDM_Viewer/src -type f | xargs chmod 644
+  find ./caqtdm/caQtDM_QtControls/src -type f | xargs chmod 644
+  find ./caqtdm/caQtDM_Lib/src -type f | xargs chmod 644
+  find ./caqtdm/caQtDM_Lib/caQtDM_Plugins -type f | xargs chmod 644
+
+  mv caqtdm caqtdm-${PACKAGE_VERSION}
+  tar -czf caqtdm-${PACKAGE_VERSION}.tar.gz ./caqtdm-${PACKAGE_VERSION}
+else
+  echo "Using current directory as source, not checking out from git"
+  currentdir=$(pwd)
+  cd ../../../../
+  tar -czf caqtdm-${PACKAGE_VERSION}.tar.gz --exclude=.git --transform="s,^\.,caqtdm-${PACKAGE_VERSION}," .
+  mv caqtdm-${PACKAGE_VERSION}.tar.gz ${currentdir}/
+  cd ${currentdir}
 fi
-
-
-
-find ./caqtdm/caQtDM_Viewer/src -type f | xargs chmod 644
-find ./caqtdm/caQtDM_QtControls/src -type f | xargs chmod 644
-find ./caqtdm/caQtDM_Lib/src -type f | xargs chmod 644
-find ./caqtdm/caQtDM_Lib/caQtDM_Plugins -type f | xargs chmod 644
-
-mv caqtdm caqtdm-${PACKAGE_VERSION}
-tar -czf caqtdm-${PACKAGE_VERSION}.tar.gz ./caqtdm-${PACKAGE_VERSION}
 fi
 
 if [ ! -d "../../rpmbuild/SOURCES/" ]; then
    mkdir -p "../../rpmbuild/SOURCES/"
 fi
 
-export   EPICS_BASE_TARGET=/usr/local/epics/base-7.0.9;
+: "${EPICS_BASE_TARGET:=/usr/local/epics/base-7.0.9}"
+export EPICS_BASE_TARGET
 
 cp caqtdm-${PACKAGE_VERSION}.tar.gz  ../../rpmbuild/SOURCES/
 

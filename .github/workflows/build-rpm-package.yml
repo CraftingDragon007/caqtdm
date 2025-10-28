@@ -1,0 +1,100 @@
+name: caQtDM RPM Package Build
+
+on:
+  workflow_dispatch:
+  pull_request:
+  schedule: # Daily at 2am
+    - cron: '0 2 * * *'
+
+jobs:
+  build:
+    name: Build RPM package
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ matrix.linux-version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        linux-version: [fedora:44, redhat/ubi10:latest, rockylinux:9]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v5
+
+    - name: Determine package manager
+      id: pkg-manager
+      run: |
+        if [ -f /etc/dnf/dnf.conf ]; then
+          echo "cmd=dnf install -y" >> $GITHUB_OUTPUT
+        elif [ -f /etc/yum.conf ]; then
+          echo "cmd=yum install -y" >> $GITHUB_OUTPUT
+        else
+          echo "Unsupported package manager"
+          exit 1
+        fi
+
+    - name: Install build dependencies for epics-base
+      run: |
+        ${{ steps.pkg-manager.outputs.cmd }} \
+          gcc make patch perl readline-devel ncurses-devel \
+          wget rpmdevtools
+
+    - name: Build epics-base RPM
+      run: |
+        cd caQtDM_Viewer/package/redhat/epics-base
+
+        # Create the RPM build environment
+        rpmdev-setuptree
+
+        # Download source
+        wget https://epics-controls.org/download/base/base-7.0.9.tar.gz
+
+        # Copy source and patches to rpmbuild directories
+        cp base-7.0.9.tar.gz ~/rpmbuild/SOURCES/
+        cp *.patch ~/rpmbuild/SOURCES/
+        cp epics-base.spec ~/rpmbuild/SPECS/
+        
+        # Build the RPM package
+        cd ~/rpmbuild/SPECS
+        rpmbuild -ba epics-base.spec
+
+    - name: Install epics-base RPM
+      run: |
+        rpm -ivh ~/rpmbuild/RPMS/*/epics-base-7.0.9-*.rpm
+
+    - name: Install caQtDM build dependencies
+      run: |
+        ${{ steps.pkg-manager.outputs.cmd }} \
+          qt6-qtbase-devel qt6-qttools-devel qt6-qtsvg-devel \
+          qt6-qtserialbus-devel qt6-qt5compat-devel qt6-qtlocation-devel \
+          qwt-qt6-devel libXext-devel czmq-devel cppzmq-devel \
+          python3-devel
+
+    - name: Build caQtDM RPM
+      run: |
+        cd caQtDM_Viewer/package/redhat/caqtdm
+
+        # Set EPICS_BASE environment variable
+        export EPICS_BASE_TARGET=/usr/local/epics/base-7.0.9
+
+        # The create-rpm.sh script will handle the rest
+        chmod +x create-rpm.sh
+        ./create-rpm.sh
+
+    - name: Upload epics-base RPM as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: epics-base-rpm-${{ matrix.linux-version }}
+        path: ~/rpmbuild/RPMS/*/*.rpm
+
+    - name: Upload caQtDM RPM as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: caqtdm-rpm-${{ matrix.linux-version }}
+        path: ~/rpmbuild/RPMS/*/*.rpm
+
+    - name: Verify caQtDM installation
+      run: |
+        rpm -ivh ~/rpmbuild/RPMS/*/caqtdm*.rpm
+        which caQtDM || echo "caQtDM not in PATH, checking /opt/caqtdm"
+        ls -la /opt/caqtdm/bin/ || true
