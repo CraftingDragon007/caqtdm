@@ -2623,11 +2623,61 @@ has no equivalent in MEDM
       "x coordinate of the mouse position", "y coordinate of the mouse position", "MouseMove", "n/a",
       "x coordinate of the mouse position", "y coordinate of the mouse position", "MousePress", "n/a"
 
+--------------
+
+.. _wmSignalRescale:
+
+``wmSignalRescale``
+~~~~~~~~~~~~~~~~~~~
+has no equivalent in MEDM
+
+   **Description:**
+   The wmSignalRescale object is used to capture rescale events of its parent widget. This allows you to respond to rescale events by receiving the new size of the parent widget.
+   The object itself is invisible at runtime and does not interact with the user. It can be configured just like any other object in Qt Designer. You typically place it inside a ``caFrame`` or the main window to capture rescale events of that container.
+   The result of the rescale event can be sent to caCalc soft channels (``softChannelA`` and ``softChannelB``) or emitted via signals. This allows you to use the new size information in other parts of your panel.
+
+
+   **Properties:**
+   The following properties are available:
+
+   ``softChannelA``
+      1st Output, primary output route. Provides you with the width of the parent widget after a rescale event.
+      Type: caCalc soft channel name/identifier (string)
+
+   ``softChannelB``
+      2nd Output, secondary/alternative output route. Provides you with the height of the parent widget after a rescale event.
+      Type: caCalc soft channel name/identifier (string)
+
+   ``rectSignalPosition``
+      Defines the position and size information sent with the ``emitSignal(QRect rect)`` signal. The ``QRect`` carries the rectangle (x, y, width, height).
+      Type: QPoint (x, y)
+
+
+   **Signals:**
+   The following signals are emitted by the wmSignalRescale widget:
+
+   ``emitSignal(QRect rect)``
+      Emitted on rescale events to report the current size and the position defined in the ``rectSignalPosition`` property. The ``QRect`` carries the rectangle (x, y, width, height).
+
+   ``emitSignal(QSize size)``
+      Emitted on rescale events to report the current size. The ``QSize`` carries the size (width, height).
+
+   ``emitSignal(int width, int height)``
+      Emitted on rescale events to report the current width and height in pixels.
+
+   ``emitWidth(int width)``
+      Emitted on rescale events to report the current width in pixels.
+
+   ``emitHeight(int height)``
+      Emitted on rescale events to report the current height in pixels.
+
+   ``internalResizeEvent(...);``
+      Internal signal used to trigger the rescale event handling. This signal is not meant to be used directly.
+
 
 
 
 --------------
-
 
 Requirements
 -------------------------------
