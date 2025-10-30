@@ -12,7 +12,7 @@
 // Configuration parameters
 #define MAX_PROCESS_SLOTS 256      // Maximum number of concurrent processes
 #define EVENT_PAYLOAD_SIZE 8192    // Fixed size for event data payload
-#define EVENT_BUFFER_CAPACITY 100 // Max events in the ring buffer
+#define EVENT_BUFFER_CAPACITY 512 // Max events in the ring buffer
 
 #define PREFIX "HmiSharedEventBus"
 
@@ -41,13 +41,13 @@ struct EventPayload {
 
 struct SharedHeader {
     int currentWriteIndex;  // Next available slot for writing (0 to EVENT_BUFFER_CAPACITY - 1)
-    int totalEventsWritten;
+    quint64 totalEventsWritten;
 
     // Each slot represents a potential active process.
     // pid = 0 means slot is free.
     struct ProcessSlot {
         int pid;                 // Process ID of the active process in this slot (0 if free)
-        int lastReadTotalEvents; // Amount of events the process has read
+        quint64 lastReadTotalEvents; // Amount of events the process has read
     } processSlots[MAX_PROCESS_SLOTS];
 
     SharedHeader() : currentWriteIndex(0), totalEventsWritten(0) {
