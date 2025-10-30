@@ -121,7 +121,7 @@ private:
     double thisMaximum, thisMinimum;
     SourceMode thisPrecMode;
     SourceMode thisLimitsMode;
-    bool thisFixedFormat;
+
     colMode thisColorMode;
     colMode oldColorMode;
     QColor thisForeColor, oldForeColor;

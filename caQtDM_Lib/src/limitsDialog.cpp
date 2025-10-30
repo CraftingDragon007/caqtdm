@@ -25,7 +25,7 @@
 
 #include <QtGui>
 #include "limitsDialog.h"
-#define PREC_LIMIT_NUMERIC 15
+#define PREC_LIMIT_NUMERIC 19
 
 int limitsDialog::extractPrecisionFromFormat(const QString &fmt)
 {

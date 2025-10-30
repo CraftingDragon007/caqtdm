@@ -104,6 +104,7 @@ protected:
     virtual QSize sizeHint() const;
     virtual QSize minimumSizeHint() const;
 
+    bool managedigits(double newvalue);
 private:
     void mouseDoubleClickEvent(QMouseEvent*);
     bool eventFilter(QObject *obj, QEvent *event);
@@ -123,8 +124,6 @@ private:
     void suppressUserInput();
     QString generate_valueString();
 
-    int idUpVuoto, idDownVuoto;
-    int idUpPoint, idDownPoint;
     int intDig;
     int decDig;
     int digits;
@@ -150,5 +149,7 @@ private:
     int orig_intDig = -1;
     bool suppressInput = false;
     QString backupStylesheet = "";
+public:
+    bool thisFixedFormat;
 };
 #endif // EDIGIT_H

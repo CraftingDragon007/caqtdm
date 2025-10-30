@@ -42,7 +42,7 @@
 #include <QApplication>
 
 #define MIN_FONT_SIZE 5
-#define PREC_LIMIT_NUMERIC 15
+#define PREC_LIMIT_NUMERIC 19
 
 #if (_MSC_VER == 1600)
 int round (double x) {
@@ -61,6 +61,8 @@ ENumeric::ENumeric(QWidget *parent, int id, int dd) : QFrame(parent), FloatDeleg
     intDig = id;
     decDig = dd;
     digits = id + dd;
+    qDebug()<<"ENumeric::ENumeric"<<digits;
+
     data = 0;
     csValue = 0.0;
     minVal = (int) -pow(10.0, digits) + 1;
@@ -136,6 +138,8 @@ void ENumeric::setDigitsFontScaleEnabled(bool en)
 
 void ENumeric::clearContainers()
 {
+
+    qDebug() << "clearContainers";
     if (box) {
         labels.clear();
         QString pattern="layoutmember*";
@@ -159,6 +163,7 @@ void ENumeric::clearContainers()
 
 void ENumeric::init()
 {
+    qDebug() << "init";
     LeftClickWithModifiersEater *lCWME = findChild<LeftClickWithModifiersEater *>("leftClickWithModifiersEater");
     setFocusPolicy(Qt::StrongFocus);
         if(box == NULL) box = new QGridLayout(this);
@@ -246,9 +251,7 @@ void ENumeric::setValue(double v)
     if ((temp >= minVal) && (temp <= maxVal)) {
         bool valChanged = data != temp;
         data = temp;
-        /* call this before emitting value changed to be sure that the value is up to date
-         * in the labels of the TNumeric.
-         */
+        managedigits(v);
         showData();
 
         if (valChanged) emit valueChanged(transformNumberSpace(temp, -decDig));
@@ -260,8 +263,10 @@ QString ENumeric::generate_valueString(){
     if(signLabel && (signLabel->text() == "-")) valueString += signLabel->text();
     for(int i = 0; i < digits; i++){
         if(i == intDig) valueString += ".";
-        QString txt = labels[i]->text();
-        if(txt != " ") valueString += txt;
+        if (i<labels.length()){
+            QString txt = labels[i]->text();
+            if(txt != " ") valueString += txt;
+        }
     }
     return valueString;
 }
@@ -270,11 +275,34 @@ QString ENumeric::generate_valueString(){
 
 
 bool ENumeric::canEdit(){
-    QString dataString = QString().number(data);
-    qDebug()<< "canEdit:" << dataString << dataString.length();
-    if(((dataString.contains("922337")) && dataString.length() >= 19)){
+
+/*
+    quint64 numberi{std::numeric_limits<quint64>::max()};
+    QString k{""};
+    k = QString::number(numberi);
+    qDebug() << "k quint64 is now: " << k;
+
+    double numberd{std::numeric_limits<double>::max()};
+    k.clear();
+    k = QString::number(numberd);
+    qDebug() << "k double is now: " << k;
+*/
+
+
+    //QString dataString = QString().number(data);
+    //qDebug()<< "canEdit:" << dataString << dataString.length() << data;
+    //if(((dataString.contains("922337")) && dataString.length() >= 19)){
+
+    if (csValue>std::numeric_limits<qint64>::max()||csValue<std::numeric_limits<qint64>::min()){
+       return false;
+    }
+    int intDigits = QString().number((qint64) csValue).length();
+    if ((intDig+4) < intDigits){
+        qDebug()<< "canEdit=false:"<<intDig+4 << intDigits;
         return false;
     }
+
+
     return true;
 }
 
@@ -293,12 +321,70 @@ void ENumeric::suppressUserInput(){
     update();
 }
 
+bool ENumeric::managedigits(double newvalue){
+    int intDigits = QString().number((qint64) newvalue).length();
+    qDebug()<< "Digits:"<< this->objectName()<< digits << intDig << decDig;
+    qDebug()<< "start intDigits:"<<  intDigits;
+    if (intDig!=intDigits){
+
+        int calc_shift=intDig-intDigits;
+
+        if (!thisFixedFormat){
+            if (calc_shift>0){
+                if ((intDig-calc_shift)<1){
+                    calc_shift=intDig-1;
+
+                }
+
+                if ((decDig-calc_shift)<0){
+                    calc_shift=decDig;
+                }
+
+                intDig=intDig+calc_shift;
+                decDig=decDig-calc_shift;
+                qDebug()<< "calc_shift:"<<calc_shift;
+                qDebug()<< "new Digits(1):"<< digits << intDig << decDig;
+                return true;
+            }
+            if (calc_shift<0){
+                if ((intDig-calc_shift)<1){
+                    calc_shift=intDig-1;
+                }
+                if ((decDig+calc_shift)<0){
+                    calc_shift=decDig;
+                }
+
+                intDig=intDig-calc_shift;
+                decDig=decDig+calc_shift;
+                qDebug()<< "calc_shift:"<<calc_shift;
+                qDebug()<< "new Digits(2):"<< digits << intDig << decDig;
+                return true;
+            }
+        }else{
+            qDebug()<< "Digits change";
+        }
+    }
+
+
+
+
+
+    return false;
+}
+
 void ENumeric::silentSetValue(double v)
 {
+/*
     int intDigits = QString().number((qint64) v).length();
     if(orig_decDig == -1) orig_decDig = decDig;
     if(orig_intDig == -1) orig_intDig = intDig;
 
+    qDebug()<< "start intDigits:"<<  intDigits <<  QString::number(v, 'f', 16);
+    qDebug() << "max Value" << std::numeric_limits<qint64>::max();
+
+
+    qDebug() << "intDig" << intDig;
+    qDebug() << "decDig" << decDig;
 
     // Only do after initialized (or above threshold) to avoid shortening digits when not needed
     if(!valueChangedByButton && (digits > PREC_LIMIT_NUMERIC)){
@@ -321,7 +407,8 @@ void ENumeric::silentSetValue(double v)
 
 
     }
-
+*/
+    managedigits(v);
     setValuesFromChannel(v);
 
 
@@ -336,8 +423,14 @@ void ENumeric::silentSetValue(double v)
         for(int i = 0; i < digits; i++){
             labels[i]->setStyleSheet("");
         }
-        if(!valueChangedByButton) clearContainers();
-        if(!valueChangedByButton) init();
+
+        qint64 temp = transformNumberSpace(v, decDig);
+        if (temp!=data){
+            if(!valueChangedByButton) {
+                clearContainers();
+                init();
+            }
+        }
         showData();
         triggerRoundColorUpdate();
     }else if(!canEdit() && !suppressInput){
@@ -352,9 +445,11 @@ void ENumeric::setValuesFromChannel(double v)
     // Adjust min/max if set by channel
     setDecDigits(decDig);
     qint64 temp = transformNumberSpace(v, decDig);
-    if(!isInitialized) isInitialized = true;
-    data = temp;
-    showData();
+    if (temp!=data){
+        data = temp;
+        showData();
+        isInitialized = true;
+    }
 }
 
 void ENumeric::setMaximum(double v)
@@ -384,28 +479,35 @@ void ENumeric::setIntDigits(int i)
     clearContainers();
     intDig = i;
     digits = intDig + decDig;
+    qDebug()<<"setIntDigits"<<this->objectName()<<digits;
     init();
 }
 
 void ENumeric::setDecDigits(int d)
 {
     if (d < 0) return;
-    data = (qint64) (data * pow(10.0, d - decDig));
-    maxVal = (qint64) (maxVal * pow(10.0, d - decDig));
-    minVal = (qint64) (minVal * pow(10.0, d - decDig));
+    if (!thisFixedFormat){
+        data = (qint64) (data * pow(10.0, d - decDig));
+        maxVal = (qint64) (maxVal * pow(10.0, d - decDig));
+        minVal = (qint64) (minVal * pow(10.0, d - decDig));
+    }
     decDig = d;
+    digits = intDig + decDig;
 
+    qDebug()<<"setDecDigits"<<this->objectName()<<decDig;
     // shift digits around if max/minvalue get too big.
+/*
     int ddig = decDig + intDig;
     int digShifted = 0;
-    while (ddig > 17) {
+    while (ddig > PREC_LIMIT_NUMERIC) {
         if(intDig > 0) decDig--;
         ddig--;
         digShifted++;
     }
     digits = decDig + intDig;
-
-    if(((decDig != orig_decDig || intDig != orig_intDig) && digShifted > 0) || !isInitialized){
+    qDebug()<<"setDecDigits:" << decDig << intDig ;
+*/
+    if(!isInitialized){
         if(!valueChangedByButton) clearContainers();
         /* when changing decimal digits, minimum and maximum need to be recalculated, to avoid
          * round issues. So, recalculating maximum and minimum is required  to obtain precision
@@ -433,12 +535,13 @@ void ENumeric::upDataIndex(int id)
 {
     if(!_AccessW) return;
     if(id == -1) return;
+    valueChangedByButton = true;
     qint64 datad = data;
     qint64 const currentData = data;
     qint64 power =  qPow(10.0, digits-id-1);
     datad = datad + power;
     // (qint64) power overflows between 10^18 and 10^19
-    qDebug()<<"upDataIndex:" << id << datad << maxVal;
+    qDebug()<<"upDataIndex:" << id << datad << maxVal << power;
     if (datad <= (maxVal) && digits-id-1 < 19) {
         data = datad;
         double dataDouble = (double) datad;
@@ -484,10 +587,12 @@ void ENumeric::downDataIndex(int id)
 {
     if(!_AccessW) return;
     if(id == -1) return;
+    valueChangedByButton = true;
     qint64 datad = data;
     qint64 const currentData = data;
     qint64 power =  pow(10.0, digits-id-1);
     datad = datad - power;
+    qDebug()<<"downDataIndex:" << id << datad << maxVal << power;
     if (datad >= minVal) {
         data = datad;
         double dataDouble = (double) datad;
@@ -503,17 +608,19 @@ void ENumeric::downDataIndex(int id)
 
 void ENumeric::showData()
 {
-    int thisDigit, prvDigit;
+    int thisDigit=0;
+    int prvDigit=0;
     bool suppress = true;
     qint64 temp = data;
     double num = 0;
 
     if(!suppressInput){
-        if (data < 0)
+        if (csValue < 0.0){
             if (signLabel) signLabel->setText(QString("-"));
-        else
+        }
+        else{
             if (signLabel) signLabel->setText(QString("+"));
-
+        }
         for (int i = 0; i < digits; i++) {
             double power =  pow(10.0, digits-i-1);
             double numd = (double) temp / power;
