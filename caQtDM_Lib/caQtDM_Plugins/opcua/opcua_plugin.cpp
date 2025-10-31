@@ -332,12 +332,28 @@ int OPCUAPlugin::pvClearMonitor(knobData *kData)
     m_knobDataIndicesForEndpoint[endpoint].removeAll(index);
     m_channelCache.remove(nodeId, index);
 
-    // Find which endpoint this node belongs to
-    for (auto it = m_cores.begin(); it != m_cores.end(); ++it) {
-        auto core = it.value();
-        if (core && core->hasSubscription(nodeId)) {
+    // Unsubscribe from node
+    OpcUaCore *core = Q_NULLPTR;
+    if (m_cores.contains(nodeId)) {
+        core = m_cores[nodeId];
+        if (core->hasSubscription(nodeId)) {
             core->unsubscribeFromNode(nodeId);
-            break;
+        }
+
+        m_cores.remove(nodeId);
+
+        // Check if any other node is still connected to this core
+        bool coreIsStillUsed = false;
+        for (auto it = m_cores.begin(); it != m_cores.end(); ++it) {
+            if (it.value() == core) {
+                coreIsStillUsed = true;
+            }
+        }
+
+        // Remove the core if its not used anymore
+        if (!coreIsStillUsed) {
+            core->disconnectOpc();
+            core->deleteLater();
         }
     }
 
