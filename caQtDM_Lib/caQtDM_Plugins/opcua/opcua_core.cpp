@@ -26,6 +26,7 @@
 #include <QDebug>
 #include "qeventloop.h"
 #include "qmetaobject.h"
+#include "qopcuaauthenticationinformation.h"
 #include "qtcpsocket.h"
 
 #define DEFAULT_OPCUA_PORT 4840
@@ -36,6 +37,7 @@
 OpcUaCore::OpcUaCore(QObject *parent)
     : QObject(parent)
     , m_client(Q_NULLPTR)
+    , m_passwordCredentials({"", ""})
 {
     QOpcUaProvider provider;
 
@@ -49,6 +51,21 @@ OpcUaCore::OpcUaCore(QObject *parent)
     if (!m_client) {
         VERBOSELOG("Failed to create OPC UA client instance.");
         return;
+    }
+
+    QString username = qgetenv("CAQTDM_OPCUA_USERNAME_PLAIN");
+    QString password = qgetenv("CAQTDM_OPCUA_PASSWORD_PLAIN");
+    if (!username.isEmpty() && !password.isEmpty()) {
+        QOpcUaAuthenticationInformation authInfo;
+        authInfo.setUsernameAuthentication(username, password);
+        m_client->setAuthenticationInformation(authInfo);
+        m_passwordCredentials = {username, password};
+    }
+
+    QString certificatePath = qgetenv("CAQTDM_OPCUA_CERTIFICATE");
+    QString privateKeyPath = qgetenv("CAQTDM_OPCUA_PRIVATEKEY");
+    if (!certificatePath.isEmpty() && !privateKeyPath.isEmpty()) {
+        VERBOSELOG("certificate authentication / encryption is not yet supported.");
     }
 
     QObject::connect(m_client, &QOpcUaClient::connected, this, [this]() {
@@ -103,12 +120,19 @@ OpcUaCore::OpcUaCore(QObject *parent)
         reconnectTimer->start(0);
     });
 
-    QObject::connect(m_client,
-                     &QOpcUaClient::errorChanged,
-                     this,
-                     [](QOpcUaClient::ClientError error) {
-                         VERBOSELOG(QString("Client error: %1").arg(static_cast<int>(error)));
-                     });
+    QObject::connect(
+        m_client, &QOpcUaClient::errorChanged, this, [this](QOpcUaClient::ClientError error) {
+            if (error == QOpcUaClient::ClientError::InvalidAuthenticationInformation) {
+                VERBOSELOG("Client error: Authentication information is wrong for: "
+                           << m_currentEndpointDescription.endpointUrl());
+            } else if (error == QOpcUaClient::ClientError::NoMatchingUserIdentityTokenFound) {
+                VERBOSELOG("Client error: No matching authentication information found for: "
+                           << m_currentEndpointDescription.endpointUrl());
+            } else {
+                VERBOSELOG("Client error: " << static_cast<int>(error) << " for: "
+                                            << m_currentEndpointDescription.endpointUrl());
+            }
+        });
 }
 OpcUaCore::~OpcUaCore()
 {
@@ -594,4 +618,14 @@ QString OpcUaCore::getTimestamp(const QString &nodeId)
     }
     QDateTime timestamp = node->serverTimestamp(QOpcUa::NodeAttribute::Value);
     return "Timestamp: " + timestamp.toString("MMM dd, yyyy HH:mm:ss.zzz");
+}
+
+void OpcUaCore::updatePasswordCredentials(const PasswordCredentials &newPasswordCredentials)
+{
+    QOpcUaAuthenticationInformation authInfo;
+    authInfo.setUsernameAuthentication(newPasswordCredentials.username,
+                                       newPasswordCredentials.password);
+    m_client->setAuthenticationInformation(authInfo);
+    m_client->connectToEndpoint(m_currentEndpointDescription);
+    m_passwordCredentials = newPasswordCredentials;
 }

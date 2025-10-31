@@ -191,6 +191,17 @@ private:
     QMutex m_mutex;
     MutexKnobData *m_mutexKnobDataP;
     MessageWindow *m_messageWindowP;
+    PasswordCredentials m_generalPasswordCredentials;
+    // knobData index for the general username for all channels
+    int m_usernameIndex;
+    // knobData index for the general password for all channels
+    int m_passwordIndex;
+    // Maps host to knobData index of respective username
+    QMap<QString, int> m_usernameIndexForHost;
+    // Maps host to knobData index of respective password
+    QMap<QString, int> m_passwordIndexForHost;
+    // Maps host to respective PasswordCredentials
+    QMap<QString, PasswordCredentials> m_passwordCredentialsForHost;
     // Maps nodeId to knobData index
     QMultiMap<QString, int> m_channelCache;
     // Maps nodeId to core (multiple nodeId > core possible)
@@ -205,6 +216,35 @@ private:
     QMap<QString, EpicsWaveformAttributePVs> m_epicsWaveformAttributePVs;
     // Maps pvs (as keys)) to values that should be used instead of them in the OpcUa context
     QMap<QString, QString> m_translationMap;
+
+    /**
+     * @brief Checks if a pv is for a general username or password for all hosts
+     * @param pv: string to check
+     * @return true if it is, else false
+     */
+    bool isGeneralUsernamePassword(const QString &pv);
+
+    /**
+     * @brief Checks if a pv is a specific username or password for some host
+     * @param pv: string to check
+     * @return true if it is, else false
+     */
+    bool isSpecificUsernamePassword(const QString &pv);
+
+    /**
+     * @brief Initialized either a general or a specific username or password pv, updating its value if anything is already stored
+     * @param index: knobData index of the pv to initialize
+     * @return true for success, false for failure
+     */
+    int initializeUsernamePasswordPV(int index);
+
+    /**
+     * @brief Checks if a given PasswordCredentials is valid in a way it can be used to start a connection
+     * This Check does not guarantee or even check correctness of the credentials on any system.
+     * @param credentialsToCheck: credentials to check
+     * @return true if credentials are valid, else false
+     */
+    bool isPasswordCredentialsValid(const PasswordCredentials &credentialsToCheck);
 
     /**
      * @brief Creates a caType corresponding to a QVariant value

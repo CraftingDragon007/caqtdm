@@ -33,14 +33,19 @@
 #include "searchfile.h"
 #include <memory>
 
+#define PASSWORD_PLACEHOLDER "[HIDDEN]"
 #define PLUGIN_PREFIX "opcua://"
 #define PROTOCOL_PREFIX "opc.tcp://"
+
 OPCUAPlugin::OPCUAPlugin()
+    : m_generalPasswordCredentials({"", ""})
 {
     VERBOSELOG("Create");
     QLoggingCategory::setFilterRules("qt.opcua.plugins.open62541*=false");
     m_mutexKnobDataP = Q_NULLPTR;
     m_messageWindowP = Q_NULLPTR;
+    m_usernameIndex = -1;
+    m_passwordIndex = -1;
 }
 
 QString OPCUAPlugin::pluginName()
@@ -127,6 +132,92 @@ int OPCUAPlugin::initCommunicationLayer(MutexKnobData *data,
     return true;
 }
 
+bool OPCUAPlugin::isGeneralUsernamePassword(const QString &pv)
+{
+    return (pv == "username" || pv == "password");
+}
+
+bool OPCUAPlugin::isSpecificUsernamePassword(const QString &pv)
+{
+    if (!pv.endsWith("/username") && !pv.endsWith("/password")) {
+        return false;
+    }
+
+    if (pv.contains(PROTOCOL_PREFIX)) {
+        return false;
+    }
+    return true;
+}
+
+int OPCUAPlugin::initializeUsernamePasswordPV(int index)
+{
+    knobData kData = m_mutexKnobDataP->GetMutexKnobData(index);
+    QString pv = QString::fromUtf8(kData.pv);
+    if (!kData.edata.connected) {
+        kData.edata.connected = true;
+        kData.edata.valueCount = kData.edata.nelm = 0;
+        kData.edata.dataSize = 0;
+        kData.edata.fieldtype = caSTRING;
+        kData.edata.accessR = true;
+        kData.edata.accessW = true;
+    }
+    kData.edata.monitorCount++;
+    QString newValue;
+
+    if (isGeneralUsernamePassword(pv)) {
+        if (pv == "username") {
+            m_usernameIndex = index;
+            newValue = m_generalPasswordCredentials.username;
+        } else if (pv == "password") {
+            m_passwordIndex = index;
+            if (!m_generalPasswordCredentials.password.isEmpty()) {
+                newValue = PASSWORD_PLACEHOLDER;
+            }
+        }
+    } else if (isSpecificUsernamePassword(pv)) {
+        QString host = pv;
+        host.remove(pv.length() - 9, 9);
+        host.remove(PLUGIN_PREFIX);
+        if (pv.endsWith("username")) {
+            m_usernameIndexForHost[host] = index;
+            if (m_passwordCredentialsForHost.contains(host)) {
+                newValue = m_passwordCredentialsForHost[host].username;
+            } else {
+                m_passwordCredentialsForHost[host] = {"", ""};
+            }
+        } else if (pv.endsWith("password")) {
+            m_passwordIndexForHost[host] = index;
+            if (m_passwordCredentialsForHost.contains(host)) {
+                newValue = PASSWORD_PLACEHOLDER;
+            } else {
+                m_passwordCredentialsForHost[host] = {"", ""};
+            }
+        }
+    }
+
+    if (!newValue.isEmpty()) {
+        if (kData.edata.dataB && kData.edata.dataSize != (newValue.length() + 1)) {
+            free(kData.edata.dataB);
+            kData.edata.dataB = Q_NULLPTR;
+        }
+        if (!kData.edata.dataB) {
+            kData.edata.dataSize = newValue.length() + 1;
+            kData.edata.dataB = malloc(static_cast<size_t>(kData.edata.dataSize));
+        }
+        memcpy(kData.edata.dataB,
+               newValue.toUtf8().data(),
+               static_cast<size_t>(kData.edata.dataSize));
+    }
+    m_mutexKnobDataP->SetMutexKnobDataReceived(&kData);
+
+    return true;
+}
+
+bool OPCUAPlugin::isPasswordCredentialsValid(const PasswordCredentials &credentialsToCheck)
+{
+    return (!credentialsToCheck.username.isEmpty() && !credentialsToCheck.password.isEmpty());
+}
+
 int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
 {
     Q_UNUSED(rate);
@@ -149,6 +240,8 @@ int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
         }
         m_epicsWaveformAttributePVs[regularPV].NELM_index = index;
         return true;
+    } else if (isGeneralUsernamePassword(rawPV) || isSpecificUsernamePassword(rawPV)) {
+        return initializeUsernamePasswordPV(index);
     }
 
     QString endpoint, nodeId;
@@ -264,6 +357,9 @@ int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
             core = m_cores[endpoint];
         }
     }
+    if (isPasswordCredentialsValid(m_generalPasswordCredentials)) {
+        core->updatePasswordCredentials(m_generalPasswordCredentials);
+    }
 
     m_knobDataIndicesForEndpoint[endpoint].push_back(index);
 
@@ -307,6 +403,12 @@ int OPCUAPlugin::pvClearMonitor(knobData *kData)
             m_epicsWaveformAttributePVs[regularPV] = {-1, -1};
         }
         m_epicsWaveformAttributePVs[regularPV].NELM_index = -1;
+        return true;
+    } else if (rawPV == "username") {
+        m_usernameIndex = -1;
+        return true;
+    } else if (rawPV == "password") {
+        m_passwordIndex = -1;
         return true;
     }
 
@@ -378,6 +480,117 @@ int OPCUAPlugin::pvSetValue(
 
     QMutexLocker locker(&m_mutex);
 
+    QString pvString = QString::fromUtf8(pv);
+    if (isGeneralUsernamePassword(pvString)) {
+        int index;
+        QString newValue = "";
+        knobData kData;
+        if (pvString == "username") {
+            index = m_usernameIndex;
+            if (index == -1) {
+                return false;
+            }
+
+            m_generalPasswordCredentials.username = QString::fromUtf8(sdata);
+
+            kData = m_mutexKnobDataP->GetMutexKnobData(index);
+            newValue = QString::fromUtf8(sdata);
+        } else if (pvString == "password") {
+            index = m_passwordIndex;
+            if (index == -1) {
+                return false;
+            }
+
+            m_generalPasswordCredentials.password = QString::fromUtf8(sdata);
+
+            kData = m_mutexKnobDataP->GetMutexKnobData(index);
+            newValue = PASSWORD_PLACEHOLDER;
+        }
+
+        if (kData.edata.dataB && kData.edata.dataSize != (newValue.length() + 1)) {
+            free(kData.edata.dataB);
+            kData.edata.dataB = Q_NULLPTR;
+        }
+        if (!kData.edata.dataB) {
+            kData.edata.dataSize = newValue.length() + 1;
+            kData.edata.dataB = malloc(static_cast<size_t>(kData.edata.dataSize));
+        }
+        memcpy(kData.edata.dataB,
+               newValue.toUtf8().data(),
+               static_cast<size_t>(kData.edata.dataSize));
+
+        kData.edata.valueCount = kData.edata.nelm = 1;
+        kData.edata.monitorCount++;
+        m_mutexKnobDataP->SetMutexKnobDataReceived(&kData);
+
+        if (isPasswordCredentialsValid(m_generalPasswordCredentials)) {
+            for (const QString &endpoint : m_cores.keys()) {
+                QString host = endpoint;
+                host.remove(PROTOCOL_PREFIX);
+                PasswordCredentials &specificCredentials = m_passwordCredentialsForHost[host];
+                if (isPasswordCredentialsValid(specificCredentials)) {
+                    // Don't overwrite credentials for endpoints that already have endpoint-specific credentials
+                    continue;
+                }
+                m_cores[endpoint]->updatePasswordCredentials(m_generalPasswordCredentials);
+            }
+        }
+        return true;
+    } else if (isSpecificUsernamePassword(pvString)) {
+        int index;
+        QString newValue = "";
+        knobData kData;
+        QString host = pvString;
+        host.remove(pvString.length() - 9, 9);
+        host.remove(PLUGIN_PREFIX);
+        if (pvString.endsWith("username")) {
+            index = m_usernameIndexForHost[host];
+            if (index == -1) {
+                return false;
+            }
+
+            m_passwordCredentialsForHost[host].username = QString::fromUtf8(sdata);
+
+            kData = m_mutexKnobDataP->GetMutexKnobData(index);
+            newValue = QString::fromUtf8(sdata);
+        } else if (pvString.endsWith("password")) {
+            index = m_passwordIndexForHost[host];
+            if (index == -1) {
+                return false;
+            }
+
+            m_passwordCredentialsForHost[host].password = QString::fromUtf8(sdata);
+
+            kData = m_mutexKnobDataP->GetMutexKnobData(index);
+            newValue = PASSWORD_PLACEHOLDER;
+        }
+
+        if (kData.edata.dataB && kData.edata.dataSize != (newValue.length() + 1)) {
+            free(kData.edata.dataB);
+            kData.edata.dataB = Q_NULLPTR;
+        }
+        if (!kData.edata.dataB) {
+            kData.edata.dataSize = newValue.length() + 1;
+            kData.edata.dataB = malloc(static_cast<size_t>(kData.edata.dataSize));
+        }
+        memcpy(kData.edata.dataB,
+               newValue.toUtf8().data(),
+               static_cast<size_t>(kData.edata.dataSize));
+
+        kData.edata.valueCount = kData.edata.nelm = 1;
+        kData.edata.monitorCount++;
+        m_mutexKnobDataP->SetMutexKnobDataReceived(&kData);
+
+        if (isPasswordCredentialsValid(m_passwordCredentialsForHost[host])) {
+            QString endpoint = PROTOCOL_PREFIX + host;
+            if (m_cores.contains(endpoint)) {
+                m_cores[endpoint]->updatePasswordCredentials(m_passwordCredentialsForHost[host]);
+            } else {
+            }
+        }
+        return true;
+    }
+
     QString endpoint, nodeId;
     if (!resolveConnectionString(pv, endpoint, nodeId)) {
         return false;
@@ -432,6 +645,9 @@ int OPCUAPlugin::pvGetTimeStamp(char *pv, char *timestamp)
     QString rawPV = QString::fromUtf8(pv);
     if (rawPV.endsWith(".FTVL") || rawPV.endsWith(".NELM")) {
         rawPV.remove(rawPV.length() - 5, 5);
+    } else if (rawPV == "password" || rawPV == "username") {
+        qstrncpy(timestamp, "Timestamp: N/A", MAX_STRING_LENGTH);
+        return true;
     }
 
     QString endpoint, nodeId;
@@ -460,6 +676,11 @@ int OPCUAPlugin::pvGetDescription(char *pv, char *description)
     if (rawPV.endsWith(".FTVL") || rawPV.endsWith(".NELM")) {
         qstrcpy(description, "I'm just here for compatibility reasons :)");
         return true;
+    } else if (rawPV == "password" || rawPV == "username") {
+        qstrncpy(description,
+                 "Global value used across all opcua endpoints, unless overwritten per endpoint",
+                 MAX_STRING_LENGTH);
+        return true;
     }
 
     QString endpoint, nodeId;
@@ -485,6 +706,13 @@ int OPCUAPlugin::pvGetDescription(char *pv, char *description)
 int OPCUAPlugin::pvClearEvent(void *ptr)
 {
     knobData *kData = static_cast<knobData *>(ptr);
+
+    QString plainKey = QString::fromUtf8(kData->pv);
+    if (plainKey.endsWith(".FTVL") || plainKey.endsWith(".NELM") || plainKey == "username"
+        || plainKey == "password") {
+        return true;
+    }
+
     QString endpoint, nodeId;
     if (!resolveConnectionString(kData->pv, endpoint, nodeId)) {
         return false;
@@ -502,6 +730,13 @@ int OPCUAPlugin::pvClearEvent(void *ptr)
 int OPCUAPlugin::pvAddEvent(void *ptr)
 {
     knobData *kData = static_cast<knobData *>(ptr);
+
+    QString plainKey = QString::fromUtf8(kData->pv);
+    if (plainKey.endsWith(".FTVL") || plainKey.endsWith(".NELM") || plainKey == "username"
+        || plainKey == "password") {
+        return true;
+    }
+
     QString endpoint, nodeId;
     if (!resolveConnectionString(kData->pv, endpoint, nodeId)) {
         return false;
@@ -521,6 +756,12 @@ int OPCUAPlugin::pvAddEvent(void *ptr)
 
 int OPCUAPlugin::pvReconnect(knobData *kData)
 {
+    QString plainKey = QString::fromUtf8(kData->pv);
+    if (plainKey.endsWith(".FTVL") || plainKey.endsWith(".NELM") || plainKey == "username"
+        || plainKey == "password") {
+        return true;
+    }
+
     QString endpoint, nodeId;
     if (!resolveConnectionString(kData->pv, endpoint, nodeId)) {
         if (m_messageWindowP) {
@@ -549,6 +790,12 @@ int OPCUAPlugin::pvReconnect(knobData *kData)
 
 int OPCUAPlugin::pvDisconnect(knobData *kData)
 {
+    QString plainKey = QString::fromUtf8(kData->pv);
+    if (plainKey.endsWith(".FTVL") || plainKey.endsWith(".NELM") || plainKey == "username"
+        || plainKey == "password") {
+        return true;
+    }
+
     QString endpoint, nodeId;
     if (!resolveConnectionString(kData->pv, endpoint, nodeId)) {
         return false;
@@ -728,20 +975,26 @@ void OPCUAPlugin::updateEpicsWaveformAttributePVs(QString rawPV, const knobData 
     if (m_epicsWaveformAttributePVs.contains(rawPV)) {
         EpicsWaveformAttributePVs indices = m_epicsWaveformAttributePVs[rawPV];
         if (indices.FTVL_index != -1) {
-            knobData FTVL_kdata = m_mutexKnobDataP->GetMutexKnobData(indices.FTVL_index);
-            FTVL_kdata.edata.connected = referenceKnobData.edata.connected;
-            FTVL_kdata.edata.ivalue = referenceKnobData.edata.fieldtype;
-            FTVL_kdata.edata.rvalue = FTVL_kdata.edata.ivalue;
-            FTVL_kdata.edata.fieldtype = caINT;
-            m_mutexKnobDataP->SetMutexKnobData(indices.FTVL_index, FTVL_kdata);
+            knobData FTVL_kData = m_mutexKnobDataP->GetMutexKnobData(indices.FTVL_index);
+            FTVL_kData.edata.connected = referenceKnobData.edata.connected;
+            FTVL_kData.edata.ivalue = referenceKnobData.edata.fieldtype;
+            FTVL_kData.edata.rvalue = FTVL_kData.edata.ivalue;
+            FTVL_kData.edata.fieldtype = caINT;
+            FTVL_kData.edata.accessR = true;
+            FTVL_kData.edata.accessW = false;
+            FTVL_kData.edata.monitorCount++;
+            m_mutexKnobDataP->SetMutexKnobDataReceived(&FTVL_kData);
         }
         if (indices.NELM_index != -1) {
-            knobData NELM_kdata = m_mutexKnobDataP->GetMutexKnobData(indices.NELM_index);
-            NELM_kdata.edata.connected = referenceKnobData.edata.connected;
-            NELM_kdata.edata.ivalue = referenceKnobData.edata.valueCount;
-            NELM_kdata.edata.rvalue = NELM_kdata.edata.ivalue;
-            NELM_kdata.edata.fieldtype = caINT;
-            m_mutexKnobDataP->SetMutexKnobData(indices.NELM_index, NELM_kdata);
+            knobData NELM_kData = m_mutexKnobDataP->GetMutexKnobData(indices.NELM_index);
+            NELM_kData.edata.connected = referenceKnobData.edata.connected;
+            NELM_kData.edata.ivalue = referenceKnobData.edata.valueCount;
+            NELM_kData.edata.rvalue = NELM_kData.edata.ivalue;
+            NELM_kData.edata.fieldtype = caINT;
+            NELM_kData.edata.accessR = true;
+            NELM_kData.edata.accessW = false;
+            NELM_kData.edata.monitorCount++;
+            m_mutexKnobDataP->SetMutexKnobDataReceived(&NELM_kData);
         }
     }
 }

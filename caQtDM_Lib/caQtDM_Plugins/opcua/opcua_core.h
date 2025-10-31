@@ -47,6 +47,12 @@ typedef struct
     int samplingIntervalMs;
 } SubscriptionSettings;
 
+typedef struct
+{
+    QString username;
+    QString password;
+} PasswordCredentials;
+
 class OpcUaCore : public QObject
 {
     Q_OBJECT
@@ -139,6 +145,11 @@ public:
      */
     QString getTimestamp(const QString &nodeId);
 
+    /**
+     * @brief Updates the given credentials and restarts the connection for all nodes handled by this core
+     * @param newPasswordCredentials: the new password credentials to use. Will always replace old credentials entirely.
+     */
+    void updatePasswordCredentials(const PasswordCredentials &newPasswordCredentials);
 signals:
     /**
      * @brief Emitted when the OpcUa client has successfully connected to an endpoint
@@ -183,6 +194,7 @@ private:
     QMap<QString, bool> m_isConnectingToNode;
     // Map of nodeId to interval in Ms for its subscription
     QMap<QString, int> m_intervalMsForNodeId;
+    PasswordCredentials m_passwordCredentials;
     int m_reconnectionAttempt;
     int m_reconnectionTimeoutMs;
     bool m_reconnecting;
