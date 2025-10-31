@@ -70,7 +70,6 @@ SOURCES += caqtdm_lib.cpp \
     src/causerid.cpp \
     src/hmisharedconfiglistmanager.cpp \
     src/hmisharedeventbus.cpp \
-    src/vncpanelinstance.cpp \
     vaPrintf.c \
     myMessageBox.cpp \
     limitsStripplotDialog.cpp \
@@ -79,7 +78,6 @@ SOURCES += caqtdm_lib.cpp \
     sliderDialog.cpp \
     splashscreen.cpp \
     loadPlugins.cpp  \
-    sharedvnclistmanager.cpp \
     websocketserver.cpp
     
 HEADERS += caqtdm_lib.h\
@@ -96,7 +94,6 @@ HEADERS += caqtdm_lib.h\
     src/hmi_common_event_defs.h \
     src/hmisharedconfiglistmanager.h \
     src/hmisharedeventbus.h \
-    src/vncpanelinstance.h \
     vaPrintf.h \
     myMessageBox.h \
     limitsStripplotDialog.h \
@@ -108,7 +105,6 @@ HEADERS += caqtdm_lib.h\
     inlines.h \
     loadPlugins.h \
     caqtdm_lib_interface.h \
-    sharedvnclistmanager.h \
     websocketserver.h
 
 !MOBILE {

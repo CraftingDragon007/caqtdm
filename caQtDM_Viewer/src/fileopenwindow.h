@@ -47,7 +47,6 @@
 
 #ifndef MOBILE
 #include "myQProcess.h"
-#include "sharedvnclistmanager.h"
 #endif
 #include "MessageWindow.h"
 #include "dbrString.h"
@@ -288,7 +287,6 @@ private:
      QTimer *timer;
 
      QTimer *heartBeatTimer;
-     QTimer *vncHeartBeatTimer;
 
      bool mustOpenFile;
 

@@ -53,8 +53,6 @@ bool HTTPCONFIGURATOR = false;
 #include <hmisharedeventbus.h>
 #include <hmisharedconfiglistmanager.h>
 #include <websocketserver.h>
-#include <sharedvnclistmanager.h>
-#include <vncpanelinstance.h>
 #endif
 
 #include <QFileDialog>
@@ -300,18 +298,6 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
         ui.fileAction->setEnabled(false);
         ui.timedAction->setEnabled(false);
         ui.directAction->setEnabled(false);
-
-        if (!SharedVNCListManager::instance().setup()) {
-            qCritical() << "Failed to set up SharedVNCListManager, unable to coordinate opening of related displays (pid:" << QCoreApplication::applicationPid() << ")";
-        } else {
-            QList<VNCPanelInstance> vncList = SharedVNCListManager::instance().readList();
-            VNCPanelInstance currentInstance;
-            if (filename.length() > 0) {
-                QFileInfo file(filename);
-                currentInstance.m_panel = file.fileName();
-                currentInstance.m_port_suffix = web_port % 100;
-            } else qCritical("caQtDM_Web -- No file specified, expect stuff to go wrong");
-        }
     }
 #endif
 

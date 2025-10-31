@@ -217,6 +217,7 @@ int main(int argc, char *argv[])
     bool savetoimage = false;
     bool resizing = true;
     bool server = false;
+    bool slave_server = false;
     quint16 port = 5900;
     quint16 web_port = port + 1000;
 
@@ -314,17 +315,27 @@ int main(int argc, char *argv[])
             createMap(options, QString(argv[in]));
         } else if (strcmp (argv[in], "-server") == 0) {
             server = true;
+        } else if (strcmp (argv[in], "-slave_server") == 0) {
+            slave_server = true;
         } else if (strcmp (argv[in], "-server_port") == 0) {
             in++;
             bool valid;
             port = QString(argv[in]).toUShort(&valid);
             if (!valid) {
-                printf("caQtDM -- Invalid port %s specified, not enabling server mode", argv[in]);
+                printf("caQtDM -- Invalid server port %s specified, not enabling server mode", argv[in]);
                 server = false;
             } else {
                 if (port > std::numeric_limits<quint16>::max() - 1000) {
                     web_port = port - 1000;
                 } else web_port = port + 1000;
+            }
+        } else if (strcmp (argv[in], "-web_server_port") == 0) {
+            in++;
+            bool valid;
+            web_port = QString(argv[in]).toUShort(&valid);
+            if (!valid) {
+                printf("caQtDM -- Invalid web server port %s specified, not enabling server mode", argv[in]);
+                server = false;
             }
         } else if (strncmp (argv[in], "-" , 1) == 0) {
             /* unknown application argument */
@@ -348,6 +359,11 @@ int main(int argc, char *argv[])
         printf("No ui file was specified, not enabling server mode!");
         server = false;
     }
+
+    options.insert("vnc_server", QString::number(server));
+    options.insert("slave_server", QString::number(slave_server));
+    options.insert("vnc_port", QString::number(port));
+    options.insert("web_port", QString::number(web_port));
 
     QApplication app(argc, argv);
     QApplication::setOrganizationName("Paul Scherrer Institut");

@@ -139,6 +139,9 @@ public:
     static QList<caHMIConfigTransferItem*> hmiConfigList;
     static QReadWriteLock hmiConfigListLock;
 
+    static QMap<QString, QProcess> webChildProcesses;
+    static QReadWriteLock webChildProcessesLock;
+
     // interface implementation
     int addMonitor(QWidget *thisW, knobData *data, QString pv, QWidget *w, int *specData, QMap<QString, QString> map, QString *pvRep);
     knobData* GetMutexKnobDataPtr(int index);

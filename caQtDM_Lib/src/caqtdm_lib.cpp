@@ -318,6 +318,9 @@ QReadWriteLock CaQtDM_Lib::externalHmiConfigListLock;
 QList<caHMIConfigTransferItem*> CaQtDM_Lib::hmiConfigList;
 QReadWriteLock CaQtDM_Lib::hmiConfigListLock;
 
+QMap<QString, QProcess> CaQtDM_Lib::webChildProcesses;
+QReadWriteLock CaQtDM_Lib::webChildProcessesLock;
+
 /**
  * CaQtDM_Lib destructor
  */
@@ -358,6 +361,19 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
     // for cainclude, we need when updating internal positions to know about the resize factors
     this->setProperty("RESIZEX", 1.0);
     this->setProperty("RESIZEY", 1.0);
+
+    if (IS_VNC) {
+        bool ok;
+        quint16 web_port = options["web_port"].toUShort(&ok);
+        quint16 vnc_port = options["port"].toUShort(&ok);
+
+        if (!ok) {
+            qCritical() << "caQtDM_Web -- Invalid web/vnc ports defined, stuff will break.";
+        } else {
+            this->setProperty("WEBPORT", web_port);
+            this->setProperty("VNCPORT", vnc_port);
+        }
+    }
 
     // is a default plugin specified (normally nothing means epics3)
     QString option = options["defaultPlugin"];
@@ -7197,26 +7213,29 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
     QString geometry = "+%1+%2";
     geometry = geometry.arg(xpos).arg(ypos);
 
-    // do we have to remove this window while removeparent was specified
-    if(indx < removeParents.count()) {
-        QString removeParent = removeParents.at(indx);
-        removeParent = removeParent.toLower();
-        if(removeParent.contains("true")) {
-            this->close();
-        } else {
-            // in case we do not remove the parent let the window manager position the new window
-            geometry = "";
-            // however it is possible that the user wanted a fixed position
-            if((w->getPosition().x() != -1) || w->getPosition().y() != -1) {
-                if(w->getPosition().x() < 0) xpos = 0; else xpos= w->getPosition().x();
-                if(w->getPosition().y() < 0) ypos = 0; else ypos = w->getPosition().y();
-                geometry = "+%1+%2";
-                geometry = geometry.arg(xpos).arg(ypos);
-            }
-        }
-    }
+
 
     if (!IS_VNC) {
+
+        // do we have to remove this window while removeparent was specified
+        if(indx < removeParents.count()) {
+            QString removeParent = removeParents.at(indx);
+            removeParent = removeParent.toLower();
+            if(removeParent.contains("true")) {
+                this->close();
+            } else {
+                // in case we do not remove the parent let the window manager position the new window
+                geometry = "";
+                // however it is possible that the user wanted a fixed position
+                if((w->getPosition().x() != -1) || w->getPosition().y() != -1) {
+                    if(w->getPosition().x() < 0) xpos = 0; else xpos= w->getPosition().x();
+                    if(w->getPosition().y() < 0) ypos = 0; else ypos = w->getPosition().y();
+                    geometry = "+%1+%2";
+                    geometry = geometry.arg(xpos).arg(ypos);
+                }
+            }
+        }
+
         // open new file and
         if(indx < files.count() && indx < args.count()) {
             emit Signal_OpenNewWFile(files[indx].trimmed(), args[indx].trimmed(), geometry, "true");
@@ -7250,8 +7269,41 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
             QMessageBox::critical(this, "Error", WEB_CARELATED_DISPLAY_ERROR_MSG);
             return;
         }
+        QFile runScript = QFile(websockify_path + "/run");
+
+        if (!runScript.exists()) {
+            qCritical() << "caQtDM_Web -- websockify run script, please check if you provided the right CAQTDM_WEB_PATH and if websockify was correctly cloned inside it";
+            QMessageBox::critical(this, "Error", WEB_CARELATED_DISPLAY_ERROR_MSG);
+            return;
+        }
+
+        QWriteLocker webChildProcessesLocker(&webChildProcessesLock);
+
+        QString argStr;
+
+        if(indx < files.count() && indx < args.count()) {
+            argStr += "-macro \"" + args[indx].trimmed()  + "\" ";
+        }
+
+        argStr += files[indx].trimmed();
+
+        QProcess child;
+        child.setProgram(runScript.fileName());
+
+        QList<QString> webSockifyArgs;
+
+        quint16 new_vnc_port = this->property("VNCPORT").toString().toUShort() +
+                webChildProcesses.count() + 1;
+        quint16 new_web_port = this->property("WEBPORT").toString().toUShort() +
+                webChildProcesses.count() + 1;
 
 
+        webSockifyArgs.append("--timeout=60 " + QString::number(new_vnc_port) + " -- "
+                              + caQtDM_executable + " -server -slave_server -server_port "
+                              + QString::number(new_vnc_port) + " -web_server_port "
+                              + QString::number(new_web_port) + " " + argStr);
+
+        child.setArguments(webSockifyArgs);
     }
 
 }
