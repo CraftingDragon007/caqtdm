@@ -33,6 +33,8 @@
 #include "searchfile.h"
 #include <memory>
 
+#define PLUGIN_PREFIX "opcua://"
+#define PROTOCOL_PREFIX "opc.tcp://"
 OPCUAPlugin::OPCUAPlugin()
 {
     VERBOSELOG("Create");
@@ -572,15 +574,29 @@ int OPCUAPlugin::TerminateIO()
 
 bool OPCUAPlugin::resolveConnectionString(char *pv, QString &endpoint, QString &nodeId)
 {
-    QString plainKey = QString::fromLatin1(pv);
-    QString logicalKey = plainKey.remove("opcua://");
+    QString plainKey = QString::fromUtf8(pv);
+
+    if (plainKey.endsWith(".FTVL") || plainKey.endsWith(".NELM")
+        || isGeneralUsernamePassword(plainKey) || isSpecificUsernamePassword(plainKey)) {
+        VERBOSELOG(
+            "Invalid connection string, cannot write opcua to EPICS extensions: " << plainKey);
+        return false;
+    }
+
+    QString logicalKey = plainKey;
+    logicalKey.remove(PLUGIN_PREFIX);
     QString fullConnection = m_translationMap.value(plainKey,
                                                     m_translationMap.value(logicalKey, ""));
     if (fullConnection.isEmpty()) {
         fullConnection = plainKey;
     }
 
-    QString raw = fullConnection.remove("opcua://");
+    QString raw = fullConnection.remove(PLUGIN_PREFIX);
+
+    if (!raw.startsWith(PROTOCOL_PREFIX)) {
+        VERBOSELOG("Invalid connection string: " << fullConnection);
+        return false;
+    }
 
     int splitPos = raw.lastIndexOf("/ns=");
     if (splitPos < 0) {
