@@ -57,8 +57,7 @@ OpcUaCore::OpcUaCore(QObject *parent)
         m_reconnectionAttempt = 0;
         m_reconnectionTimeoutMs = INITIAL_RECONNECTION_TIMEOUT;
 
-        for (auto it = m_subscriptionNodes.begin(); it != m_subscriptionNodes.end(); ++it) {
-            QOpcUaNode *node = it.value();
+        for (QOpcUaNode *node : m_subscriptionNodes) {
             if (node) {
                 // Start monitoring, will not do anything if it is already connected. Used in case of previous reconnects.
                 startMonitoringOfNode(node);
@@ -176,7 +175,7 @@ bool OpcUaCore::connectOpc(const QString &url)
                 QTcpSocket *sock = new QTcpSocket(this);
                 sockets.append(sock);
 
-                QObject::connect(sock, &QTcpSocket::connected, this, [&]() {
+                QObject::connect(sock, &QTcpSocket::connected, this, [&, ep]() {
                     if (found.exchange(true))
                         return;
                     chosenEndpoint = ep;
@@ -264,6 +263,7 @@ void OpcUaCore::startMonitoringOfNode(QOpcUaNode *node)
     if (m_isConnectingToNode[nodeId]) {
         return;
     }
+
     m_isConnectingToNode[nodeId] = true;
     int intervalMs = m_intervalMsForNodeId.value(nodeId, 10);
 

@@ -24,8 +24,6 @@
 #ifndef OPCUA_PLUGIN_H
 #define OPCUA_PLUGIN_H
 
-#pragma once
-
 #include <QList>
 #include <QMap>
 #include <QMutex>
