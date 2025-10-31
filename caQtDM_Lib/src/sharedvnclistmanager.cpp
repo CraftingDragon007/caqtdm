@@ -67,8 +67,8 @@ SharedVNCListManager& SharedVNCListManager::instance() {
     return manager;
 }
 
-QList<QString> SharedVNCListManager::readList() {
-    QList<QString> list;
+QList<VNCPanelInstance> SharedVNCListManager::readList() {
+    QList<VNCPanelInstance> list;
     QByteArray rawDataFromSharedMemory;
 
     if (!m_semaphore.acquire()) {
@@ -107,21 +107,21 @@ QList<QString> SharedVNCListManager::readList() {
         stream >> count;
 
         for (quint32 i = 0; i < count; ++i) {
-            QString text;
-            stream >> text;
-            list.append(text);
+            VNCPanelInstance item;
+            stream >> item;
+            list.append(item);
         }
     }
     return list;
 }
 
-bool SharedVNCListManager::writeList(const QList<QString> &newList) {
+bool SharedVNCListManager::writeList(const QList<VNCPanelInstance> &newList) {
     QByteArray serializedData;
     QDataStream stream(&serializedData, QIODevice::WriteOnly);
 
     stream << static_cast<quint32>(newList.size());
 
-    foreach(QString item, newList) {
+    foreach(VNCPanelInstance item, newList) {
         stream << item;
     }
 

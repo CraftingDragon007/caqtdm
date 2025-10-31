@@ -2,18 +2,27 @@
 #include <QDebug>
 #include <QHostAddress>
 
-WebSocketServer::WebSocketServer(quint16 port, QObject *parent) :
-    QObject(parent),
-    m_pWebSocketServer(new QWebSocketServer(QStringLiteral("caQtDM Websocket Server"),
-                                            QWebSocketServer::NonSecureMode,
-                                            this))
-{
+WebSocketServer::WebSocketServer(QObject *parent) : QObject(parent), m_isInitialized(false)
+{}
+
+WebSocketServer& WebSocketServer::instance() {
+    static WebSocketServer wsServer;
+    return wsServer;
+}
+
+bool WebSocketServer::setup(quint16 port) {
+    m_pWebSocketServer = new QWebSocketServer(QStringLiteral("caQtDM Websocket Server"),
+                                              QWebSocketServer::NonSecureMode, this);
+
     if (m_pWebSocketServer->listen(QHostAddress::LocalHost, port)) {
         qDebug() << "WebSocketServer listening on port" << port;
         connect(m_pWebSocketServer, &QWebSocketServer::newConnection,
                 this, &WebSocketServer::onNewConnection);
+        m_isInitialized = true;
+        return true;
     } else {
         qCritical() << "Failed to start WebSocket server on port" << port << ":" << m_pWebSocketServer->errorString();
+        return false;
     }
 }
 
@@ -76,7 +85,7 @@ void WebSocketServer::socketDisconnected()
 void WebSocketServer::sendLog(QString text) {
     QReadLocker locker(&m_clientReadWriteLock);
     foreach (QWebSocket *pSocket, m_clients) {
-        if (pSocket != Q_NULLPTR && pSocket->requestUrl().path() == "/admin") {
+        if (pSocket != Q_NULLPTR) {
             pSocket->sendTextMessage("LOG>" + text);
         }
     }

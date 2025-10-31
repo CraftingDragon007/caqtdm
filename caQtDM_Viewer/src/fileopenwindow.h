@@ -47,7 +47,6 @@
 
 #ifndef MOBILE
 #include "myQProcess.h"
-#include "websocketserver.h"
 #include "sharedvnclistmanager.h"
 #endif
 #include "MessageWindow.h"
@@ -289,6 +288,7 @@ private:
      QTimer *timer;
 
      QTimer *heartBeatTimer;
+     QTimer *vncHeartBeatTimer;
 
      bool mustOpenFile;
 
@@ -318,9 +318,6 @@ private:
 
      QDateTime lastReloadTime;
 
-#ifndef MOBILE
-     WebSocketServer *webSocketServer;
-#endif
  };
 
  #endif

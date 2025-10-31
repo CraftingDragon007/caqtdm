@@ -5,8 +5,10 @@
 #include <QSharedMemory>
 #include <QSystemSemaphore>
 #include <QList>
+#include "caQtDM_Lib_global.h"
+#include "vncpanelinstance.h"
 
-class SharedVNCListManager : public QObject
+class CAQTDM_LIBSHARED_EXPORT SharedVNCListManager : public QObject
 {
     Q_OBJECT
 public:
@@ -16,8 +18,8 @@ public:
     void shutdown();
     bool isInitialized() const;
 
-    QList<QString> readList();
-    bool writeList(const QList<QString> &newList);
+    QList<VNCPanelInstance> readList();
+    bool writeList(const QList<VNCPanelInstance> &newList);
 
 private:
     explicit SharedVNCListManager(QObject *parent = nullptr);

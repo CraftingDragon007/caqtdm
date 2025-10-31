@@ -52,6 +52,9 @@ bool HTTPCONFIGURATOR = false;
 #ifndef MOBILE
 #include <hmisharedeventbus.h>
 #include <hmisharedconfiglistmanager.h>
+#include <websocketserver.h>
+#include <sharedvnclistmanager.h>
+#include <vncpanelinstance.h>
 #endif
 
 #include <QFileDialog>
@@ -288,10 +291,10 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
 #ifndef MOBILE
     // disable buttons that shouldn't be used when in vnc
     if (IS_VNC) {
-        webSocketServer = new WebSocketServer(web_port, this);
+        WebSocketServer::instance().setup(web_port);
 
-        connect(messageWindow, &MessageWindow::newMessageReceivedEvent, [this](QString text){
-            webSocketServer->sendLog(text);
+        connect(messageWindow, &MessageWindow::newMessageReceivedEvent, [](QString text){
+            WebSocketServer::instance().sendLog(text);
         });
 
         ui.fileAction->setEnabled(false);
@@ -300,6 +303,14 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
 
         if (!SharedVNCListManager::instance().setup()) {
             qCritical() << "Failed to set up SharedVNCListManager, unable to coordinate opening of related displays (pid:" << QCoreApplication::applicationPid() << ")";
+        } else {
+            QList<VNCPanelInstance> vncList = SharedVNCListManager::instance().readList();
+            VNCPanelInstance currentInstance;
+            if (filename.length() > 0) {
+                QFileInfo file(filename);
+                currentInstance.m_panel = file.fileName();
+                currentInstance.m_port_suffix = web_port % 100;
+            } else qCritical("caQtDM_Web -- No file specified, expect stuff to go wrong");
         }
     }
 #endif

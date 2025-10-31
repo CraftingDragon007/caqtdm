@@ -6,13 +6,15 @@
 #include <QWebSocket>
 #include <QList>
 #include <QReadWriteLock>
+#include "caQtDM_Lib_global.h"
 
-class WebSocketServer : public QObject
+class CAQTDM_LIBSHARED_EXPORT WebSocketServer : public QObject
 {
     Q_OBJECT
 public:
-    explicit WebSocketServer(quint16 port, QObject *parent = nullptr);
-    ~WebSocketServer();
+    static WebSocketServer& instance();
+    bool setup(quint16 port);
+    bool isInitialized() const;
     void sendLog(QString text);
 
 private slots:
@@ -22,9 +24,15 @@ private slots:
     void socketDisconnected();
 
 private:
+    explicit WebSocketServer(QObject *parent = nullptr);
+    ~WebSocketServer();
     QWebSocketServer *m_pWebSocketServer;
     QList<QWebSocket *> m_clients;
     QReadWriteLock m_clientReadWriteLock;
+    bool m_isInitialized;
+
+    WebSocketServer(const WebSocketServer&) = delete;
+    WebSocketServer& operator=(const WebSocketServer&) = delete;
 
 signals:
 };

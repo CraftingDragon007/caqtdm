@@ -132,6 +132,8 @@
 
 #define IS_VNC qgetenv("QT_QPA_PLATFORM").startsWith("vnc")
 
+#define WEB_CARELATED_DISPLAY_ERROR_MSG "Unable to open this caRelatedDisplay, please check your caQtDM Web configuration."
+
 // used for calculating visibility for several types of widgets
 #define ComputeVisibility(x, obj)  {  \
     switch(obj->getVisibility()) { \
@@ -7214,11 +7216,42 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
         }
     }
 
-    // open new file and
-    if(indx < files.count() && indx < args.count()) {
-        emit Signal_OpenNewWFile(files[indx].trimmed(), args[indx].trimmed(), geometry, "true");
-    } else if(indx < files.count()) {
-        emit Signal_OpenNewWFile(files[indx].trimmed(), "", geometry, "true");
+    if (!IS_VNC) {
+        // open new file and
+        if(indx < files.count() && indx < args.count()) {
+            emit Signal_OpenNewWFile(files[indx].trimmed(), args[indx].trimmed(), geometry, "true");
+        } else if(indx < files.count()) {
+            emit Signal_OpenNewWFile(files[indx].trimmed(), "", geometry, "true");
+        }
+
+    } else {
+        // start new process and novnc
+        QString caQtDM_executable = QApplication::applicationFilePath();
+
+        QString web_path = qgetenv("CAQTDM_WEB_PATH");
+        if (web_path.length() <= 0) {
+            web_path = QDir(QApplication::applicationDirPath() + "/../caQtDM_Web").absolutePath();
+        }
+
+        QString websockify_path = QDir(web_path + "/websockify").absolutePath();
+        QFileInfo websockify_info(websockify_path);
+        if (!websockify_info.exists()) {
+            qCritical() << "caQtDM_Web -- websockify does not exist inside caQtDM_Web folder, unable to start another instance for caRelatedDisplay, please ensure you specified the right CAQTDM_WEB_PATH and the websockify folder exists within it.";
+            QMessageBox::critical(this, "Error", WEB_CARELATED_DISPLAY_ERROR_MSG);
+            return;
+        }
+        if (websockify_info.isFile()) {
+            qCritical() << "caQtDM_Web -- websockify is a file and not a folder, please ensure that you initialized the websockify git submodule.";
+            QMessageBox::critical(this, "Error", WEB_CARELATED_DISPLAY_ERROR_MSG);
+            return;
+        }
+        if (!websockify_info.isDir()) {
+            qCritical() << "caQtDM_Web -- websockify is neither a folder nor a file, please check if you provided the right CAQTDM_WEB_PATH";
+            QMessageBox::critical(this, "Error", WEB_CARELATED_DISPLAY_ERROR_MSG);
+            return;
+        }
+
+
     }
 
 }

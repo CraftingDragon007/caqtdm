@@ -16,7 +16,7 @@ contains(QT_VER_MAJ, 4) {
 }
 
 contains(QT_VER_MAJ, 5) {
-    QT += widgets  uitools opengl
+    QT += widgets  uitools opengl websockets
     !ios:!android {
        message("caQtDM_Lib -- printsupport added")
        QT += printsupport
@@ -27,7 +27,7 @@ contains(QT_VER_MAJ, 5) {
 }
 
 contains(QT_VER_MAJ, 6) {
-    QT += widgets  uitools opengl
+    QT += widgets  uitools opengl websockets
     !ios:!android {
        message("caQtDM_Lib -- printsupport added")
        QT += printsupport
@@ -70,6 +70,7 @@ SOURCES += caqtdm_lib.cpp \
     src/causerid.cpp \
     src/hmisharedconfiglistmanager.cpp \
     src/hmisharedeventbus.cpp \
+    src/vncpanelinstance.cpp \
     vaPrintf.c \
     myMessageBox.cpp \
     limitsStripplotDialog.cpp \
@@ -77,7 +78,9 @@ SOURCES += caqtdm_lib.cpp \
     limitsDialog.cpp \
     sliderDialog.cpp \
     splashscreen.cpp \
-    loadPlugins.cpp
+    loadPlugins.cpp  \
+    sharedvnclistmanager.cpp \
+    websocketserver.cpp
     
 HEADERS += caqtdm_lib.h\
         caQtDM_Lib_global.h \
@@ -93,6 +96,7 @@ HEADERS += caqtdm_lib.h\
     src/hmi_common_event_defs.h \
     src/hmisharedconfiglistmanager.h \
     src/hmisharedeventbus.h \
+    src/vncpanelinstance.h \
     vaPrintf.h \
     myMessageBox.h \
     limitsStripplotDialog.h \
@@ -103,7 +107,9 @@ HEADERS += caqtdm_lib.h\
     epicsExternals.h \
     inlines.h \
     loadPlugins.h \
-    caqtdm_lib_interface.h
+    caqtdm_lib_interface.h \
+    sharedvnclistmanager.h \
+    websocketserver.h
 
 !MOBILE {
     SOURCES += myQProcess.cpp  processWindow.cpp

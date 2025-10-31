@@ -10,7 +10,7 @@ contains(QT_VER_MAJ, 4) {
    CONFIG += qt warn_on thread uitools
 }
 contains(QT_VER_MAJ, 5) {
-   QT     += core gui svg uitools network opengl
+   QT     += core gui svg uitools network opengl websockets
    modbus{
       QT += serialbus
       DEFINES += CAQTDM_MODBUS
@@ -80,17 +80,13 @@ SOURCES +=\
     fileopenwindow.cpp \
     messagebox.cpp \
     configDialog.cpp \
-    pipereader.cpp \
-    src/sharedvnclistmanager.cpp \
-    src/websocketserver.cpp
+    pipereader.cpp
 
 HEADERS  +=  \
     messagebox.h \
     fileopenwindow.h \
     configDialog.h \
-    pipereader.h \
-    src/sharedvnclistmanager.h \
-    src/websocketserver.h
+    pipereader.h
 
 FORMS += main.ui
 
