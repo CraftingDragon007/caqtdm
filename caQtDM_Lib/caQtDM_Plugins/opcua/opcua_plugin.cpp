@@ -23,6 +23,7 @@
  */
 #include "opcua_plugin.h"
 #include <QDebug>
+#include <QOpcUaMultiDimensionalArray>
 #include <QSettings>
 #include <QThread>
 #include <QtConcurrent/QtConcurrent>
@@ -35,7 +36,7 @@
 OPCUAPlugin::OPCUAPlugin()
 {
     VERBOSELOG("Create");
-    QLoggingCategory::setFilterRules("qt.opcua.plugins.open62541.sdk*=false");
+    QLoggingCategory::setFilterRules("qt.opcua.plugins.open62541*=false");
     m_mutexKnobDataP = Q_NULLPTR;
     m_messageWindowP = Q_NULLPTR;
 }
@@ -601,12 +602,17 @@ bool OPCUAPlugin::resolveConnectionString(char *pv, QString &endpoint, QString &
 #define QT_VARIANT_TYPE(value) value.type()
 #endif
 
-caType OPCUAPlugin::generateCaTypeFromVariant(const QVariant &value, bool &isArray)
+caType OPCUAPlugin::generateCaTypeFromVariant(const QVariant &value, bool &isArray, bool &isMatrix)
 {
     isArray = false;
     QVariant valueToCheck = value;
+    isMatrix = valueToCheck.canConvert<QOpcUaMultiDimensionalArray>();
 
-    if (value.canConvert<QVariantList>() && !value.canConvert<QString>()) {
+    if ((valueToCheck.canConvert<QVariantList>() || isMatrix)
+        && !valueToCheck.canConvert<QString>()) {
+        if (isMatrix) {
+            valueToCheck = valueToCheck.value<QOpcUaMultiDimensionalArray>().valueArray();
+        }
         QList<QVariant> list = valueToCheck.toList();
         if (list.length() > 0) {
             valueToCheck = list.constFirst();
@@ -640,6 +646,7 @@ void OPCUAPlugin::updateKnobDataFromVariantSingle(knobData &kData,
                                                   const QVariant &value,
                                                   const caType &detectedType)
 {
+    kData.edata.valueCount = kData.edata.nelm = 1;
     switch (detectedType) {
     case caDOUBLE:
         kData.edata.rvalue = value.toDouble();
@@ -713,7 +720,7 @@ void OPCUAPlugin::updateKnobDataFromVariantArray(knobData &kData,
 {
     QList<QVariant> list = value.toList();
     int num_values = list.count();
-    kData.edata.valueCount = num_values;
+    kData.edata.valueCount = kData.edata.nelm = num_values;
 
     QString rawPV = QString::fromUtf8(kData.pv);
     updateEpicsWaveformAttributePVs(rawPV, kData);
@@ -817,11 +824,15 @@ void OPCUAPlugin::updateKnobDataFromVariantArray(knobData &kData,
     }
 }
 
-void OPCUAPlugin::updateKnobDataFromVariant(knobData &kData, const QVariant &value)
+void OPCUAPlugin::updateKnobDataFromVariant(knobData &kData, QVariant value)
 {
     QMutexLocker locker(static_cast<QMutex *>(kData.mutex));
     bool isArray = false;
-    caType detectedType = generateCaTypeFromVariant(value, isArray);
+    bool isMatrix = false;
+    caType detectedType = generateCaTypeFromVariant(value, isArray, isMatrix);
+    if (isMatrix) {
+        value = value.value<QOpcUaMultiDimensionalArray>().valueArray();
+    }
     kData.edata.fieldtype = detectedType;
     kData.edata.connected = 1;
     kData.edata.monitorCount++;

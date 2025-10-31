@@ -210,9 +210,10 @@ private:
      * @brief Creates a caType corresponding to a QVariant value
      * @param value: the QVariant value to check
      * @param isArray: output boolean that will be set to true if value is an array, else to false
+     * @param isMatrix: output boolean that will be set to true if value is a matrix, else false
      * @return caType corresponding to the QVariant value
      */
-    caType generateCaTypeFromVariant(const QVariant &value, bool &isArray);
+    caType generateCaTypeFromVariant(const QVariant &value, bool &isArray, bool &isMatrix);
     /**
      * @brief Converts the update interval specified in a knobData (in Hz) and returns the milliseconds)
      * @param kData: knobData pointer to check
@@ -250,7 +251,7 @@ private:
      * @param kData: knobData to update
      * @param value: Value to store
      */
-    void updateKnobDataFromVariant(knobData &kData, const QVariant &value);
+    void updateKnobDataFromVariant(knobData &kData, QVariant value);
     /**
      * @brief Updates knobData to store the access level possible to an OpcUa variable
      * @param kData: knobData to update
