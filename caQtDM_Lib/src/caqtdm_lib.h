@@ -69,6 +69,7 @@
 #ifndef MOBILE
    #include "myQProcess.h"
    #include "processWindow.h"
+   #include "vncwebchildprocess.h"
 #endif
 #include "mutexKnobData.h"
 #include "mutexKnobDataWrapper.h"
@@ -87,7 +88,6 @@
 
 // interface used enabling some widgets doing their own acquisition by calling caQtDM_Lib routines
 #include "caqtdm_lib_interface.h"
-
 #include <QtControls>
 
 #ifdef MOBILE
@@ -139,8 +139,10 @@ public:
     static QList<caHMIConfigTransferItem*> hmiConfigList;
     static QReadWriteLock hmiConfigListLock;
 
-    static QMap<QString, QProcess> webChildProcesses;
+#ifndef MOBILE
+    static QMap<QString, VncWebChildProcess> webChildProcesses;
     static QReadWriteLock webChildProcessesLock;
+#endif
 
     // interface implementation
     int addMonitor(QWidget *thisW, knobData *data, QString pv, QWidget *w, int *specData, QMap<QString, QString> map, QString *pvRep);

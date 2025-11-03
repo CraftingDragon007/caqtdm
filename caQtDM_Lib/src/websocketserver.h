@@ -16,6 +16,7 @@ public:
     bool setup(quint16 port);
     bool isInitialized() const;
     void sendLog(QString text);
+    void sendOpenFileRequest(quint16 path);
 
 private slots:
     void onNewConnection();

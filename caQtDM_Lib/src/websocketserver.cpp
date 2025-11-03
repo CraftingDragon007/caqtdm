@@ -10,6 +10,10 @@ WebSocketServer& WebSocketServer::instance() {
     return wsServer;
 }
 
+bool WebSocketServer::isInitialized() const {
+    return this->m_isInitialized;
+}
+
 bool WebSocketServer::setup(quint16 port) {
     m_pWebSocketServer = new QWebSocketServer(QStringLiteral("caQtDM Websocket Server"),
                                               QWebSocketServer::NonSecureMode, this);
@@ -87,6 +91,16 @@ void WebSocketServer::sendLog(QString text) {
     foreach (QWebSocket *pSocket, m_clients) {
         if (pSocket != Q_NULLPTR) {
             pSocket->sendTextMessage("LOG>" + text);
+        }
+    }
+}
+
+void WebSocketServer::sendOpenFileRequest(quint16 path) {
+    QString pathStr = QString::number(path % 100);
+    QReadLocker locker(&m_clientReadWriteLock);
+    foreach (QWebSocket *pSocket, m_clients) {
+        if (pSocket != Q_NULLPTR) {
+            pSocket->sendTextMessage("OPEN>" + pathStr);
         }
     }
 }

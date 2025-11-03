@@ -12,99 +12,23 @@
       overflow: hidden;
       font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
     }
-    .topbar {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 44px;
-  background: #1f2937;
-      color: #fff;
-      display: flex;
-      align-items: center;
-      padding: 0 12px;
-      z-index: 1000;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
-    }
-    .menu-item {
-      margin-right: 12px;
-      cursor: pointer;
-      user-select: none;
-      padding: 6px 10px;
-      border-radius: 4px;
-    }
-    .menu-item:hover { background: rgba(255,255,255,0.06); }
-
     #vnc-container {
       position: absolute;
-      top: 44px;
+      top: 0;
       left: 0;
       width: 100%;
-      bottom: 0;
+      height: 100%;
       border: none;
     }
-
-    .modal-backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.4);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 1100;
-    }
-    .modal {
-      background: #fff;
-      color: #111;
-      width: min(720px, 96%);
-      max-height: 80vh;
-      overflow: auto;
-      border-radius: 8px;
-      box-shadow: 0 8px 30px rgba(0,0,0,0.3);
-      padding: 16px;
-    }
-    .modal h2 { margin: 0 0 8px 0; font-size: 1.05rem }
-    .related-list { list-style: none; padding: 0; margin: 8px 0 0 0; }
-    .related-list li { padding: 8px; border-bottom: 1px solid #eee; display:flex; justify-content:space-between; gap:12px; align-items:center }
-    .related-list a { color: #0066cc; text-decoration: none; word-break:break-all }
-    .related-actions { display:flex; gap:8px; align-items:center }
-    .btn { background:#1f2937; color:#fff; border:none; padding:6px 10px; border-radius:4px; cursor:pointer }
-    .btn.ghost { background:transparent; color:#111; border:1px solid #ddd }
-    .add-url { display:flex; gap:8px; margin-top:12px }
-    .add-url input { flex:1; padding:6px 8px; border:1px solid #ccc; border-radius:4px }
   </style>
   </head>
   <body>
-    <div class="topbar">
-  <div class="menu-item" id="menu-caRelatedDisplays">caRelatedDisplays ▾</div>
-    </div>
-
     <iframe
         id="vnc-container"
         src="/noVNC/vnc.html?path=&autoconnect=true&resize=scale"
         title="caQtDM"
         allowfullscreen
     ></iframe>
-
-    <div class="modal-backdrop" id="relatedModal">
-      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="relatedTitle">
-        <div style="display:flex; justify-content:space-between; align-items:center">
-          <h2 id="relatedTitle">caRelatedDisplays</h2>
-          <div>
-            <button class="btn ghost" id="closeRelated">Close</button>
-          </div>
-        </div>
-
-        <p style="color:#444; margin:8px 0 0 0">Click a URL to load it into the viewer. Hold Shift while clicking to open in a new tab.</p>
-
-        <ul class="related-list" id="relatedList"></ul>
-
-        <div class="add-url">
-          <input type="url" id="newRelatedUrl" placeholder="Add URL (e.g. /noVNC/vnc.html?path=/some/path)" />
-          <button class="btn" id="addRelated">Add</button>
-        </div>
-      </div>
-    </div>
 
     <script>
       (function() {
@@ -114,197 +38,18 @@
         var iframe = document.getElementById('vnc-container');
 
         function setIframeToPath(p) {
-          if (!p) p = '0';
-          if (p.startsWith('/noVNC') || p.startsWith('http')) {
-            iframe.src = p;
+          var value = p;
+          if (value == null || value === '') value = '0';
+          value = String(value).trim();
+          if (/^[0-9]$/.test(value)) value = '0' + value;
+          if (value.startsWith('/noVNC') || value.startsWith('http')) {
+            iframe.src = value;
           } else {
-            iframe.src = '/noVNC/vnc.html?path=' + encodeURIComponent(p) + '&autoconnect=true&resize=scale';
+            iframe.src = '/noVNC/vnc.html?path=/websockify/' + encodeURIComponent(value) + '&autoconnect=true&resize=scale';
           }
         }
 
         setIframeToPath(path);
-
-        var modal = document.getElementById('relatedModal');
-        var menu = document.getElementById('menu-caRelatedDisplays');
-        var closeBtn = document.getElementById('closeRelated');
-        var listEl = document.getElementById('relatedList');
-        var addInput = document.getElementById('newRelatedUrl');
-        var addBtn = document.getElementById('addRelated');
-
-        var STORAGE_KEY = 'caRelatedDisplays';
-        var defaults = ['test','test2.ui','test3.ui'];
-
-        function loadList() {
-          try {
-            var raw = localStorage.getItem(STORAGE_KEY);
-            var arr = raw ? JSON.parse(raw) : defaults.slice();
-            if (!Array.isArray(arr)) arr = defaults.slice();
-            return arr;
-          } catch (e) { return defaults.slice(); }
-        }
-
-        function saveList(arr) {
-          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)); } catch (e) {}
-        }
-
-        function renderList() {
-          var arr = loadList();
-          listEl.innerHTML = '';
-          if (arr.length === 0) {
-            var li = document.createElement('li');
-            li.textContent = 'No related displays saved.';
-            listEl.appendChild(li);
-            return;
-          }
-          arr.forEach(function(u, idx) {
-            var li = document.createElement('li');
-            var a = document.createElement('a');
-            a.href = u;
-            a.textContent = u;
-            a.addEventListener('click', function(ev) {
-              ev.preventDefault();
-              if (ev.shiftKey) { window.open(u, '_blank'); return; }
-              setIframeToPath(u);
-              closeModal();
-            });
-
-            var actions = document.createElement('div');
-            actions.className = 'related-actions';
-
-            var openTab = document.createElement('button');
-            openTab.className = 'btn ghost';
-            openTab.textContent = 'New Tab';
-
-            function openResolvedUrlInNewTab(res) {
-              try {
-                if (/^https?:\/\//i.test(res)) { window.open(res, '_blank'); return; }
-                if (res && res.charAt(0) === '/') { window.open(window.location.origin + res, '_blank'); return; }
-                if (res) {
-                  var base = window.location.origin + window.location.pathname;
-                  base = base.replace(/\/[^/]*$/, '/');
-                  window.open(new URL(res, base).href, '_blank');
-                  return;
-                }
-                window.open(window.location.href, '_blank');
-              } catch (e) { console.error('openResolvedUrlInNewTab error', e); window.open(window.location.href, '_blank'); }
-            }
-
-            function requestPathViaWebSocket(wsUrl, opts) {
-              opts = opts || {};
-              return new Promise(function(resolve, reject) {
-                var timeoutMs = opts.timeoutMs || 10000;
-                var timer = null;
-                var ws;
-                try { ws = new WebSocket(wsUrl); } catch (err) { return reject(err); }
-
-                function cleanUp() { if (timer) { clearTimeout(timer); timer = null; } try { if (ws) ws.close(); } catch (e) {} }
-
-                ws.addEventListener('open', function() {
-                  var payload = { type: 'requestPath', href: window.location.href, pathname: window.location.pathname };
-                  try { ws.send(JSON.stringify(payload)); } catch (e) {}
-                  timer = setTimeout(function() { cleanUp(); reject(new Error('Timeout waiting for WebSocket response')); }, timeoutMs);
-                });
-
-                ws.addEventListener('message', function(msgEv) {
-                  var data = msgEv.data;
-                  var parsed = null;
-                  if (typeof data === 'string') { try { parsed = JSON.parse(data); } catch (e) { parsed = data; } } else { parsed = data; }
-                  cleanUp();
-                  if (typeof parsed === 'string') return resolve(parsed);
-                  if (parsed && typeof parsed === 'object') {
-                    if (parsed.path) return resolve(parsed.path);
-                    if (parsed.url) return resolve(parsed.url);
-                    for (var k in parsed) { if (typeof parsed[k] === 'string') return resolve(parsed[k]); }
-                  }
-                  reject(new Error('Unsupported message format from WebSocket'));
-                });
-
-                ws.addEventListener('error', function() { cleanUp(); reject(new Error('WebSocket error')); });
-                ws.addEventListener('close', function() { if (timer) { cleanUp(); reject(new Error('WebSocket closed before response')); } });
-              });
-            }
-
-            function fetchInitialListViaWebSocket(wsUrl, opts) {
-              opts = opts || {};
-              return new Promise(function(resolve, reject) {
-                var timeoutMs = opts.timeoutMs || 5000;
-                var timer = null;
-                var ws;
-                try { ws = new WebSocket(wsUrl); } catch (e) { return reject(e); }
-
-                function cleanUp() { if (timer) { clearTimeout(timer); timer = null; } try { if (ws) ws.close(); } catch(e) {} }
-
-                ws.addEventListener('open', function() { try { ws.send(JSON.stringify({ type: 'requestList', href: window.location.href })); } catch (e) {} timer = setTimeout(function() { cleanUp(); reject(new Error('Timeout waiting for WebSocket list')); }, timeoutMs); });
-
-                ws.addEventListener('message', function(ev) {
-                  var data = ev.data;
-                  var parsed = null;
-                  if (typeof data === 'string') { try { parsed = JSON.parse(data); } catch (e) { parsed = data; } } else { parsed = data; }
-                  cleanUp();
-                  if (Array.isArray(parsed)) return resolve(parsed);
-                  if (parsed && typeof parsed === 'object') { if (Array.isArray(parsed.list)) return resolve(parsed.list); for (var k in parsed) { if (Array.isArray(parsed[k])) return resolve(parsed[k]); } }
-                  reject(new Error('Unsupported list format from WebSocket'));
-                });
-
-                ws.addEventListener('error', function() { cleanUp(); reject(new Error('WebSocket error while fetching list')); });
-                ws.addEventListener('close', function() { if (timer) { cleanUp(); reject(new Error('WebSocket closed while fetching list')); } });
-              });
-            }
-
-            openTab.addEventListener('click', function(ev) {
-              ev.stopPropagation();
-              var originalText = openTab.textContent;
-              var isWs = /^wss?:\/\//i.test(u) || /^wss?:/i.test(u);
-              var defaultWsPath = (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + '/related-displays';
-              var wsUrl = null;
-              if (isWs) { wsUrl = u; } else if (u === 'request' || u === 'ws') { wsUrl = defaultWsPath; }
-              if (!wsUrl) { window.open(u, '_blank'); return; }
-              openTab.textContent = 'Waiting...'; openTab.disabled = true;
-              requestPathViaWebSocket(wsUrl, { timeoutMs: 10000 }).then(function(resPath) {
-                if (typeof resPath === 'string') {
-                  if (/^https?:\/\//i.test(resPath)) { window.open(resPath, '_blank'); }
-                  else if (resPath.charAt(0) === '/') { window.open(window.location.origin + resPath, '_blank'); }
-                  else { openResolvedUrlInNewTab(resPath); }
-                } else { window.open(window.location.href, '_blank'); }
-              }).catch(function(err) { console.warn('requestPathViaWebSocket failed', err); alert('Failed to fetch path via WebSocket: ' + (err && err.message ? err.message : String(err))); }).finally(function() { openTab.textContent = originalText; openTab.disabled = false; });
-            });
-
-            var remove = document.createElement('button');
-            remove.className = 'btn';
-            remove.textContent = 'Remove';
-            remove.addEventListener('click', function(ev) { ev.stopPropagation(); removeAt(idx); });
-
-            actions.appendChild(openTab);
-            actions.appendChild(remove);
-
-            li.appendChild(a);
-            li.appendChild(actions);
-            listEl.appendChild(li);
-          });
-        }
-
-        function removeAt(i) {
-          var arr = loadList();
-          if (i >=0 && i < arr.length) { arr.splice(i,1); saveList(arr); renderList(); }
-        }
-
-        function openModal() { modal.style.display = 'flex'; renderList(); addInput.focus(); }
-        function closeModal() { modal.style.display = 'none'; }
-
-        menu.addEventListener('click', function() { modal.style.display = (modal.style.display === 'flex') ? 'none' : 'flex'; if (modal.style.display === 'flex') renderList(); });
-        closeBtn.addEventListener('click', closeModal);
-        modal.addEventListener('click', function(ev) { if (ev.target === modal) closeModal(); });
-
-        addBtn.addEventListener('click', function() { var v = (addInput.value || '').trim(); if (!v) return; var arr = loadList(); arr.push(v); saveList(arr); addInput.value = ''; renderList(); });
-
-        addInput.addEventListener('keydown', function(ev) { if (ev.key === 'Enter') { addBtn.click(); } });
-
-        window.setIframeToPath = setIframeToPath;
-
-        (function tryFetchInitialList() {
-          var defaultWsPath = (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + '/related-displays';
-          fetchInitialListViaWebSocket(defaultWsPath, { timeoutMs: 5000 }).then(function(list) { if (Array.isArray(list) && list.length) { saveList(list); if (modal && modal.style && modal.style.display === 'flex') renderList(); } }).catch(function(err) { console.debug('fetchInitialListViaWebSocket:', err && err.message ? err.message : err); });
-        })();
       })();
     </script>
   </body>

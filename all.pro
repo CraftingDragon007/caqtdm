@@ -110,18 +110,3 @@ QMAKE_IOS_DEVICE_ARCHS = $$iosArchitectures
 
 # Set "Devices" (1=iPhone, 2=iPad, 1,2=Universal)
 QMAKE_IOS_TARGETED_DEVICE_FAMILY = 2
-
-unix:equals(_CAQTDMWEB, 1) {
-  message("rebind.so will be built for caQtDM_Web")
-
-  rebind_lib.target = rebind_lib
-
-  rebind_lib.commands = $(MAKE) -C caQtDM_Web/websockify
-
-  QMAKE_EXTRA_TARGETS += rebind_lib
-
-  caQtDM_Viewer.depends = rebind_lib
-
-} else {
-  message("rebind.so will NOT be build for caQtDM_Web")
-}

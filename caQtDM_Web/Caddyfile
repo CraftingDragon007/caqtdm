@@ -5,7 +5,7 @@ localhost {
 	handle @noVNC {
 		uri strip_prefix /websockify/{re.dynamic_port_route.1}
 
-		reverse_proxy localhost:79{re.dynamic_port_route.1} {
+		reverse_proxy localhost:59{re.dynamic_port_route.1} {
 			header_up Host {http.request.host}
 		}
 	}

@@ -37,6 +37,7 @@
 #ifndef MOBILE
 #include "hmisharedeventbus.h"
 #include "hmisharedconfiglistmanager.h"
+#include "websocketserver.h"
 #endif
 
 #ifndef MOBILE_ANDROID
@@ -318,8 +319,10 @@ QReadWriteLock CaQtDM_Lib::externalHmiConfigListLock;
 QList<caHMIConfigTransferItem*> CaQtDM_Lib::hmiConfigList;
 QReadWriteLock CaQtDM_Lib::hmiConfigListLock;
 
-QMap<QString, QProcess> CaQtDM_Lib::webChildProcesses;
+#ifndef MOBILE
+QMap<QString, VncWebChildProcess> CaQtDM_Lib::webChildProcesses;
 QReadWriteLock CaQtDM_Lib::webChildProcessesLock;
+#endif
 
 /**
  * CaQtDM_Lib destructor
@@ -365,7 +368,7 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
     if (IS_VNC) {
         bool ok;
         quint16 web_port = options["web_port"].toUShort(&ok);
-        quint16 vnc_port = options["port"].toUShort(&ok);
+        quint16 vnc_port = options["vnc_port"].toUShort(&ok);
 
         if (!ok) {
             qCritical() << "caQtDM_Web -- Invalid web/vnc ports defined, stuff will break.";
@@ -373,6 +376,8 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
             this->setProperty("WEBPORT", web_port);
             this->setProperty("VNCPORT", vnc_port);
         }
+
+        this->setProperty("SLAVE_SERVER", options["slave_server"]);
     }
 
     // is a default plugin specified (normally nothing means epics3)
@@ -7243,8 +7248,20 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
             emit Signal_OpenNewWFile(files[indx].trimmed(), "", geometry, "true");
         }
 
-    } else {
+    }
+#ifndef MOBILE
+    else if (this->property("SLAVE_SERVER").toInt() != 1) {
         // start new process and novnc
+
+        QWriteLocker webChildProcessesLocker(&webChildProcessesLock);
+        auto result = webChildProcesses.find(files[indx].trimmed());
+        if (result != webChildProcesses.constEnd()) {
+            if (WebSocketServer::instance().isInitialized()) {
+                WebSocketServer::instance().sendOpenFileRequest(result->vncPort());
+                return;
+            }
+        }
+
         QString caQtDM_executable = QApplication::applicationFilePath();
 
         QString web_path = qgetenv("CAQTDM_WEB_PATH");
@@ -7277,18 +7294,9 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
             return;
         }
 
-        QWriteLocker webChildProcessesLocker(&webChildProcessesLock);
-
-        QString argStr;
-
-        if(indx < files.count() && indx < args.count()) {
-            argStr += "-macro \"" + args[indx].trimmed()  + "\" ";
-        }
-
-        argStr += files[indx].trimmed();
-
-        QProcess child;
-        child.setProgram(runScript.fileName());
+        QProcess websockify_child;
+        //QProcess child;
+        websockify_child.setProgram(runScript.fileName());
 
         QList<QString> webSockifyArgs;
 
@@ -7298,14 +7306,42 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
                 webChildProcesses.count() + 1;
 
 
-        webSockifyArgs.append("--timeout=60 " + QString::number(new_vnc_port) + " -- "
-                              + caQtDM_executable + " -server -slave_server -server_port "
-                              + QString::number(new_vnc_port) + " -web_server_port "
-                              + QString::number(new_web_port) + " " + argStr);
+        //webSockifyArgs.append("--timeout=60");
+        webSockifyArgs.append(QString::number(new_vnc_port));
+        webSockifyArgs.append("--");
+        webSockifyArgs.append(caQtDM_executable);
+        webSockifyArgs.append("-server");
+        webSockifyArgs.append("-slave_server");
+        webSockifyArgs.append("-server_port");
+        webSockifyArgs.append(QString::number(new_vnc_port));
+        webSockifyArgs.append("-web_server_port");
+        webSockifyArgs.append(QString::number(new_web_port));
 
-        child.setArguments(webSockifyArgs);
+        if(indx < files.count() && indx < args.count() && args[indx].trimmed().length() > 0) {
+            webSockifyArgs.append("-macro");
+            webSockifyArgs.append("\"" + args[indx].trimmed()  + "\"");
+        }
+
+        webSockifyArgs.append(files[indx].trimmed());
+
+        QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
+        environment.remove("LD_PRELOAD");
+
+        websockify_child.setProcessEnvironment(environment);
+
+        websockify_child.setArguments(webSockifyArgs);
+
+        websockify_child.startDetached();
+
+        if (WebSocketServer::instance().isInitialized()) {
+            WebSocketServer::instance().sendOpenFileRequest(new_vnc_port);
+        }
+
+        VncWebChildProcess item(new_vnc_port, new_web_port, &websockify_child);
+
+        webChildProcesses.insert(files[indx].trimmed(), item);
     }
-
+#endif
 }
 
 /**

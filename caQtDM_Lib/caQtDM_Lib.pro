@@ -94,6 +94,7 @@ HEADERS += caqtdm_lib.h\
     src/hmi_common_event_defs.h \
     src/hmisharedconfiglistmanager.h \
     src/hmisharedeventbus.h \
+    src/vncwebchildprocess.h \
     vaPrintf.h \
     myMessageBox.h \
     limitsStripplotDialog.h \
