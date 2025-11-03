@@ -756,7 +756,7 @@ void caCartesianPlot::setGridsColor(QColor c)
     penGrid.setStyle(Qt::DashLine);
 
     plotGrid->setPen(penGrid);
-    plotGrid->setVisible(penGrid.style() != Qt::NoPen);
+    //plotGrid->setVisible(penGrid.style() != Qt::NoPen);
     replot();
 }
 
