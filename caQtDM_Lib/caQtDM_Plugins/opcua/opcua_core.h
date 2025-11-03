@@ -26,7 +26,6 @@
 #define OPCUA_CORE_H
 
 #include <QObject>
-#include <QTimer>
 #include <QUrl>
 #include <QtOpcUa/QOpcUaAddReferenceItem>
 #include <QtOpcUa/QOpcUaBrowseRequest>
@@ -186,6 +185,8 @@ signals:
 
 private:
     QOpcUaClient *m_client;
+    // Most recent url specified for connection
+    QUrl m_latestEndpointUrl;
     // Holds information about the endpoint the core is currently connected to
     QOpcUaEndpointDescription m_currentEndpointDescription;
     // Map of nodeId to node with all nodes that are configured to be subscribed to
@@ -199,6 +200,41 @@ private:
     int m_reconnectionTimeoutMs;
     bool m_reconnecting;
 
+    /**
+     * @brief Gets the Qt standard path for AppLocalDataLocation and uses that to form a path for PKI configurations
+     * No path is created here, it simply returns the string.
+     * @return The path to use for PKI configurations
+     */
+    static QString defaultPkiPath();
+
+    /**
+     * @brief Deletes all pki configuration stored to the default PKI path
+     */
+    void clearPkiConfig();
+
+    /**
+     * @brief Sets up a valid PKI configuration under the standard path
+     */
+    void setupPkiConfig();
+
+    /**
+     * @brief Tries to connecto to all given endpoints via tcp and approximately returns the one with the fastes response time
+     * @param endpointDescriptions: the list of endpoint(-description)s to check
+     * @return The fastests endpoint (as a description) or a description with an empty endpointUrl in case none replied within a certain timeout
+     */
+    QOpcUaEndpointDescription getEndpointWithLowestLatency(
+        const QVector<QOpcUaEndpointDescription> &endpointDescriptions);
+
+    /**
+     * @brief Chooses an appropriate endpoint out of many, considering connectivity and security & what the client supports in it's current configuration
+     * @param endpointDescriptions: the list of endpoint(-description)s to choose from (output from endpointsRequest)
+     * @param fallbackUrl: the fallback url to include in the checks as an alternative to the list
+     * This is useful e.g. for port-forwarding or domain-aliasing where the host is reachable over a different URI than it knows itself
+     * @return The chosen endpoint description, or if none was suitable an endpoint description with an empty endpointUrl
+     */
+    QOpcUaEndpointDescription chooseEndpointDescription(
+        const QVector<QOpcUaEndpointDescription> &endpointDescriptions,
+        const QUrl &fallbackUrl);
     /**
      * @brief Checks if the clients state is connected
      * @return true if the client is initialized and its state() is Connected, else false

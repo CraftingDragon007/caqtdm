@@ -24,15 +24,24 @@
 
 #include "opcua_core.h"
 #include <QDebug>
+#include <QStandardPaths>
+#include <QTimer>
+#include "qdir.h"
 #include "qeventloop.h"
 #include "qmetaobject.h"
 #include "qopcuaauthenticationinformation.h"
 #include "qtcpsocket.h"
+#include "x509certificate.h"
+#include <qopcuaerrorstate.h>
 
 #define DEFAULT_OPCUA_PORT 4840
 #define INITIAL_RECONNECTION_TIMEOUT 100
 #define RECONNECTION_TIMEOUT_FACTOR 2
 #define MAX_RECONNECTION_TIMEOUT 60000
+
+#define DEFAULT_MAX_LATENCY 500
+
+#define NOPASS_PLACEHOLDER "caQtDM"
 
 OpcUaCore::OpcUaCore(QObject *parent)
     : QObject(parent)
@@ -62,11 +71,39 @@ OpcUaCore::OpcUaCore(QObject *parent)
         m_passwordCredentials = {username, password};
     }
 
-    QString certificatePath = qgetenv("CAQTDM_OPCUA_CERTIFICATE");
-    QString privateKeyPath = qgetenv("CAQTDM_OPCUA_PRIVATEKEY");
-    if (!certificatePath.isEmpty() && !privateKeyPath.isEmpty()) {
-        VERBOSELOG("certificate authentication / encryption is not yet supported.");
+    if (!qgetenv("CAQTDM_OPCUA_RESET_PKI_CONFIG").isEmpty()) {
+        VERBOSELOG("Resetting PKI Config.");
+        clearPkiConfig();
     }
+
+    setupPkiConfig();
+
+    QObject::connect(m_client,
+                     &QOpcUaClient::passwordForPrivateKeyRequired,
+                     this,
+                     [](QString keyFilePath, QString *password, bool previousTryWasInvalid) {
+                         if (previousTryWasInvalid) {
+                             if (*password != NOPASS_PLACEHOLDER) {
+                                 // Maybe the user specified a password but this pki config was created without one
+                                 VERBOSELOG(
+                                     "Failed to decrypt private key with given password, trying "
+                                     "default. To reset, specify CAQTDM_OPCUA_RESET_PKI_CONFIG.");
+                                 *password = NOPASS_PLACEHOLDER;
+                                 return;
+                             }
+                             VERBOSELOG("Failed to decrypt private key, have you specified a "
+                                        "password when initializing it via environment variable? "
+                                        "To reset, specify CAQTDM_OPCUA_RESET_PKI_CONFIG.");
+                             *password = "";
+                             return;
+                         }
+
+                         QString pemPassword = qgetenv("CAQTDM_OPCUA_PEM_PASSWORD");
+                         if (pemPassword.isEmpty()) {
+                             pemPassword = NOPASS_PLACEHOLDER;
+                         }
+                         *password = pemPassword;
+                     });
 
     QObject::connect(m_client, &QOpcUaClient::connected, this, [this]() {
         emit connected();
@@ -122,8 +159,11 @@ OpcUaCore::OpcUaCore(QObject *parent)
 
     QObject::connect(
         m_client, &QOpcUaClient::errorChanged, this, [this](QOpcUaClient::ClientError error) {
-            if (error == QOpcUaClient::ClientError::InvalidAuthenticationInformation) {
-                VERBOSELOG("Client error: Authentication information is wrong for: "
+            if (error == QOpcUaClient::ClientError::AccessDenied) {
+                VERBOSELOG("Client error: Got Access denied for: "
+                           << m_currentEndpointDescription.endpointUrl());
+            } else if (error == QOpcUaClient::ClientError::InvalidAuthenticationInformation) {
+                VERBOSELOG("Client error: Authentication information is invalid for: "
                            << m_currentEndpointDescription.endpointUrl());
             } else if (error == QOpcUaClient::ClientError::NoMatchingUserIdentityTokenFound) {
                 VERBOSELOG("Client error: No matching authentication information found for: "
@@ -151,12 +191,205 @@ OpcUaCore::~OpcUaCore()
     }
 }
 
+QString OpcUaCore::defaultPkiPath()
+{
+    return QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + "/pki";
+}
+
+void OpcUaCore::clearPkiConfig()
+{
+    const QString pkiPath = defaultPkiPath();
+    if (QDir().exists(pkiPath)) {
+        if (!QDir(pkiPath).removeRecursively()) {
+            VERBOSELOG(
+                "Failed to delete files for resetting PKI config, please check and unlock/delete "
+                << pkiPath << ". After that, restart caQtDM.");
+        }
+    }
+}
+
+void OpcUaCore::setupPkiConfig()
+{
+    const QString pkiPath = defaultPkiPath();
+    const QString certFileName(pkiPath + "/own/certs/caQtDM.der");
+    const QString privateKeyFileName(pkiPath + "/own/private/caQtDM.pem");
+
+    const bool createCertificate = !QFile::exists(certFileName)
+                                   || !QFile::exists(privateKeyFileName);
+    if (createCertificate && !X509Certificate::createCertificate(pkiPath)) {
+        VERBOSELOG("Could not set up directory" << pkiPath);
+    }
+
+    QOpcUaPkiConfiguration pkiConfig;
+
+    pkiConfig.setClientCertificateFile(certFileName);
+    pkiConfig.setPrivateKeyFile(privateKeyFileName);
+    pkiConfig.setTrustListDirectory(pkiPath + "/trusted/certs");
+    pkiConfig.setRevocationListDirectory(pkiPath + "/trusted/crl");
+    pkiConfig.setIssuerListDirectory(pkiPath + "/issuers/certs");
+    pkiConfig.setIssuerRevocationListDirectory(pkiPath + "/issuers/crl");
+
+    const QStringList toCreate = {pkiConfig.trustListDirectory(),
+                                  pkiConfig.revocationListDirectory(),
+                                  pkiConfig.issuerListDirectory(),
+                                  pkiConfig.issuerRevocationListDirectory()};
+    for (const QString &dir : toCreate) {
+        if (!QDir().mkpath(dir)) {
+            VERBOSELOG("Could not create directory" << dir);
+        }
+    }
+
+    m_client->setPkiConfiguration(pkiConfig);
+}
+
+QOpcUaEndpointDescription OpcUaCore::getEndpointWithLowestLatency(
+    const QVector<QOpcUaEndpointDescription> &endpointDescriptions)
+{
+    QOpcUaEndpointDescription chosenEndpoint;
+    chosenEndpoint.setEndpointUrl("");
+
+    if (endpointDescriptions.isEmpty()) {
+        return chosenEndpoint;
+    }
+
+    QList<QTcpSocket *> sockets;
+    std::atomic<bool> found(false);
+    QEventLoop loop;
+    QTimer timer;
+    timer.setSingleShot(true);
+    QString timeoutString = qgetenv("CAQTDM_OPCUA_MAX_LATENCY");
+    int timeout;
+    {
+        bool ok = false;
+        timeout = timeoutString.toInt(&ok);
+        if (!ok) {
+            timeout = DEFAULT_MAX_LATENCY;
+        }
+    }
+
+    QObject::connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
+
+    // For each endpoint returned from the server, try to establish a simple tcp connection. The first endpoint that connects is chosen for further opcua communication.
+    for (int i = 0; i < endpointDescriptions.size(); ++i) {
+        QOpcUaEndpointDescription ep = endpointDescriptions.at(i);
+        QUrl url = ep.endpointUrl();
+        QTcpSocket *sock = new QTcpSocket(this);
+        sockets.append(sock);
+
+        QObject::connect(sock, &QTcpSocket::connected, this, [&, ep]() {
+            if (found.exchange(true))
+                return;
+            chosenEndpoint = ep;
+            timer.stop();
+            loop.quit();
+            for (QTcpSocket *s : sockets) {
+                if (s) {
+                    if (s->state() == QAbstractSocket::ConnectedState) {
+                        s->abort();
+                    }
+                    s->deleteLater();
+                }
+            }
+        });
+        ;
+        sock->connectToHost(url.host(), url.port());
+    }
+
+    // Try to connect to all endpoints for a certain time. Due to signal / slot mechanism, the fastest connection will usually be chosen.
+    timer.start(timeout);
+    loop.exec();
+
+    return chosenEndpoint;
+}
+
+QOpcUaEndpointDescription OpcUaCore::chooseEndpointDescription(
+    const QVector<QOpcUaEndpointDescription> &endpointDescriptions, const QUrl &fallbackUrl)
+{
+    QVector<QOpcUaEndpointDescription> certificateEndpoints;
+    QVector<QOpcUaEndpointDescription> usernamePasswordEndpoints;
+    QVector<QOpcUaEndpointDescription> anonymousEndpoints;
+
+    bool isCertificateSupported = m_client->authenticationInformation().authenticationType()
+                                      == QOpcUaUserTokenPolicy::Certificate
+                                  && m_client->pkiConfiguration().isPkiValid();
+    bool isUsernamePasswordSupported = m_client->authenticationInformation().authenticationType()
+                                       == QOpcUaUserTokenPolicy::Username;
+
+    // Get all supported endpoints
+    for (auto ep : endpointDescriptions) {
+        if ((!isCertificateSupported
+             && ep.securityPolicy()
+                    == QStringLiteral("http://opcfoundation.org/UA/SecurityPolicy#None"))
+            || isCertificateSupported) {
+            if (ep.userIdentityTokensRef().isEmpty()) {
+                // No tokens specified -> no username / password auth supported
+                anonymousEndpoints.emplace_back(ep);
+                break;
+            }
+            for (QOpcUaUserTokenPolicy &token : ep.userIdentityTokens()) {
+                if (isCertificateSupported
+                    && token.tokenType() == QOpcUaUserTokenPolicy::Certificate) {
+                    certificateEndpoints.emplace_back(ep);
+                } else if (isUsernamePasswordSupported
+                           && token.tokenType() == QOpcUaUserTokenPolicy::Username) {
+                    usernamePasswordEndpoints.emplace_back(ep);
+                } else if (token.tokenType() == QOpcUaUserTokenPolicy::Anonymous) {
+                    anonymousEndpoints.emplace_back(ep);
+                }
+            }
+        }
+    }
+
+    QOpcUaEndpointDescription chosenEndpoint;
+    chosenEndpoint.setEndpointUrl("");
+    if (certificateEndpoints.isEmpty() && usernamePasswordEndpoints.isEmpty()
+        && anonymousEndpoints.isEmpty()) {
+        return chosenEndpoint;
+    }
+
+    // in case any of the groups don't include the fallback url, clone the first of them with it as the endpointUrl
+    for (QVector<QOpcUaEndpointDescription> *endpointList :
+         {&certificateEndpoints, &usernamePasswordEndpoints, &anonymousEndpoints}) {
+        if (!endpointList->isEmpty()
+            && std::find_if(endpointList->constBegin(),
+                            endpointList->constEnd(),
+                            [&fallbackUrl](const QOpcUaEndpointDescription &ep) {
+                                return ep.endpointUrl() == fallbackUrl;
+                            })
+                   == endpointList->constEnd()) {
+            QOpcUaEndpointDescription cloneWithFallbackUrl = endpointList->first();
+            cloneWithFallbackUrl.setEndpointUrl(fallbackUrl.toString());
+            endpointList->append(cloneWithFallbackUrl);
+        }
+    }
+
+    // check if any certificate endpoints are reachable
+    chosenEndpoint = getEndpointWithLowestLatency(certificateEndpoints);
+    if (!chosenEndpoint.endpointUrl().isEmpty()) {
+        return chosenEndpoint;
+    }
+    // check if any username / password endpoints are reachable
+    chosenEndpoint = getEndpointWithLowestLatency(usernamePasswordEndpoints);
+    if (!chosenEndpoint.endpointUrl().isEmpty()) {
+        return chosenEndpoint;
+    }
+    // check if any anonymous endpoints are reachable
+    chosenEndpoint = getEndpointWithLowestLatency(anonymousEndpoints);
+    if (!chosenEndpoint.endpointUrl().isEmpty()) {
+        return chosenEndpoint;
+    }
+
+    // Since we didn't find anything, we return an invalid chosenEndpoint (empty endpointUrl)
+    return chosenEndpoint;
+}
+
 bool OpcUaCore::connectOpc(const QString &url)
 {
     if (!m_client) {
         VERBOSELOG("Client is not initialized.");
         return false;
     }
+    m_latestEndpointUrl = url;
 
     auto conn = new QMetaObject::Connection;
     *conn = QObject::connect(
@@ -168,74 +401,22 @@ bool OpcUaCore::connectOpc(const QString &url)
                      const QUrl &url) {
             QObject::disconnect(*conn);
             delete conn;
+
             // If no endpoints are returned at all, there is something fundamentally wrong with the server.
             // Thus, not even the fallbackEndpoint is checked from the pv, and we error out here.
             if (returnedEndpoints.isEmpty() || status != QOpcUa::UaStatusCode::Good) {
                 VERBOSELOG("No endpoints received or status not good.");
                 return;
             }
-            // Add a fallbackEndpoint which is from the provided pv string (url)
-            QOpcUaEndpointDescription fallbackEndpoint = returnedEndpoints.constFirst();
-            fallbackEndpoint.setEndpointUrl(url.toString());
-            int fallbackPort = QUrl(url).port(
-                DEFAULT_OPCUA_PORT); // Fallback port is the port given in the pv string or the hardcoded default, if none given.
 
-            QVector<QOpcUaEndpointDescription> endpoints = returnedEndpoints;
-            endpoints.append(fallbackEndpoint);
+            QOpcUaEndpointDescription chosenEndpoint = chooseEndpointDescription(returnedEndpoints,
+                                                                                 url);
 
-            QOpcUaEndpointDescription chosenEndpoint;
-            bool foundWorkingEndpoint = false;
-            QList<QTcpSocket *> sockets;
-            QEventLoop loop;
-            QTimer timer;
-            std::atomic<bool> found(false);
-
-            timer.setSingleShot(true);
-            QObject::connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
-
-            // For each endpoint returned from the server, try to establish a simple tcp connection. The first endpoint that connects is chosen for further opcua communication.
-            for (int i = 0; i < endpoints.size(); ++i) {
-                QOpcUaEndpointDescription ep = endpoints.at(i);
-                QUrl url = ep.endpointUrl();
-                QTcpSocket *sock = new QTcpSocket(this);
-                sockets.append(sock);
-
-                QObject::connect(sock, &QTcpSocket::connected, this, [&, ep]() {
-                    if (found.exchange(true))
-                        return;
-                    chosenEndpoint = ep;
-                    foundWorkingEndpoint = true;
-                    timer.stop();
-                    loop.quit();
-                    for (QTcpSocket *s : sockets)
-                        if (s && s->state() == QAbstractSocket::ConnectedState
-                            && s != qobject_cast<QTcpSocket *>(QObject::sender()))
-                            s->abort();
-                });
-                ;
-                sock->connectToHost(
-                    url.host(),
-                    url.port(
-                        fallbackPort)); // Uses either endoint provided port, or defaults to fallbackPort
-            }
-
-            // Try to connect to all endpoints for a certain time. Due to signal / slot mechanism, the fastest connection will usually be chosen.
-            timer.start(500);
-            loop.exec();
-
-            for (QTcpSocket *s : sockets) {
-                if (s) {
-                    s->abort();
-                    s->deleteLater();
-                }
-            }
-
-            if (!foundWorkingEndpoint) {
+            if (chosenEndpoint.endpointUrl().isEmpty()) {
                 VERBOSELOG("No reachable endpoint hosts.");
                 return;
             }
 
-            // Use this endpoint for all subscriptions
             m_client->connectToEndpoint(chosenEndpoint);
             m_currentEndpointDescription = chosenEndpoint;
         });
@@ -254,6 +435,7 @@ void OpcUaCore::disconnectOpc()
     } else {
         VERBOSELOG("Client not connected or already disconnected.");
     }
+    m_currentEndpointDescription.setEndpointUrl("");
 }
 
 void OpcUaCore::subscribeToNode(const SubscriptionSettings &subscriptionSettings)
@@ -628,6 +810,10 @@ void OpcUaCore::updatePasswordCredentials(const PasswordCredentials &newPassword
     authInfo.setUsernameAuthentication(newPasswordCredentials.username,
                                        newPasswordCredentials.password);
     m_client->setAuthenticationInformation(authInfo);
-    m_client->connectToEndpoint(m_currentEndpointDescription);
+    if (!m_currentEndpointDescription.endpointUrl().isEmpty()) {
+        m_client->connectToEndpoint(m_currentEndpointDescription);
+    } else {
+        connectOpc(m_latestEndpointUrl.toString());
+    }
     m_passwordCredentials = newPasswordCredentials;
 }

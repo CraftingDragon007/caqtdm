@@ -23,9 +23,11 @@ INCLUDEPATH    += ../
 INCLUDEPATH    += ../../src
 INCLUDEPATH    += ../../../caQtDM_QtControls/src
 HEADERS         = ../controlsinterface.h \
-    opcua_plugin.h opcua_core.h
+    opcua_plugin.h opcua_core.h \
+    x509certificate.h
 SOURCES         = \
-    opcua_plugin.cpp opcua_core.cpp
+    opcua_plugin.cpp opcua_core.cpp \
+    x509certificate.cpp
 TARGET          = opcua_plugin
 android {
    INCLUDEPATH += $(ANDROIDFUNCTIONSINCLUDE)
