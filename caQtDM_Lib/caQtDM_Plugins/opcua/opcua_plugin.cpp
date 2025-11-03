@@ -134,6 +134,19 @@ int OPCUAPlugin::initCommunicationLayer(MutexKnobData *data,
     return true;
 }
 
+void OPCUAPlugin::copyStringToDataB(knobData &kData, const QString &newValue)
+{
+    if (kData.edata.dataB && kData.edata.dataSize != (newValue.length() + 1)) {
+        free(kData.edata.dataB);
+        kData.edata.dataB = Q_NULLPTR;
+    }
+    if (!kData.edata.dataB) {
+        kData.edata.dataSize = newValue.length() + 1;
+        kData.edata.dataB = malloc(static_cast<size_t>(kData.edata.dataSize));
+    }
+    memcpy(kData.edata.dataB, newValue.toUtf8().data(), static_cast<size_t>(kData.edata.dataSize));
+}
+
 bool OPCUAPlugin::isGeneralUsernamePassword(const QString &pv)
 {
     return (pv == "username" || pv == "password");
@@ -210,17 +223,7 @@ int OPCUAPlugin::initializeCredentialsPV(int index)
     }
 
     if (!newValue.isEmpty()) {
-        if (kData.edata.dataB && kData.edata.dataSize != (newValue.length() + 1)) {
-            free(kData.edata.dataB);
-            kData.edata.dataB = Q_NULLPTR;
-        }
-        if (!kData.edata.dataB) {
-            kData.edata.dataSize = newValue.length() + 1;
-            kData.edata.dataB = malloc(static_cast<size_t>(kData.edata.dataSize));
-        }
-        memcpy(kData.edata.dataB,
-               newValue.toUtf8().data(),
-               static_cast<size_t>(kData.edata.dataSize));
+        copyStringToDataB(kData, newValue);
     }
     m_mutexKnobDataP->SetMutexKnobDataReceived(&kData);
 
@@ -498,7 +501,14 @@ int OPCUAPlugin::pvFreeAllocatedData(knobData *kData)
     return true;
 }
 
-bool OPCUAPlugin::setUsernamePasswordPV(const QString &pvString, const char *sdata)
+QString OPCUAPlugin::getHostFromSpecificUsernamePassword(const QString &pv)
+{
+    QString host = pv;
+    host.remove(pv.length() - 9, 9);
+    host.remove(PLUGIN_PREFIX);
+    return host;
+}
+
 bool OPCUAPlugin::setCredentialsPV(const QString &pvString, const char *sdata)
 {
     if (isGeneralUsernamePassword(pvString)) {
@@ -527,17 +537,7 @@ bool OPCUAPlugin::setCredentialsPV(const QString &pvString, const char *sdata)
             newValue = PASSWORD_PLACEHOLDER;
         }
 
-        if (kData.edata.dataB && kData.edata.dataSize != (newValue.length() + 1)) {
-            free(kData.edata.dataB);
-            kData.edata.dataB = Q_NULLPTR;
-        }
-        if (!kData.edata.dataB) {
-            kData.edata.dataSize = newValue.length() + 1;
-            kData.edata.dataB = malloc(static_cast<size_t>(kData.edata.dataSize));
-        }
-        memcpy(kData.edata.dataB,
-               newValue.toUtf8().data(),
-               static_cast<size_t>(kData.edata.dataSize));
+        copyStringToDataB(kData, newValue);
 
         kData.edata.valueCount = kData.edata.nelm = 1;
         kData.edata.monitorCount++;
@@ -560,9 +560,7 @@ bool OPCUAPlugin::setCredentialsPV(const QString &pvString, const char *sdata)
         int index;
         QString newValue = "";
         knobData kData;
-        QString host = pvString;
-        host.remove(pvString.length() - 9, 9);
-        host.remove(PLUGIN_PREFIX);
+        QString host = getHostFromSpecificUsernamePassword(pvString);
         if (pvString.endsWith("username")) {
             index = m_usernameIndexForHost[host];
             if (index == -1) {
@@ -585,17 +583,7 @@ bool OPCUAPlugin::setCredentialsPV(const QString &pvString, const char *sdata)
             newValue = PASSWORD_PLACEHOLDER;
         }
 
-        if (kData.edata.dataB && kData.edata.dataSize != (newValue.length() + 1)) {
-            free(kData.edata.dataB);
-            kData.edata.dataB = Q_NULLPTR;
-        }
-        if (!kData.edata.dataB) {
-            kData.edata.dataSize = newValue.length() + 1;
-            kData.edata.dataB = malloc(static_cast<size_t>(kData.edata.dataSize));
-        }
-        memcpy(kData.edata.dataB,
-               newValue.toUtf8().data(),
-               static_cast<size_t>(kData.edata.dataSize));
+        copyStringToDataB(kData, newValue);
 
         kData.edata.valueCount = kData.edata.nelm = 1;
         kData.edata.monitorCount++;
@@ -647,8 +635,9 @@ int OPCUAPlugin::pvSetValue(
 
     QString pvString = QString::fromUtf8(pv);
 
-    if (isGeneralUsernamePassword(pvString) || isSpecificUsernamePassword(pvString)) {
-        return setUsernamePasswordPV(pvString, sdata);
+    if (isGeneralUsernamePassword(pvString) || isSpecificUsernamePassword(pvString)
+        || isPemPassword(pvString)) {
+        return setCredentialsPV(pvString, sdata);
     }
 
     QString endpoint, nodeId;
@@ -1024,17 +1013,7 @@ void OPCUAPlugin::updateKnobDataFromVariantSingle(knobData &kData,
         kData.edata.precision = 0;
         break;
     case caSTRING:
-        if (kData.edata.dataB && kData.edata.dataSize != (value.toString().length() + 1)) {
-            free(kData.edata.dataB);
-            kData.edata.dataB = Q_NULLPTR;
-        }
-        if (!kData.edata.dataB) {
-            kData.edata.dataSize = value.toString().length() + 1;
-            kData.edata.dataB = malloc(static_cast<size_t>(kData.edata.dataSize));
-        }
-        memcpy(kData.edata.dataB,
-               value.toString().toUtf8().data(),
-               static_cast<size_t>(kData.edata.dataSize));
+        copyStringToDataB(kData, value.toString());
         break;
     default:
         kData.edata.rvalue = 0.0;
@@ -1165,17 +1144,7 @@ void OPCUAPlugin::updateKnobDataFromVariantArray(knobData &kData,
     }
     case caSTRING: {
         QVariant firstValue = list.constFirst();
-        if (kData.edata.dataB && kData.edata.dataSize != (firstValue.toString().length() + 1)) {
-            free(kData.edata.dataB);
-            kData.edata.dataB = Q_NULLPTR;
-        }
-        if (!kData.edata.dataB) {
-            kData.edata.dataSize = firstValue.toString().length() + 1;
-            kData.edata.dataB = malloc(static_cast<size_t>(kData.edata.dataSize));
-        }
-        memcpy(kData.edata.dataB,
-               firstValue.toString().toUtf8().data(),
-               static_cast<size_t>(kData.edata.dataSize));
+        copyStringToDataB(kData, firstValue.toString());
         break;
     }
     default:
