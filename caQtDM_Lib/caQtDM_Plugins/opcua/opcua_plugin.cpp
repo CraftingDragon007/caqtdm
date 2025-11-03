@@ -187,7 +187,8 @@ int OPCUAPlugin::initializeUsernamePasswordPV(int index)
             }
         } else if (pv.endsWith("password")) {
             m_passwordIndexForHost[host] = index;
-            if (m_passwordCredentialsForHost.contains(host)) {
+            if (m_passwordCredentialsForHost.contains(host)
+                && !m_passwordCredentialsForHost[host].password.isEmpty()) {
                 newValue = PASSWORD_PLACEHOLDER;
             } else {
                 m_passwordCredentialsForHost[host] = {"", ""};
@@ -410,6 +411,8 @@ int OPCUAPlugin::pvClearMonitor(knobData *kData)
     } else if (rawPV == "password") {
         m_passwordIndex = -1;
         return true;
+    } else if (isSpecificUsernamePassword(rawPV) || isGeneralUsernamePassword(rawPV)) {
+        return true;
     }
 
     int index = kData->index;
@@ -472,15 +475,8 @@ int OPCUAPlugin::pvFreeAllocatedData(knobData *kData)
     return true;
 }
 
-int OPCUAPlugin::pvSetValue(
-    char *pv, double rdata, int32_t idata, char *sdata, char *object, char *errmess, int forceType)
+bool OPCUAPlugin::setUsernamePasswordPV(const QString &pvString, const char *sdata)
 {
-    Q_UNUSED(object);
-    Q_UNUSED(forceType);
-
-    QMutexLocker locker(&m_mutex);
-
-    QString pvString = QString::fromUtf8(pv);
     if (isGeneralUsernamePassword(pvString)) {
         int index;
         QString newValue = "";
@@ -589,6 +585,23 @@ int OPCUAPlugin::pvSetValue(
             }
         }
         return true;
+    }
+
+    return false;
+}
+
+int OPCUAPlugin::pvSetValue(
+    char *pv, double rdata, int32_t idata, char *sdata, char *object, char *errmess, int forceType)
+{
+    Q_UNUSED(object);
+    Q_UNUSED(forceType);
+
+    QMutexLocker locker(&m_mutex);
+
+    QString pvString = QString::fromUtf8(pv);
+
+    if (isGeneralUsernamePassword(pvString) || isSpecificUsernamePassword(pvString)) {
+        return setUsernamePasswordPV(pvString, sdata);
     }
 
     QString endpoint, nodeId;
@@ -708,8 +721,8 @@ int OPCUAPlugin::pvClearEvent(void *ptr)
     knobData *kData = static_cast<knobData *>(ptr);
 
     QString plainKey = QString::fromUtf8(kData->pv);
-    if (plainKey.endsWith(".FTVL") || plainKey.endsWith(".NELM") || plainKey == "username"
-        || plainKey == "password") {
+    if (plainKey.endsWith(".FTVL") || plainKey.endsWith(".NELM")
+        || isSpecificUsernamePassword(plainKey) || isGeneralUsernamePassword(plainKey)) {
         return true;
     }
 

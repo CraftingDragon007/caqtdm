@@ -28,7 +28,6 @@
 #include <QMap>
 #include <QMutex>
 #include <QObject>
-#include <QTimer>
 #include <QtGlobal>
 #include "controlsinterface.h"
 #include "opcua_core.h"
@@ -245,6 +244,14 @@ private:
      * @return true if credentials are valid, else false
      */
     bool isPasswordCredentialsValid(const PasswordCredentials &credentialsToCheck);
+
+    /**
+     * @brief Sets either the username or the password for general or endpoint-specific credentials
+     * @param pvString: pv whose value is to be used, and whose name defines what exactly needs to be set
+     * @param sdata: string data containing the new value
+     * @return true if the value has been set, else false
+     */
+    bool setUsernamePasswordPV(const QString &pvString, const char * sdata);
 
     /**
      * @brief Creates a caType corresponding to a QVariant value
