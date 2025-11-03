@@ -191,6 +191,9 @@ private:
     MutexKnobData *m_mutexKnobDataP;
     MessageWindow *m_messageWindowP;
     PasswordCredentials m_generalPasswordCredentials;
+    QString m_pemPassword;
+    // knobData index for pem password
+    int m_pemPasswordIndex;
     // knobData index for the general username for all channels
     int m_usernameIndex;
     // knobData index for the general password for all channels
@@ -217,6 +220,13 @@ private:
     QMap<QString, QString> m_translationMap;
 
     /**
+     * @brief Copies a string into the dataB container in knobdata safely
+     * @param knobData: knobData to copy into
+     * @param value: value to copy
+     */
+    void copyStringToDataB(knobData &kData, const QString &value);
+
+    /**
      * @brief Checks if a pv is for a general username or password for all hosts
      * @param pv: string to check
      * @return true if it is, else false
@@ -231,11 +241,18 @@ private:
     bool isSpecificUsernamePassword(const QString &pv);
 
     /**
-     * @brief Initialized either a general or a specific username or password pv, updating its value if anything is already stored
+     * @brief Checks if a pv is for the password of the pem key
+     * @param pv: string ot check
+     * @return true if it is, else false
+     */
+    bool isPemPassword(const QString &pv);
+
+    /**
+     * @brief Initialized either a general or a specific username or password pv or a pv containing the password to the pem, updating its value if anything is already stored
      * @param index: knobData index of the pv to initialize
      * @return true for success, false for failure
      */
-    int initializeUsernamePasswordPV(int index);
+    int initializeCredentialsPV(int index);
 
     /**
      * @brief Checks if a given PasswordCredentials is valid in a way it can be used to start a connection
@@ -246,12 +263,19 @@ private:
     bool isPasswordCredentialsValid(const PasswordCredentials &credentialsToCheck);
 
     /**
-     * @brief Sets either the username or the password for general or endpoint-specific credentials
+     * @brief Extracts the host from a pv for a host-specific username or password
+     * @param pv: the pv to extract the host from
+     * @return The extracted host
+     */
+    QString getHostFromSpecificUsernamePassword(const QString &pv);
+
+    /**
+     * @brief Sets either the username or the password for general or endpoint-specific credentials or for the pem key
      * @param pvString: pv whose value is to be used, and whose name defines what exactly needs to be set
      * @param sdata: string data containing the new value
      * @return true if the value has been set, else false
      */
-    bool setUsernamePasswordPV(const QString &pvString, const char * sdata);
+    bool setCredentialsPV(const QString &pvString, const char *sdata);
 
     /**
      * @brief Creates a caType corresponding to a QVariant value

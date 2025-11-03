@@ -149,6 +149,11 @@ public:
      * @param newPasswordCredentials: the new password credentials to use. Will always replace old credentials entirely.
      */
     void updatePasswordCredentials(const PasswordCredentials &newPasswordCredentials);
+
+    /**
+     * @brief Sets the password used for decrypting the PEM
+     */
+    void setPemPassword(const QString &newPassword);
 signals:
     /**
      * @brief Emitted when the OpcUa client has successfully connected to an endpoint
@@ -185,6 +190,7 @@ signals:
 
 private:
     QOpcUaClient *m_client;
+    QString m_pemPassword;
     // Most recent url specified for connection
     QUrl m_latestEndpointUrl;
     // Holds information about the endpoint the core is currently connected to
@@ -233,8 +239,7 @@ private:
      * @return The chosen endpoint description, or if none was suitable an endpoint description with an empty endpointUrl
      */
     QOpcUaEndpointDescription chooseEndpointDescription(
-        const QVector<QOpcUaEndpointDescription> &endpointDescriptions,
-        const QUrl &fallbackUrl);
+        const QVector<QOpcUaEndpointDescription> &endpointDescriptions, const QUrl &fallbackUrl);
     /**
      * @brief Checks if the clients state is connected
      * @return true if the client is initialized and its state() is Connected, else false

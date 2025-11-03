@@ -46,6 +46,7 @@
 OpcUaCore::OpcUaCore(QObject *parent)
     : QObject(parent)
     , m_client(Q_NULLPTR)
+    , m_pemPassword("")
     , m_passwordCredentials({"", ""})
 {
     QOpcUaProvider provider;
@@ -81,7 +82,7 @@ OpcUaCore::OpcUaCore(QObject *parent)
     QObject::connect(m_client,
                      &QOpcUaClient::passwordForPrivateKeyRequired,
                      this,
-                     [](QString keyFilePath, QString *password, bool previousTryWasInvalid) {
+                     [this](QString keyFilePath, QString *password, bool previousTryWasInvalid) {
                          if (previousTryWasInvalid) {
                              if (*password != NOPASS_PLACEHOLDER) {
                                  // Maybe the user specified a password but this pki config was created without one
@@ -95,6 +96,13 @@ OpcUaCore::OpcUaCore(QObject *parent)
                                         "password when initializing it via environment variable? "
                                         "To reset, specify CAQTDM_OPCUA_RESET_PKI_CONFIG.");
                              *password = "";
+                             return;
+                         }
+
+                         if (!m_pemPassword.isEmpty()) {
+                             *password = m_pemPassword;
+                             VERBOSELOG("Using explicitely provided password via "
+                                        "opcua://pem_password for decrypting pem.");
                              return;
                          }
 
@@ -816,4 +824,9 @@ void OpcUaCore::updatePasswordCredentials(const PasswordCredentials &newPassword
         connectOpc(m_latestEndpointUrl.toString());
     }
     m_passwordCredentials = newPasswordCredentials;
+}
+
+void OpcUaCore::setPemPassword(const QString &newPassword)
+{
+    m_pemPassword = newPassword;
 }

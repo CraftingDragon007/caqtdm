@@ -46,6 +46,8 @@ OPCUAPlugin::OPCUAPlugin()
     m_messageWindowP = Q_NULLPTR;
     m_usernameIndex = -1;
     m_passwordIndex = -1;
+    m_pemPasswordIndex = -1;
+    m_pemPassword = "";
 }
 
 QString OPCUAPlugin::pluginName()
@@ -146,10 +148,16 @@ bool OPCUAPlugin::isSpecificUsernamePassword(const QString &pv)
     if (pv.contains(PROTOCOL_PREFIX)) {
         return false;
     }
+
     return true;
 }
 
-int OPCUAPlugin::initializeUsernamePasswordPV(int index)
+bool OPCUAPlugin::isPemPassword(const QString &pv)
+{
+    return pv == "pem_password";
+}
+
+int OPCUAPlugin::initializeCredentialsPV(int index)
 {
     knobData kData = m_mutexKnobDataP->GetMutexKnobData(index);
     QString pv = QString::fromUtf8(kData.pv);
@@ -193,6 +201,11 @@ int OPCUAPlugin::initializeUsernamePasswordPV(int index)
             } else {
                 m_passwordCredentialsForHost[host] = {"", ""};
             }
+        }
+    } else if (isPemPassword(pv)) {
+        m_pemPasswordIndex = index;
+        if (!m_pemPassword.isEmpty()) {
+            newValue = PASSWORD_PLACEHOLDER;
         }
     }
 
@@ -241,8 +254,9 @@ int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
         }
         m_epicsWaveformAttributePVs[regularPV].NELM_index = index;
         return true;
-    } else if (isGeneralUsernamePassword(rawPV) || isSpecificUsernamePassword(rawPV)) {
-        return initializeUsernamePasswordPV(index);
+    } else if (isGeneralUsernamePassword(rawPV) || isSpecificUsernamePassword(rawPV)
+               || isPemPassword(rawPV)) {
+        return initializeCredentialsPV(index);
     }
 
     QString endpoint, nodeId;
@@ -411,7 +425,16 @@ int OPCUAPlugin::pvClearMonitor(knobData *kData)
     } else if (rawPV == "password") {
         m_passwordIndex = -1;
         return true;
-    } else if (isSpecificUsernamePassword(rawPV) || isGeneralUsernamePassword(rawPV)) {
+    } else if (isSpecificUsernamePassword(rawPV)) {
+        QString host = getHostFromSpecificUsernamePassword(rawPV);
+        if (rawPV.endsWith("/username")) {
+            m_usernameIndexForHost[host] = -1;
+        } else if (rawPV.endsWith("/password")) {
+            m_passwordIndexForHost[host] = -1;
+        }
+        return true;
+    } else if (isPemPassword(rawPV)) {
+        m_pemPasswordIndex = -1;
         return true;
     }
 
@@ -476,6 +499,7 @@ int OPCUAPlugin::pvFreeAllocatedData(knobData *kData)
 }
 
 bool OPCUAPlugin::setUsernamePasswordPV(const QString &pvString, const char *sdata)
+bool OPCUAPlugin::setCredentialsPV(const QString &pvString, const char *sdata)
 {
     if (isGeneralUsernamePassword(pvString)) {
         int index;
@@ -520,15 +544,15 @@ bool OPCUAPlugin::setUsernamePasswordPV(const QString &pvString, const char *sda
         m_mutexKnobDataP->SetMutexKnobDataReceived(&kData);
 
         if (isPasswordCredentialsValid(m_generalPasswordCredentials)) {
-            for (const QString &endpoint : m_cores.keys()) {
-                QString host = endpoint;
+            for (auto it = m_cores.constKeyValueBegin(); it != m_cores.constKeyValueEnd(); it++) {
+                QString host = it->first;
                 host.remove(PROTOCOL_PREFIX);
-                PasswordCredentials &specificCredentials = m_passwordCredentialsForHost[host];
+                const PasswordCredentials &specificCredentials = m_passwordCredentialsForHost[host];
                 if (isPasswordCredentialsValid(specificCredentials)) {
                     // Don't overwrite credentials for endpoints that already have endpoint-specific credentials
                     continue;
                 }
-                m_cores[endpoint]->updatePasswordCredentials(m_generalPasswordCredentials);
+                m_cores[it->first]->updatePasswordCredentials(m_generalPasswordCredentials);
             }
         }
         return true;
@@ -581,9 +605,32 @@ bool OPCUAPlugin::setUsernamePasswordPV(const QString &pvString, const char *sda
             QString endpoint = PROTOCOL_PREFIX + host;
             if (m_cores.contains(endpoint)) {
                 m_cores[endpoint]->updatePasswordCredentials(m_passwordCredentialsForHost[host]);
-            } else {
             }
         }
+        return true;
+    } else if (isPemPassword(pvString)) {
+        int index = m_pemPasswordIndex;
+        if (index == -1) {
+            return false;
+        }
+
+        m_pemPassword = QString::fromUtf8(sdata);
+
+        knobData kData = m_mutexKnobDataP->GetMutexKnobData(index);
+        QString newValue = PASSWORD_PLACEHOLDER;
+
+        copyStringToDataB(kData, newValue);
+
+        kData.edata.valueCount = kData.edata.nelm = 1;
+        kData.edata.monitorCount++;
+        m_mutexKnobDataP->SetMutexKnobDataReceived(&kData);
+
+        for (auto it = m_cores.constKeyValueBegin(); it != m_cores.constKeyValueEnd(); it++) {
+            QString host = it->first;
+            host.remove(PROTOCOL_PREFIX);
+            m_cores[it->first]->setPemPassword(m_pemPassword);
+        }
+
         return true;
     }
 
@@ -658,7 +705,8 @@ int OPCUAPlugin::pvGetTimeStamp(char *pv, char *timestamp)
     QString rawPV = QString::fromUtf8(pv);
     if (rawPV.endsWith(".FTVL") || rawPV.endsWith(".NELM")) {
         rawPV.remove(rawPV.length() - 5, 5);
-    } else if (rawPV == "password" || rawPV == "username") {
+    } else if (isGeneralUsernamePassword(rawPV) || isSpecificUsernamePassword(rawPV)
+               || isPemPassword(rawPV)) {
         qstrncpy(timestamp, "Timestamp: N/A", MAX_STRING_LENGTH);
         return true;
     }
@@ -689,10 +737,21 @@ int OPCUAPlugin::pvGetDescription(char *pv, char *description)
     if (rawPV.endsWith(".FTVL") || rawPV.endsWith(".NELM")) {
         qstrcpy(description, "I'm just here for compatibility reasons :)");
         return true;
-    } else if (rawPV == "password" || rawPV == "username") {
+    } else if (isGeneralUsernamePassword(rawPV)) {
         qstrncpy(description,
                  "Global value used across all opcua endpoints, unless overwritten per endpoint",
                  MAX_STRING_LENGTH);
+        return true;
+    } else if (isSpecificUsernamePassword(rawPV)) {
+        qstrncpy(description,
+                 "Endpoint specific value, overwrites all other definitions",
+                 MAX_STRING_LENGTH);
+        return true;
+    } else if (isPemPassword(rawPV)) {
+        qstrncpy(
+            description,
+            "Used to decrypt private key for OPCUA communication, overwrites all other definitions",
+            MAX_STRING_LENGTH);
         return true;
     }
 
@@ -722,7 +781,8 @@ int OPCUAPlugin::pvClearEvent(void *ptr)
 
     QString plainKey = QString::fromUtf8(kData->pv);
     if (plainKey.endsWith(".FTVL") || plainKey.endsWith(".NELM")
-        || isSpecificUsernamePassword(plainKey) || isGeneralUsernamePassword(plainKey)) {
+        || isSpecificUsernamePassword(plainKey) || isGeneralUsernamePassword(plainKey)
+        || isPemPassword(plainKey)) {
         return true;
     }
 
@@ -745,8 +805,9 @@ int OPCUAPlugin::pvAddEvent(void *ptr)
     knobData *kData = static_cast<knobData *>(ptr);
 
     QString plainKey = QString::fromUtf8(kData->pv);
-    if (plainKey.endsWith(".FTVL") || plainKey.endsWith(".NELM") || plainKey == "username"
-        || plainKey == "password") {
+    if (plainKey.endsWith(".FTVL") || plainKey.endsWith(".NELM")
+        || isGeneralUsernamePassword(plainKey) || isSpecificUsernamePassword(plainKey)
+        || isPemPassword(plainKey)) {
         return true;
     }
 
@@ -770,8 +831,9 @@ int OPCUAPlugin::pvAddEvent(void *ptr)
 int OPCUAPlugin::pvReconnect(knobData *kData)
 {
     QString plainKey = QString::fromUtf8(kData->pv);
-    if (plainKey.endsWith(".FTVL") || plainKey.endsWith(".NELM") || plainKey == "username"
-        || plainKey == "password") {
+    if (plainKey.endsWith(".FTVL") || plainKey.endsWith(".NELM")
+        || isGeneralUsernamePassword(plainKey) || isSpecificUsernamePassword(plainKey)
+        || isPemPassword(plainKey)) {
         return true;
     }
 
@@ -804,8 +866,9 @@ int OPCUAPlugin::pvReconnect(knobData *kData)
 int OPCUAPlugin::pvDisconnect(knobData *kData)
 {
     QString plainKey = QString::fromUtf8(kData->pv);
-    if (plainKey.endsWith(".FTVL") || plainKey.endsWith(".NELM") || plainKey == "username"
-        || plainKey == "password") {
+    if (plainKey.endsWith(".FTVL") || plainKey.endsWith(".NELM")
+        || isGeneralUsernamePassword(plainKey) || isSpecificUsernamePassword(plainKey)
+        || isPemPassword(plainKey)) {
         return true;
     }
 
