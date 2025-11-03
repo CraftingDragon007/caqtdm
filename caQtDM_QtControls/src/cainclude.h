@@ -54,8 +54,8 @@ class  QTCON_EXPORT caInclude : public QWidget
     Q_PROPERTY(double yCorrectionFactor READ getYcorrection WRITE setYcorrection  DESIGNABLE isPropertyVisible(yCorrectionFactor))
 #else
     Q_PROPERTY(QString macro READ getMacroC WRITE setMacro  DESIGNABLE false)
-    Q_PROPERTY(QString xPositionsOrChannels READ getXpositions WRITE setXpositions DESIGNABLE false STORED false)
-    Q_PROPERTY(QString yPositionsOrChannels READ getYpositions WRITE setYpositions DESIGNABLE false STORED false)
+    Q_PROPERTY(QString xPositionsOrChannels READ getXpositions WRITE setXpositions DESIGNABLE true STORED false)
+    Q_PROPERTY(QString yPositionsOrChannels READ getYpositions WRITE setYpositions DESIGNABLE true STORED false)
 
     Q_PROPERTY(double xCorrectionFactor READ getXcorrection WRITE setXcorrection  DESIGNABLE true)
     Q_PROPERTY(double yCorrectionFactor READ getYcorrection WRITE setYcorrection  DESIGNABLE true)

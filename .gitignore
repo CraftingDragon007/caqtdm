@@ -21,3 +21,13 @@ caQtDM_Binaries/
 qrc_qtcontrols.cpp
 qrc_qtcontrolsplugin.cpp
 qrc_caQtDM.cpp
+
+#Binaries
+*.MSI
+*.DLL
+*.EXE
+*.LIB
+*.EXP
+*.OBJ
+*.PDB
+.vs

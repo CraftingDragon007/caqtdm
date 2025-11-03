@@ -3,9 +3,17 @@ class Caqtdm < Formula
   homepage "https://github.com/caqtdm/caqtdm"
   url "https://github.com/caqtdm/caqtdm/archive/refs/tags/V4.5.0.tar.gz"
   sha256 "153a3d7355a6f6412343b0e2cb876a3dafee06c97e3f1fdcb849320134ee6d1e"
+
+  head "https://github.com/caqtdm/caqtdm.git" , branch: "Development"
+
   license "GPLv3"
 
-  depends_on "qt"
+  depends_on "qtbase"
+  depends_on "qt5compat"
+  depends_on "qtpositioning"
+  depends_on "qtserialbus"
+  depends_on "qtimageformats"
+  depends_on "qtnetworkauth"
   depends_on "qwt"
   depends_on "epicsbase"
 

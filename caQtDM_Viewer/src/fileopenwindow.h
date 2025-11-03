@@ -68,7 +68,7 @@
         char blop[BlopSize];
     };
 
-#ifdef linux
+#if defined(linux) || defined(__FreeBSD__)
 #  include <unistd.h>
 #endif
 // this sleep will not block the GUI and QThread::msleep is protected in Qt4.8 (so do not use that)
@@ -285,6 +285,8 @@ private:
      QMainWindow *pvWindow;
      QTableWidget* pvTable;
      QTimer *timer;
+
+     QTimer *heartBeatTimer;
 
      bool mustOpenFile;
 

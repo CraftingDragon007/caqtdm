@@ -56,6 +56,8 @@ public:
     QWidget *getProcessCaller();
     Q_PID getProcessID();
 
+    void setArguments(const QString &newArguments);
+
 public slots:
 
     bool tryTerminate();
@@ -82,6 +84,7 @@ private:
     bool displayWindow;
     QWidget *thisCaller;
     Q_PID thisPID;
+    QString arguments;
 };
 
 #endif

@@ -49,13 +49,18 @@ bool HTTPCONFIGURATOR = false;
 #include <fstream>
 #include <string>
 
+#ifndef MOBILE
+#include <hmisharedeventbus.h>
+#include <hmisharedconfiglistmanager.h>
+#endif
+
 #include <QFileDialog>
 #include <QString>
 #include "messagebox.h"
 #include "configDialog.h"
 #include "caQtDM_Lib_global.h"
 
-#ifdef linux
+#if defined(linux) || defined(__FreeBSD__)
 #include <sys/resource.h>
 #include <sys/time.h>
 #include <unistd.h>
@@ -333,7 +338,7 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
 
     #endif
 
-    #ifdef linux
+    #if defined(linux) || defined(__FreeBSD__)
         QString uids = QString::number(getuid());
         uniqueKey.append(":"+ uids);
     #endif
@@ -396,6 +401,106 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
     }
 #else
     Q_UNUSED(attach);
+#endif
+#ifndef MOBILE
+    if (!HmiSharedEventBus::instance().setup()) {
+        qCritical() << "Failed to set up HmiSharedEventBus. Unable to receive or send events using this instance (pid:" << QCoreApplication::applicationPid() << ")";
+    } else {
+        connect(&HmiSharedEventBus::instance(), &HmiSharedEventBus::eventReceived, this,
+        [](int eventType, int senderPid, qint64 timestamp, const QByteArray& payload){
+            Q_UNUSED(timestamp)
+            if (senderPid == QApplication::applicationPid()) return; // ignore own events
+            if (eventType == EventTypes::NewCaHMIConfig) {
+                QSharedPointer<caHMIConfigTransferItem> item = QSharedPointer<caHMIConfigTransferItem>::create();
+                QDataStream in(payload);
+                in >> *item;
+
+                bool found = false;
+                QWriteLocker locker(&CaQtDM_Lib::externalHmiConfigListLock);
+                foreach (QSharedPointer<caHMIConfigTransferItem> i, CaQtDM_Lib::externalHmiConfigList) {
+                    if (i->uuid() == item->uuid()) found = true;
+                }
+
+                if (found) return;
+                CaQtDM_Lib::externalHmiConfigList.append(item);
+            } else if (eventType == EventTypes::CaHMIConfigDeleted) {
+                QString uuid;
+                QDataStream in(payload);
+                in >> uuid;
+                QWriteLocker locker(&CaQtDM_Lib::externalHmiConfigListLock);
+                auto it = std::remove_if(CaQtDM_Lib::externalHmiConfigList.begin(), CaQtDM_Lib::externalHmiConfigList.end(),
+                                         [&](const QSharedPointer<caHMIConfigTransferItem>& item) {
+                                             return item->uuid() == uuid;
+                                         });
+                CaQtDM_Lib::externalHmiConfigList.erase(it, CaQtDM_Lib::externalHmiConfigList.end());
+            } else if (eventType == EventTypes::CaHMIConfigEnabledChanged) {
+                QString uuid;
+                bool enabled;
+                QDataStream in(payload);
+                in >> uuid;
+                in >> enabled;
+
+                {
+                    QWriteLocker locker(&CaQtDM_Lib::hmiConfigListLock);
+                    foreach (caHMIConfigTransferItem* item, CaQtDM_Lib::hmiConfigList) {
+                        if (item->uuid() == uuid) {
+                            item->setEnabled(enabled);
+                        }
+                    }
+                }
+
+                {
+                    QWriteLocker locker(&CaQtDM_Lib::externalHmiConfigListLock);
+                    foreach (const QSharedPointer<caHMIConfigTransferItem>& item, CaQtDM_Lib::externalHmiConfigList) {
+                        if (item->uuid() == uuid) {
+                            item->setEnabled(enabled);
+                        }
+                    }
+                }
+            }
+        });
+    }
+    if (!HmiSharedConfigListManager::instance().setup()) {
+        qCritical() << "Failed to set up HmiSharedConfigListManager. Unable to view configured hmiConfigs of other processes (pid:" << QCoreApplication::applicationPid() << ")";
+    } else {
+        QList<QSharedPointer<caHMIConfigTransferItem>> items = HmiSharedConfigListManager::instance().readList();
+
+        QWriteLocker locker(&CaQtDM_Lib::externalHmiConfigListLock);
+        CaQtDM_Lib::externalHmiConfigList.append(items);
+        heartBeatTimer = new QTimer(this);
+        heartBeatTimer->setInterval(2000);
+        connect(heartBeatTimer, &QTimer::timeout, this, [](){
+            auto sharedList = HmiSharedConfigListManager::instance().readList();
+            qint64 time = QDateTime::currentMSecsSinceEpoch();
+
+            //qDebug() << "HeartBeatTimer tick" << time;
+            {
+                QReadLocker locker(&CaQtDM_Lib::hmiConfigListLock);
+                foreach (caHMIConfigTransferItem *config, CaQtDM_Lib::hmiConfigList) {
+                    if (config == Q_NULLPTR) continue;
+                    bool found = false;
+                    foreach (auto item, sharedList) {
+                        if (item == Q_NULLPTR) continue;
+                        if (config->uuid() == item->uuid()) {
+                            item->setTimestamp(time);
+                            found = true;
+                        }
+                    }
+                    if (!found) {
+                        sharedList.append(config->clone());
+                        if (HmiSharedEventBus::instance().isInitialized()) {
+                            QByteArray byteArray;
+                            QDataStream out(&byteArray, QIODevice::WriteOnly);
+                            out << *config;
+                            HmiSharedEventBus::instance().sendEvent(EventTypes::NewCaHMIConfig, byteArray);
+                        }
+                    }
+                }
+            }
+            HmiSharedConfigListManager::instance().writeList(sharedList);
+        });
+        heartBeatTimer->start();
+    }
 #endif
     // when file was specified, open it
     // when called from here on Windows, the actual size of the window
@@ -771,7 +876,7 @@ void FileOpenWindow::timerEvent(QTimerEvent *event)
 
     asc[0] = '\0';
 
-#ifdef linux
+#if defined(linux) || defined(__FreeBSD__)
     struct rusage usage;
     getrusage(RUSAGE_SELF, &usage);
     snprintf(asc, MAX_STRING_LENGTH, "memory: %ld kB,", usage.ru_maxrss);

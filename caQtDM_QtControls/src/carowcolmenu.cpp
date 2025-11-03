@@ -263,8 +263,13 @@ void caRowColMenu::updateLabel()
 
             ImagePushButton *temp = (ImagePushButton *) cellsI[0];
 
+            if (thisLabel.length() == 0) {
+                temp->setIconVisible(true);
+                return;
+            }
             QString newLabel= thisLabel;
             QString pixLabel = thisLabel;
+
             if(pixLabel[0] == '-') pixLabel.remove(0,1);
             else                   pixLabel.insert(0, "     ");        // not very nice, we prefix with some blancs to stay outdise the pixmap
             temp->setText(pixLabel);
