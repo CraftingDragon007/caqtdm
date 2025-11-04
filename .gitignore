@@ -30,4 +30,8 @@ qrc_caQtDM.cpp
 *.EXP
 *.OBJ
 *.PDB
+
+
+#Tools
 .vs
+.qtc_clangd

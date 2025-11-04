@@ -487,6 +487,10 @@ private:
 
     void hmiHandleIncomingEvent(QObject* target, QEvent *event, QEvent *originalEvent, bool isSourceExternal);
 
+    void wmHandleResize(QObject* target, QWidget* wmSignalRescaleWidget, QResizeEvent *event, const QString &channelA, const QString &channelB);
+
+    QString wmHandleSoftChannel(QString channel, QMap<QString, QString> map, bool doNothing, QString objectName);
+
     QHash<QString, QString> softvars;                // use a hash list to test if same variable names
 
     QString defaultPlugin;
