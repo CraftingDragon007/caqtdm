@@ -33,4 +33,5 @@ qrc_caQtDM.cpp
 
 
 #Tools
-.vs.qtc_clangd
+.vs
+.qtc_clangd
