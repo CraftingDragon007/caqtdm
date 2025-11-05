@@ -2791,6 +2791,10 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
             }
         }
 
+        // reapply a globally loaded user stylesheet, cainlude seems to disable it
+        if (qApp->property("user_defined_stylesheet").isValid() && (!qApp->property("user_defined_stylesheet").toString().isEmpty())){
+            qApp->setStyleSheet(qApp->styleSheet());
+        }
         includeWidget->setProperty("Taken", true);
 
         //==================================================================================================================
