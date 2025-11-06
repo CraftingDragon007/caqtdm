@@ -83,6 +83,7 @@ OpcUaCore::OpcUaCore(QObject *parent)
                      &QOpcUaClient::passwordForPrivateKeyRequired,
                      this,
                      [this](QString keyFilePath, QString *password, bool previousTryWasInvalid) {
+                         Q_UNUSED(keyFilePath);
                          if (previousTryWasInvalid) {
                              if (*password != NOPASS_PLACEHOLDER) {
                                  // Maybe the user specified a password but this pki config was created without one
@@ -170,12 +171,15 @@ OpcUaCore::OpcUaCore(QObject *parent)
             if (error == QOpcUaClient::ClientError::AccessDenied) {
                 VERBOSELOG("Client error: Got Access denied for: "
                            << m_currentEndpointDescription.endpointUrl());
+// Qt 5 has different internal error mappings...
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
             } else if (error == QOpcUaClient::ClientError::InvalidAuthenticationInformation) {
                 VERBOSELOG("Client error: Authentication information is invalid for: "
                            << m_currentEndpointDescription.endpointUrl());
             } else if (error == QOpcUaClient::ClientError::NoMatchingUserIdentityTokenFound) {
                 VERBOSELOG("Client error: No matching authentication information found for: "
                            << m_currentEndpointDescription.endpointUrl());
+#endif
             } else {
                 VERBOSELOG("Client error: " << static_cast<int>(error) << " for: "
                                             << m_currentEndpointDescription.endpointUrl());
@@ -331,18 +335,18 @@ QOpcUaEndpointDescription OpcUaCore::chooseEndpointDescription(
             || isCertificateSupported) {
             if (ep.userIdentityTokensRef().isEmpty()) {
                 // No tokens specified -> no username / password auth supported
-                anonymousEndpoints.emplace_back(ep);
+                anonymousEndpoints.push_back(ep);
                 break;
             }
             for (QOpcUaUserTokenPolicy &token : ep.userIdentityTokens()) {
                 if (isCertificateSupported
                     && token.tokenType() == QOpcUaUserTokenPolicy::Certificate) {
-                    certificateEndpoints.emplace_back(ep);
+                    certificateEndpoints.push_back(ep);
                 } else if (isUsernamePasswordSupported
                            && token.tokenType() == QOpcUaUserTokenPolicy::Username) {
-                    usernamePasswordEndpoints.emplace_back(ep);
+                    usernamePasswordEndpoints.push_back(ep);
                 } else if (token.tokenType() == QOpcUaUserTokenPolicy::Anonymous) {
-                    anonymousEndpoints.emplace_back(ep);
+                    anonymousEndpoints.push_back(ep);
                 }
             }
         }
@@ -359,12 +363,11 @@ QOpcUaEndpointDescription OpcUaCore::chooseEndpointDescription(
     for (QVector<QOpcUaEndpointDescription> *endpointList :
          {&certificateEndpoints, &usernamePasswordEndpoints, &anonymousEndpoints}) {
         if (!endpointList->isEmpty()
-            && std::find_if(endpointList->constBegin(),
-                            endpointList->constEnd(),
-                            [&fallbackUrl](const QOpcUaEndpointDescription &ep) {
-                                return ep.endpointUrl() == fallbackUrl;
-                            })
-                   == endpointList->constEnd()) {
+            && std::any_of(endpointList->constBegin(),
+                           endpointList->constEnd(),
+                           [&fallbackUrl](const QOpcUaEndpointDescription &ep) {
+                               return ep.endpointUrl() == fallbackUrl.toString();
+                           })) {
             QOpcUaEndpointDescription cloneWithFallbackUrl = endpointList->first();
             cloneWithFallbackUrl.setEndpointUrl(fallbackUrl.toString());
             endpointList->append(cloneWithFallbackUrl);
