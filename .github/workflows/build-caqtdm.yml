@@ -30,6 +30,8 @@ jobs:
         pacman -S --noconfirm \
           qt6-base \
           qt6-tools \
+          qt6-opcua \
+          openssl \
           zeromq \
           python \
           qt6-5compat \
