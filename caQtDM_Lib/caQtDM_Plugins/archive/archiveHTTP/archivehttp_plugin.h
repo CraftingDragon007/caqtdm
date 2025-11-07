@@ -190,6 +190,7 @@ private:
     QMap<QString, indexes> m_IndexesToUpdate;
     bool m_IsSuspended;
     QMap<QString, QSharedPointer<HttpPerformanceData> > m_retrievalPerformancePerPV;
+    QMap<QString, qint64> m_minTimeoutPerPV;
     QStringList availableBackends;
 };
 

@@ -34,6 +34,8 @@
 #define CURVE_IDENTIFIER "\\b[0-7]_"
 #define DEFAULT_BACKEND "sf-archiver"
 #define DEFAULT_HOSTNAME "data-api.psi.ch"
+#define MAX_PV_TIMEOUT_SECONDS 3600
+#define INITIAL_PV_TIMEOUT_SECONDS 60
 
 #define qasc(x) x.toLatin1().constData()
 
@@ -402,6 +404,10 @@ void ArchiveHTTP_Plugin::handleResults(
     // set data for other indexes with same channel (& same widget because different widgets might have different time spans etc.)
     indexes indexInCheck = indexNew;
     if (valueCount > 0) {
+        // Reset any timeouts
+        if (m_minTimeoutPerPV.contains(indexInCheck.key)) {
+            m_minTimeoutPerPV[indexInCheck.key] = qMin(m_minTimeoutPerPV[indexInCheck.key] * 2, MAX_PV_TIMEOUT_SECONDS);
+        }
         for (QMap<QString, indexes>::const_iterator tempI = m_IndexesToUpdate.constBegin();
              tempI != m_IndexesToUpdate.constEnd();
              tempI++) {
@@ -415,6 +421,18 @@ void ArchiveHTTP_Plugin::handleResults(
                     } else {
                         updateCartesianAppended(valueCount, tempI.value(), XVals, YVals, backend);
                     }
+                }
+            }
+        }
+    } else {
+        // In case of a errors, set a Timeout
+        if (!qEnvironmentVariableIsSet("CAQTDM_ARCHIVEHTTP_NO_TIMEOUT") && m_retrievalPerformancePerPV.contains(indexNew.key)) {
+            const auto& data = m_retrievalPerformancePerPV[indexNew.key];
+            if (data->httpStatusCode() > 299 || data->httpStatusCode() < 200) {
+                if (m_minTimeoutPerPV.contains(indexInCheck.key)) {
+                    m_minTimeoutPerPV[indexInCheck.key] = qMin(m_minTimeoutPerPV[indexInCheck.key] * 2, MAX_PV_TIMEOUT_SECONDS);
+                } else {
+                    m_minTimeoutPerPV[indexInCheck.key] = INITIAL_PV_TIMEOUT_SECONDS;
                 }
             }
         }
@@ -478,6 +496,21 @@ void ArchiveHTTP_Plugin::Callback_UpdateInterface(QMap<QString, indexes> listOfI
             i++;
             continue;
         }
+
+        // Check if there is a timeout specified for this key
+        if (m_minTimeoutPerPV.contains(keyInCheck)) {
+            if (m_retrievalPerformancePerPV.contains(keyInCheck)) {
+                const qint64 minTimeoutSeconds = m_minTimeoutPerPV[keyInCheck];
+                const auto& data = m_retrievalPerformancePerPV[keyInCheck];
+                if (data->lastUpdatedTime().secsTo(QDateTime::currentDateTime()) < minTimeoutSeconds) {
+                    i++;
+                    continue;
+                }
+            } else {
+                m_minTimeoutPerPV.remove(keyInCheck);
+            }
+        }
+
         m_IndexesToUpdate.insert(i.key(), i.value());
 
         // If it doesn't already exist, create an Object to measure performance
