@@ -136,9 +136,7 @@ int ArchiveHTTP_Plugin::pvClearMonitor(knobData *kData)
     // Get rid of data to track redundancy, is needed for reload, because otherwise all channels (which are re-added on reload) will be seen as redundant,
     // resulting in none actually being updated.
     QString keyInCheck = kData->pv;
-    // Remove extension
-    keyInCheck.replace(".X", "", Qt::CaseInsensitive);
-    keyInCheck.replace(".Y", "", Qt::CaseInsensitive);
+    cleanKey(keyInCheck);
     // We need that address, because it was added to the key in order to prevent mix ups from different widgets...
     keyInCheck += QString("_%1").arg(reinterpret_cast<quintptr>(kData->dispW), sizeof(void*) * 2, 16, QChar('0'));
     QList<QString> removeKeys;
@@ -146,10 +144,7 @@ int ArchiveHTTP_Plugin::pvClearMonitor(knobData *kData)
     for (QMap<QString, indexes>::const_iterator tempI = m_IndexesToUpdate.constBegin();
          tempI != m_IndexesToUpdate.constEnd();
          tempI++) {
-        QString keyStored = tempI.key();
-        m_regexStr.setPattern(CURVE_IDENTIFIER);
-        keyStored.replace(m_regexStr, "");
-        if (keyStored == keyInCheck) {
+        if (cleanKey(tempI.key()) == keyInCheck) {
             removeKeys.append(tempI.key());
         }
     }
@@ -158,7 +153,18 @@ int ArchiveHTTP_Plugin::pvClearMonitor(knobData *kData)
     for (int i = 0; i < removeKeys.count(); i++) {
         // Remove entry for updating the data
         m_IndexesToUpdate.remove(removeKeys[i]);
-        // Also remove the perfomance data
+    }
+
+    // Also remove the perfomance data
+    removeKeys.clear();
+    for (QMap<QString, QSharedPointer<HttpPerformanceData>>::const_iterator tempI = m_retrievalPerformancePerPV.constBegin();
+         tempI != m_retrievalPerformancePerPV.constEnd();
+         tempI++) {
+        if (tempI.key() == keyInCheck) {
+            removeKeys.append(tempI.key());
+        }
+    }
+    for (int i = 0; i < removeKeys.count(); i++) {
         if (m_retrievalPerformancePerPV.contains(removeKeys[i])) {
             m_retrievalPerformancePerPV.remove(removeKeys[i]);
         }
@@ -220,20 +226,14 @@ int ArchiveHTTP_Plugin::pvGetDescription(char *pv, char *description)
     QString report = "<br>Performance data for last request to this pv: <br>";
     QString keyInCheck = pv;
     // Get rid of the suffix
-    keyInCheck.replace(".X", "", Qt::CaseInsensitive);
-    keyInCheck.replace(".Y", "", Qt::CaseInsensitive);
-    keyInCheck.replace(".minY", "", Qt::CaseInsensitive);
-    keyInCheck.replace(".maxY", "", Qt::CaseInsensitive);
-    // Get rid of curve number
-    m_regexStr.setPattern(CURVE_IDENTIFIER);
-    keyInCheck.replace(m_regexStr, "");
+    keyInCheck = cleanKey(keyInCheck);
 
     // Now, the only thing remaining besides the pv name is the plot identifier, which we need, as different plots have different performance data.
 
     // Search for the entry that contains our pv and plot
     bool foundAnEntry = false;
     for (auto entry = m_retrievalPerformancePerPV.constBegin(); entry != m_retrievalPerformancePerPV.constEnd(); ++entry) {
-        if (entry.key().contains(keyInCheck)) {
+        if (entry.key() == keyInCheck) {
             foundAnEntry = true;
             // Generate a nice report and append it to our string
             report.append(entry.value()->generateReport());
@@ -337,7 +337,7 @@ void ArchiveHTTP_Plugin::updateCartesianAppended(int numberOfValues,
         if (kDataX.edata.dataB == NULL) {
             // Uhhhhhm, no this should not happen
             printf("Realloc failed to allocate memory, maybe the system ran out of memory...\n");
-            throw;
+            throw std::bad_alloc();
         }
 
         // Now copy the new data to be plotted into the knobData
@@ -371,7 +371,7 @@ void ArchiveHTTP_Plugin::updateCartesianAppended(int numberOfValues,
         if (kDataY.edata.dataB == NULL) {
             // Uhhhhhm, no this should not happen
             printf("Realloc failed to allocate memory, maybe the system ran out of memory...\n");
-            throw;
+            throw std::bad_alloc();
         }
 
         memcpy(kDataY.edata.dataB, &YValues[0], kDataY.edata.dataSize);
@@ -387,6 +387,7 @@ void ArchiveHTTP_Plugin::updateCartesianAppended(int numberOfValues,
 void ArchiveHTTP_Plugin::handleResults(
     indexes indexNew, int valueCount, QVector<double> XVals, QVector<double> YVals, QVector<double> YMinVals, QVector<double> YMaxVals, QString backend, bool isFinalIteration)
 {
+    indexNew.key = cleanKey(indexNew.key);
     QMutexLocker mutexLocker(&m_globalMutex);
     QMap<QString, WorkerHttpThread*>::const_iterator listOfThreadsEntry = m_listOfThreads.constFind(indexNew.key);
     if (listOfThreadsEntry == m_listOfThreads.constEnd()) {
@@ -400,21 +401,11 @@ void ArchiveHTTP_Plugin::handleResults(
 
     // set data for other indexes with same channel (& same widget because different widgets might have different time spans etc.)
     indexes indexInCheck = indexNew;
-    m_regexStr.setPattern(CURVE_IDENTIFIER);
-    indexInCheck.key.replace(m_regexStr, "");
-    indexInCheck.key.replace(m_regexStr, "");
-    indexInCheck.key.replace(".minY", "");
-    indexInCheck.key.replace(".maxY", "");
     if (valueCount > 0) {
         for (QMap<QString, indexes>::const_iterator tempI = m_IndexesToUpdate.constBegin();
              tempI != m_IndexesToUpdate.constEnd();
              tempI++) {
-            QString keyStored = tempI.key();
-            keyStored.replace(m_regexStr, "");
-            keyStored.replace(m_regexStr, "");
-            keyStored.replace(".minY", "");
-            keyStored.replace(".maxY", "");
-            if (keyStored == indexInCheck.key) {
+            if (cleanKey(tempI.key()) == indexInCheck.key) {
                 if (isActive) {
                     // If we have binned data and the channel contains min/max then use the according values.
                     if (tempI.key().contains(".minY") && indexNew.nrOfBins > 0) {
@@ -439,16 +430,10 @@ void ArchiveHTTP_Plugin::handleResults(
         m_listOfThreads.remove(indexNew.key);
 
         QList<QString> removeKeys;
-        m_regexStr.setPattern(CURVE_IDENTIFIER);
         for (QMap<QString, indexes>::const_iterator indexesToUpdateIterator = m_IndexesToUpdate.constBegin();
              indexesToUpdateIterator != m_IndexesToUpdate.constEnd();
              indexesToUpdateIterator++) {
-            QString keyStored = indexesToUpdateIterator.key();
-            keyStored.replace(m_regexStr, "");
-            keyStored.replace(m_regexStr, "");
-            keyStored.replace(".minY", "");
-            keyStored.replace(".maxY", "");
-            if (keyStored == indexInCheck.key) {
+            if (cleanKey(indexesToUpdateIterator.key()) == indexInCheck.key) {
                 if (!isActive) {
                     m_archiverGeneral->updateSecondsPast(indexesToUpdateIterator.value(), valueCount != 0);
                 }
@@ -474,28 +459,16 @@ void ArchiveHTTP_Plugin::Callback_UpdateInterface(QMap<QString, indexes> listOfI
 
     // remove the curve index that seperates indexes from different curve,
     // so we can avoid requesting the same index multiple times.
-    m_regexStr.setPattern(CURVE_IDENTIFIER);
     QMap<QString, indexes>::const_iterator i = listOfIndexes.constBegin();
     while (i != listOfIndexes.constEnd()) {
         // Don't retrieve data twice
-        QString keyInCheck = i.key();
-        // Account for different curve Numbers
-        keyInCheck.replace(m_regexStr, "");
-        keyInCheck.replace(m_regexStr, "");
-        // Account for .minY and .maxY
-        keyInCheck.replace(".minY", "");
-        keyInCheck.replace(".maxY", "");
+        QString keyInCheck = cleanKey(i.key());
         bool keyAlreadyPresent = false;
         for (QMap<QString, indexes>::const_iterator tempI = m_IndexesToUpdate.constBegin();
              tempI != m_IndexesToUpdate.constEnd();
              tempI++) {
-            QString keyStored = tempI.key();
-            keyStored.replace(m_regexStr, "");
-            keyStored.replace(m_regexStr, "");
-            keyStored.replace(".minY", "");
-            keyStored.replace(".maxY", "");
 
-            if (keyStored == keyInCheck) {
+            if (cleanKey(tempI.key()) == keyInCheck) {
                 m_IndexesToUpdate.insert(i.key(), i.value());
                 keyAlreadyPresent = true;
                 break;
@@ -508,9 +481,9 @@ void ArchiveHTTP_Plugin::Callback_UpdateInterface(QMap<QString, indexes> listOfI
         m_IndexesToUpdate.insert(i.key(), i.value());
 
         // If it doesn't already exist, create an Object to measure performance
-        if (!m_retrievalPerformancePerPV.contains(i.key())) {
+        if (!m_retrievalPerformancePerPV.contains(keyInCheck)) {
             HttpPerformanceData *newHttpPerformanceData = new HttpPerformanceData;
-            m_retrievalPerformancePerPV.insert(i.key(), QSharedPointer<HttpPerformanceData>(newHttpPerformanceData));
+            m_retrievalPerformancePerPV.insert(keyInCheck, QSharedPointer<HttpPerformanceData>(newHttpPerformanceData));
         }
 
         // Now initiate the retrieval
@@ -664,7 +637,7 @@ void ArchiveHTTP_Plugin::Callback_UpdateInterface(QMap<QString, indexes> listOfI
         }
         WorkerHTTP *newWorker = new WorkerHTTP;
         WorkerHttpThread *newWorkerThread = new WorkerHttpThread(newWorker);
-        m_listOfThreads.insert(i.key(), newWorkerThread);
+        m_listOfThreads.insert(keyInCheck, newWorkerThread);
 
         newWorker->moveToThread(newWorkerThread);
 
@@ -680,7 +653,7 @@ void ArchiveHTTP_Plugin::Callback_UpdateInterface(QMap<QString, indexes> listOfI
                 SLOT(handleResults(indexes, int, QVector<double>, QVector<double>, QVector<double>, QVector<double>, QString, bool)));
         newWorkerThread->start();
 
-        emit operate(indexNew, index_name, m_messageWindowP, m_mutexKnobDataP, m_retrievalPerformancePerPV.value(i.key()));
+        emit operate(indexNew, index_name, m_messageWindowP, m_mutexKnobDataP, m_retrievalPerformancePerPV.value(keyInCheck));
         disconnect(newWorker);
         ++i;
     }
@@ -688,6 +661,8 @@ void ArchiveHTTP_Plugin::Callback_UpdateInterface(QMap<QString, indexes> listOfI
 
 void ArchiveHTTP_Plugin::Callback_AbortOutstandingRequests(QString key)
 {
+    key = cleanKey(key);
+
     QMutexLocker mutexLocker(&m_globalMutex);
     m_IsSuspended = true;
 
@@ -706,4 +681,21 @@ void ArchiveHTTP_Plugin::Callback_AbortOutstandingRequests(QString key)
 void ArchiveHTTP_Plugin::closeEvent()
 {
     emit Signal_StopUpdateInterface();
+}
+
+QString ArchiveHTTP_Plugin::cleanKey(const QString &keyToClean)
+{
+    QString cleanedKey = keyToClean;
+    QRegularExpression regexStr;
+    regexStr.setPattern(CURVE_IDENTIFIER);
+    // Account for different curve Numbers
+    cleanedKey.replace(regexStr, "");
+    cleanedKey.replace(regexStr, "");
+    // Get rid of the suffix
+    cleanedKey.replace(".X", "", Qt::CaseInsensitive);
+    cleanedKey.replace(".Y", "", Qt::CaseInsensitive);
+    cleanedKey.replace(".minY", "", Qt::CaseInsensitive);
+    cleanedKey.replace(".maxY", "", Qt::CaseInsensitive);
+
+    return cleanedKey;
 }

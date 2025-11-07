@@ -177,13 +177,17 @@ private:
                          QVector<double> YValues,
                          QString backend);
 
+    /*
+     * Returns a cleaned key with curve-index and .minX/Y / .maxX/Y specifiers removed.
+     * */
+    QString cleanKey(const QString &keyToClean);
+
     QMutex m_globalMutex;
     MutexKnobData *m_mutexKnobDataP;
     MessageWindow *m_messageWindowP;
     ArchiverGeneral *m_archiverGeneral;
     QMap<QString, WorkerHttpThread*> m_listOfThreads;
     QMap<QString, indexes> m_IndexesToUpdate;
-    QRegularExpression m_regexStr;
     bool m_IsSuspended;
     QMap<QString, QSharedPointer<HttpPerformanceData> > m_retrievalPerformancePerPV;
     QStringList availableBackends;
