@@ -1,3 +1,4 @@
+
 /*
  *  This file is part of the caQtDM Framework, developed at the Paul Scherrer Institut,
  *  Villigen, Switzerland
@@ -321,6 +322,8 @@ static void dataCallback(struct event_handler_args args)
 
             // concatenate strings separated with ';'
             dataSize = dbr_size_n(args.type, args.count) + (args.count+1) * sizeof(char);
+            // the reason for this here are crashes mainly on reloads of the panels
+            if (dataSize < db_strval_dim) dataSize=db_strval_dim;
             if(dataSize != kData.edata.dataSize) {
                 if(kData.edata.dataB != (void*) Q_NULLPTR) free(kData.edata.dataB);
                 kData.edata.dataB = (void*) malloc((size_t) dataSize);
@@ -330,7 +333,7 @@ static void dataCallback(struct event_handler_args args)
             ptr = (char*) kData.edata.dataB;
             ptr[0] = '\0';
             len = 0;
-            strcpy(ptr, myLimitedString(val_ptr[0]));
+            strncpy(ptr, myLimitedString(val_ptr[0]),kData.edata.dataSize);
             for (i = 1; i < args.count; i++) {
                 len = len+ (int) strlen(myLimitedString(val_ptr[i-1]));
                 strcat(&ptr[len++], "\033");
@@ -854,7 +857,7 @@ int CreateAndConnect(int index, knobData *kData, int rate, int skip)
 
     //printf("we have to add an epics device <%s>\n", kData->pv);
     status = ca_create_channel(kData->pv,
-                               (void(*)())connectCallback,
+                               connectCallback,
                                info,
                                CA_PRIORITY_DEFAULT,
                                &info->ch);
@@ -888,7 +891,7 @@ void EpicsReconnect(knobData *kData)
 
     if (info != (connectInfo *) 0) {
         status = ca_create_channel(kData->pv,
-                                   (void(*)())connectCallback,
+                                   connectCallback,
                                    info,
                                    CA_PRIORITY_DEFAULT,
                                    &info->ch);
@@ -1354,7 +1357,7 @@ int EpicsGetTimeStamp_Connected(chid ch,char *pv, char *timestamp)
     status = ca_pend_io(CA_TIMEOUT/2);
     if (status == ECA_NORMAL) {
         epicsTimeToStrftime(tsString, 32, "%b %d, %Y %H:%M:%S.%09f", &ctrlS.stamp);
-        sprintf(timestamp, "TimeStamp: %s\n", tsString);
+        sprintf(timestamp, "TimeStamp: %s", tsString);
     } else {
         strcpy(timestamp, "-timestamp timeout-");
     }
@@ -1392,6 +1395,7 @@ int EpicsGetDescription(char *pv, char *description)
     chid     ch;
     int status;
     pv_desc pvDesc = {'\0'};
+    pv_desc pvDescTarget = {'\0'};
     char * pch;
     dbr_string_t value;
     strcpy(description, "");
@@ -1409,10 +1413,9 @@ int EpicsGetDescription(char *pv, char *description)
 
     if (pch) *pch='\0';
 
-    sprintf(pvDesc, "%s.DESC", pvDesc);
-
+    sprintf(pvDescTarget, "%s.DESC", pvDesc);
     // get description
-    status = ca_create_channel(pvDesc, Q_NULLPTR, 0, CA_PRIORITY, &ch);
+    status = ca_create_channel(pvDescTarget, Q_NULLPTR, 0, CA_PRIORITY, &ch);
     if (ch == (chid) 0) return !ECA_NORMAL;
 
     status = ca_pend_io(CA_TIMEOUT/2);

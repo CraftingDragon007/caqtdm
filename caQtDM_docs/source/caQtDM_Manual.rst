@@ -3,7 +3,7 @@ caQtDM Manual
 =============
 
 | **Anton Mezger/Helge Brands**
-| **November 2023**
+| **May 2025**
 | Paul Scherrer Institute
 | CH-5232 Villigen
 | Switzerland
@@ -17,6 +17,14 @@ Display Manager MEDM [#]_, therefore this manual is of course also inspired
 by the existing MEDM manual.
 
 The HTML was converted to restructured text using spinx.
+
+.. sourcecode:: none 
+   :caption: building/installing 
+   
+     pip install sphinx
+     pip install pydata-sphinx-theme
+     make singlehtml
+
 
 .. [#] EPICS: https://epics.anl.gov
 .. [#] MEDM: https://epics.anl.gov/extensions/medm
@@ -146,10 +154,10 @@ Min:
    -  Wix 3.0
 
 Max:
-   -  Qt 6.5.2
-   -  Qwt 6.2.0
-   -  EPICS 7.0.7
-   -  MS Visual Studio 2019
+   -  Qt 6.9.0
+   -  Qwt 6.3.0
+   -  EPICS 7.0.9
+   -  MS Visual Studio 2022
    -  Wix 3.11
 
 
@@ -383,9 +391,24 @@ release. You can follow the development history and detect if a bug in
 the used version has been solved.
 
 .. container::
-   
-   4.4.1
 
+   4.5.0
+   
+-  special character feature handling by CAQTDM_CUSTOM_UNIT_REPLACMETS
+-  caStripplot improved data handling
+-  optimized UI loading by reducing the load of incoming data (CAQTDM_SUPPRESS_UPDATES_ONLOAD)
+-  improved colors in caQtDM status window
+-  added UI loading benchmark
+-  added the new archiverhttp-protocol
+-  some code refurbishments
+-  RPM for RHEL9
+-  logfile generation for status window (CAQTDM_CREATE_LOGFILE,CAQTDM_LOGFILE_PATH)
+-  small documentation updates
+
+.. container::
+
+   4.4.1
+   
 -  caQtDM can be compiled with Qt6
 -  new signals for caCartesianplot
 -  fix for caInclude with upscaling
@@ -1237,7 +1260,7 @@ is the equivalent of the Text Update in MEDM.
       |                                  | absolaute precision from user or |
       |                                  | channel                          |
       +----------------------------------+----------------------------------+
-      | compact                          | value encode in e or f format    |
+      | compact                          | value encoded in e or f format   |
       |                                  | using absolaute precision from   |
       |                                  | user or channel, format will     |
       |                                  | switch to e format for values    |
@@ -1254,6 +1277,11 @@ is the equivalent of the Text Update in MEDM.
       +----------------------------------+----------------------------------+
       | string                           | will be treated as decimal       |
       |                                  | format                           |
+      +----------------------------------+----------------------------------+
+      | user_defined_format              | takes a c printf style format    |
+      |                                  | string taking a float if the     |
+      |                                  | channel has the type of double   |
+      |                                  | and an int if not                |
       +----------------------------------+----------------------------------+
 
 --------------
@@ -1584,7 +1612,7 @@ curves
       when either one changes, in the case of X, Y Scalar) a new point
       is plotted until there are Count points. The points are plotted
       from i = 0 to the lesser of Count -1 and the number of updates.
-      When the Plot Mode is "PlotNPointsAndStop",ù no more points are
+      When the Plot Mode is "PlotNPointsAndStop", no more points are
       plotted. When the Plot Mode is "PlotLastNPoints", the earliest point
       is discarded and the others are moved down, and the latest is
       plotted at the end. In the cases where one of the process
@@ -1743,7 +1771,7 @@ This serves as the replacement for the StripChart Monitor in MEDM.
       bool: specifies if the legend should be drawn
    
    | **Dynamic Properties:**
-   .. container::
+      container::
       caStripPlot also has dynamic properties. For panel designers, they can be treated the same as regular QProperties.
       
       **xAxisToleranceFactor:**
@@ -2242,10 +2270,14 @@ is the equivalent of the Composite in MEDM
 ``caDoubleTabWidget``
 ~~~~~~~~~~~~~~~~~~~~~
 
-has no equivalent in MEDM and is not a controls object
+has no equivalent in MEDM and is not a controls object.
 
    :ref:`geometry` is used for any object
    **Description:**
+
+   enables the use of tabs. A new tab can be added in Qt Designer by right-clicking on the widget
+   and using 'Insert Before' or 'Insert After' (doesnt matter which). Color of tabs can be edited via stylesheet
+   (QTabBar::tab for horizontal, QPushButton:checked for vertical ones)
 
 all controller objects
 --------------------------
@@ -2806,7 +2838,7 @@ other string, both on the command line and when calling a `related
 display <#RelatedDisplay>`__. Specific directions for each of these
 cases are given in the correspoonding sections of the manual. In
 general, there is an argument string with the form
-``name1=value1[,name2=value2]...``.  All occurrences of "(name1)"ù in the
+``name1=value1[,name2=value2]...``.  All occurrences of "(name1)" in the
 ``.ui`` file are replaced with "value1", then all occurences of $(name2)
 are replaced by value2, *etc*. The substitition is recursive; that is,
 if value1 contains an occurrence of $(name2), then when name2=value2
@@ -2964,7 +2996,7 @@ You have to first write the source characters you want to replace, then an equal
 character replacements, seperate them by semicolon (;). Parts that dont contain an equal sign but are seperated from other parts with semicolon are ignored. All put together this would be the structure:
 CAQTDM_CUSTOM_UNIT_REPLACEMENTS={sourceCharacters}={replacementCharacters};{anotherReplacement}
 An example (that doesnt make much sense but displays many possibilities) would be:
-CAQTDM_CUSTOM_UNIT_REPLACEMENTS=charsToReplace=charsToUse;0x48,0x68=bye;charsWithHex,0x4f=something;∞=o
+CAQTDM_CUSTOM_UNIT_REPLACEMENTS=charsToReplace=charsToUse;0x48,0x68=bye;charsWithHex,0x4f=something;
 It can be seen that all combinations of strings, hex- and deciaml character codes are possible to form a source or replacement string.
 All replacements will be done sequentially, with the leftmost replacements being done first. Therefore, it can also be possible, that later replacements replace characters in a string
 that has already been replaced before by another replacements.
@@ -2975,6 +3007,50 @@ Those unit replacements always take place before custom unit replacements, you c
 CAQTDM_DEFAULT_UNIT_REPLACEMENTS
 It is not recommended to disable them, as they are tested on all common systems and should be working with most clients, however disabling might help
 in some edge cases.
+
+Copying and selecting Text
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Multiple widgets support some kind of selection of their displayed values. All of them also enable copying of their values into the clipboard.
+They do not behave exactly the same, but their differences are relatively minor and mostly in how they are implemented: 
+
+**Comparison**
++------------------------+--------+--------+--------------------------+-----------------------------+-----------------------+
+| Widget                 | Ctrl+C | Ctrl+A | Behaviour on Single Click| Behaviour on Double-Click   |  Selection on Change  |
++========================+========+========+==========================+=============================+=======================+
+| caLineDraw             |  true  |  true  |  nothing                 |  marks entire text          |  retained             |
++------------------------+--------+--------+--------------------------+-----------------------------+-----------------------+
+| caLineEdit             |  true  |  true  |  nothing                 |  marks entire text          |  lost                 |
++------------------------+--------+--------+--------------------------+-----------------------------+-----------------------+
+| caMultiLineString      |  true  |  true  |  nothing                 |  marks entire text          |  lost                 |
++------------------------+--------+--------+--------------------------+-----------------------------+-----------------------+
+| caTable                |  true  |  true  |  marks current cell      |  deselects current cell     |  retained             |
++------------------------+--------+--------+--------------------------+-----------------------------+-----------------------+
+| caWaveTable            |  true  |  true  |  marks current cell      |  enables editing of cell    |  lost                 |
++------------------------+--------+--------+--------------------------+-----------------------------+-----------------------+
+| caTextEntry            |  true  |  true  |  enables editing of cell |  marks entire text          |  lost                 |
++------------------------+--------------------------------------------+-----------------------------+-----------------------+
+
+**Shortcuts**
+Although the widgets might work differently, the shortcuts are the same across all of them. The shortcuts use, if any exists, the industry standard that most people are familiar with.
+When no industry standard is available, caQtDM uses the Combination ``Ctrl+Alt``, in combination with the first letter of the action performed (Ex. **R** for **R**eload in ``Ctrl+Alt+R``).
+
++------------------+-----------------------------------------------------+
+| ``Ctrl+C``       | Copies currently selected text to clipboard         |
++------------------+-----------------------------------------------------+
+| ``Ctrl+A``       | Selects entirety of the text inside a widget        |
++------------------+-----------------------------------------------------+
+| ``Ctrl+Alt+D``   | Removes selection from all widgets currently marked |
++------------------+-----------------------------------------------------+
+| ``Ctrl+R``       | Reload current window                               |
++------------------+-----------------------------------------------------+
+| ``Ctrl+Alt+R``   | Reload all windows                                  |
++------------------+-----------------------------------------------------+
+| ``Ctrl+O``       | Open File                                           |
++------------------+-----------------------------------------------------+
+| ``Ctrl+P``       | Print                                               |
++------------------+-----------------------------------------------------+
+
 
 .. _env.var:
 Environment Variables
@@ -3066,14 +3142,20 @@ caQtDM uses the following environment variables:
 +---------------------------------------+-----------------------------------------------------------+
 | ``CAQTDM_ARCHIVEHTTP_URL``            | point the archiveHTTP plugin to a different backend       |
 +---------------------------------------+-----------------------------------------------------------+
-| ``CAQTDM_ARCHIVEHTTP_BACKEND``        | Specify the "backend" parameter for archiver api queries. |
-|                                       | This can be overwritten by the dynamic property "backend".|
+| ``CAQTDM_ARCHIVEHTTP_DEFAULT_BACKEND``| Specify the "backend" parameter for archiver api queries, |
+|                                       | which is used if none is set in the widget.               |
++---------------------------------------+-----------------------------------------------------------+
+|``CAQTDM_ARCHIVEHTTP_OVERRIDE_BACKEND``| Overrides any other definition of the "backend" paramter  |
+|                                       | for queries, including dynamic properties in the widget.  |
 +---------------------------------------+-----------------------------------------------------------+
 | ``CAQTDM_ARCHIVEHTTP_APIPATH_BINNED`` | Overwrite the default api path for binned data.           |
 |                                       | Needs to be in the format: /path/to/binned                |
 +---------------------------------------+-----------------------------------------------------------+
 | ``CAQTDM_ARCHIVEHTTP_APIPATH_RAW``    | Overwrite the default api path for raw data (events).     |
 |                                       | Needs to be in the format: /path/to/events                |
++---------------------------------------+-----------------------------------------------------------+
+| ``CAQTDM_ARCHIVEHTTP_APIPATH_LIST``   | Overwrite the default path to fetch the list of available |
+|                                       | backends. Needs to be in the format: /path/to/backend/list|
 +---------------------------------------+-----------------------------------------------------------+
 | ``CAQTDM_OPTIMIZE_EPICS3CONNECTIONS`` | Disable Epics3 connections when tabwidget is not active   |
 |                                       | Set to "TRUE" to activate                                 |

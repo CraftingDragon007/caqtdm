@@ -27,7 +27,7 @@ contains(QT_VER_MAJ, 5) {
 }
 contains(QT_VER_MAJ, 6) {
       QT += widgets concurrent uitools opengl core
-      CONFIG  += qwt plugin
+      CONFIG  += plugin
       ios | android {
             QT += uiplugin
       }else {
@@ -124,6 +124,7 @@ SOURCES	+= \
     src/caspinbox.cpp \
     src/qwtplotcurvenan.cpp \
     src/cawavetable.cpp \
+    src/cawavetablemodel.cpp \
     src/specialFunctions.cpp \
     src/caclock.cpp \
     src/cameter.cpp \
@@ -240,6 +241,7 @@ HEADERS	+= \
     src/caspinbox.h \
     src/qwtplotcurvenan.h \
     src/cawavetable.h \
+    src/cawavetablemodel.h \
     src/capolylinedialog.h \
     src/specialFunctions.h \
     src/caclock.h \

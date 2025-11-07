@@ -32,6 +32,7 @@ ios | android {
   LIBS += ../$(CAQTDM_COLLECT)/libqtcontrols.a
   INCLUDEPATH += $(QWTINCLUDE)
   INCLUDEPATH += $$(QWTHOME)/src
+  INCLUDEPATH += $(QTHOME)/include
   MOC_DIR = moc
   OBJECTS_DIR = obj
 }
@@ -72,8 +73,12 @@ unix:!ios {
    }
 
    unix:!macx {
-      LIBS += -L$(QWTLIB) -Wl,-rpath,$(QWTLIB) -l$$(QWTLIBNAME)
-      LIBS += -L$(CAQTDM_COLLECT) -Wl,-rpath,$(QTDM_RPATH) -lqtcontrols
+      LIBS += -L$(QWTLIB) -l$$(QWTLIBNAME)
+      LIBS += -L$(CAQTDM_COLLECT) -lqtcontrols
+      caqtdm_rpath {
+          LIBS += -Wl,-rpath,$(QTDM_RPATH)  -Wl,-rpath,$(QWTLIB)
+      }
+
    }
 
    macx: {
@@ -84,6 +89,7 @@ unix:!ios {
       LIBS += -L $(CAQTDM_COLLECT) -lqtcontrols
 
    }
+
 }
 
 INCLUDEPATH += ../../caQtDM_Lib/src
