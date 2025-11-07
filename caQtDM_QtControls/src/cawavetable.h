@@ -60,8 +60,8 @@ class QTCON_EXPORT caWaveTable : public QTableWidget
 
     Q_PROPERTY(FormatType formatType READ getFormatType WRITE setFormatType)
     Q_PROPERTY(QString formatString READ getFormatString WRITE setFormatString)
-    // this will prevent user interference
-    Q_PROPERTY(QString styleSheet READ styleSheet WRITE noStyle DESIGNABLE false)
+
+    Q_PROPERTY(QString styleSheet READ styleSheet WRITE noStyle)
 
     Q_ENUMS(FormatType)
 
@@ -71,7 +71,7 @@ class QTCON_EXPORT caWaveTable : public QTableWidget
     Q_PROPERTY(int verticalOffset READ getVerticalOffset WRITE setVerticalOffset)
 
 public:
-    void noStyle(QString style) {Q_UNUSED(style);}
+    //void noStyle(QString style) {Q_UNUSED(style);}
 
     caWaveTable(QWidget *parent);
 
@@ -131,6 +131,7 @@ public:
 
                                                   void copy();
 
+    void noStyle(QString stylesheet);
     QString getHorizontalString() const;
     void setHorizontalString(const QString &newHorizontalString);
 
@@ -193,8 +194,8 @@ private:
 
     QString	thisPV;
     int	thisColumnSize;
-    char thisFormat[20];
-    char thisFormatC[20];
+    char thisFormat[MAX_STRING_LENGTH];
+    char thisFormatC[MAX_STRING_LENGTH];
     FormatType thisFormatType;
     QString thisFormatUserString;
     bool thisUnsigned;

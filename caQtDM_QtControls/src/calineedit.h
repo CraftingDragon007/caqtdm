@@ -188,7 +188,7 @@ private:
     SourceMode thisLimitsMode;
 
     bool thisUnitMode;
-    QString keepText;
+
     char thisFormat[MAX_STRING_LENGTH];
     char thisFormatC[20];
     bool d_rescaleFontOnTextChanged;

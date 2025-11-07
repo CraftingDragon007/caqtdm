@@ -48,7 +48,7 @@
 #include <QtGui/QApplication>
 #endif
 
-#ifdef linux
+#if defined(linux) || defined(__FreeBSD__)
 #if QT_VERSION < QT_VERSION_CHECK(5,0,0)
    #define CAQTDM_X11 Q_WS_X11
 #else
@@ -310,7 +310,9 @@ int main(int argc, char *argv[])
             file.open(QFile::ReadOnly);
             QString StyleSheet = QLatin1String(file.readAll());
             printf("caQtDM -- custom stylesheet file <%s> replaced the default stylesheet\n", qasc(fileNameStylesheet));
+            fflush(stdout);
             app.setStyleSheet(StyleSheet);
+            app.setProperty("user_defined_stylesheet", fileNameFound);
             file.close();
         }
         delete searchCustomStyleSheet;
