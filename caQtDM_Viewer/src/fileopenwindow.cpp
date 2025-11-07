@@ -284,7 +284,7 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
     this->statusBar()->show();
 
 #ifndef MOBILE
-    // disable buttons that shouldn't be used when in vnc
+    // disable buttons that shouldn't be used when in vnc and hide window
     if (options["vnc_server"].toInt() == 1) {
         WebSocketServer::instance().setup(web_port);
 
@@ -297,9 +297,9 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
         ui.directAction->setEnabled(false);
         ui.exitAction->setEnabled(false);
         ui.fileAction->setEnabled(false);
-        /*ui.menuMenu->setEnabled(false);
-        ui.menuBar->setEnabled(false);*/
-    } //else {
+        ui.menuMenu->setEnabled(false);
+        ui.menuBar->setEnabled(false);
+    } else {
 #endif
 
     // connect action buttons
@@ -314,9 +314,9 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
     connect( this->ui.emptycacheAction, SIGNAL( triggered() ), this, SLOT(Callback_EmptyCache()) );
     this->ui.timedAction->setChecked(true);
 
-/*#ifndef MOBILE
-}
-#endif*/
+#ifndef MOBILE
+    }
+#endif
 
     setWindowTitle(title);
 

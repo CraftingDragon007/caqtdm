@@ -316,7 +316,7 @@ int main(int argc, char *argv[])
             createMap(options, QString(argv[in]));
         } else if (strcmp (argv[in], "-server") == 0) {
             server = true;
-            minimize = true;
+            minimize = false;
         } else if (strcmp (argv[in], "-novnc") == 0) {
             use_novnc_plugin = true;
         } else if (strcmp (argv[in], "-slave_server") == 0) {
@@ -469,7 +469,7 @@ int main(int argc, char *argv[])
     FileOpenWindow fileOpenWindow (0, fileName, macroString, attach, minimize, geometry, printscreen, resizing, web_port, options);
     fileOpenWindow.setWindowIcon (QIcon(":/caQtDM.ico"));
     if (savetoimage) fileOpenWindow.setProperty("savetoimage", true);
-    fileOpenWindow.show();
+    if (!server) fileOpenWindow.show();
 #ifdef CAQTDM_X11
     #if QT_VERSION > QT_VERSION_CHECK(5,0,0)
         if (qApp->platformName()== QLatin1String("xcb")){

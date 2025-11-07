@@ -740,15 +740,17 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
     connect(ReloadAllWindowsAction, SIGNAL(triggered()), this, SLOT(Callback_reloadAllWindows()));
     this->addAction(ReloadAllWindowsAction);
 
-    // add a print action
-    QAction *PrintWindowAction = new QAction(this);
+    if (!IS_VNC) {
+        // add a print action
+        QAction *PrintWindowAction = new QAction(this);
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    PrintWindowAction->setShortcut(QApplication::translate("MainWindow", "Ctrl+P", 0, QApplication::UnicodeUTF8));
+        PrintWindowAction->setShortcut(QApplication::translate("MainWindow", "Ctrl+P", 0, QApplication::UnicodeUTF8));
 #else
-    PrintWindowAction->setShortcut(QApplication::translate("MainWindow", "Ctrl+P", Q_NULLPTR));
+        PrintWindowAction->setShortcut(QApplication::translate("MainWindow", "Ctrl+P", Q_NULLPTR));
 #endif
-    connect(PrintWindowAction, SIGNAL(triggered()), this, SLOT(Callback_printWindow()));
-    this->addAction(PrintWindowAction);
+        connect(PrintWindowAction, SIGNAL(triggered()), this, SLOT(Callback_printWindow()));
+        this->addAction(PrintWindowAction);
+    }
 
     // add a resize action
     QAction *ResizeUpAction = new QAction(this);
@@ -7260,9 +7262,9 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
         // start new process and vnc or novnc
 
         quint16 new_vnc_port = this->property("VNCPORT").toString().toUShort() +
-                webChildProcesses.count() + 1;
+                vncPortIndex;
         quint16 new_web_port = this->property("WEBPORT").toString().toUShort() +
-                webChildProcesses.count() + 1;
+                vncPortIndex;
 
         QWriteLocker webChildProcessesLocker(&webChildProcessesLock);
         auto result = webChildProcesses.find(files[indx].trimmed());
@@ -7275,13 +7277,12 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
                     new_vnc_port = result.value()->vncPort();
                     new_web_port = result.value()->webPort();
                     webChildProcesses.remove(files[indx].trimmed());
-                }
-                if (WebSocketServer::instance().isInitialized()) {
+                } else if (WebSocketServer::instance().isInitialized()) {
                     WebSocketServer::instance().sendOpenFileRequest(result.key(), result.value()->vncPort());
                     return;
                 }
             }
-        }
+        } else vncPortIndex++;
 
         QString caQtDM_executable = QApplication::applicationFilePath();
         QString executable;
@@ -7341,7 +7342,7 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
 
         if(indx < files.count() && indx < args.count() && args[indx].trimmed().length() > 0) {
             process_args.append("-macro");
-            process_args.append("\"" + args[indx].trimmed()  + "\"");
+            process_args.append(args[indx].trimmed());
         }
 
         process_args.append(files[indx].trimmed());
@@ -7992,9 +7993,11 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
         onMain = true;
         myMenu.addAction(UNDEFINEDMACROS);
         myMenu.addAction(GLOBALSHORTCUTS);
-        myMenu.addAction(PRINTWINDOW);
+        if (!IS_VNC) {
+            myMenu.addAction(PRINTWINDOW);
+            myMenu.addAction(RAISEWINDOW);
+        }
         myMenu.addAction(RELOADWINDOW);
-        myMenu.addAction(RAISEWINDOW);
         myMenu.addAction(INCLUDES);
     }
 

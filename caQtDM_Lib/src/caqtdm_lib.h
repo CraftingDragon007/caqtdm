@@ -502,6 +502,8 @@ private:
     QString handle_Macro_Constants(QString Text);
     QStringList treat_read_MacroCommand(QStringList args);
 
+    quint16 vncPortIndex = 1;
+
 private slots:
     void Callback_CaCalc(double value) ;
     void Callback_UndefinedMacrowindowExit();
