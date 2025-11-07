@@ -240,6 +240,27 @@
 
 public slots:
      void doSomething() {
+         {
+             QWriteLocker locker(&CaQtDM_Lib::webChildProcessesLock);
+             foreach (auto item, CaQtDM_Lib::webChildProcesses) {
+                 if (item == nullptr) continue;
+                 QProcess *process = item->process();
+                 if (process != nullptr) {
+                     if (process->state() == QProcess::Running) {
+                         qDebug() << "Stopping child process (pid:" << process->processId() << "vnc port:" << item->vncPort() << ")";
+                         process->terminate();
+
+                         if (!process->waitForFinished(5000)) {
+                             qDebug() << "Child process did not terminate gracefully (pid:" << process->processId() << "vnc port:" << item->vncPort() << "), killing it.";
+                             process->kill();
+                             process->waitForFinished(1000);
+                         }
+                     }
+                     item->deleteLater();
+                 }
+             }
+         }
+
          printf("About to quit!\n");
 #if defined linux || defined TARGET_OS_MAC
          // remove temporary file created by caQtDM for pipe reading

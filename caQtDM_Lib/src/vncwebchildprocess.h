@@ -1,15 +1,16 @@
 #ifndef VNCWEBCHILDPROCESS_H
 #define VNCWEBCHILDPROCESS_H
 
-#include <QMetaType>
+#include "qdebug.h"
+#include <QObject>
 #include <QProcess>
 
-class VncWebChildProcess {
-    Q_GADGET
+class VncWebChildProcess : public QObject {
+    Q_OBJECT
 
 public:
-    VncWebChildProcess() : m_process(nullptr), m_vncPort(5900), m_webPort(6900) {}
-    VncWebChildProcess(quint16 vncPort, quint16 webPort, QProcess *process) : m_process(process), m_vncPort(vncPort), m_webPort(webPort) {}
+    VncWebChildProcess(QObject* parent = nullptr) : QObject(parent), m_process(nullptr), m_vncPort(5900), m_webPort(6900) {}
+    VncWebChildProcess(quint16 vncPort, quint16 webPort, QObject* parent = nullptr) : QObject(parent), m_vncPort(vncPort), m_webPort(webPort) {}
 
     quint16 vncPort() { return m_vncPort; }
     quint16 webPort() { return m_webPort; }
@@ -17,14 +18,36 @@ public:
 
     void setVncPort(quint16 port) { m_vncPort = port; }
     void setWebPort(quint16 port) { m_webPort = port; }
-    void setProcess(QProcess* process) { m_process = process; }
+    void setProcess(QProcess* process) {
+        m_process = process;
+        quint64 pid = m_process->processId();
+        connect(m_process, &QProcess::readyReadStandardOutput, this, [this, pid]() {
+            QByteArray data = m_process->readAllStandardOutput();
+            QTextStream stream(data);
+            while (!stream.atEnd()) {
+                qDebug().noquote() << QString("child (pid: %1, vnc_port: %2) -- %3").arg(pid).arg(m_vncPort).arg(stream.readLine());
+            }
+        });
+
+        connect(m_process, &QProcess::readyReadStandardError, this, [this, pid]() {
+            QByteArray data = m_process->readAllStandardError();
+            QTextStream stream(data);
+            while (!stream.atEnd()) {
+                qDebug().noquote() << QString("child (pid: %1, vnc_port: %2) -- %3").arg(pid).arg(m_vncPort).arg(stream.readLine());
+            }
+        });
+
+        connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+                this, [this, pid](int exitCode, QProcess::ExitStatus exitStatus) {
+            qDebug().noquote() << QString("child (pid: %1, vnc_port: %2) -- finished with exit code:").arg(pid).arg(m_vncPort) << exitCode
+                     << "and exit status:" << exitStatus;
+        });
+    }
 
 private:
     QProcess* m_process;
     quint16 m_vncPort;
     quint16 m_webPort;
 };
-
-Q_DECLARE_METATYPE(VncWebChildProcess)
 
 #endif // VNCWEBCHILDPROCESS_H

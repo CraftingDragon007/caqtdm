@@ -140,7 +140,7 @@ public:
     static QReadWriteLock hmiConfigListLock;
 
 #ifndef MOBILE
-    static QMap<QString, VncWebChildProcess> webChildProcesses;
+    static QMap<QString, VncWebChildProcess*> webChildProcesses;
     static QReadWriteLock webChildProcessesLock;
 #endif
 

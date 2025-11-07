@@ -15,8 +15,8 @@ public:
     static WebSocketServer& instance();
     bool setup(quint16 port);
     bool isInitialized() const;
-    void sendLog(QString text);
-    void sendOpenFileRequest(quint16 path);
+    void sendLog(const QString text);
+    void sendOpenFileRequest(const QString filePath, quint16 vncPort);
 
 private slots:
     void onNewConnection();

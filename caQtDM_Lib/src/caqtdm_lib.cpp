@@ -131,7 +131,8 @@
 
 #define POPUPDEFENITION "popup.ui"
 
-#define IS_VNC qgetenv("QT_QPA_PLATFORM").startsWith("vnc")
+#define IS_VNC (this->property("VNC_SERVER").toInt() == 1)
+#define IS_NOVNC_PLUGIN (this->property("NOVNC_PLUGIN").toInt() == 1)
 
 #define WEB_CARELATED_DISPLAY_ERROR_MSG "Unable to open this caRelatedDisplay, please check your caQtDM Web configuration."
 
@@ -320,7 +321,7 @@ QList<caHMIConfigTransferItem*> CaQtDM_Lib::hmiConfigList;
 QReadWriteLock CaQtDM_Lib::hmiConfigListLock;
 
 #ifndef MOBILE
-QMap<QString, VncWebChildProcess> CaQtDM_Lib::webChildProcesses;
+QMap<QString, VncWebChildProcess*> CaQtDM_Lib::webChildProcesses;
 QReadWriteLock CaQtDM_Lib::webChildProcessesLock;
 #endif
 
@@ -365,6 +366,10 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
     this->setProperty("RESIZEX", 1.0);
     this->setProperty("RESIZEY", 1.0);
 
+#ifndef MOBILE
+    this->setProperty("VNC_SERVER", options["vnc_server"].toInt());
+    this->setProperty("NOVNC_PLUGIN", options["novnc_plugin"].toInt());
+
     if (IS_VNC) {
         bool ok;
         quint16 web_port = options["web_port"].toUShort(&ok);
@@ -379,6 +384,7 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
 
         this->setProperty("SLAVE_SERVER", options["slave_server"]);
     }
+#endif
 
     // is a default plugin specified (normally nothing means epics3)
     QString option = options["defaultPlugin"];
@@ -7251,93 +7257,111 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
     }
 #ifndef MOBILE
     else if (this->property("SLAVE_SERVER").toInt() != 1) {
-        // start new process and novnc
-
-        QWriteLocker webChildProcessesLocker(&webChildProcessesLock);
-        auto result = webChildProcesses.find(files[indx].trimmed());
-        if (result != webChildProcesses.constEnd()) {
-            if (WebSocketServer::instance().isInitialized()) {
-                WebSocketServer::instance().sendOpenFileRequest(result->vncPort());
-                return;
-            }
-        }
-
-        QString caQtDM_executable = QApplication::applicationFilePath();
-
-        QString web_path = qgetenv("CAQTDM_WEB_PATH");
-        if (web_path.length() <= 0) {
-            web_path = QDir(QApplication::applicationDirPath() + "/../caQtDM_Web").absolutePath();
-        }
-
-        QString websockify_path = QDir(web_path + "/websockify").absolutePath();
-        QFileInfo websockify_info(websockify_path);
-        if (!websockify_info.exists()) {
-            qCritical() << "caQtDM_Web -- websockify does not exist inside caQtDM_Web folder, unable to start another instance for caRelatedDisplay, please ensure you specified the right CAQTDM_WEB_PATH and the websockify folder exists within it.";
-            QMessageBox::critical(this, "Error", WEB_CARELATED_DISPLAY_ERROR_MSG);
-            return;
-        }
-        if (websockify_info.isFile()) {
-            qCritical() << "caQtDM_Web -- websockify is a file and not a folder, please ensure that you initialized the websockify git submodule.";
-            QMessageBox::critical(this, "Error", WEB_CARELATED_DISPLAY_ERROR_MSG);
-            return;
-        }
-        if (!websockify_info.isDir()) {
-            qCritical() << "caQtDM_Web -- websockify is neither a folder nor a file, please check if you provided the right CAQTDM_WEB_PATH";
-            QMessageBox::critical(this, "Error", WEB_CARELATED_DISPLAY_ERROR_MSG);
-            return;
-        }
-        QFile runScript = QFile(websockify_path + "/run");
-
-        if (!runScript.exists()) {
-            qCritical() << "caQtDM_Web -- websockify run script, please check if you provided the right CAQTDM_WEB_PATH and if websockify was correctly cloned inside it";
-            QMessageBox::critical(this, "Error", WEB_CARELATED_DISPLAY_ERROR_MSG);
-            return;
-        }
-
-        QProcess websockify_child;
-        //QProcess child;
-        websockify_child.setProgram(runScript.fileName());
-
-        QList<QString> webSockifyArgs;
+        // start new process and vnc or novnc
 
         quint16 new_vnc_port = this->property("VNCPORT").toString().toUShort() +
                 webChildProcesses.count() + 1;
         quint16 new_web_port = this->property("WEBPORT").toString().toUShort() +
                 webChildProcesses.count() + 1;
 
+        QWriteLocker webChildProcessesLocker(&webChildProcessesLock);
+        auto result = webChildProcesses.find(files[indx].trimmed());
+        if (result != webChildProcesses.constEnd()) {
+            if (result.value() == nullptr) {
+                webChildProcesses.remove(files[indx].trimmed());
+                qWarning().noquote() << QString("caQtDM_Web -- found undefined child process for file %1, this shouldn't happen").arg(files[indx].trimmed());
+            } else {
+                if (result.value()->process() == nullptr || result.value()->process()->state() == QProcess::ProcessState::NotRunning) {
+                    new_vnc_port = result.value()->vncPort();
+                    new_web_port = result.value()->webPort();
+                    webChildProcesses.remove(files[indx].trimmed());
+                }
+                if (WebSocketServer::instance().isInitialized()) {
+                    WebSocketServer::instance().sendOpenFileRequest(result.key(), result.value()->vncPort());
+                    return;
+                }
+            }
+        }
 
-        //webSockifyArgs.append("--timeout=60");
-        webSockifyArgs.append(QString::number(new_vnc_port));
-        webSockifyArgs.append("--");
-        webSockifyArgs.append(caQtDM_executable);
-        webSockifyArgs.append("-server");
-        webSockifyArgs.append("-slave_server");
-        webSockifyArgs.append("-server_port");
-        webSockifyArgs.append(QString::number(new_vnc_port));
-        webSockifyArgs.append("-web_server_port");
-        webSockifyArgs.append(QString::number(new_web_port));
+        QString caQtDM_executable = QApplication::applicationFilePath();
+        QString executable;
+
+        if (!IS_NOVNC_PLUGIN) {
+            QString web_path = qgetenv("CAQTDM_WEB_PATH");
+            if (web_path.length() <= 0) {
+                web_path = QDir(QApplication::applicationDirPath() + "/../caQtDM_Web").absolutePath();
+            }
+
+            QString websockify_path = QDir(web_path + "/websockify").absolutePath();
+            QFileInfo websockify_info(websockify_path);
+            if (!websockify_info.exists()) {
+                qCritical() << "caQtDM_Web -- websockify does not exist inside caQtDM_Web folder, unable to start another instance for caRelatedDisplay, please ensure you specified the right CAQTDM_WEB_PATH and the websockify folder exists within it.";
+                QMessageBox::critical(this, "Error", WEB_CARELATED_DISPLAY_ERROR_MSG);
+                return;
+            }
+            if (websockify_info.isFile()) {
+                qCritical() << "caQtDM_Web -- websockify is a file and not a folder, please ensure that you initialized the websockify git submodule.";
+                QMessageBox::critical(this, "Error", WEB_CARELATED_DISPLAY_ERROR_MSG);
+                return;
+            }
+            if (!websockify_info.isDir()) {
+                qCritical() << "caQtDM_Web -- websockify is neither a folder nor a file, please check if you provided the right CAQTDM_WEB_PATH";
+                QMessageBox::critical(this, "Error", WEB_CARELATED_DISPLAY_ERROR_MSG);
+                return;
+            }
+            QFile runScript = QFile(websockify_path + "/run");
+
+            if (!runScript.exists()) {
+                qCritical() << "caQtDM_Web -- websockify run script, please check if you provided the right CAQTDM_WEB_PATH and if websockify was correctly cloned inside it";
+                QMessageBox::critical(this, "Error", WEB_CARELATED_DISPLAY_ERROR_MSG);
+                return;
+            }
+
+            executable = runScript.fileName();
+        } else executable = caQtDM_executable;
+
+        VncWebChildProcess* item = new VncWebChildProcess(new_vnc_port, new_web_port);
+        QProcess* child = new QProcess(item);
+        child->setProgram(executable);
+
+        QList<QString> process_args;
+
+        if (!IS_NOVNC_PLUGIN) {
+            process_args.append(QString::number(new_vnc_port));
+            process_args.append("--");
+            process_args.append(caQtDM_executable);
+        }
+        process_args.append("-server");
+        if (IS_NOVNC_PLUGIN) process_args.append("-novnc");
+        process_args.append("-slave_server");
+        process_args.append("-server_port");
+        process_args.append(QString::number(new_vnc_port));
+        process_args.append("-web_server_port");
+        process_args.append(QString::number(new_web_port));
 
         if(indx < files.count() && indx < args.count() && args[indx].trimmed().length() > 0) {
-            webSockifyArgs.append("-macro");
-            webSockifyArgs.append("\"" + args[indx].trimmed()  + "\"");
+            process_args.append("-macro");
+            process_args.append("\"" + args[indx].trimmed()  + "\"");
         }
 
-        webSockifyArgs.append(files[indx].trimmed());
+        process_args.append(files[indx].trimmed());
 
-        QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
-        environment.remove("LD_PRELOAD");
+        if (!IS_NOVNC_PLUGIN) {
+            QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
+            environment.remove("LD_PRELOAD");
 
-        websockify_child.setProcessEnvironment(environment);
+            child->setProcessEnvironment(environment);
+        }
 
-        websockify_child.setArguments(webSockifyArgs);
+        child->setArguments(process_args);
 
-        websockify_child.startDetached();
+        child->start();
 
         if (WebSocketServer::instance().isInitialized()) {
-            WebSocketServer::instance().sendOpenFileRequest(new_vnc_port);
+            WebSocketServer::instance().sendOpenFileRequest(files[indx].trimmed(), new_vnc_port);
         }
 
-        VncWebChildProcess item(new_vnc_port, new_web_port, &websockify_child);
+        item->setProcess(child);
 
         webChildProcesses.insert(files[indx].trimmed(), item);
     }

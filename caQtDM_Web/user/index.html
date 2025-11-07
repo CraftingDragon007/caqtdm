@@ -12,17 +12,195 @@
       overflow: hidden;
       font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
     }
+    #menu-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 12px;
+      background: linear-gradient(180deg, #f8fafc, #e2e8f0);
+      border-bottom: 1px solid #cbd5f5;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+      z-index: 1050;
+      font-size: 14px;
+    }
+    #menu-title {
+      font-weight: 600;
+      color: #1e293b;
+    }
+    #menu-bar button {
+      background: transparent;
+      border: none;
+      padding: 4px 10px;
+      border-radius: 4px;
+      color: #1f2937;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    #menu-bar button:hover,
+    #menu-bar button:focus {
+      background: rgba(37, 99, 235, 0.1);
+      outline: none;
+    }
+    #menu-bar button.has-new::after {
+      content: '●';
+      color: #ef4444;
+      font-size: 10px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
     #vnc-container {
       position: absolute;
+      top: 32px;
+      left: 0;
+      width: 100%;
+      height: calc(100% - 32px);
+      border: none;
+    }
+    #dialog-overlay {
+      position: fixed;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.4);
+      z-index: 1200;
+    }
+    #dialog-overlay.show {
+      display: flex;
+    }
+    #dialog-box {
+      background: #fff;
+      padding: 24px;
+      max-width: 320px;
+      width: calc(100% - 40px);
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+      text-align: left;
+    }
+    #dialog-box p {
+      margin: 0 0 16px 0;
+      word-break: break-word;
+    }
+    #dialog-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    #dialog-actions button {
+      padding: 6px 12px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      background: #f5f5f5;
+      cursor: pointer;
+    }
+    #dialog-actions button.primary {
+      background: #2563eb;
+      border-color: #1d4ed8;
+      color: #fff;
+    }
+    #dialog-actions button:focus {
+      outline: 2px solid #2563eb;
+      outline-offset: 1px;
+    }
+    #log-window {
+      position: fixed;
+  top: 48px;
+  right: 12px;
+  width: min(380px, calc(100% - 24px));
+  max-height: 60vh;
+      display: none;
+      flex-direction: column;
+      background: #fff;
+      border: 1px solid #cbd5f5;
+      border-radius: 8px;
+      box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18);
+      z-index: 1100;
+  min-height: 160px;
+    }
+    #log-window.show {
+      display: flex;
+    }
+    #log-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      border-bottom: 1px solid #e2e8f0;
+      background: #f8fafc;
+      border-top-left-radius: 8px;
+      border-top-right-radius: 8px;
+      cursor: move;
+      user-select: none;
+    }
+    #log-header span {
+      font-weight: 600;
+      color: #1e293b;
+    }
+    #log-close {
+      background: transparent;
       border: none;
+      font-size: 16px;
+      line-height: 1;
+      cursor: pointer;
+      padding: 4px 8px;
+    }
+    #log-close:hover,
+    #log-close:focus {
+      background: rgba(37, 99, 235, 0.12);
+      border-radius: 4px;
+      outline: none;
+    }
+    #log-content {
+      padding: 12px;
+      overflow-y: auto;
+      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+      font-size: 12px;
+      color: #1f2937;
+      flex: 1;
+      padding-bottom: 24px;
+    }
+    .log-entry {
+      margin-bottom: 8px;
+      word-break: break-word;
+    }
+    .log-entry:last-child {
+      margin-bottom: 0;
+    }
+    .log-empty {
+      margin: 0;
+      color: #64748b;
+      font-style: italic;
+    }
+    #log-window.show #log-resize-handle {
+      display: block;
+    }
+    #log-resize-handle {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      right: 4px;
+      bottom: 4px;
+      cursor: se-resize;
+      border-right: 2px solid rgba(148, 163, 184, 0.8);
+      border-bottom: 2px solid rgba(148, 163, 184, 0.8);
+      border-radius: 2px;
+      display: none;
     }
   </style>
   </head>
   <body>
+    <div id="menu-bar" role="menubar">
+      <span id="menu-title">caQtDM Web</span>
+      <button type="button" id="menu-logs" aria-haspopup="dialog" aria-expanded="false" aria-controls="log-window">Logs</button>
+    </div>
     <iframe
         id="vnc-container"
         src="/noVNC/vnc.html?path=&autoconnect=true&resize=scale"
@@ -30,12 +208,255 @@
         allowfullscreen
     ></iframe>
 
+    <div id="log-window" role="dialog" aria-modal="false" aria-labelledby="log-title" tabindex="-1">
+      <div id="log-header">
+        <span id="log-title">caQtDM Web Messages</span>
+        <button type="button" id="log-close" aria-label="Close logs">&times;</button>
+      </div>
+      <div id="log-content" data-empty="true">
+        <p class="log-empty">No log messages yet.</p>
+      </div>
+      <div id="log-resize-handle" aria-hidden="true"></div>
+    </div>
+
+    <div id="dialog-overlay" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+      <div id="dialog-box">
+        <p id="dialog-message"></p>
+        <div id="dialog-actions">
+          <button type="button" id="dialog-cancel">Cancel</button>
+          <button type="button" id="dialog-accept" class="primary">Open</button>
+        </div>
+      </div>
+    </div>
+
     <script>
       (function() {
         var params = new URLSearchParams(window.location.search);
         var path = params.get('path') || '0';
 
         var iframe = document.getElementById('vnc-container');
+        var dialogOverlay = document.getElementById('dialog-overlay');
+        var dialogMessage = document.getElementById('dialog-message');
+        var dialogAccept = document.getElementById('dialog-accept');
+        var dialogCancel = document.getElementById('dialog-cancel');
+        var pendingOpenPath = null;
+        var menuLogsButton = document.getElementById('menu-logs');
+        var logWindow = document.getElementById('log-window');
+        var logClose = document.getElementById('log-close');
+        var logContent = document.getElementById('log-content');
+        var logHeader = document.getElementById('log-header');
+        var logResizeHandle = document.getElementById('log-resize-handle');
+        var dialogTimeout = null;
+        var isDragging = false;
+        var dragOffsetX = 0;
+        var dragOffsetY = 0;
+        var isResizing = false;
+        var resizeStartWidth = 0;
+        var resizeStartHeight = 0;
+        var resizeStartX = 0;
+        var resizeStartY = 0;
+        var logWindowManuallyPositioned = false;
+  // Shared geometry constraints for the draggable/resizable log window.
+  var MIN_PADDING = 12;
+  var MIN_RESIZE_WIDTH = 240;
+  var MIN_RESIZE_HEIGHT = 160;
+
+        function openLogWindow() {
+          logWindow.classList.add('show');
+          menuLogsButton.classList.remove('has-new');
+          menuLogsButton.setAttribute('aria-expanded', 'true');
+          logWindow.focus();
+          ensureLogWindowInView();
+        }
+
+        function closeLogWindow() {
+          logWindow.classList.remove('show');
+          menuLogsButton.setAttribute('aria-expanded', 'false');
+          menuLogsButton.focus();
+        }
+
+        function toggleLogWindow() {
+          if (logWindow.classList.contains('show')) {
+            closeLogWindow();
+          } else {
+            openLogWindow();
+          }
+        }
+
+        function parseLogMarkup(raw) {
+          var container = document.createElement('div');
+          container.innerHTML = raw;
+          var fontElements = container.getElementsByTagName('font');
+          while (fontElements.length) {
+            var fontNode = fontElements[0];
+            var span = document.createElement('span');
+            var colorAttr = fontNode.getAttribute('color');
+            if (colorAttr) span.style.color = colorAttr;
+            while (fontNode.firstChild) {
+              span.appendChild(fontNode.firstChild);
+            }
+            if (fontNode.parentNode) {
+              fontNode.parentNode.replaceChild(span, fontNode);
+            } else {
+              container.appendChild(span);
+            }
+          }
+          var fragment = document.createDocumentFragment();
+          while (container.firstChild) {
+            fragment.appendChild(container.firstChild);
+          }
+          return fragment;
+        }
+
+        function addLogMessage(html) {
+          if (logContent.dataset.empty === 'true') {
+            logContent.innerHTML = '';
+            delete logContent.dataset.empty;
+          }
+          var entry = document.createElement('div');
+          entry.className = 'log-entry';
+          entry.appendChild(parseLogMarkup(html));
+          logContent.appendChild(entry);
+          logContent.scrollTop = logContent.scrollHeight;
+          if (!logWindow.classList.contains('show')) {
+            menuLogsButton.classList.add('has-new');
+          }
+        }
+
+        menuLogsButton.addEventListener('click', toggleLogWindow);
+        logClose.addEventListener('click', closeLogWindow);
+
+        document.addEventListener('keydown', function(event) {
+          if (event.key === 'Escape' && logWindow.classList.contains('show')) {
+            closeLogWindow();
+          }
+        });
+
+        function prepareManualPosition(rect) {
+          if (logWindowManuallyPositioned) return;
+          logWindow.style.left = rect.left + 'px';
+          logWindow.style.top = rect.top + 'px';
+          logWindow.style.right = 'auto';
+          logWindow.style.maxHeight = 'none';
+          logWindowManuallyPositioned = true;
+          ensureLogWindowInView();
+        }
+
+        function ensureLogWindowInView() {
+          if (!logWindowManuallyPositioned) return;
+          var maxWidth = Math.max(0, window.innerWidth - (2 * MIN_PADDING));
+          var maxHeight = Math.max(0, window.innerHeight - (2 * MIN_PADDING));
+          var rect = logWindow.getBoundingClientRect();
+          var width = rect.width;
+          var height = rect.height;
+          if (maxWidth > 0 && width > maxWidth) {
+            width = maxWidth;
+            logWindow.style.width = width + 'px';
+          }
+          if (maxHeight > 0 && height > maxHeight) {
+            height = maxHeight;
+            logWindow.style.height = height + 'px';
+          }
+          rect = logWindow.getBoundingClientRect();
+          width = rect.width;
+          height = rect.height;
+          var maxLeft = Math.max(0, window.innerWidth - width - MIN_PADDING);
+          var maxTop = Math.max(0, window.innerHeight - height - MIN_PADDING);
+          var nextLeft = Math.min(Math.max(MIN_PADDING, rect.left), maxLeft);
+          var nextTop = Math.min(Math.max(MIN_PADDING, rect.top), maxTop);
+          logWindow.style.left = nextLeft + 'px';
+          logWindow.style.top = nextTop + 'px';
+          logWindow.style.right = 'auto';
+        }
+
+        function onDragStart(event) {
+          if (event.button !== 0 && event.pointerType !== 'touch') return;
+          if (event.target && event.target.closest('button')) return;
+          var rect = logWindow.getBoundingClientRect();
+          prepareManualPosition(rect);
+          rect = logWindow.getBoundingClientRect();
+          isDragging = true;
+          dragOffsetX = event.clientX - rect.left;
+          dragOffsetY = event.clientY - rect.top;
+          document.addEventListener('pointermove', onDragMove);
+          document.addEventListener('pointerup', onDragEnd);
+          event.preventDefault();
+        }
+
+        function onDragMove(event) {
+          if (!isDragging) return;
+          var width = logWindow.offsetWidth;
+          var height = logWindow.offsetHeight;
+          var newLeft = event.clientX - dragOffsetX;
+          var newTop = event.clientY - dragOffsetY;
+          var maxLeft = Math.max(0, window.innerWidth - width - MIN_PADDING);
+          var maxTop = Math.max(0, window.innerHeight - height - MIN_PADDING);
+          newLeft = Math.min(Math.max(MIN_PADDING, newLeft), maxLeft);
+          newTop = Math.min(Math.max(MIN_PADDING, newTop), maxTop);
+          logWindow.style.left = newLeft + 'px';
+          logWindow.style.top = newTop + 'px';
+          logWindow.style.right = 'auto';
+        }
+
+        function onDragEnd() {
+          if (!isDragging) return;
+          isDragging = false;
+          document.removeEventListener('pointermove', onDragMove);
+          document.removeEventListener('pointerup', onDragEnd);
+        }
+
+        function onResizeStart(event) {
+          if (event.button !== 0 && event.pointerType !== 'touch') return;
+          var rect = logWindow.getBoundingClientRect();
+          prepareManualPosition(rect);
+          rect = logWindow.getBoundingClientRect();
+          isResizing = true;
+          resizeStartWidth = rect.width;
+          resizeStartHeight = rect.height;
+          resizeStartX = event.clientX;
+          resizeStartY = event.clientY;
+          document.addEventListener('pointermove', onResizeMove);
+          document.addEventListener('pointerup', onResizeEnd);
+          event.preventDefault();
+        }
+
+        function onResizeMove(event) {
+          if (!isResizing) return;
+          var deltaX = event.clientX - resizeStartX;
+          var deltaY = event.clientY - resizeStartY;
+          var maxWidth = Math.max(0, window.innerWidth - (2 * MIN_PADDING));
+          var maxHeight = Math.max(0, window.innerHeight - (2 * MIN_PADDING));
+          var minWidth = maxWidth > 0 ? Math.min(MIN_RESIZE_WIDTH, maxWidth) : 0;
+          var minHeight = maxHeight > 0 ? Math.min(MIN_RESIZE_HEIGHT, maxHeight) : 0;
+          var targetWidth = resizeStartWidth + deltaX;
+          var targetHeight = resizeStartHeight + deltaY;
+          var newWidth = Math.max(minWidth, Math.min(targetWidth, maxWidth || targetWidth));
+          var newHeight = Math.max(minHeight, Math.min(targetHeight, maxHeight || targetHeight));
+          logWindow.style.width = newWidth + 'px';
+          logWindow.style.height = newHeight + 'px';
+          ensureLogWindowInView();
+        }
+
+        function onResizeEnd() {
+          if (!isResizing) return;
+          isResizing = false;
+          document.removeEventListener('pointermove', onResizeMove);
+          document.removeEventListener('pointerup', onResizeEnd);
+        }
+
+        logHeader.addEventListener('pointerdown', onDragStart);
+  logResizeHandle.addEventListener('pointerdown', onResizeStart);
+  window.addEventListener('resize', ensureLogWindowInView);
+  document.addEventListener('pointercancel', onDragEnd);
+  document.addEventListener('pointercancel', onResizeEnd);
+
+        function getInstancePath() {
+          if (path == null) return '00';
+          var value = String(path).trim();
+          if (value === '') return '00';
+          if (/^(https?:|\/)/i.test(value)) return '00';
+          return value;
+        }
 
         function setIframeToPath(p) {
           var value = p;
@@ -44,12 +465,106 @@
           if (/^[0-9]$/.test(value)) value = '0' + value;
           if (value.startsWith('/noVNC') || value.startsWith('http')) {
             iframe.src = value;
-          } else {
-            iframe.src = '/noVNC/vnc.html?path=/websockify/' + encodeURIComponent(value) + '&autoconnect=true&resize=scale';
+            path = value;
+            return;
           }
+          path = value;
+          iframe.src = '/noVNC/vnc.html?path=/websockify/' + encodeURIComponent(getInstancePath()) + '&autoconnect=true&resize=scale';
         }
 
         setIframeToPath(path);
+
+        var reconnectDelay = 1000;
+        var reconnectTimer = null;
+
+        function scheduleReconnect() {
+          if (reconnectTimer) return;
+          reconnectTimer = setTimeout(function() {
+            reconnectTimer = null;
+            reconnectDelay = Math.min(reconnectDelay * 2, 10000);
+            connectWebSocket();
+          }, reconnectDelay);
+        }
+
+        function hideDialog() {
+          if (dialogTimeout) {
+            clearTimeout(dialogTimeout);
+            dialogTimeout = null;
+          }
+          dialogOverlay.classList.remove('show');
+          pendingOpenPath = null;
+        }
+
+        function showOpenFileDialog(requestedPath, displayName) {
+          pendingOpenPath = requestedPath;
+          var name = displayName || requestedPath;
+          dialogMessage.textContent = 'Open "' + name + '"?';
+          dialogOverlay.classList.add('show');
+          if (dialogTimeout) clearTimeout(dialogTimeout);
+          dialogTimeout = setTimeout(function() {
+            hideDialog();
+          }, 30000);
+        }
+
+        dialogCancel.addEventListener('click', hideDialog);
+
+        dialogAccept.addEventListener('click', function() {
+          if (!pendingOpenPath) {
+            hideDialog();
+            return;
+          }
+          var newUrl = new URL(window.location.href);
+          newUrl.searchParams.set('path', pendingOpenPath);
+          window.open(newUrl.toString(), '_blank', 'noopener');
+          hideDialog();
+        });
+
+        function connectWebSocket() {
+          var wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+          var wsUrl = wsProtocol + window.location.host + '/instance/' + encodeURIComponent(getInstancePath());
+          var socket;
+
+          try {
+            socket = new WebSocket(wsUrl);
+          } catch (err) {
+            console.error('WebSocket connection failed:', err);
+            scheduleReconnect();
+            return;
+          }
+
+          socket.onopen = function() {
+            reconnectDelay = 1000;
+            try {
+              socket.send(getInstancePath());
+            } catch (sendErr) {
+              console.warn('WebSocket send failed:', sendErr);
+            }
+          };
+
+          socket.onmessage = function(event) {
+            var data = String(event.data || '');
+            if (data.startsWith('LOG;')) {
+              addLogMessage(data.slice(4));
+              return;
+            }
+            var openMatch = data.match(/^OPEN;([^;]+);(.+)$/);
+            if (openMatch) {
+              showOpenFileDialog(openMatch[1], openMatch[2]);
+              return;
+            }
+          };
+
+          socket.onerror = function(errorEvent) {
+            console.warn('WebSocket error:', errorEvent);
+            socket.close();
+          };
+
+          socket.onclose = function() {
+            scheduleReconnect();
+          };
+        }
+
+        connectWebSocket();
       })();
     </script>
   </body>

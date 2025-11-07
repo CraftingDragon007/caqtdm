@@ -112,9 +112,6 @@ int setenv(const char *name, const char *value, int overwrite)
   #include <mach/vm_statistics.h>
 #endif
 
-#define IS_VNC qgetenv("QT_QPA_PLATFORM").startsWith("vnc")
-
-
 #if QT_VERSION > 0x050000
 void FileOpenWindow::onApplicationStateChange(Qt::ApplicationState state)
 {
@@ -288,7 +285,7 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
 
 #ifndef MOBILE
     // disable buttons that shouldn't be used when in vnc
-    if (IS_VNC) {
+    if (options["vnc_server"].toInt() == 1) {
         WebSocketServer::instance().setup(web_port);
 
         connect(messageWindow, &MessageWindow::newMessageReceivedEvent, [](QString text){
@@ -298,7 +295,11 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
         ui.fileAction->setEnabled(false);
         ui.timedAction->setEnabled(false);
         ui.directAction->setEnabled(false);
-    }
+        ui.exitAction->setEnabled(false);
+        ui.fileAction->setEnabled(false);
+        /*ui.menuMenu->setEnabled(false);
+        ui.menuBar->setEnabled(false);*/
+    } //else {
 #endif
 
     // connect action buttons
@@ -312,6 +313,10 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
     connect( this->ui.helpAction, SIGNAL( triggered() ), this, SLOT(Callback_ActionHelp()) );
     connect( this->ui.emptycacheAction, SIGNAL( triggered() ), this, SLOT(Callback_EmptyCache()) );
     this->ui.timedAction->setChecked(true);
+
+/*#ifndef MOBILE
+}
+#endif*/
 
     setWindowTitle(title);
 

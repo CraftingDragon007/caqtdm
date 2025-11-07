@@ -217,6 +217,7 @@ int main(int argc, char *argv[])
     bool savetoimage = false;
     bool resizing = true;
     bool server = false;
+    bool use_novnc_plugin = false;
     bool slave_server = false;
     quint16 port = 5900;
     quint16 web_port = port + 1000;
@@ -315,6 +316,9 @@ int main(int argc, char *argv[])
             createMap(options, QString(argv[in]));
         } else if (strcmp (argv[in], "-server") == 0) {
             server = true;
+            minimize = true;
+        } else if (strcmp (argv[in], "-novnc") == 0) {
+            use_novnc_plugin = true;
         } else if (strcmp (argv[in], "-slave_server") == 0) {
             slave_server = true;
         } else if (strcmp (argv[in], "-server_port") == 0) {
@@ -353,17 +357,20 @@ int main(int argc, char *argv[])
             if (dimensions.height <= 0 || dimensions.width <= 0) {
                 printf("caQtDM -- Negative or zero ui width / height found (%sx%s), not enabling server mode!", QString::number(dimensions.width).toUtf8().data(), QString::number(dimensions.height).toUtf8().data());
                 server = false;
-            } else qputenv("QT_QPA_PLATFORM", ("vnc:size=" + QString::number(dimensions.width) + "x" + QString::number(dimensions.height) + ":depth=16:port=" + QString::number(port)).toStdString());
+            } else qputenv("QT_QPA_PLATFORM", ("%1:size=" + QString::number(dimensions.width) + "x" + QString::number(dimensions.height) + ":depth=16:port=" + QString::number(port)).arg(use_novnc_plugin ? "novnc" : "vnc").toStdString());
         }
     } else if (server) {
         printf("No ui file was specified, not enabling server mode!");
         server = false;
     }
 
-    options.insert("vnc_server", QString::number(server));
-    options.insert("slave_server", QString::number(slave_server));
-    options.insert("vnc_port", QString::number(port));
-    options.insert("web_port", QString::number(web_port));
+    if (server) {
+        options.insert("vnc_server", QString::number(server));
+        options.insert("novnc_plugin", QString::number(use_novnc_plugin));
+        options.insert("slave_server", QString::number(slave_server));
+        options.insert("vnc_port", QString::number(port));
+        options.insert("web_port", QString::number(web_port));
+    }
 
     QApplication app(argc, argv);
     QApplication::setOrganizationName("Paul Scherrer Institut");

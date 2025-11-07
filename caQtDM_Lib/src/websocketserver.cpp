@@ -1,5 +1,6 @@
 #include "websocketserver.h"
 #include <QDebug>
+#include <QFileInfo>
 #include <QHostAddress>
 
 WebSocketServer::WebSocketServer(QObject *parent) : QObject(parent), m_isInitialized(false)
@@ -86,21 +87,23 @@ void WebSocketServer::socketDisconnected()
     }
 }
 
-void WebSocketServer::sendLog(QString text) {
+void WebSocketServer::sendLog(const QString text) {
     QReadLocker locker(&m_clientReadWriteLock);
     foreach (QWebSocket *pSocket, m_clients) {
         if (pSocket != Q_NULLPTR) {
-            pSocket->sendTextMessage("LOG>" + text);
+            pSocket->sendTextMessage("LOG;" + text);
         }
     }
 }
 
-void WebSocketServer::sendOpenFileRequest(quint16 path) {
-    QString pathStr = QString::number(path % 100);
+void WebSocketServer::sendOpenFileRequest(const QString filePath, quint16 vncPort) {
+    QFileInfo fileInfo(filePath);
+    QString fileName = fileInfo.fileName();
+    QString pathStr = QString::number(vncPort % 100);
     QReadLocker locker(&m_clientReadWriteLock);
     foreach (QWebSocket *pSocket, m_clients) {
         if (pSocket != Q_NULLPTR) {
-            pSocket->sendTextMessage("OPEN>" + pathStr);
+            pSocket->sendTextMessage("OPEN;" + pathStr + ";" + fileName);
         }
     }
 }
