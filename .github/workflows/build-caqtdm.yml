@@ -33,6 +33,7 @@ jobs:
           zeromq \
           python \
           qt6-5compat \
+          qt6-websockets \
           git \
           ncurses \
           perl \
