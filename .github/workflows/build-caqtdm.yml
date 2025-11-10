@@ -137,7 +137,7 @@ jobs:
           if git_clone_aur_with_fallback qwt-qt6; then
             cd qwt-qt6 || { echo \"Error: Could not change to qwt-qt6 directory.\"; exit 1; }
             sed -i 's|^source=.*|source=("git+https://git.code.sf.net/p/qwt/git#tag=v${pkgver}")|' PKGBUILD
-            sed -i "s|^sha256sums=.*|sha256sums=('SKIP')|" PKGBUILD
+            sed -i \"s|^sha256sums=.*|sha256sums=('SKIP')|\" PKGBUILD
             sed -i 's|cd qwt-${pkgver}|cd git|' PKGBUILD
             makepkg -si --noconfirm
             cd \"\$AUR_DIR\" || { echo \"Error: Could not change back to \$AUR_DIR.\"; exit 1; }
