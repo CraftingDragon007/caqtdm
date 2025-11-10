@@ -3950,6 +3950,7 @@ void CaQtDM_Lib::UndefinedMacrosWindow()
     int maxW = (w + count + macroTable->verticalHeader()->width() + macroTable->verticalScrollBar()->width());
     macroWindow->setMinimumWidth(maxW+25);
 
+    connect(this, &CaQtDM_Lib::Signal_Closing, macroWindow, &QDialog::close);
     if(!showMax) showNormal();
     else showMaximized();
     macroWindow->exec();
@@ -4118,6 +4119,8 @@ void CaQtDM_Lib::GlobalShortcutWindow() {
     for (int i = 0; i < count; i++) w += table->columnWidth(i);
     int maxW = (w + count + table->verticalHeader()->width() + table->verticalScrollBar()->width());
     table->setMinimumWidth(maxW + 25);
+
+    connect(this, &CaQtDM_Lib::Signal_Closing, shortcutWindow, &QDialog::close);
 
     shortcutWindow->showNormal();
     shortcutWindow->exec();
@@ -7700,6 +7703,8 @@ void CaQtDM_Lib::closeEvent(QCloseEvent* ce)
 {
     Q_UNUSED(ce);
 
+    emit Signal_Closing();
+
     killTimer(loopTimerID);
 
     AllowsUpdate = false;
@@ -7823,6 +7828,7 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
         }
     }
 
+    if (w == nullptr) return;
     // get the monitor list back for this widget
     QVariant monitorList=w->property("MonitorList");
     QVariantList MonitorList = monitorList.toList();
@@ -8062,7 +8068,7 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
                 knobData *kPtr = mutexKnobDataP->GetMutexKnobDataPtr(dataIndex);
                 if((kPtr != (knobData *) Q_NULLPTR) && (strlen(kPtr->pv) > 0)) {
                     myMenu.addAction(INPUTDIALOG);
-                    if((kPtr->edata.fieldtype == caSTRING) || (kPtr->edata.fieldtype == caCHAR)) {
+                    if(((kPtr->edata.fieldtype == caSTRING) || (kPtr->edata.fieldtype == caCHAR)) && !IS_VNC) {
                         myMenu.addAction(FILEDIALOG);
                     }
                 }
@@ -8093,6 +8099,7 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
         }
     }
 
+    connect(this, &CaQtDM_Lib::Signal_Closing, &myMenu, &QWidget::close);
     QAction* selectedItem = myMenu.exec(cursorPos);
 
     if (selectedItem) {
@@ -8179,6 +8186,7 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
             info.append(InfoPostfix);
             myMessageBox box(this);
             box.setText("<html>" + info + "</html>");
+            connect(this, &CaQtDM_Lib::Signal_Closing, &box, &QWidget::close);
             box.exec();
 
         } else  if(selectedItem->text().contains(GETINFO)) {
@@ -8433,6 +8441,7 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
 
             myMessageBox box(this);
             box.setText("<!DOCTYPE html><html>" + info + "</html>");
+            connect(this, &CaQtDM_Lib::Signal_Closing, &box, &QWidget::close);
             box.exec();
 
         // add a file dialog to simplify user path+file input
@@ -8478,9 +8487,11 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
         } else if(selectedItem->text().contains(CHANGEAXIS)) {
             if(caStripPlot* stripplotWidget = qobject_cast<caStripPlot *>(w)) {
                 limitsStripplotDialog dialog(stripplotWidget, mutexKnobDataP, "stripplot modifications", this);
+                connect(this, &CaQtDM_Lib::Signal_Closing, &dialog, &QWidget::close);
                 dialog.exec();
             } else if(caCartesianPlot* cartesianplotWidget = qobject_cast<caCartesianPlot *>(w)) {
                 limitsCartesianplotDialog dialog(cartesianplotWidget, mutexKnobDataP, "cartesianplot modifications", this);
+                connect(this, &CaQtDM_Lib::Signal_Closing, &dialog, &QWidget::close);
                 dialog.exec();
                 if (dialog.getChannelScalingWasReset()) {
                    char asc[MAX_STRING_LENGTH];
@@ -8532,11 +8543,13 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
         } else if(selectedItem->text().contains(CHANGEVALUE)) {
             if(caSlider* sliderWidget = qobject_cast<caSlider *>(w)) {
                 sliderDialog dialog(sliderWidget, mutexKnobDataP, "slider Increment/Value change", this);
+                connect(this, &CaQtDM_Lib::Signal_Closing, &dialog, &QWidget::close);
                 dialog.exec();
             }
 
         } else if(selectedItem->text().contains(CHANGELIMITS)) {
             limitsDialog dialog(w, mutexKnobDataP, "Limits/Precision change", this);
+            connect(this, &CaQtDM_Lib::Signal_Closing, &dialog, &QWidget::close);
             dialog.exec();
 
         } else {

@@ -300,6 +300,7 @@ signals:
     void Signal_ReloadWindow(QWidget*);
     void Signal_ReloadWindowL();
     void Signal_ReloadAllWindows();
+    void Signal_Closing();
     void fileChanged(const QString&);
 
 private:
