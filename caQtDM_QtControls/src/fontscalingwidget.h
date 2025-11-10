@@ -49,7 +49,7 @@ class FontScalingWidget
 	double calculateFontPointSizeF(const QString& text, const QSize & size);
     double calculateVertFontPointSizeF(const QString& text, const QSize & size);
 	
-	virtual QSize calculateTextSpace() = 0;
+
     virtual QString text() const = 0;
 	
 	int scaleMode() { return d_scaleMode; }
@@ -72,6 +72,7 @@ class FontScalingWidget
 	QWidget *d_widget;
 	QFont d_savedFont;
 	
+    virtual QSize calculateTextSpace() = 0;
 	static bool longerThan(const QString& s1, const QString& s2) { return s1.length() > s2.length(); }
 };
 
