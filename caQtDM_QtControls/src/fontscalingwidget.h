@@ -72,7 +72,7 @@ class FontScalingWidget
 	QWidget *d_widget;
 	QFont d_savedFont;
 	
-    virtual QSize calculateTextSpace() = 0;
+    virtual QSize calculateTextSpace() {return QSize(0,0);}
 	static bool longerThan(const QString& s1, const QString& s2) { return s1.length() > s2.length(); }
 };
 

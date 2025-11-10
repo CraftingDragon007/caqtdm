@@ -168,10 +168,10 @@ private slots:
     void rescaleFont(const QString& newText);
 
 protected:
-      virtual bool event(QEvent *);
-      virtual QSize sizeHint() const;
-      virtual QSize minimumSizeHint() const;
-      QSize calculateTextSpace();
+      virtual bool event(QEvent *) override;
+      virtual QSize sizeHint() const override;
+      virtual QSize minimumSizeHint() const override;
+      QSize calculateTextSpace() override;
 
 private:
     QString thisPV;

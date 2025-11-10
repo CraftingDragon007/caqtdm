@@ -76,7 +76,7 @@ public:
     void setAlignment(const Alignment &alignment);
     Alignment getAlignment() const {return thisAlignment;}
 
-    QSize calculateTextSpace();
+    QSize calculateTextSpace() override;
 
     void setFontScaleMode(ScaleMode m) { FontScalingWidget::setScaleMode((int) m); }
     ScaleMode fontScaleMode() { return (ScaleMode) FontScalingWidget::scaleMode();  }
