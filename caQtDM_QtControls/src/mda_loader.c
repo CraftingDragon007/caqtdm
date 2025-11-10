@@ -153,8 +153,8 @@ static struct mda_header *header_read( XDR *xdrs)
       // -1 is it was int16_t, not int32_t
       if(  header->dimensions[i] == 0xFFFFFFFF) 
         {
-          free( header);
           free( header->dimensions);
+          free( header);
           return NULL;
         }
   }
