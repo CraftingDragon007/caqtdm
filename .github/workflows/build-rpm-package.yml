@@ -18,8 +18,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - image: fedora:44
+            rhel_major: 0
           - image: almalinux:10.0
             rhel_major: 10
+          - image: rockylinux:9
+            rhel_major: 9
 
     steps:
     - name: Install Node.js
