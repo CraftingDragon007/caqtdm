@@ -62,8 +62,8 @@ jobs:
       run: |
         set -euo pipefail
         mkdir -p $HOME/rpmbuild/RPMS
-        chmod +x .github/workflows/scripts/build-qwt-rpm.sh
-        .github/workflows/scripts/build-qwt-rpm.sh
+        chmod +x caQtDM_Viewer/package/redhat/qwt-qt6/build-qwt-rpm.sh
+        caQtDM_Viewer/package/redhat/qwt-qt6/build-qwt-rpm.sh
 
     - name: Install qwt RPM (RHEL >=10)
       if: ${{ matrix.rhel_major >= 10 }}
@@ -170,6 +170,12 @@ jobs:
       with:
         name: ${{ steps.set-artifact-names.outputs.rpms_name }}
         path: ~/rpmbuild/RPMS/*/*.rpm
+
+    - name: Upload all SRPMs as one artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ steps.set-artifact-names.outputs.rpms_name }}-srpms
+        path: ~/rpmbuild/SRPMS/*.rpm
 
     - name: Verify caQtDM installation
       run: |
