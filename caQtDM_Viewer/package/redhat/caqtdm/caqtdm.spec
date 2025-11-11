@@ -82,7 +82,15 @@ caQtDM makes panel development faster and easier. It's made for folks of all ski
 Summary:  Development files for %{name}
 Provides: caqtdm-devel = %{version}-%{release}
 Provides: caqtdm-devel%{_isa} = %{version}-%{release}
-Requires: %{name}%{?_isa} = %{version}-%{release}
+%if 0%{?qt5}
+Requires: %{name}-bin-qt5 = %{version}-%{release}
+%endif
+%if 0%{?qt4}
+Requires: %{name}-bin-qt4 = %{version}-%{release}
+%endif
+%if 0%{?qt6}
+Requires: %{name}-bin-qt6 = %{version}-%{release}
+%endif
 %description devel
 %{summary}.
 

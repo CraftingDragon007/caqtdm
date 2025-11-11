@@ -175,14 +175,14 @@ jobs:
         # single artifact containing all RPMs
         echo "rpms_name=caqtdm-rpms-${sanitized}" >> $GITHUB_OUTPUT
 
-#    - name: Upload all RPMs as one artifact
-#      uses: actions/upload-artifact@v4
-#      with:
-#        name: ${{ steps.set-artifact-names.outputs.rpms_name }}
-#        path: ~/rpmbuild/RPMS/*/*.rpm
+    - name: Upload all RPMs as one artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ steps.set-artifact-names.outputs.rpms_name }}
+        path: ~/rpmbuild/RPMS/*/*.rpm
 
     - name: Verify caQtDM installation
       run: |
         rpm -ivh ~/rpmbuild/RPMS/*/caqtdm*.rpm
         which caQtDM || echo "caQtDM not in PATH, checking /opt/caqtdm"
-        ls -la /opt/caqtdm/bin/ || true
+        ls -la /opt/caqtdm/lib/qt*/caQtDM || true
