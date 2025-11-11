@@ -186,8 +186,8 @@ jobs:
         /opt/caqtdm/lib/qt*/caQtDM/caQtDM --version || echo "caQtDM execution failed"
         echo "Listing /opt/caqtdm/lib/qt(ver)/*.so:"
         ls -lisah /opt/caqtdm/lib/qt*/*.so || true
-        echo "Listing /opt/caqtdm/bin/qt(ver)/*.a:"
-        ls -lisah /opt/caqtdm/bin/qt*/*.a || true
+        echo "Listing /opt/caqtdm/lib/qt(ver)/*.a:"
+        ls -lisah /opt/caqtdm/lib/qt*/*.a || true
         echo "Listing all plugins:"
         ls -lisah /opt/caqtdm/lib/qt*/*/*.so || true
         echo "caQtDM installation verification completed."
