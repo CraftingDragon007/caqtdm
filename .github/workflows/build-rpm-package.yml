@@ -7,86 +7,84 @@ on:
     - cron: '0 2 * * *'
 
 jobs:
-  build-qwt-rpm:
-    name: Build Qwt RPM (artifact)
-    runs-on: ubuntu-latest
-    container:
-      image: almalinux:10.0
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v5
-
-    - name: Prepare system and enable EPEL
-      run: |
-        set -euo pipefail
-        dnf install -y dnf-plugins-core || true
-        dnf config-manager --set-enabled crb || true
-        dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-10.noarch.rpm || true
-        dnf install -y almalinux-release-devel || true
-        dnf repolist --enabled
-
-    - name: Install Qwt build dependencies
-      run: |
-        set -euo pipefail
-        dnf install -y rpmdevtools gcc-c++ make cmake wget git pkgconfig qt6-qtbase-devel qt6-qtsvg-devel qt6-qttools-devel || true
-
-    - name: Build Qwt RPM
-      run: |
-        set -euo pipefail
-        chmod +x .github/workflows/scripts/build-qwt-rpm.sh
-        export QWT_VER=6.3.0
-        .github/workflows/scripts/build-qwt-rpm.sh
-
-    - name: Upload Qwt RPM artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: qwt-rpm
-        path: $HOME/rpmbuild/RPMS/*/qwt*.rpm
-
   build:
     name: Build RPM package
-    needs: build-qwt-rpm
     runs-on: ubuntu-latest
     container:
-      image: ${{ matrix.linux-version }}
+      image: ${{ matrix.image }}
+    env:
+      QWT_VER: 6.3.0
     strategy:
       fail-fast: false
       matrix:
-        linux-version:
-          - fedora:44
-          - rockylinux:9
-          - almalinux:10.0
+        include:
+          - image: fedora:44
+            rhel_major: 0
+          - image: almalinux:10.0
+            rhel_major: 10
+          - image: rockylinux:9
+            rhel_major: 9
 
     steps:
-    - name: Determine package manager
-      id: pkg-manager
+    - name: Install Node.js
       run: |
-        if [ -f /etc/dnf/dnf.conf ]; then
-          echo "cmd=dnf install -y" >> $GITHUB_OUTPUT
-        elif [ -f /etc/yum.conf ]; then
-          echo "cmd=yum install -y" >> $GITHUB_OUTPUT
-        else
-          echo "Unsupported package manager"
-          exit 1
-        fi
+        dnf install -y nodejs
 
-    - name: Prepare AlmaLinux repositories
-      if: contains(matrix.linux-version, 'almalinux')
+    - name: Install git
+      run: |
+        dnf install -y git
+
+    - name: Prepare EPEL repository
+      if: ${{ matrix.rhel_major > 0 }}
       run: |
         set -euo pipefail
         dnf install -y dnf-plugins-core || true
         dnf config-manager --set-enabled crb || true
-        dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-10.noarch.rpm || true
-        dnf install -y almalinux-release-devel || true
-
-    - name: Install build dependencies for epics-base
-      run: |
-        ${{ steps.pkg-manager.outputs.cmd }} \
-          gcc make patch perl libedit-devel ncurses-devel \
-          wget rpmdevtools git
+        # Install EPEL release package matching the major version (e.g., 10, 11)
+        dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-${{ matrix.rhel_major }}.noarch.rpm || true
+        # Ensure EPEL repo is enabled
+        dnf config-manager --set-enabled epel || true
 
     - name: Checkout repository
       uses: actions/checkout@v5
+
+    - name: Restore Qwt RPM cache
+      if: ${{ matrix.rhel_major >= 10 }}
+      id: qwt-cache
+      uses: actions/cache@v4
+      with:
+        path: $HOME/rpmbuild/RPMS
+        key: qwt-rpm-${{ matrix.image }}-${{ env.QWT_VER }}-${{ runner.os }}
+        restore-keys: |
+          qwt-rpm-${{ matrix.image }}-${{ env.QWT_VER }}-
+
+    - name: Install Qwt build dependencies (only if cache miss)
+      if: ${{ matrix.rhel_major >= 10 && steps.qwt-cache.outputs.cache-hit != 'true' }}
+      run: |
+        set -euo pipefail
+        dnf install -y \
+          qt6-qtbase-devel qt6-qttools-devel qt6-qtsvg-devel \
+          cmake gcc-c++ make autoconf automake libtool pkgconfig \
+          bzip2 rpmdevtools
+
+    - name: Build Qwt RPM (only if cache miss)
+      if: ${{ matrix.rhel_major >= 10 && steps.qwt-cache.outputs.cache-hit != 'true' }}
+      run: |
+        set -euo pipefail
+        mkdir -p $HOME/rpmbuild/RPMS
+        chmod +x .github/workflows/scripts/build-qwt-rpm.sh
+        .github/workflows/scripts/build-qwt-rpm.sh
+
+    - name: Install qwt RPM (RHEL >=10)
+      if: ${{ matrix.rhel_major >= 10 }}
+      run: |
+        rpm -ivh $HOME/rpmbuild/RPMS/*/qwt-qt6-*.rpm
+
+    - name: Install build dependencies for epics-base
+      run: |
+        dnf install -y \
+          gcc make patch perl libedit-devel ncurses-devel \
+          wget rpmdevtools git
 
     - name: Build epics-base RPM
       run: |
@@ -116,11 +114,23 @@ jobs:
       run: |
         rpm -ivh ~/rpmbuild/RPMS/*/epics-base-7.0.9-*.rpm
 
-    - name: Install caQtDM build dependencies (Fedora/Rocky)
-      if: ${{ !contains(matrix.linux-version, 'almalinux') }}
+    - name: Install caQtDM build dependencies (RHEL <10, non-Fedora — use Qt5)
+      if: ${{ matrix.rhel_major < 10 && !contains(matrix.image, 'fedora') }}
       run: |
         set -euo pipefail
-        ${{ steps.pkg-manager.outputs.cmd }} \
+        dnf install -y \
+          qt5-qtbase-devel qt5-qttools-devel qt5-qtsvg-devel \
+          qt5-qtserialbus-devel qt5-qtlocation-devel \
+          libXext-devel python3-devel zeromq-devel \
+          cmake gcc-c++ make autoconf automake libtool pkgconfig \
+          curl tar jansson-devel libuuid-devel libsodium-devel \
+          qwt-qt5-devel czmq-devel cppzmq-devel qt5-qttools-devel
+
+    - name: Install caQtDM build dependencies (Fedora — keep Qt6)
+      if: ${{ contains(matrix.image, 'fedora') }}
+      run: |
+        set -euo pipefail
+        dnf install -y \
           qt6-qtbase-devel qt6-qttools-devel qt6-qtsvg-devel \
           qt6-qtserialbus-devel qt6-qt5compat-devel qt6-qtlocation-devel \
           libXext-devel python3-devel zeromq-devel \
@@ -128,46 +138,30 @@ jobs:
           curl tar jansson-devel libuuid-devel libsodium-devel \
           qwt-qt6-devel czmq-devel cppzmq-devel qt6-qttools-devel
 
-    - name: Install caQtDM build dependencies (AlmaLinux)
-      if: ${{ contains(matrix.linux-version, 'almalinux') }}
-      env:
-        PKG_INSTALL_CMD: ${{ steps.pkg-manager.outputs.cmd }}
+    - name: Install caQtDM build dependencies (RHEL >=10)
+      if: ${{ matrix.rhel_major >= 10 }}
       run: |
         set -euo pipefail
         # Install the core pieces available in AlmaLinux/EPEL; the Alma-only script will build the rest
-        $PKG_INSTALL_CMD \
+        dnf install -y \
           qt6-qtbase-devel qt6-qttools-devel qt6-qtsvg-devel \
           qt6-qtserialbus-devel qt6-qt5compat-devel qt6-qtlocation-devel \
           libXext-devel python3-devel zeromq-devel \
           cmake gcc-c++ make autoconf automake libtool pkgconfig \
           curl tar jansson-devel libuuid-devel libsodium-devel qt6-qttools-devel
 
-    - name: Download Qwt RPM artifact
-      if: contains(matrix.linux-version, 'almalinux')
-      uses: actions/download-artifact@v4
-      with:
-        name: qwt-rpm
-        path: ${{ runner.temp }}/rpms
-
-    - name: Prepare Alma install script
-      if: contains(matrix.linux-version, 'almalinux')
+    - name: Prepare RHEL >=10 install script
+      if: ${{ matrix.rhel_major >= 10 }}
       run: |
         set -euo pipefail
         mkdir -p $HOME/rpmbuild/RPMS
-        # Move downloaded RPMs into rpmbuild layout so the install script can find them
-        if [ -d "$RUNNER_TEMP/rpms" ]; then
-          mv "$RUNNER_TEMP/rpms"/* "$HOME/rpmbuild/RPMS/" 2>/dev/null || true
-        fi
         chmod +x .github/workflows/scripts/install-alma-extra-deps.sh
 
-    - name: Install Alma-only dependencies
-      if: contains(matrix.linux-version, 'almalinux')
-      env:
-        PKG_INSTALL_CMD: ${{ steps.pkg-manager.outputs.cmd }}
+    - name: Install RHEL >=10-only dependencies
+      if: ${{ matrix.rhel_major >= 10 }}
       run: |
         set -euo pipefail
-        # Install the Alma-only dependencies (this script will try EPEL installs first,
-        # fall back to source builds, and will install the Qwt RPM created in the separate job)
+        # Install dependencies required on RHEL-derivatives >=10 (EPEL packages or builds)
         .github/workflows/scripts/install-alma-extra-deps.sh
 
     - name: Build caQtDM RPM
@@ -184,13 +178,13 @@ jobs:
     - name: Upload epics-base RPM as artifact
       uses: actions/upload-artifact@v4
       with:
-        name: epics-base-rpm-${{ matrix.linux-version }}
+        name: epics-base-rpm-${{ matrix.image }}
         path: ~/rpmbuild/RPMS/*/*.rpm
 
     - name: Upload caQtDM RPM as artifact
       uses: actions/upload-artifact@v4
       with:
-        name: caqtdm-rpm-${{ matrix.linux-version }}
+        name: caqtdm-rpm-${{ matrix.image }}
         path: ~/rpmbuild/RPMS/*/*.rpm
 
     - name: Verify caQtDM installation
