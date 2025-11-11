@@ -189,5 +189,5 @@ jobs:
         echo "Listing /opt/caqtdm/bin/qt(ver)/*.a:"
         ls -lisah /opt/caqtdm/bin/qt*/*.a || true
         echo "Listing all plugins:"
-        ls -lisah /opt/caqtdm/lib/qt6/*/*.so || true
+        ls -lisah /opt/caqtdm/lib/qt*/*/*.so || true
         echo "caQtDM installation verification completed."
