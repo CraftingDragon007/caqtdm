@@ -689,6 +689,10 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
 
         splash->deleteLater();
     }
+    // reapply a globally loaded user stylesheet, cainlude seems to disable it
+    if (qApp->property("user_defined_stylesheet").isValid() && (!qApp->property("user_defined_stylesheet").toString().isEmpty())){
+        qApp->setStyleSheet(qApp->styleSheet());
+    }
 
     // add a reload action
     QAction *ReloadWindowAction = new QAction(this);
@@ -3928,11 +3932,22 @@ void CaQtDM_Lib::UndefinedMacrosWindow()
     if(unknownMacrosList.count() > 0) macroTable->setRowCount(unknownMacrosList.count());
     else macroTable->setRowCount(1);
     while (i != unknownMacrosList.constEnd()) {
-        QStringList list = i.key().split("###", SKIP_EMPTY_PARTS);
+        QStringList list = i.key().split("###");
         //qDebug() << i.key() << "macro variable" << list.at(0) << "in widget" << list.at(1) << "in file" << list.at(2) << "is undefined";
-        macroTable->setItem(count, 0, new QTableWidgetItem(list.at(0)));
-        macroTable->setItem(count, 1, new QTableWidgetItem(list.at(1)));
-        macroTable->setItem(count++, 2, new QTableWidgetItem(list.at(2)));
+        if (list.length() < 3) continue;
+
+        QTableWidgetItem *macroItem = new QTableWidgetItem(list.at(0));
+        macroItem->setFlags(macroItem->flags() & ~Qt::ItemIsEditable);
+        macroTable->setItem(count, 0, macroItem);
+
+        QTableWidgetItem *widgetItem = new QTableWidgetItem(list.at(1));
+        widgetItem->setFlags(widgetItem->flags() & ~Qt::ItemIsEditable);
+        macroTable->setItem(count, 1, widgetItem);
+
+        QTableWidgetItem *fileNameItem = new QTableWidgetItem(list.at(2));
+        fileNameItem->setFlags(fileNameItem->flags() & ~Qt::ItemIsEditable);
+        macroTable->setItem(count++, 2, fileNameItem);
+
         ++i;
     }
     macroTable->resizeColumnsToContents();

@@ -8,7 +8,8 @@ class Caqtdm < Formula
 
   license "GPLv3"
 
-  depends_on "qtbase"
+  depends_on "qt"
+  depends_on "qtbase"  => :build
   depends_on "qt5compat"
   depends_on "qtpositioning"
   depends_on "qtserialbus"
@@ -38,11 +39,11 @@ class Caqtdm < Formula
     ENV["QWTLIBNAME"] = "qwt"
     ENV["QWTLIB"] = Formula["qwt"].opt_prefix
     ENV["QWTLIB"] += "/lib" 
-    #ENV["QWTINCLUDE"] = Formula["qwt"].opt_prefix 
-    #ENV["QWTINCLUDE"] += "/include" 
-    ENV["QWTINCLUDE"] = "/opt/homebrew/opt/qwt/lib/qwt.framework/Headers"
-
+    ENV["QWTINCLUDE"] = Formula["qwt"].opt_prefix 
+    ENV["QWTINCLUDE"] += "/lib/qwt.framework/Headers" 
+    
     puts ">> Detected QWTLIB: #{ENV["QWTLIB"]}"
+    puts ">> Detected QWTINCLUDE: #{ENV["QWTINCLUDE"]}"
     puts ">> Detected qwt: #{Formula["qwt"].opt_prefix}"
     
     ENV["SDKROOT"] = MacOS.sdk_for_formula(self).path
@@ -50,10 +51,11 @@ class Caqtdm < Formula
     os = OS.mac? ? "macx" : OS.kernel_name.downcase
     compiler = ENV.compiler.to_s.match?("clang") ? "clang" : "g++"
 
-    system "qmake", "PREFIX=#{prefix} release -spec #{os}-#{compiler}"
+    #system "qmake", "PREFIX=#{prefix} release -spec #{os}-#{compiler}"
+    system Formula["qtbase"].bin/"qmake", "all.pro"
     system "make"
     system "make", "install"
-    if OS.mac?
+    on_macos do
      caqtdm_path = "#{prefix}/caQtDM.app"
      qt_bin = Formula["qt"].opt_bin
      #system qt_bin/"macdeployqt", caqtdm_path, "-verbose=2"
@@ -62,8 +64,8 @@ class Caqtdm < Formula
      plugins =  "#{prefix}/caQtDM.app/Contents/PlugIns/controlsystems"
      design =  "#{prefix}/caQtDM.app/Contents/PlugIns/designer"
 
-     system "install_name_tool", "-id", "@rpath/libcaQtDM_Lib.dylib", "#{frameworks}/libcaQtDM_Lib.dylib"
-     system "install_name_tool", "-id", "@rpath/libqtcontrols.dylib", "#{frameworks}/libqtcontrols.dylib"
+     #system "install_name_tool", "-id", "@rpath/libcaQtDM_Lib.dylib", "#{frameworks}/libcaQtDM_Lib.dylib"
+     #system "install_name_tool", "-id", "@rpath/libqtcontrols.dylib", "#{frameworks}/libqtcontrols.dylib"
 
      #system "install_name_tool", "-add_rpath", "@executable_path/../Frameworks", app_bin
      system "install_name_tool", "-change", "libcaQtDM_Lib.dylib", "@rpath/libcaQtDM_Lib.dylib", app_bin
@@ -77,7 +79,6 @@ class Caqtdm < Formula
      system "install_name_tool", "-change", "libqtcontrols.dylib", "@rpath/libqtcontrols.dylib", "#{plugins}/libarchiveHTTP_plugin.dylib"      
 
      system "install_name_tool", "-change", "libcaQtDM_Lib.dylib", "@rpath/libcaQtDM_Lib.dylib", "#{plugins}/libdemo_plugin.dylib"
-     system "install_name_tool", "-change", "libqtcontrols.dylib", "@rpath/libqtcontrols.dylib", "#{plugins}/libdemo_plugin.dylib"
 
      system "install_name_tool", "-change", "libcaQtDM_Lib.dylib", "@rpath/libcaQtDM_Lib.dylib", "#{plugins}/libenvironment_plugin.dylib"
      system "install_name_tool", "-change", "libqtcontrols.dylib", "@rpath/libqtcontrols.dylib", "#{plugins}/libenvironment_plugin.dylib"
@@ -86,15 +87,27 @@ class Caqtdm < Formula
      system "install_name_tool", "-change", "libqtcontrols.dylib", "@rpath/libqtcontrols.dylib", "#{plugins}/libmodbus_plugin.dylib"
 
      system "install_name_tool", "-change", "libcaQtDM_Lib.dylib", "@rpath/libcaQtDM_Lib.dylib", "#{plugins}/libgps_plugin.dylib"
-     system "install_name_tool", "-change", "libqtcontrols.dylib", "@rpath/libqtcontrols.dylib", "#{plugins}/libgps_plugin.dylib"
 
-     system "install_name_tool", "-change", "libqtcontrols.dylib", "@rpath/libqtcontrols.dylib", "#{design}/libqtcontrols_controllers_plugin.dylib"
-     system "install_name_tool", "-change", "libqtcontrols.dylib", "@rpath/libqtcontrols.dylib", "#{design}/libqtcontrols_graphics_plugin.dylib"
-     system "install_name_tool", "-change", "libqtcontrols.dylib", "@rpath/libqtcontrols.dylib", "#{design}/libqtcontrols_monitors_plugin.dylib"
-     system "install_name_tool", "-change", "libqtcontrols.dylib", "@rpath/libqtcontrols.dylib", "#{design}/libqtcontrols_utilities_plugin.dylib"
+     system "install_name_tool", "-change", "@loader_path/libqtcontrols.dylib", "#{frameworks}/libqtcontrols.dylib" , "#{frameworks}/libcaQtDM_Lib.dylib"
 
+     system "install_name_tool", "-change", "@loader_path/libadlParser.dylib", "#{frameworks}/libadlParser.dylib" , "#{frameworks}/libqtcontrols.dylib" 
+     system "install_name_tool", "-change", "@loader_path/libedlParser.dylib", "#{frameworks}/libedlParser.dylib" , "#{frameworks}/libqtcontrols.dylib" 
 
+     system "install_name_tool", "-change", "libqtcontrols.dylib", "@rpath/libqtcontrols.dylib" , "#{design}/libqtcontrols_controllers_plugin.dylib"
+     system "install_name_tool", "-change", "libqtcontrols.dylib", "@rpath/libqtcontrols.dylib" , "#{design}/libqtcontrols_graphics_plugin.dylib"
+     system "install_name_tool", "-change", "libqtcontrols.dylib", "@rpath/libqtcontrols.dylib" , "#{design}/libqtcontrols_monitors_plugin.dylib"
+     system "install_name_tool", "-change", "libqtcontrols.dylib", "@rpath/libqtcontrols.dylib" , "#{design}/libqtcontrols_utilities_plugin.dylib"
 
+     
+     
+     system ("echo '[PATH]' > #{prefix}/caQtDM.app/Contents/Resources/qt.conf")
+     system ("echo 'Prefix=..' >> #{prefix}/caQtDM.app/Contents/Resources/qt.conf")
+     system ("echo 'Plugins=../PlugIns' >> #{prefix}/caQtDM.app/Contents/Resources/qt.conf")
+     system ("echo ' ' >> #{prefix}/caQtDM.app/Contents/Resources/qt.conf")
+
+     system ("defaults write #{prefix}/caQtDM.app/Contents/Info LSEnvironment -dict QT_PLUGIN_PATH #{prefix}/caQtDM.app/Contents/PlugIns")     
+
+     bin.install_symlink prefix/"caQtDM.app/Contents/MacOS/caQtDM" => "caqtdm"
 
 
     end

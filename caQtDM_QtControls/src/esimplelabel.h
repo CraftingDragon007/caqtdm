@@ -85,7 +85,7 @@ class QTCON_EXPORT ESimpleLabel : public QLabel, public FontScalingWidget
 	
     QString text() const {return QLabel::text(); }
 	
-	QSize calculateTextSpace();
+    QSize calculateTextSpace() override;
 	
     void setFontScaleMode(ScaleMode m) { FontScalingWidget::setScaleMode((int) m); }
         ScaleMode fontScaleMode() { return (ScaleMode) FontScalingWidget::scaleMode();  }

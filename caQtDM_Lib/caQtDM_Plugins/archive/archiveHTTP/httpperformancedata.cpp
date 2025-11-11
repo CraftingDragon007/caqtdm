@@ -81,6 +81,7 @@ void HttpPerformanceData::addNewRequest(UrlHandlerHttp *urlHandler)
 
 void HttpPerformanceData::addNewResponse(quint64 responseBytes, int httpStatusCode, bool receivedContinueAt, QDateTime continueAtTime)
 {
+    m_lastUpdatedTime = QDateTime::currentDateTime();
     long responseTimeInMs = m_requestTimer.elapsed();
     m_requestTimer.invalidate();
     QMutexLocker locker(&m_globalMutex);
@@ -99,4 +100,14 @@ void HttpPerformanceData::addNewResponse(quint64 responseBytes, int httpStatusCo
         m_finishedSuccessfully = false;
         m_inProgress = false;
     }
+}
+
+int HttpPerformanceData::httpStatusCode() const
+{
+    return m_httpStatusCode;
+}
+
+QDateTime HttpPerformanceData::lastUpdatedTime() const
+{
+    return m_lastUpdatedTime;
 }

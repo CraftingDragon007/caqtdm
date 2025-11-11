@@ -3377,6 +3377,8 @@ caQtDM uses the following environment variables:
 | ``CAQTDM_ARCHIVEHTTP_APIPATH_LIST``   | Overwrite the default path to fetch the list of available |
 |                                       | backends. Needs to be in the format: /path/to/backend/list|
 +---------------------------------------+-----------------------------------------------------------+
+| ``CAQTDM_ARCHIVEHTTP_NO_TIMEOUT``     | If this is set, errors will not create a timeout.         |
++---------------------------------------+-----------------------------------------------------------+
 | ``CAQTDM_OPTIMIZE_EPICS3CONNECTIONS`` | Disable Epics3 connections when tabwidget is not active   |
 |                                       | Set to "TRUE" to activate                                 |
 +---------------------------------------+-----------------------------------------------------------+
