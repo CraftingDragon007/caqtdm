@@ -142,27 +142,13 @@ jobs:
       if: ${{ matrix.rhel_major >= 10 }}
       run: |
         set -euo pipefail
-        # Install the core pieces available in AlmaLinux/EPEL; the Alma-only script will build the rest
         dnf install -y \
           qt6-qtbase-devel qt6-qttools-devel qt6-qtsvg-devel \
           qt6-qtserialbus-devel qt6-qt5compat-devel qt6-qtlocation-devel \
           libXext-devel python3-devel zeromq-devel \
           cmake gcc-c++ make autoconf automake libtool pkgconfig \
-          curl tar jansson-devel libuuid-devel libsodium-devel qt6-qttools-devel
-
-    - name: Prepare RHEL >=10 install script
-      if: ${{ matrix.rhel_major >= 10 }}
-      run: |
-        set -euo pipefail
-        mkdir -p $HOME/rpmbuild/RPMS
-        chmod +x .github/workflows/scripts/install-alma-extra-deps.sh
-
-    - name: Install RHEL >=10-only dependencies
-      if: ${{ matrix.rhel_major >= 10 }}
-      run: |
-        set -euo pipefail
-        # Install dependencies required on RHEL-derivatives >=10 (EPEL packages or builds)
-        .github/workflows/scripts/install-alma-extra-deps.sh
+          curl tar jansson-devel libuuid-devel libsodium-devel qt6-qttools-devel \
+          cppzmq-devel
 
     - name: Build caQtDM RPM
       run: |
