@@ -124,7 +124,8 @@ jobs:
           qt5-qtx11extras-devel qwt-qt5-devel \
           cmake gcc-c++ make autoconf automake libtool pkgconfig \
           jansson-devel libuuid-devel cppzmq-devel libXext-devel \
-          zlib-devel python3-devel tar
+          zlib-devel python3-devel tar \
+          qt5-assistant qt5-qtimageformats
 
     - name: Install caQtDM build dependencies (Fedora — minimal Qt6 set)
       if: ${{ contains(matrix.image, 'fedora') }}
@@ -136,7 +137,8 @@ jobs:
           qt6-qtwebsockets-devel qwt-qt6-devel \
           cmake gcc-c++ make autoconf automake libtool \
           pkgconfig jansson-devel libuuid-devel cppzmq-devel libXext-devel \
-          zlib-devel python3-devel tar curl
+          zlib-devel python3-devel tar curl \
+          qt6-assistant qt6-qtimageformats
 
     - name: Install caQtDM build dependencies (RHEL >=10 — minimal Qt6 set)
       if: ${{ matrix.rhel_major >= 10 }}
@@ -149,7 +151,8 @@ jobs:
           cmake gcc-c++ make autoconf automake libtool pkgconfig \
           jansson-devel libuuid-devel cppzmq-devel \
           zlib-devel libXext-devel python3-devel \
-          tar curl
+          tar curl \
+          qt6-assistant qt6-qtimageformats
 
     - name: Build caQtDM RPM
       run: |
@@ -172,11 +175,11 @@ jobs:
         # single artifact containing all RPMs
         echo "rpms_name=caqtdm-rpms-${sanitized}" >> $GITHUB_OUTPUT
 
-    - name: Upload all RPMs as one artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ steps.set-artifact-names.outputs.rpms_name }}
-        path: ~/rpmbuild/RPMS/*/*.rpm
+#    - name: Upload all RPMs as one artifact
+#      uses: actions/upload-artifact@v4
+#      with:
+#        name: ${{ steps.set-artifact-names.outputs.rpms_name }}
+#        path: ~/rpmbuild/RPMS/*/*.rpm
 
     - name: Verify caQtDM installation
       run: |

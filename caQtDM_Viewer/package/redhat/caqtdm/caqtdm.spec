@@ -107,7 +107,7 @@ Summary: Make %{name}-bin-qt4 default
 Requires: %{name}-bin-qt4 = %{version}-%{release} 
 Requires: %{name}-doc = %{version}-%{release}
 Conflicts: %{name}-qt5
-Provides: %{name}%{?_isa}
+Provides: %{name}%{?_isa} = %{version}-%{release}
 %description qt4
 %define qt_vers qt4
 %{summary}
@@ -123,7 +123,7 @@ Summary: Qt5 Widgets for Technical Applications
 %description qt5
 Provides: caqtdm-qt5 = %{version}-%{release}
 Provides: caqtdm-qt5%{_isa} = %{version}-%{release}
-Provides: %{name}%{?_isa}
+Provides: %{name}%{?_isa} = %{version}-%{release}
 Requires: %{name}-bin-qt5 = %{version}-%{release}
 Requires: %{name}-doc = %{version}-%{release}
 Conflicts: %{name}-qt4
@@ -154,7 +154,7 @@ Summary: Qt6 Widgets for Technical Applications
 %description qt6
 Provides: caqtdm-qt6 = %{version}-%{release}
 Provides: caqtdm-qt6%{_isa} = %{version}-%{release}
-Provides: %{name}%{?_isa}
+Provides: %{name}%{?_isa} = %{version}-%{release}
 Requires: %{name}-bin-qt6 = %{version}-%{release}
 Requires: %{name}-doc = %{version}-%{release}
 Requires: qt6-assistant
