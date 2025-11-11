@@ -1715,6 +1715,8 @@ void FileOpenWindow::Callback_ActionUnconnected()
     int countDisplayed = 0;
 
     if(pvWindow != (QMainWindow*) Q_NULLPTR) {
+        //refill the table with the actual valid data
+        fillPVtable(countPV, countNotConnected, countDisplayed);
         pvWindow->show();
         return;
     }
