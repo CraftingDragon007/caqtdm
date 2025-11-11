@@ -174,11 +174,20 @@ jobs:
     - name: Upload all SRPMs as one artifact
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ steps.set-artifact-names.outputs.rpms_name }}-srpms
+        name: ${{ steps.set-artifact-names.outputs.rpms_name }}-source-rpms
         path: ~/rpmbuild/SRPMS/*.rpm
 
     - name: Verify caQtDM installation
       run: |
         rpm -ivh ~/rpmbuild/RPMS/*/caqtdm*.rpm
         which caQtDM || echo "caQtDM not in PATH, checking /opt/caqtdm"
-        ls -la /opt/caqtdm/lib/qt*/caQtDM || true
+        echo "Listing /opt/caqtdm/lib/qt(ver)/caQtDM:"
+        ls -lisah /opt/caqtdm/lib/qt*/caQtDM || true
+        /opt/caqtdm/lib/qt*/caQtDM/caQtDM --version || echo "caQtDM execution failed"
+        echo "Listing /opt/caqtdm/lib/qt(ver)/*.so:"
+        ls -lisah /opt/caqtdm/lib/qt*/*.so || true
+        echo "Listing /opt/caqtdm/bin/qt(ver)/*.a:"
+        ls -lisah /opt/caqtdm/bin/qt*/*.a || true
+        echo "Listing all plugins:"
+        ls -lisah /opt/caqtdm/lib/qt6/*/*.so || true
+        echo "caQtDM installation verification completed."
