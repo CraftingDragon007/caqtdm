@@ -114,41 +114,41 @@ jobs:
       run: |
         rpm -ivh ~/rpmbuild/RPMS/*/epics-base-7.0.9-*.rpm
 
-    - name: Install caQtDM build dependencies (RHEL <10, non-Fedora — use Qt5)
+    - name: Install caQtDM build dependencies (RHEL <10, non-Fedora — minimal Qt5 set)
       if: ${{ matrix.rhel_major < 10 && !contains(matrix.image, 'fedora') }}
       run: |
         set -euo pipefail
         dnf install -y \
-          qt5-qtbase-devel qt5-qttools-devel qt5-qtsvg-devel \
-          qt5-qtserialbus-devel qt5-qtlocation-devel \
-          libXext-devel python3-devel zeromq-devel \
+          qt5-qtbase-devel qt5-qtsvg-devel qt5-qttools-devel \
+          qt5-qtwebsockets-devel qt5-qtserialbus-devel qt5-qtlocation-devel \
+          qwt-qt5-devel \
           cmake gcc-c++ make autoconf automake libtool pkgconfig \
-          curl tar jansson-devel libuuid-devel libsodium-devel \
-          qwt-qt5-devel czmq-devel cppzmq-devel qt5-qttools-devel
+          jansson-devel libuuid-devel cppzmq-devel \
+          tar
 
-    - name: Install caQtDM build dependencies (Fedora — keep Qt6)
+    - name: Install caQtDM build dependencies (Fedora — minimal Qt6 set)
       if: ${{ contains(matrix.image, 'fedora') }}
       run: |
         set -euo pipefail
         dnf install -y \
-          qt6-qtbase-devel qt6-qttools-devel qt6-qtsvg-devel \
-          qt6-qtserialbus-devel qt6-qt5compat-devel qt6-qtlocation-devel \
-          libXext-devel python3-devel zeromq-devel \
-          cmake gcc-c++ make autoconf automake libtool pkgconfig \
-          curl tar jansson-devel libuuid-devel libsodium-devel \
-          qwt-qt6-devel czmq-devel cppzmq-devel qt6-qttools-devel
+          qt6-qtbase-devel qt6-qtsvg-devel qt6-qttools-devel \
+          qt6-qt5compat-devel qt6-qtlocation-devel qt6-qtserialbus-devel \
+          qt6-qtwebsockets-devel qwt-qt6-devel \
+          cmake gcc-c++ make autoconf automake libtool \
+          pkgconfig jansson-devel libuuid-devel cppzmq-devel libXext-devel \
+          python3-devel tar curl
 
-    - name: Install caQtDM build dependencies (RHEL >=10)
+    - name: Install caQtDM build dependencies (RHEL >=10 — minimal Qt6 set)
       if: ${{ matrix.rhel_major >= 10 }}
       run: |
         set -euo pipefail
         dnf install -y \
-          qt6-qtbase-devel qt6-qttools-devel qt6-qtsvg-devel \
-          qt6-qtserialbus-devel qt6-qt5compat-devel qt6-qtlocation-devel \
-          libXext-devel python3-devel zeromq-devel \
+          qt6-qtbase-devel qt6-qtsvg-devel qt6-qttools-devel \
+          qt6-qt5compat-devel qt6-qtlocation-devel qt6-qtserialbus-devel \
+          qt6-qtwebsockets-devel qwt-qt6-devel \
           cmake gcc-c++ make autoconf automake libtool pkgconfig \
-          curl tar jansson-devel libuuid-devel libsodium-devel qt6-qttools-devel \
-          cppzmq-devel
+          jansson-devel libuuid-devel cppzmq-devel \
+          tar curl
 
     - name: Build caQtDM RPM
       run: |
@@ -161,16 +161,20 @@ jobs:
         chmod +x create-rpm.sh
         ./create-rpm.sh --no-checkout
 
-    - name: Upload epics-base RPM as artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: epics-base-rpm-${{ matrix.image }}
-        path: ~/rpmbuild/RPMS/*/*.rpm
+    - name: Set artifact name (sanitize image)
+      id: set-artifact-names
+      run: |
+        set -euo pipefail
+        image="${{ matrix.image }}"
+        # replace ':' with '-' to make a safe artifact name
+        sanitized=${image//:/-}
+        # single artifact containing all RPMs
+        echo "rpms_name=caqtdm-rpms-${sanitized}" >> $GITHUB_OUTPUT
 
-    - name: Upload caQtDM RPM as artifact
+    - name: Upload all RPMs as one artifact
       uses: actions/upload-artifact@v4
       with:
-        name: caqtdm-rpm-${{ matrix.image }}
+        name: ${{ steps.set-artifact-names.outputs.rpms_name }}
         path: ~/rpmbuild/RPMS/*/*.rpm
 
     - name: Verify caQtDM installation

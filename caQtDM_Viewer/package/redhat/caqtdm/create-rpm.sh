@@ -69,6 +69,6 @@ export CAQTDM_NORPATH=1
 
 cp caqtdm-${PACKAGE_VERSION}.tar.gz  ~/rpmbuild/SOURCES/
 
-cp *patch* ~/rpmbuild/SOURCES/
+cp *patch* ~/rpmbuild/SOURCES/ || true
 
 rpmbuild -ba caqtdm.spec
