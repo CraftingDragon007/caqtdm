@@ -13,17 +13,13 @@ jobs:
     container:
       image: ${{ matrix.image }}
     env:
-      QWT_VER: 6.3.0
+      QWT_VER: 6.3.0 # Qwt version to build for RHEL 10+
     strategy:
       fail-fast: false
       matrix:
         include:
-          - image: fedora:44
-            rhel_major: 0
           - image: almalinux:10.0
             rhel_major: 10
-          - image: rockylinux:9
-            rhel_major: 9
 
     steps:
     - name: Install Node.js
@@ -148,6 +144,7 @@ jobs:
           qt6-qtwebsockets-devel qwt-qt6-devel \
           cmake gcc-c++ make autoconf automake libtool pkgconfig \
           jansson-devel libuuid-devel cppzmq-devel \
+          libXext-devel python3-devel \
           tar curl
 
     - name: Build caQtDM RPM

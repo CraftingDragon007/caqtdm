@@ -46,7 +46,7 @@ BuildRequires: qt5-devel
 %else
 BuildRequires: qt5-qtbase-devel
 %endif
-BuildRequires: qt5-qtserialbus-devel qt5-qtsvg-devel qt5-qttools-devel qwt-qt5-devel libXext-devel czmq-devel cppzmq-devel 
+BuildRequires: qt5-qtserialbus-devel qt5-qtsvg-devel qt5-qttools-devel qwt-qt5-devel libXext-devel cppzmq-devel 
 %endif
 
 %if 0%{?qt6}
@@ -57,7 +57,7 @@ BuildRequires: qt6-qtserialbus-devel
 BuildRequires: qt6-qt5compat-devel
 BuildRequires: qt6-qtlocation-devel
 BuildRequires: qwt-qt6-devel
-BuildRequires: libXext-devel czmq-devel cppzmq-devel
+BuildRequires: libXext-devel cppzmq-devel
 BuildRequires: python3-devel
 %endif
 
@@ -214,11 +214,13 @@ export EPICS_HOST_ARCH=${EPICS_HOST_ARCH:-linux-x86_64}
 export EPICSINCLUDE=${EPICS_BASE}/include
 export EPICSLIB=${EPICS_BASE}/lib/$EPICS_HOST_ARCH
 %if 0%{?rhel} >  7
-export PYTHONVERSION=$(python3 --version 2>&1 | cut -d ' ' -f 2 | cut -d '.' -f 1-2)
+%define pythonversion $(python3 --version 2>&1 | cut -d ' ' -f 2 | cut -d '.' -f 1-2)
+export PYTHONVERSION=%{pythonversion}
 %else
 export PYTHONVERSION=2.7
+%define pythonversion 2.7
 %endif
-export PYTHONINCLUDE=/usr/include/python$PYTHONVERSION
+export PYTHONINCLUDE=/usr/include/python%{pythonversion}
 export PYTHONLIB=/usr/lib/
 export ZMQINC=/usr/include
 export ZMQLIB=/usr/lib64
@@ -256,7 +258,8 @@ export EPICS_HOST_ARCH=${EPICS_HOST_ARCH:-linux-x86_64}
 export EPICSINCLUDE=${EPICS_BASE}/include
 export EPICSLIB=${EPICS_BASE}/lib/$EPICS_HOST_ARCH
 export PYTHONVERSION=2.7
-export PYTHONINCLUDE=/usr/include/python$PYTHONVERSION
+%define pythonversion 2.7
+export PYTHONINCLUDE=/usr/include/python%{pythonversion}
 export PYTHONLIB=/usr/lib/
 export ZMQINC=/usr/include
 export ZMQLIB=/usr/lib64
@@ -303,8 +306,9 @@ export EPICS_HOST_ARCH=${EPICS_HOST_ARCH:-linux-aarch64}
 %endif
 export EPICSINCLUDE=${EPICS_BASE}/include
 export EPICSLIB=${EPICS_BASE}/lib/$EPICS_HOST_ARCH
-export PYTHONVERSION=$(python --version 2>&1 | cut -d ' ' -f 2 | cut -d '.' -f 1-2)
-export PYTHONINCLUDE=/usr/include/python$PYTHONVERSION
+%define pythonversion $(python3 --version 2>&1 | cut -d ' ' -f 2 | cut -d '.' -f 1-2)
+export PYTHONVERSION=%{pythonversion}
+export PYTHONINCLUDE=/usr/include/python%{pythonversion}
 export PYTHONLIB=/usr/lib/
 export ZMQINC=/usr/include
 export ZMQLIB=/usr/lib64
