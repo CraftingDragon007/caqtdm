@@ -30,9 +30,9 @@ jobs:
       run: |
         dnf install -y nodejs
 
-    - name: Install git
+    - name: Install git and which
       run: |
-        dnf install -y git
+        dnf install -y git which
 
     - name: Prepare EPEL repository
       if: ${{ matrix.rhel_major > 0 }}
