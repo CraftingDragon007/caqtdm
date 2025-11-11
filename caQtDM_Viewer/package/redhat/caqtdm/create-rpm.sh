@@ -53,21 +53,22 @@ else
   echo "Using current directory as source, not checking out from git"
   currentdir=$(pwd)
   cd ../../../../
-  tar -czf caqtdm-${PACKAGE_VERSION}.tar.gz --exclude=.git --transform="s,^\.,caqtdm-${PACKAGE_VERSION}," .
+  tar -czf caqtdm-${PACKAGE_VERSION}.tar.gz --exclude=.git --exclude=caqtdm-${PACKAGE_VERSION}.tar.gz --transform="s,^\.,caqtdm-${PACKAGE_VERSION}," .
   mv caqtdm-${PACKAGE_VERSION}.tar.gz ${currentdir}/
   cd ${currentdir}
 fi
 fi
 
-if [ ! -d "../../rpmbuild/SOURCES/" ]; then
-   mkdir -p "../../rpmbuild/SOURCES/"
+if [ ! -d "~/rpmbuild/SOURCES/" ]; then
+   mkdir -p "~/rpmbuild/SOURCES/"
 fi
 
 : "${EPICS_BASE_TARGET:=/usr/local/epics/base-7.0.9}"
 export EPICS_BASE_TARGET
+export CAQTDM_NORPATH=1
 
-cp caqtdm-${PACKAGE_VERSION}.tar.gz  ../../rpmbuild/SOURCES/
+cp caqtdm-${PACKAGE_VERSION}.tar.gz  ~/rpmbuild/SOURCES/
 
-cp *patch* ../../rpmbuild/SOURCES/
- 
+cp *patch* ~/rpmbuild/SOURCES/
+
 rpmbuild -ba caqtdm.spec

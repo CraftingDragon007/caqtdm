@@ -13,13 +13,13 @@
 %global qt4 0
 %endif
 # build qt5 support (or not)
-%if 0%{?fedora} > 39
+%if (0%{?fedora} > 39 || (0%{?rhel} > 9))
 %global qt5 0
 %else
 %global qt5 1
 %endif
 # build qt6 support (or not)
-%if 0%{?fedora} > 39 
+%if (0%{?fedora} > 39 || (0%{?rhel} > 9))
 %global qt6 1
 %else
 %global qt6 0
@@ -35,9 +35,9 @@ License: GPLv3
 URL:     https://github.com/caqtdm/caqtdm
 Source:  https://github.com/caqtdm/caqtdm/%{name}/%{name}-%{version}.tar.gz
 
-%if 0%{?qt6}
-Patch0: no_rpath.patch
-%endif
+#%if 0%{?qt6}
+#Patch0: no_rpath.patch
+#%endif
 
 %if 0%{?qt5}
 # Requires: caqtdm_archiver
@@ -185,9 +185,9 @@ Requires: python3
 #%patch52 -p1 -b .qt5
 #%patch53 -p1 -b .no_rpath
 
-%if 0%{?qt6}
-%patch 0 -p1
-%endif
+#%if 0%{?qt6}
+#%patch 0 -p1
+#%endif
 
 %build
 mkdir -p %{buildroot}/opt/caqtdm/lib
