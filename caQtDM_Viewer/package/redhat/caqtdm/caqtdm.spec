@@ -46,7 +46,7 @@ BuildRequires: qt5-devel
 %else
 BuildRequires: qt5-qtbase-devel
 %endif
-BuildRequires: qt5-qtserialbus-devel qt5-qtsvg-devel qt5-qttools-devel qwt-qt5-devel libXext-devel cppzmq-devel 
+BuildRequires: qt5-qtserialbus-devel qt5-qtsvg-devel qt5-qttools-devel qwt-qt5-devel libXext-devel cppzmq-devel python3-devel
 %endif
 
 %if 0%{?qt6}
