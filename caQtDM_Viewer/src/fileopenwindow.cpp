@@ -82,6 +82,7 @@ bool HTTPCONFIGURATOR = false;
         #include <X11/Xlib.h>
         #include <X11/Xatom.h>
 
+        #undef KeyPress //remove the X11 defenition to access QEvent::KeyPress
         #define MESSAGE_SOURCE_OLD            0
         #define MESSAGE_SOURCE_APPLICATION    1
         #define MESSAGE_SOURCE_PAGER          2
