@@ -24,6 +24,9 @@ jobs:
             rhel_major: 10
           - image: rockylinux:9
             rhel_major: 9
+    permissions:
+      contents: read
+      actions: write      
 
     steps:
     - name: Install Node.js
