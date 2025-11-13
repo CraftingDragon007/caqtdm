@@ -405,6 +405,27 @@ popd
 	cp %{_builddir}/%{name}-%{version}/caQtDM_QtControls/doc/*.css     %{buildroot}/opt/caqtdm/doc
 
 	cp -R %{_builddir}/%{name}-%{version}/build/* %{buildroot}
+                # Create ld.so.conf.d/caqtdm.conf file because there is no rpath in the binaries
+                # Only create the file when CAQTDM_NORPATH=1 (packaging option) is set
+                if [ "$CAQTDM_NORPATH" = "1" ] ; then
+                        mkdir -p %{buildroot}/etc/ld.so.conf.d
+                        echo "/opt/caqtdm/lib" > %{buildroot}/etc/ld.so.conf.d/caqtdm.conf
+%if 0%{?qt6}
+                        echo "/opt/caqtdm/lib/qt6" >> %{buildroot}/etc/ld.so.conf.d/caqtdm.conf
+                        echo "/opt/caqtdm/lib/qt6/designer" >> %{buildroot}/etc/ld.so.conf.d/caqtdm.conf
+                        echo "/opt/caqtdm/lib/qt6/controlsystems" >> %{buildroot}/etc/ld.so.conf.d/caqtdm.conf
+%endif
+%if 0%{?qt5}
+                        echo "/opt/caqtdm/lib/qt5" >> %{buildroot}/etc/ld.so.conf.d/caqtdm.conf
+                        echo "/opt/caqtdm/lib/qt5/designer" >> %{buildroot}/etc/ld.so.conf.d/caqtdm.conf
+                        echo "/opt/caqtdm/lib/qt5/controlsystems" >> %{buildroot}/etc/ld.so.conf.d/caqtdm.conf
+%endif
+%if 0%{?qt4}
+                        echo "/opt/caqtdm/lib/qt4" >> %{buildroot}/etc/ld.so.conf.d/caqtdm.conf
+                        echo "/opt/caqtdm/lib/qt4/designer" >> %{buildroot}/etc/ld.so.conf.d/caqtdm.conf
+                        echo "/opt/caqtdm/lib/qt4/controlsystems" >> %{buildroot}/etc/ld.so.conf.d/caqtdm.conf
+%endif
+                fi
 %if 0%{?qt4}
         echo "#!/bin/bash" >>  %{buildroot}/opt/caqtdm/lib/qt4/caqtdm_designer
         echo "SOURCE=\"\${BASH_SOURCE[0]}\"" >>  %{buildroot}/opt/caqtdm/lib/qt4/caqtdm_designer
@@ -476,11 +497,7 @@ popd
         echo "fi" >>  %{buildroot}/opt/caqtdm/lib/qt6/caqtdm
         echo " " >>  %{buildroot}/opt/caqtdm/lib/qt6/caqtdm
 
-        # Create ld.so.conf.d/caqtdm.conf file because there is no rpath in the binaries
-        mkdir -p %{buildroot}/etc/ld.so.conf.d
-        echo "/opt/caqtdm/lib/qt6" > %{buildroot}/etc/ld.so.conf.d/caqtdm.conf
-        echo "/opt/caqtdm/lib/qt6/designer" >> %{buildroot}/etc/ld.so.conf.d/caqtdm.conf
-        echo "/opt/caqtdm/lib/qt6/controlsystems" >> %{buildroot}/etc/ld.so.conf.d/caqtdm.conf
+                
 
 %endif
 
