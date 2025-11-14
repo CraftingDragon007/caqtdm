@@ -186,7 +186,7 @@ jobs:
         which caQtDM || echo "caQtDM not in PATH, checking /opt/caqtdm"
         echo "Listing /opt/caqtdm/lib/qt(ver)/caQtDM:"
         ls -lisah /opt/caqtdm/lib/qt*/caQtDM || true
-        /opt/caqtdm/lib/qt*/caQtDM/caQtDM --version || echo "caQtDM execution failed"
+        /opt/caqtdm/lib/qt*/caQtDM --version || echo "caQtDM execution failed"
         echo "Listing /opt/caqtdm/lib/qt(ver)/*.so:"
         ls -lisah /opt/caqtdm/lib/qt*/*.so || true
         echo "Listing /opt/caqtdm/lib/qt(ver)/*.a:"
