@@ -6,7 +6,7 @@
 %define EPICS_TARGET_VERSION -7.0.9
 #############################################################################
 
-%global no_rpath ${CAQTDM_NORPATH:-0}
+%global no_rpath %{getenv:CAQTDM_NORPATH}
 
 # build qt4 support (or not)
 %if (0%{?rhel} && 0%{?rhel} < 8) || (0%{?fedora} && 0%{?fedora} < 24)
