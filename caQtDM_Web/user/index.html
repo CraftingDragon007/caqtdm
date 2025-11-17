@@ -231,38 +231,38 @@
 
     <script>
       (function() {
-        var params = new URLSearchParams(window.location.search);
-        var path = params.get('path') || '0';
+        const params = new URLSearchParams(window.location.search);
+        let path = params.get('path') || '0';
 
-        var iframe = document.getElementById('vnc-container');
-        var dialogOverlay = document.getElementById('dialog-overlay');
-        var dialogMessage = document.getElementById('dialog-message');
-        var dialogAccept = document.getElementById('dialog-accept');
-        var dialogCancel = document.getElementById('dialog-cancel');
-        var pendingOpenPath = null;
-        var pendingOpenMacros = null;
-        var menuLogsButton = document.getElementById('menu-logs');
-        var logWindow = document.getElementById('log-window');
-        var logClose = document.getElementById('log-close');
-        var logContent = document.getElementById('log-content');
-        var logHeader = document.getElementById('log-header');
-        var logResizeHandle = document.getElementById('log-resize-handle');
-        var dialogTimeout = null;
-        var isDragging = false;
-        var dragOffsetX = 0;
-        var dragOffsetY = 0;
-        var isResizing = false;
-        var resizeStartWidth = 0;
-        var resizeStartHeight = 0;
-        var resizeStartX = 0;
-        var resizeStartY = 0;
-        var logWindowManuallyPositioned = false;
+        const iframe = document.getElementById('vnc-container');
+        const dialogOverlay = document.getElementById('dialog-overlay');
+        const dialogMessage = document.getElementById('dialog-message');
+        const dialogAccept = document.getElementById('dialog-accept');
+        const dialogCancel = document.getElementById('dialog-cancel');
+        let pendingOpenPath = null;
+        let pendingOpenMacros = null;
+        const menuLogsButton = document.getElementById('menu-logs');
+        const logWindow = document.getElementById('log-window');
+        const logClose = document.getElementById('log-close');
+        const logContent = document.getElementById('log-content');
+        const logHeader = document.getElementById('log-header');
+        const logResizeHandle = document.getElementById('log-resize-handle');
+        let dialogTimeout = null;
+        let isDragging = false;
+        let dragOffsetX = 0;
+        let dragOffsetY = 0;
+        let isResizing = false;
+        let resizeStartWidth = 0;
+        let resizeStartHeight = 0;
+        let resizeStartX = 0;
+        let resizeStartY = 0;
+        let logWindowManuallyPositioned = false;
         // Shared geometry constraints for the draggable/resizable log window.
-        var MIN_PADDING = 12;
-        var MIN_RESIZE_WIDTH = 240;
-        var MIN_RESIZE_HEIGHT = 160;
+        const MIN_PADDING = 12;
+        const MIN_RESIZE_WIDTH = 240;
+        const MIN_RESIZE_HEIGHT = 160;
 
-        var failedOnce = false;
+        let failedOnce = false;
 
         function openLogWindow() {
           logWindow.classList.add('show');
@@ -287,13 +287,13 @@
         }
 
         function parseLogMarkup(raw) {
-          var container = document.createElement('div');
+          const container = document.createElement('div');
           container.innerHTML = raw;
-          var fontElements = container.getElementsByTagName('font');
+          const fontElements = container.getElementsByTagName('font');
           while (fontElements.length) {
-            var fontNode = fontElements[0];
-            var span = document.createElement('span');
-            var colorAttr = fontNode.getAttribute('color');
+            const fontNode = fontElements[0];
+            const span = document.createElement('span');
+            const colorAttr = fontNode.getAttribute('color');
             if (colorAttr) span.style.color = colorAttr;
             while (fontNode.firstChild) {
               span.appendChild(fontNode.firstChild);
@@ -304,7 +304,7 @@
               container.appendChild(span);
             }
           }
-          var fragment = document.createDocumentFragment();
+          const fragment = document.createDocumentFragment();
           while (container.firstChild) {
             fragment.appendChild(container.firstChild);
           }
@@ -316,7 +316,7 @@
             logContent.innerHTML = '';
             delete logContent.dataset.empty;
           }
-          var entry = document.createElement('div');
+          const entry = document.createElement('div');
           entry.className = 'log-entry';
           entry.appendChild(parseLogMarkup(html));
           logContent.appendChild(entry);
@@ -347,11 +347,11 @@
 
         function ensureLogWindowInView() {
           if (!logWindowManuallyPositioned) return;
-          var maxWidth = Math.max(0, window.innerWidth - (2 * MIN_PADDING));
-          var maxHeight = Math.max(0, window.innerHeight - (2 * MIN_PADDING));
-          var rect = logWindow.getBoundingClientRect();
-          var width = rect.width;
-          var height = rect.height;
+          const maxWidth = Math.max(0, window.innerWidth - (2 * MIN_PADDING));
+          const maxHeight = Math.max(0, window.innerHeight - (2 * MIN_PADDING));
+          let rect = logWindow.getBoundingClientRect();
+          let width = rect.width;
+          let height = rect.height;
           if (maxWidth > 0 && width > maxWidth) {
             width = maxWidth;
             logWindow.style.width = width + 'px';
@@ -363,10 +363,10 @@
           rect = logWindow.getBoundingClientRect();
           width = rect.width;
           height = rect.height;
-          var maxLeft = Math.max(0, window.innerWidth - width - MIN_PADDING);
-          var maxTop = Math.max(0, window.innerHeight - height - MIN_PADDING);
-          var nextLeft = Math.min(Math.max(MIN_PADDING, rect.left), maxLeft);
-          var nextTop = Math.min(Math.max(MIN_PADDING, rect.top), maxTop);
+          const maxLeft = Math.max(0, window.innerWidth - width - MIN_PADDING);
+          const maxTop = Math.max(0, window.innerHeight - height - MIN_PADDING);
+          const nextLeft = Math.min(Math.max(MIN_PADDING, rect.left), maxLeft);
+          const nextTop = Math.min(Math.max(MIN_PADDING, rect.top), maxTop);
           logWindow.style.left = nextLeft + 'px';
           logWindow.style.top = nextTop + 'px';
           logWindow.style.right = 'auto';
@@ -375,7 +375,7 @@
         function onDragStart(event) {
           if (event.button !== 0 && event.pointerType !== 'touch') return;
           if (event.target && event.target.closest('button')) return;
-          var rect = logWindow.getBoundingClientRect();
+          let rect = logWindow.getBoundingClientRect();
           prepareManualPosition(rect);
           rect = logWindow.getBoundingClientRect();
           isDragging = true;
@@ -388,12 +388,12 @@
 
         function onDragMove(event) {
           if (!isDragging) return;
-          var width = logWindow.offsetWidth;
-          var height = logWindow.offsetHeight;
-          var newLeft = event.clientX - dragOffsetX;
-          var newTop = event.clientY - dragOffsetY;
-          var maxLeft = Math.max(0, window.innerWidth - width - MIN_PADDING);
-          var maxTop = Math.max(0, window.innerHeight - height - MIN_PADDING);
+          const width = logWindow.offsetWidth;
+          const height = logWindow.offsetHeight;
+          let newLeft = event.clientX - dragOffsetX;
+          let newTop = event.clientY - dragOffsetY;
+          const maxLeft = Math.max(0, window.innerWidth - width - MIN_PADDING);
+          const maxTop = Math.max(0, window.innerHeight - height - MIN_PADDING);
           newLeft = Math.min(Math.max(MIN_PADDING, newLeft), maxLeft);
           newTop = Math.min(Math.max(MIN_PADDING, newTop), maxTop);
           logWindow.style.left = newLeft + 'px';
@@ -410,7 +410,7 @@
 
         function onResizeStart(event) {
           if (event.button !== 0 && event.pointerType !== 'touch') return;
-          var rect = logWindow.getBoundingClientRect();
+          let rect = logWindow.getBoundingClientRect();
           prepareManualPosition(rect);
           rect = logWindow.getBoundingClientRect();
           isResizing = true;
@@ -425,16 +425,16 @@
 
         function onResizeMove(event) {
           if (!isResizing) return;
-          var deltaX = event.clientX - resizeStartX;
-          var deltaY = event.clientY - resizeStartY;
-          var maxWidth = Math.max(0, window.innerWidth - (2 * MIN_PADDING));
-          var maxHeight = Math.max(0, window.innerHeight - (2 * MIN_PADDING));
-          var minWidth = maxWidth > 0 ? Math.min(MIN_RESIZE_WIDTH, maxWidth) : 0;
-          var minHeight = maxHeight > 0 ? Math.min(MIN_RESIZE_HEIGHT, maxHeight) : 0;
-          var targetWidth = resizeStartWidth + deltaX;
-          var targetHeight = resizeStartHeight + deltaY;
-          var newWidth = Math.max(minWidth, Math.min(targetWidth, maxWidth || targetWidth));
-          var newHeight = Math.max(minHeight, Math.min(targetHeight, maxHeight || targetHeight));
+          const deltaX = event.clientX - resizeStartX;
+          const deltaY = event.clientY - resizeStartY;
+          const maxWidth = Math.max(0, window.innerWidth - (2 * MIN_PADDING));
+          const maxHeight = Math.max(0, window.innerHeight - (2 * MIN_PADDING));
+          const minWidth = maxWidth > 0 ? Math.min(MIN_RESIZE_WIDTH, maxWidth) : 0;
+          const minHeight = maxHeight > 0 ? Math.min(MIN_RESIZE_HEIGHT, maxHeight) : 0;
+          const targetWidth = resizeStartWidth + deltaX;
+          const targetHeight = resizeStartHeight + deltaY;
+          const newWidth = Math.max(minWidth, Math.min(targetWidth, maxWidth || targetWidth));
+          const newHeight = Math.max(minHeight, Math.min(targetHeight, maxHeight || targetHeight));
           logWindow.style.width = newWidth + 'px';
           logWindow.style.height = newHeight + 'px';
           ensureLogWindowInView();
@@ -455,14 +455,14 @@
 
         function getInstancePath() {
           if (path == null) return '00';
-          var value = String(path).trim();
+          const value = String(path).trim();
           if (value === '') return '00';
           if (/^(https?:|\/)/i.test(value)) return '00';
           return value;
         }
 
         function setIframeToPath(p) {
-          var value = p;
+          let value = p;
           if (value == null || value === '') value = '0';
           value = String(value).trim();
           if (/^[0-9]$/.test(value)) value = '0' + value;
@@ -477,8 +477,8 @@
 
         setIframeToPath(path);
 
-        var reconnectDelay = 1000;
-        var reconnectTimer = null;
+        let reconnectDelay = 1000;
+        let reconnectTimer = null;
 
         function scheduleReconnect() {
           failedOnce = true;
@@ -503,11 +503,11 @@
         function showOpenFileDialog(requestedPath, displayName, macros) {
           pendingOpenPath = requestedPath;
           pendingOpenMacros = macros;
-          var name = displayName || requestedPath;
-          var message = 'Open "' + name + '"?';
+          const name = displayName || requestedPath;
+          let message = 'Open "' + name + '"?';
 
           if (macros && macros.trim() !== '') {
-            var macroList = macros.split(';').filter(function(m) { return m.trim() !== ''; });
+            const macroList = macros.split(';').filter(function(m) { return m.trim() !== ''; });
             if (macroList.length > 0) {
               message += '\n\nMacros:\n' + macroList.join('\n');
             }
@@ -528,16 +528,16 @@
             hideDialog();
             return;
           }
-          var newUrl = new URL(window.location.href);
+          const newUrl = new URL(window.location.href);
           newUrl.searchParams.set('path', pendingOpenPath);
           window.open(newUrl.toString(), '_blank', 'noopener');
           hideDialog();
         });
 
         function connectWebSocket() {
-          var wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-          var wsUrl = wsProtocol + window.location.host + '/instance/' + encodeURIComponent(getInstancePath());
-          var socket;
+          const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+          const wsUrl = wsProtocol + window.location.host + '/instance/' + encodeURIComponent(getInstancePath());
+          let socket;
 
           try {
             socket = new WebSocket(wsUrl);
@@ -561,12 +561,12 @@
           };
 
           socket.onmessage = function(event) {
-            var data = String(event.data || '');
+            const data = String(event.data || '');
             if (data.startsWith('LOG;')) {
               addLogMessage(data.slice(4));
               return;
             }
-            var openMatchPipe = data.match(/^OPEN\|([^|]+)\|([^|]+)\|(.*)$/);
+            const openMatchPipe = data.match(/^OPEN\|([^|]+)\|([^|]+)\|(.*)$/);
             if (openMatchPipe) {
               showOpenFileDialog(openMatchPipe[1], openMatchPipe[2], openMatchPipe[3]);
               return;
