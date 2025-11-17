@@ -240,6 +240,7 @@
         var dialogAccept = document.getElementById('dialog-accept');
         var dialogCancel = document.getElementById('dialog-cancel');
         var pendingOpenPath = null;
+        var pendingOpenMacros = null;
         var menuLogsButton = document.getElementById('menu-logs');
         var logWindow = document.getElementById('log-window');
         var logClose = document.getElementById('log-close');
@@ -256,10 +257,12 @@
         var resizeStartX = 0;
         var resizeStartY = 0;
         var logWindowManuallyPositioned = false;
-  // Shared geometry constraints for the draggable/resizable log window.
-  var MIN_PADDING = 12;
-  var MIN_RESIZE_WIDTH = 240;
-  var MIN_RESIZE_HEIGHT = 160;
+        // Shared geometry constraints for the draggable/resizable log window.
+        var MIN_PADDING = 12;
+        var MIN_RESIZE_WIDTH = 240;
+        var MIN_RESIZE_HEIGHT = 160;
+
+        var failedOnce = false;
 
         function openLogWindow() {
           logWindow.classList.add('show');
@@ -445,10 +448,10 @@
         }
 
         logHeader.addEventListener('pointerdown', onDragStart);
-  logResizeHandle.addEventListener('pointerdown', onResizeStart);
-  window.addEventListener('resize', ensureLogWindowInView);
-  document.addEventListener('pointercancel', onDragEnd);
-  document.addEventListener('pointercancel', onResizeEnd);
+        logResizeHandle.addEventListener('pointerdown', onResizeStart);
+        window.addEventListener('resize', ensureLogWindowInView);
+        document.addEventListener('pointercancel', onDragEnd);
+        document.addEventListener('pointercancel', onResizeEnd);
 
         function getInstancePath() {
           if (path == null) return '00';
@@ -478,6 +481,7 @@
         var reconnectTimer = null;
 
         function scheduleReconnect() {
+          failedOnce = true;
           if (reconnectTimer) return;
           reconnectTimer = setTimeout(function() {
             reconnectTimer = null;
@@ -493,12 +497,23 @@
           }
           dialogOverlay.classList.remove('show');
           pendingOpenPath = null;
+          pendingOpenMacros = null;
         }
 
-        function showOpenFileDialog(requestedPath, displayName) {
+        function showOpenFileDialog(requestedPath, displayName, macros) {
           pendingOpenPath = requestedPath;
+          pendingOpenMacros = macros;
           var name = displayName || requestedPath;
-          dialogMessage.textContent = 'Open "' + name + '"?';
+          var message = 'Open "' + name + '"?';
+
+          if (macros && macros.trim() !== '') {
+            var macroList = macros.split(';').filter(function(m) { return m.trim() !== ''; });
+            if (macroList.length > 0) {
+              message += '\n\nMacros:\n' + macroList.join('\n');
+            }
+          }
+
+          dialogMessage.textContent = message;
           dialogOverlay.classList.add('show');
           if (dialogTimeout) clearTimeout(dialogTimeout);
           dialogTimeout = setTimeout(function() {
@@ -533,7 +548,11 @@
           }
 
           socket.onopen = function() {
-            reconnectDelay = 1000;
+            if (failedOnce) {
+              reconnectDelay = 1000;
+              failedOnce = false;
+              iframe.contentWindow.location.reload();
+            }
             try {
               socket.send(getInstancePath());
             } catch (sendErr) {
@@ -547,9 +566,9 @@
               addLogMessage(data.slice(4));
               return;
             }
-            var openMatch = data.match(/^OPEN;([^;]+);(.+)$/);
-            if (openMatch) {
-              showOpenFileDialog(openMatch[1], openMatch[2]);
+            var openMatchPipe = data.match(/^OPEN\|([^|]+)\|([^|]+)\|(.*)$/);
+            if (openMatchPipe) {
+              showOpenFileDialog(openMatchPipe[1], openMatchPipe[2], openMatchPipe[3]);
               return;
             }
           };

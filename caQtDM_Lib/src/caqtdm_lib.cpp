@@ -7264,22 +7264,33 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
     else if (this->property("SLAVE_SERVER").toInt() != 1) {
         // start new process and vnc or novnc
 
+        if (indx >= files.count()) {
+            qWarning("caQtDM_Web -- Tried to open unavailable file through caRelatedDisplay (index was larger or equal than/to file count)");
+            return;
+        }
+
         quint16 new_vnc_port = this->property("VNCPORT").toString().toUShort() +
                 vncPortIndex;
         quint16 new_web_port = this->property("WEBPORT").toString().toUShort() +
                 vncPortIndex;
 
+        QString key = files[indx].trimmed();
+        if (indx < args.count()) {
+            key += '\0';
+            key += args[indx].trimmed();
+        }
+
         QWriteLocker webChildProcessesLocker(&webChildProcessesLock);
-        auto result = webChildProcesses.find(files[indx].trimmed());
+        auto result = webChildProcesses.find(key);
         if (result != webChildProcesses.constEnd()) {
             if (result.value() == nullptr) {
-                webChildProcesses.remove(files[indx].trimmed());
-                qWarning().noquote() << QString("caQtDM_Web -- found undefined child process for file %1, this shouldn't happen").arg(files[indx].trimmed());
+                webChildProcesses.remove(key);
+                qWarning().noquote() << QString("caQtDM_Web -- found undefined child process for file (and macros) %1, this shouldn't happen").arg(key.replace('\0', ' '));
             } else {
                 if (result.value()->process() == nullptr || result.value()->process()->state() == QProcess::ProcessState::NotRunning) {
                     new_vnc_port = result.value()->vncPort();
                     new_web_port = result.value()->webPort();
-                    webChildProcesses.remove(files[indx].trimmed());
+                    webChildProcesses.remove(key);
                 } else if (WebSocketServer::instance().isInitialized()) {
                     WebSocketServer::instance().sendOpenFileRequest(result.key(), result.value()->vncPort());
                     return;
@@ -7362,12 +7373,12 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
         child->start();
 
         if (WebSocketServer::instance().isInitialized()) {
-            WebSocketServer::instance().sendOpenFileRequest(files[indx].trimmed(), new_vnc_port);
+            WebSocketServer::instance().sendOpenFileRequest(key, new_vnc_port);
         }
 
         item->setProcess(child);
 
-        webChildProcesses.insert(files[indx].trimmed(), item);
+        webChildProcesses.insert(key, item);
     }
 #endif
 }
