@@ -140,8 +140,22 @@ public:
     static QReadWriteLock hmiConfigListLock;
 
 #ifndef MOBILE
-    static QMap<QString, VncWebChildProcess*> webChildProcesses;
+    static QHash<QString, VncWebChildProcess*> webChildProcesses;
     static QReadWriteLock webChildProcessesLock;
+
+    static quint16 vncPortIndex;
+    static quint16 vncPort;
+    static quint16 webPort;
+    static bool slaveServer;
+    static bool vncServer;
+    static bool noVncPlugin;
+
+    static void addWebChildProcess(QString file, QString macros, VncWebChildProcess* childProcess);
+    static VncWebChildProcess* getWebChildProcess(QString file, QString macros);
+    static QFileInfo* getAbsoluteUiFilePath(QString file);
+    static QString getChildProcessKey(QString absoluteFilePath, QString macros);
+
+    static VncWebChildProcess* startVncChildProcess(quint16 vncPort, quint16 webPort, QString file, QString macros, QWidget* parent = nullptr);
 #endif
 
     // interface implementation
@@ -502,8 +516,6 @@ private:
     QString handle_Macro_Scan(QString Text, QMap<QString, QString> map, macro_parser parse);
     QString handle_Macro_Constants(QString Text);
     QStringList treat_read_MacroCommand(QStringList args);
-
-    quint16 vncPortIndex = 1;
 
 private slots:
     void Callback_CaCalc(double value) ;

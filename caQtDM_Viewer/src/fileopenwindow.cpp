@@ -286,6 +286,22 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
 #ifndef MOBILE
     // disable buttons that shouldn't be used when in vnc and hide window
     if (options["vnc_server"].toInt() == 1) {
+        CaQtDM_Lib::vncServer = options["vnc_server"].toInt();
+        CaQtDM_Lib::noVncPlugin = options["novnc_plugin"].toInt();
+
+        bool ok;
+        quint16 web_port = options["web_port"].toUShort(&ok);
+        quint16 vnc_port = options["vnc_port"].toUShort(&ok);
+
+        if (!ok) {
+            qCritical() << "caQtDM_Web -- Invalid web/vnc ports defined, stuff will break.";
+        } else {
+            CaQtDM_Lib::webPort = web_port;
+            CaQtDM_Lib::vncPort = vnc_port;
+        }
+
+        CaQtDM_Lib::slaveServer = options["slave_server"].toInt();
+
         WebSocketServer::instance().setup(web_port);
 
         connect(messageWindow, &MessageWindow::newMessageReceivedEvent, [](QString text){

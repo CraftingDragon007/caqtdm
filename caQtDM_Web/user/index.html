@@ -233,6 +233,7 @@
       (function() {
         const params = new URLSearchParams(window.location.search);
         let path = params.get('path') || '0';
+        const macros = params.get('macros') || '';
 
         const iframe = document.getElementById('vnc-container');
         const dialogOverlay = document.getElementById('dialog-overlay');
@@ -263,6 +264,10 @@
         const MIN_RESIZE_HEIGHT = 160;
 
         let failedOnce = false;
+        let isNonNumericPath = false;
+        let resolvedInstance = null;
+        let newInstance = false;
+        let file = null;
 
         function openLogWindow() {
           logWindow.classList.add('show');
@@ -453,12 +458,23 @@
         document.addEventListener('pointercancel', onDragEnd);
         document.addEventListener('pointercancel', onResizeEnd);
 
+        function isNumericPath(value) {
+          const normalized = String(value).trim();
+          return /^[0-9]+$/.test(normalized);
+        }
+
         function getInstancePath() {
+          if (resolvedInstance != null) {
+            return resolvedInstance;
+          }
           if (path == null) return '00';
           const value = String(path).trim();
           if (value === '') return '00';
-          if (/^(https?:|\/)/i.test(value)) return '00';
-          return value;
+          if (!isNumericPath(value)) {
+            isNonNumericPath = true;
+            return '00';
+          }
+          return value.length === 1 ? '0' + value : value;
         }
 
         function setIframeToPath(p) {
@@ -553,8 +569,15 @@
               failedOnce = false;
               iframe.contentWindow.location.reload();
             }
+            newInstance = false;
             try {
-              socket.send(getInstancePath());
+              if (isNonNumericPath && resolvedInstance == null) {
+                // Request instance number for non-numeric path
+                const message = 'RESOLVE|' + path + '|' + macros;
+                socket.send(message);
+              } else {
+                socket.send(getInstancePath());
+              }
             } catch (sendErr) {
               console.warn('WebSocket send failed:', sendErr);
             }
@@ -562,8 +585,21 @@
 
           socket.onmessage = function(event) {
             const data = String(event.data || '');
-            if (data.startsWith('LOG;')) {
+            if (data.startsWith('LOG|')) {
               addLogMessage(data.slice(4));
+              return;
+            }
+            if (data.startsWith('INSTANCE|')) {
+              let instance = data.slice(9).trim();
+              if (isNonNumericPath && resolvedInstance == null) {
+                instance = instance.length === 1 ? '0' + instance : instance
+                resolvedInstance = instance;
+                file = path;
+                setIframeToPath(instance);
+                socket.close();
+                newInstance = true;
+                // onclose will call scheduleReconnect, which will use the resolved instance
+              }
               return;
             }
             const openMatchPipe = data.match(/^OPEN\|([^|]+)\|([^|]+)\|(.*)$/);
@@ -579,6 +615,11 @@
           };
 
           socket.onclose = function() {
+            if (isNonNumericPath && !newInstance && file != null) {
+              // ask for instance again, as the path could've changed
+              resolvedInstance = null;
+              path = file;
+            }
             scheduleReconnect();
           };
         }
