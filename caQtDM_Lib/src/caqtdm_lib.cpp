@@ -132,7 +132,6 @@
 #define POPUPDEFENITION "popup.ui"
 
 #define IS_VNC (vncServer)
-#define IS_NOVNC_PLUGIN (this->property("NOVNC_PLUGIN").toInt() == 1)
 
 #define WEB_CARELATED_DISPLAY_ERROR_MSG "Unable to open this caRelatedDisplay, please check your caQtDM Web configuration."
 
