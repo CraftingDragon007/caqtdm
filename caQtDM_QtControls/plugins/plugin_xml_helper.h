@@ -27,6 +27,8 @@
 #define PLUGIN_XML_HELPER_H
 
 #include <QString>
+#include <QDomDocument>
+#include <QDomElement>
 #include <cstring>
 
 typedef char strng[40];
@@ -38,63 +40,87 @@ static QString XmlFunc(const char *clss, const char *name, int x, int y, int w, 
 #ifndef DESIGNER_TOOLTIP_DESCRIPTIONS
     Q_UNUSED(propertytext);
 #endif
-    QString mess = "";
-    QString strng1 = "";
-    QString strng2 = "";
 
-    // Special handling for cadoubletabwidget
-    bool isDoubleTabWidget = (strstr(name, "cadoubletabwidget") != (char*) Q_NULLPTR);
+    // Create XML document using Qt's DOM API
+    QDomDocument doc;
+    QDomElement uiElement = doc.createElement("ui");
+    uiElement.setAttribute("language", "c++");
+    doc.appendChild(uiElement);
 
-    mess = "<ui language=\"c++\"><widget class=\"%1\" name=\"%2\">\
-            <property name=\"geometry\">\
-            <rect>\
-            <x>%3</x>\
-            <y>%4</y>\
-            <width>%5</width>\
-            <height>%6</height>\
-            </rect>\
-            </property>\
-            </widget>";
+    // Create widget element
+    QDomElement widgetElement = doc.createElement("widget");
+    widgetElement.setAttribute("class", clss);
+    widgetElement.setAttribute("name", name);
+    uiElement.appendChild(widgetElement);
 
-    mess = mess.arg(clss).arg(name).arg(x).arg(y).arg(w).arg(h);
+    // Create geometry property
+    QDomElement geometryProp = doc.createElement("property");
+    geometryProp.setAttribute("name", "geometry");
+    widgetElement.appendChild(geometryProp);
 
+    QDomElement rect = doc.createElement("rect");
+    geometryProp.appendChild(rect);
+
+    QDomElement xElem = doc.createElement("x");
+    xElem.appendChild(doc.createTextNode(QString::number(x)));
+    rect.appendChild(xElem);
+
+    QDomElement yElem = doc.createElement("y");
+    yElem.appendChild(doc.createTextNode(QString::number(y)));
+    rect.appendChild(yElem);
+
+    QDomElement widthElem = doc.createElement("width");
+    widthElem.appendChild(doc.createTextNode(QString::number(w)));
+    rect.appendChild(widthElem);
+
+    QDomElement heightElem = doc.createElement("height");
+    heightElem.appendChild(doc.createTextNode(QString::number(h)));
+    rect.appendChild(heightElem);
+
+    // Add custom widgets section if properties are specified
     if(nb > 0) {
+        QDomElement customWidgets = doc.createElement("customwidgets");
+        uiElement.appendChild(customWidgets);
+
+        QDomElement customWidget = doc.createElement("customwidget");
+        customWidgets.appendChild(customWidget);
+
+        QDomElement classElem = doc.createElement("class");
+        classElem.appendChild(doc.createTextNode(clss));
+        customWidget.appendChild(classElem);
+
+        // Special handling for cadoubletabwidget
+        bool isDoubleTabWidget = (strstr(name, "cadoubletabwidget") != (char*) Q_NULLPTR);
         if(isDoubleTabWidget) {
-            strng1 = " <customwidgets><customwidget><class>%1</class><addpagemethod>addPage</addpagemethod><propertyspecifications>";
-        } else {
-            strng1 = " <customwidgets><customwidget><class>%1</class><propertyspecifications>";
+            QDomElement addPageMethod = doc.createElement("addpagemethod");
+            addPageMethod.appendChild(doc.createTextNode("addPage"));
+            customWidget.appendChild(addPageMethod);
         }
-        strng1 = strng1.arg(clss);
-        
+
+        QDomElement propertySpecs = doc.createElement("propertyspecifications");
+        customWidget.appendChild(propertySpecs);
+
         for(int i=0; i<nb; i++) {
 #ifdef DESIGNER_TOOLTIP_DESCRIPTIONS
             if(!isDoubleTabWidget) {
-                QString strng3 = "<tooltip name=\"%1\">%2</tooltip>";
-                strng3 = strng3.arg(propertyname[i]).arg(propertytext[i]);
-                strng1.append(strng3);
+                QDomElement tooltip = doc.createElement("tooltip");
+                tooltip.setAttribute("name", propertyname[i]);
+                tooltip.appendChild(doc.createTextNode(propertytext[i]));
+                propertySpecs.appendChild(tooltip);
             }
 #endif
             if(strstr(propertytype[i], "multiline") != (char*) Q_NULLPTR) {
-                strng2 = " <stringpropertyspecification name=\"%1\" notr=\"true\" type=\"%2\"/>";
-                strng2 = strng2.arg(propertyname[i]).arg(propertytype[i]);
+                QDomElement stringPropSpec = doc.createElement("stringpropertyspecification");
+                stringPropSpec.setAttribute("name", propertyname[i]);
+                stringPropSpec.setAttribute("notr", "true");
+                stringPropSpec.setAttribute("type", propertytype[i]);
+                propertySpecs.appendChild(stringPropSpec);
             }
-            strng1.append(strng2);
         }
-        strng1.append(" </propertyspecifications></customwidget></customwidgets>");
     }
-    mess.append(strng1);
-    mess.append("</ui>");
 
-    //control output in formatted xml format
-/*
-    QString formattedOutput;
-    QDomDocument doc;
-    doc.setContent(mess, false);
-    QTextStream writer(&formattedOutput);
-    doc.save(writer, 4);
-    qDebug() << formattedOutput;
-*/
-    return mess;
+    // Convert to string without XML declaration and indentation
+    return doc.toString(-1);
 }
 
 #endif // PLUGIN_XML_HELPER_H
