@@ -26,6 +26,7 @@
 
 #include "MessageWindow.h"
 #include "messageWindowWrapper.h"
+#include "qapplication.h"
 #include "qdatetime.h"
 #include <QCoreApplication>
 #include <QMutexLocker>
@@ -55,7 +56,8 @@ MessageWindow::MessageWindow(QWidget* parent) : QDockWidget(parent)
     font.setStyleHint(QFont::TypeWriter);
     msgTextEdit.setFont(font);
 
-    QPalette palette = qApp->palette();
+    QApplication* guiApp = qobject_cast<QApplication*>(qApp);
+    QPalette palette = guiApp->palette();
     m_normalTextColorHex = palette.color(QPalette::Active, QPalette::Text).name();
     m_debugTextColorHex = palette.color(QPalette::Active, QPalette::Link).name();
 
