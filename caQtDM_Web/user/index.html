@@ -61,7 +61,7 @@
       height: calc(100% - 32px);
       border: none;
     }
-    #dialog-overlay {
+    #dialog-overlay, #error-overlay {
       position: fixed;
       top: 0;
       left: 0;
@@ -73,10 +73,10 @@
       background: rgba(0, 0, 0, 0.4);
       z-index: 1200;
     }
-    #dialog-overlay.show {
+    #dialog-overlay.show, #error-overlay.show {
       display: flex;
     }
-    #dialog-box {
+    #dialog-box, #error-box {
       background: #fff;
       padding: 24px;
       max-width: 320px;
@@ -85,28 +85,28 @@
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
       text-align: left;
     }
-    #dialog-box p {
+    #dialog-box p, #error-box p {
       margin: 0 0 16px 0;
       word-break: break-word;
     }
-    #dialog-actions {
+    #dialog-actions, #error-actions {
       display: flex;
       justify-content: flex-end;
       gap: 8px;
     }
-    #dialog-actions button {
+    #dialog-actions button, #error-actions button {
       padding: 6px 12px;
       border-radius: 4px;
       border: 1px solid #ccc;
       background: #f5f5f5;
       cursor: pointer;
     }
-    #dialog-actions button.primary {
+    #dialog-actions button.primary, #error-actions button.primary {
       background: #2563eb;
       border-color: #1d4ed8;
       color: #fff;
     }
-    #dialog-actions button:focus {
+    #dialog-actions button:focus, #error-actions button:focus {
       outline: 2px solid #2563eb;
       outline-offset: 1px;
     }
@@ -229,6 +229,15 @@
       </div>
     </div>
 
+    <div id="error-overlay" role="dialog" aria-modal="true" aria-labelledby="error-title">
+      <div id="error-box">
+        <p id="error-message"></p>
+        <div id="error-actions">
+          <button type="button" id="error-ok" class="primary">OK</button>
+        </div>
+      </div>
+    </div>
+
     <script>
       (function() {
         const params = new URLSearchParams(window.location.search);
@@ -242,6 +251,9 @@
         const dialogCancel = document.getElementById('dialog-cancel');
         let pendingOpenPath = null;
         let pendingOpenMacros = null;
+        const errorOverlay = document.getElementById('error-overlay');
+        const errorMessage = document.getElementById('error-message');
+        const errorOk = document.getElementById('error-ok');
         const menuLogsButton = document.getElementById('menu-logs');
         const logWindow = document.getElementById('log-window');
         const logClose = document.getElementById('log-close');
@@ -516,11 +528,10 @@
           pendingOpenMacros = null;
         }
 
-        function showOpenFileDialog(requestedPath, displayName, macros) {
+        function showOpenFileDialog(requestedPath, macros) {
           pendingOpenPath = requestedPath;
           pendingOpenMacros = macros;
-          const name = displayName || requestedPath;
-          let message = 'Open "' + name + '"?';
+          let message = 'Open "' + requestedPath + '"?';
 
           if (macros && macros.trim() !== '') {
             const macroList = macros.split(';').filter(function(m) { return m.trim() !== ''; });
@@ -546,9 +557,25 @@
           }
           const newUrl = new URL(window.location.href);
           newUrl.searchParams.set('path', pendingOpenPath);
+          if (pendingOpenMacros && pendingOpenMacros.trim() !== '') {
+            // Convert macros from KEY=VALUE;KEY1=VALUE1 to KEY:VALUE,KEY1:VALUE1
+            const convertedMacros = pendingOpenMacros.replace(/=/g, ':').replace(/;/g, ',');
+            newUrl.searchParams.set('macros', convertedMacros);
+          }
           window.open(newUrl.toString(), '_blank', 'noopener');
           hideDialog();
         });
+
+        function hideErrorDialog() {
+          errorOverlay.classList.remove('show');
+        }
+
+        function showErrorDialog(message) {
+          errorMessage.textContent = message;
+          errorOverlay.classList.add('show');
+        }
+
+        errorOk.addEventListener('click', hideErrorDialog);
 
         function connectWebSocket() {
           const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
@@ -589,6 +616,10 @@
               addLogMessage(data.slice(4));
               return;
             }
+            if (data.startsWith('ERROR|')) {
+              showErrorDialog(data.slice(6));
+              return;
+            }
             if (data.startsWith('INSTANCE|')) {
               let instance = data.slice(9).trim();
               if (isNonNumericPath && resolvedInstance == null) {
@@ -602,9 +633,9 @@
               }
               return;
             }
-            const openMatchPipe = data.match(/^OPEN\|([^|]+)\|([^|]+)\|(.*)$/);
+            const openMatchPipe = data.match(/^OPEN\|([^|]+)\|(.*)$/);
             if (openMatchPipe) {
-              showOpenFileDialog(openMatchPipe[1], openMatchPipe[2], openMatchPipe[3]);
+              showOpenFileDialog(openMatchPipe[1], openMatchPipe[2]);
               return;
             }
           };

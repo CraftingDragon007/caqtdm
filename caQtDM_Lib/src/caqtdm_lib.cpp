@@ -7264,6 +7264,7 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
         }
 
         QString absolutePath = fileInfo->absoluteFilePath();
+        delete fileInfo;
 
         quint16 new_vnc_port = vncPort +
                 vncPortIndex;
@@ -7319,6 +7320,18 @@ QFileInfo* CaQtDM_Lib::getAbsoluteUiFilePath(QString file) {
     return fileInfo;
 }
 
+bool CaQtDM_Lib::isAbsolutePathRequired(QString file) {
+    QFileInfo info = QFileInfo(file);
+    if (!info.exists() || !info.isFile()) return true;
+    QString relativeName = info.fileName();
+    QFileInfo* relativeInfo = getAbsoluteUiFilePath(relativeName);
+    if (relativeInfo == nullptr) return true;
+
+    bool result = (info.absoluteFilePath() == relativeInfo->absoluteFilePath());
+    delete relativeInfo;
+    return !result;
+}
+
 QString CaQtDM_Lib::getChildProcessKey(QString absoluteFilePath, QString macros) {
     QString key = absoluteFilePath;
     if (macros.length() > 0) {
@@ -7333,6 +7346,7 @@ void CaQtDM_Lib::addWebChildProcess(QString file, QString macros, VncWebChildPro
     if (fileInfo == nullptr) return;
 
     QString absolutePath = fileInfo->absoluteFilePath();
+    delete fileInfo;
 
     QString key = getChildProcessKey(absolutePath, macros);
 
@@ -7353,6 +7367,7 @@ VncWebChildProcess* CaQtDM_Lib::getWebChildProcess(QString file, QString macros)
     if (fileInfo == nullptr) return nullptr;
 
     QString absolutePath = fileInfo->absoluteFilePath();
+    delete fileInfo;
 
     QString key = getChildProcessKey(absolutePath, macros);
 

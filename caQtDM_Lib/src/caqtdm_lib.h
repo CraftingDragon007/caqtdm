@@ -152,8 +152,10 @@ public:
 
     static void addWebChildProcess(QString file, QString macros, VncWebChildProcess* childProcess);
     static VncWebChildProcess* getWebChildProcess(QString file, QString macros);
-    static QFileInfo* getAbsoluteUiFilePath(QString file);
     static QString getChildProcessKey(QString absoluteFilePath, QString macros);
+
+    static QFileInfo* getAbsoluteUiFilePath(QString file);
+    static bool isAbsolutePathRequired(QString file);
 
     static VncWebChildProcess* startVncChildProcess(quint16 vncPort, quint16 webPort, QString file, QString macros, QWidget* parent = nullptr);
 #endif

@@ -185,12 +185,12 @@ void WebSocketServer::sendLog(const QString text) {
 
 void WebSocketServer::sendOpenFileRequest(const QString file, const QString macros, quint16 vncPort) {
     QFileInfo fileInfo(file);
-    QString fileName = fileInfo.fileName();
+    QString fileName = CaQtDM_Lib::isAbsolutePathRequired(file) ? fileInfo.absoluteFilePath() : fileInfo.fileName();
     QString pathStr = QString::number(vncPort % 100);
     QReadLocker locker(&m_clientReadWriteLock);
     foreach (QWebSocket *pSocket, m_clients) {
         if (pSocket != Q_NULLPTR) {
-            pSocket->sendTextMessage("OPEN|" + pathStr + '|' + fileName + '|' + macros);
+            pSocket->sendTextMessage("OPEN|" + fileName + '|' + macros);
         }
     }
 }
