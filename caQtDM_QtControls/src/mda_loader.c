@@ -125,26 +125,41 @@ static struct mda_header *header_read( XDR *xdrs)
   header = (struct mda_header *) 
     malloc( sizeof(struct mda_header));
 
-  if( !xdr_float(xdrs, &(header->version) ))
+  if( !xdr_float(xdrs, &(header->version) )) {
+    free(header);
     return NULL;
+  }
 
-  if( !xdr_int32_t(xdrs, &(header->scan_number) ))
+  if( !xdr_int32_t(xdrs, &(header->scan_number) )) {
+    free(header);
     return NULL;
+  }
 
-  if( !xdr_int16_t(xdrs, &(header->data_rank) ))
+  if( !xdr_int16_t(xdrs, &(header->data_rank) )) {
+    free(header);
     return NULL;
+  }
 
   header->dimensions = (int32_t *) 
     malloc( header->data_rank * sizeof(int32_t));
   if( !xdr_vector( xdrs, (char *) header->dimensions, header->data_rank, 
-		   sizeof( int32_t), (xdrproc_t) xdr_int32_t))
+		   sizeof( int32_t), (xdrproc_t) xdr_int32_t)) {
+    free(header->dimensions);
+    free(header);
     return NULL;
+  }
 
-  if( !xdr_int16_t(xdrs, &(header->regular) ))
+  if( !xdr_int16_t(xdrs, &(header->regular) )) {
+    free(header->dimensions);
+    free(header);
     return NULL;
+  }
 
-  if( !xdr_int32_t(xdrs, &(header->extra_pvs_offset) )) 
+  if( !xdr_int32_t(xdrs, &(header->extra_pvs_offset) )) {
+    free(header->dimensions);
+    free(header);
     return NULL;
+  }
 
   {  // need to do error checking on dimensions!
     int i;
@@ -170,26 +185,49 @@ static struct mda_positioner *positioner_read(XDR *xdrs)
 
   positioner = (struct mda_positioner *) 
     malloc( sizeof(struct mda_positioner));
+  
+  // Initialize string pointers to NULL
+  positioner->name = NULL;
+  positioner->description = NULL;
+  positioner->step_mode = NULL;
+  positioner->unit = NULL;
+  positioner->readback_name = NULL;
+  positioner->readback_description = NULL;
+  positioner->readback_unit = NULL;
 
-  if( !xdr_int16_t(xdrs, &(positioner->number) ))
+  if( !xdr_int16_t(xdrs, &(positioner->number) )) {
+    free(positioner);
     return NULL;
+  }
 
   if( !xdr_counted_string( xdrs, &(positioner->name) ) )
-    return NULL;
+    goto cleanup;
   if( !xdr_counted_string( xdrs, &(positioner->description) ) )
-    return NULL;
+    goto cleanup;
   if( !xdr_counted_string( xdrs, &(positioner->step_mode) ) )
-    return NULL;
+    goto cleanup;
   if( !xdr_counted_string( xdrs, &(positioner->unit) ) )
-    return NULL;
+    goto cleanup;
   if( !xdr_counted_string( xdrs, &(positioner->readback_name) ) )
-    return NULL;
+    goto cleanup;
   if( !xdr_counted_string( xdrs, &(positioner->readback_description) ) )
-    return NULL;
+    goto cleanup;
   if( !xdr_counted_string( xdrs, &(positioner->readback_unit) ) )
-    return NULL;
+    goto cleanup;
 
   return positioner;
+
+cleanup:
+  // Free any allocated strings
+  if(positioner->name) free(positioner->name);
+  if(positioner->description) free(positioner->description);
+  if(positioner->step_mode) free(positioner->step_mode);
+  if(positioner->unit) free(positioner->unit);
+  if(positioner->readback_name) free(positioner->readback_name);
+  if(positioner->readback_description) free(positioner->readback_description);
+  if(positioner->readback_unit) free(positioner->readback_unit);
+  free(positioner);
+  return NULL;
 }
 
 
@@ -201,18 +239,32 @@ static struct mda_detector *detector_read(XDR *xdrs)
 
   detector = (struct mda_detector *) 
     malloc( sizeof(struct mda_detector));
+  
+  // Initialize string pointers to NULL
+  detector->name = NULL;
+  detector->description = NULL;
+  detector->unit = NULL;
 
-  if( !xdr_int16_t(xdrs, &(detector->number) ))
+  if( !xdr_int16_t(xdrs, &(detector->number) )) {
+    free(detector);
     return NULL;
+  }
 
   if( !xdr_counted_string( xdrs, &(detector->name) ) )
-    return NULL;
+    goto cleanup;
   if( !xdr_counted_string( xdrs, &(detector->description) ) )
-    return NULL;
+    goto cleanup;
   if( !xdr_counted_string( xdrs, &(detector->unit) ) )
-    return NULL;
+    goto cleanup;
 
   return detector;
+
+cleanup:
+  if(detector->name) free(detector->name);
+  if(detector->description) free(detector->description);
+  if(detector->unit) free(detector->unit);
+  free(detector);
+  return NULL;
 }
 
 
@@ -225,13 +277,23 @@ static struct mda_trigger *trigger_read(XDR *xdrs)
 
   trigger = (struct mda_trigger *) 
     malloc( sizeof(struct mda_trigger));
+  
+  // Initialize string pointer to NULL
+  trigger->name = NULL;
 
-  if( !xdr_int16_t(xdrs, &(trigger->number) ))
+  if( !xdr_int16_t(xdrs, &(trigger->number) )) {
+    free(trigger);
     return NULL;
-  if( !xdr_counted_string( xdrs, &(trigger->name ) ))
+  }
+  if( !xdr_counted_string( xdrs, &(trigger->name ) )) {
+    free(trigger);
     return NULL;
-  if( !xdr_float(xdrs, &(trigger->command) ))
+  }
+  if( !xdr_float(xdrs, &(trigger->command) )) {
+    if(trigger->name) free(trigger->name);
+    free(trigger);
     return NULL;
+  }
 
   return trigger;
 }
