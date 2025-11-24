@@ -220,6 +220,144 @@ parserClass::parserClass (char *filename)
     useDisplayBg = 1;
     widgetNumber = 0;
     openGroups = 0;
+    
+    // Initialize all primitive members to prevent reading uninitialized memory
+    invalidFile = 0;
+    invalidBgColor = 0;
+    haveComments = 0;
+    x = y = w = h = 0;
+    major = minor = release = 0;
+    alignment = 0;
+    ci = nullptr;
+    left = 0;
+    fgColor = bgColor = fgColorMode = bgColorMode = 0;
+    visInverted = autoSize = border = lineThk = 0;
+    
+    // Initialize string arrays
+    memset(fileRev, 0, sizeof(fileRev));
+    memset(fileNameAndRev, 0, sizeof(fileNameAndRev));
+    memset(fontTag, 0, sizeof(fontTag));
+    memset(minVisString, 0, sizeof(minVisString));
+    memset(maxVisString, 0, sizeof(maxVisString));
+    memset(emptyStr, 0, sizeof(emptyStr));
+    memset(myCopy, 0, sizeof(myCopy));
+    memset(widgetName, 0, sizeof(widgetName));
+    memset(defaultFontTag, 0, sizeof(defaultFontTag));
+    memset(defaultCtlFontTag, 0, sizeof(defaultCtlFontTag));
+    memset(defaultBtnFontTag, 0, sizeof(defaultBtnFontTag));
+    memset(defaultPvType, 0, sizeof(defaultPvType));
+    memset(bufDefaultPvType, 0, sizeof(bufDefaultPvType));
+    memset(title, 0, sizeof(title));
+    memset(paramValue, 0, sizeof(paramValue));
+    memset(templInfo, 0, sizeof(templInfo));
+    
+    // Initialize color and display related members
+    defaultAlignment = defaultCtlAlignment = defaultBtnAlignment = 0;
+    defaultTextFgColor = bufDefaultTextFgColor = 0;
+    defaultFg1Color = bufDefaultFg1Color = 0;
+    defaultFg2Color = bufDefaultFg2Color = 0;
+    defaultBgColor = bufDefaultBgColor = 0;
+    defaultTopShadowColor = bufDefaultTopShadowColor = 0;
+    defaultBotShadowColor = bufDefaultBotShadowColor = 0;
+    defaultOffsetColor = bufDefaultOffsetColor = 0;
+    gridSpacing = gridActive = gridShow = 0;
+    orthogonal = disableScroll = bgPixmapFlag = 0;
+    numParamValues = 0;
+    
+    // Initialize text display related members
+    formatType = colormode = editable = autoHeight = isWidget = 0;
+    limitsFromDb = colorMode = index = 0;
+    smartRefresh = useKp = changeValOnLoseFocus = fastUpdate = 0;
+    isDate = isFile = autoSelect = 0;
+    updatePvOnDrop = useHexPrefix = fileComponent = 0;
+    dateAsFileName = showUnits = useAlarmBorder = 0;
+    newPositioning = inputFocusUpdatesAllowed = 0;
+    clipToDspLimits = isPassword = characterMode = 0;
+    noExecuteClipMask = changeCallbackFlag = objType = 0;
+    nullDetectMode = 0;
+    numBits = 0;
+    
+    memset(fieldLenInfo, 0, sizeof(fieldLenInfo));
+    memset(id, 0, sizeof(id));
+    
+    // Initialize graphics related members
+    lineColor = fillColor = lineColorMode = 0;
+    fill = fillColorMode = lineWidth = lineStyle = invisible = 0;
+    closePolygon = arrows = numPoints = 0;
+    fillMode = 0;
+    
+    // Initialize bar and meter related members
+    barColor = barColorMode = labelType = showScale = horizontal = 0;
+    memset(scaleFormat, 0, sizeof(scaleFormat));
+    meterColorMode = meterColor = scaleColor = scaleColorMode = 0;
+    labelColor = tsColor = bsColor = 0;
+    trackDelta = labelIntervals = majorIntervals = minorIntervals = 0;
+    needleType = shadowMode = scaleLimitsFromDb = 0;
+    memset(literalLabel, 0, sizeof(literalLabel));
+    memset(scaleFontTag, 0, sizeof(scaleFontTag));
+    memset(labelFontTag, 0, sizeof(labelFontTag));
+    meterAngle = 0.0;
+    
+    // Initialize slider related members
+    shadeColor = topColor = botColor = increment = 0;
+    controlLabelType = showLimits = showLabel = showValue = 0;
+    showSavedValue = orientation = 0;
+    dincrement = 0.0;
+    
+    // Initialize related display members
+    topShadowColor = botShadowColor = icon = swapButtons = 0;
+    noEdit = ofsX = ofsY = useFocus = button3Popup = 0;
+    numPvs = n1 = n2 = numDsps = 0;
+    memset(setPostion, 0, sizeof(setPostion));
+    memset(allowDups, 0, sizeof(allowDups));
+    memset(cascade, 0, sizeof(cascade));
+    memset(propagateMacros, 0, sizeof(propagateMacros));
+    memset(closeAction, 0, sizeof(closeAction));
+    memset(replaceSymbols, 0, sizeof(replaceSymbols));
+    
+    // Initialize PIP related members
+    displaySource = setSize = sizeOfs = noScroll = 0;
+    ignoreMultiplexors = center = 0;
+    
+    // Initialize XY graph related members
+    plotAreaBorder = autoScaleBothDirections = 0;
+    autoScaleTimerMs = autoScaleThreshPct = 0;
+    gridColor = plotMode = updateTimerValue = resetMode = numTraces = 0;
+    xAxis = xAxisStyle = xAxisSource = xAxisTimeFormat = 0;
+    xLabelGrid = xMajorGrid = xMinorGrid = 0;
+    xAnnotationFormat = xGridMode = xAxisSmoothing = 0;
+    memset(plotStyle, 0, sizeof(plotStyle));
+    memset(y2Scale, 0, sizeof(y2Scale));
+    memset(plotColor, 0, sizeof(plotColor));
+    memset(xylineThk, 0, sizeof(xylineThk));
+    memset(xylineStyle, 0, sizeof(xylineStyle));
+    memset(plotSymbolType, 0, sizeof(plotSymbolType));
+    memset(plotUpdateMode, 0, sizeof(plotUpdateMode));
+    memset(opMode, 0, sizeof(opMode));
+    memset(xSigned, 0, sizeof(xSigned));
+    memset(ySigned, 0, sizeof(ySigned));
+    memset(y1Axis, 0, sizeof(y1Axis));
+    memset(y1AxisStyle, 0, sizeof(y1AxisStyle));
+    memset(y1AxisSource, 0, sizeof(y1AxisSource));
+    memset(y1LabelGrid, 0, sizeof(y1LabelGrid));
+    memset(y1MajorGrid, 0, sizeof(y1MajorGrid));
+    memset(y1MinorGrid, 0, sizeof(y1MinorGrid));
+    memset(y1AnnotationFormat, 0, sizeof(y1AnnotationFormat));
+    memset(y1GridMode, 0, sizeof(y1GridMode));
+    memset(y1AxisSmoothing, 0, sizeof(y1AxisSmoothing));
+    
+    // Initialize button related members
+    inconsistentColor = 0;
+    buttonColor = selectColor = 0;
+    onColor = offColor = toggle = pressAction = releaseAction = _3D = 0;
+    useEnumNumeric = usePassword = lock = 0;
+    memset(pw, 0, sizeof(pw));
+    
+    // Initialize shell command button members
+    threadSecondsToDelay = autoExecInterval = 0.0;
+    numCmds = includeHelpIcon = execCursor = 0;
+    oneShot = timerActive = timerValue = multipleInstancesAllowed = 0;
+    memset(requiredHostName, 0, sizeof(requiredHostName));
 }
 
 void parserClass::adjustGeometry(int *x, int *y)

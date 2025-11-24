@@ -51,6 +51,20 @@ tagClass::tagClass ( void ) : unknownTags(NULL) {
     numTags = 0;
     //ci = NULL;
     first = last = len = 0;
+    
+    // Initialize arrays to prevent reading uninitialized memory
+    memset(buf, 0, sizeof(buf));
+    memset(msg, 0, sizeof(msg));
+    memset(tagName, 0, sizeof(tagName));
+    memset(tagDestination, 0, sizeof(tagDestination));
+    memset(tagDestMaxSize, 0, sizeof(tagDestMaxSize));
+    memset(tagDestNumElements, 0, sizeof(tagDestNumElements));
+    memset(tagDestType, 0, sizeof(tagDestType));
+    memset(isCompound, 0, sizeof(isCompound));
+    memset(tagDefault, 0, sizeof(tagDefault));
+    memset(enumNumChoices, 0, sizeof(enumNumChoices));
+    memset(enumIntArray, 0, sizeof(enumIntArray));
+    memset(enumStrArray, 0, sizeof(enumStrArray));
 
     envPtr = getenv( "EDMGENDOC" );
     if ( envPtr ) {
