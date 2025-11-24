@@ -31,10 +31,10 @@
 #include "qwtplotcurvenan.h"
 
 QwtPlotCurveNaN::QwtPlotCurveNaN(const QString& title)
-    : Interval(0.0)
+    : QwtPlotCurve(title)
+    , Interval(0.0)
     , CurvType(TimeCurv)
 {
-    setTitle(title);
 }
 
 void QwtPlotCurveNaN::setSamplesList(const QVector<QPointF>& Samples)
@@ -74,10 +74,10 @@ void QwtPlotCurveNaN::setInterval(curvType type, double interval)
 }
 
 QwtPlotIntervalCurveNaN::QwtPlotIntervalCurveNaN(const QString& title)
-    : Interval(0.0)
+    : QwtPlotIntervalCurve(title)
+    , Interval(0.0)
     , CurvType(TimeCurv)
 {
-    setTitle(title);
 }
 
 void QwtPlotIntervalCurveNaN::setSamplesList(const QVector<QwtIntervalSample> &Samples)
