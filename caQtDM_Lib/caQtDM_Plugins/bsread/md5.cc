@@ -129,6 +129,10 @@ void MD5::init()
   state[1] = 0xefcdab89;
   state[2] = 0x98badcfe;
   state[3] = 0x10325476;
+
+  // initialize buffer and digest arrays
+  memset(buffer, 0, sizeof(buffer));
+  memset(digest, 0, sizeof(digest));
 }
 
 //////////////////////////////

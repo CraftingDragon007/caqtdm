@@ -27,10 +27,16 @@
 #include <QVariant>
 
 HttpPerformanceData::HttpPerformanceData()
+    : m_finishedSuccessfully(false)
+    , m_inProgress(false)
+    , m_httpStatusCode(0)
+    , m_receivedContinueAt(false)
+    , m_numberOfRequests(0)
+    , m_responseBytes(0)
+    , m_responseTimeinMs(0)
+    , m_isBinned(false)
+    , m_binCount(0)
 {
-    m_receivedContinueAt = false;
-    m_inProgress = false;
-    m_finishedSuccessfully = false;
 }
 
 

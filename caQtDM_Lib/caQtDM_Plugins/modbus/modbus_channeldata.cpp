@@ -25,32 +25,37 @@
 #include "modbus_channeldata.h"
 
 modbus_channeldata::modbus_channeldata()
+    : CycleTime(0)
+    , Station(0)
+    , Precision(0)
+    , valid_calc(true)
 {
-
     this->index.clear();
     generation_time= QDateTime::currentDateTime();
-
-    valid_calc=true;
 }
 
 modbus_channeldata::modbus_channeldata( int index, QModbusDataUnit *readUnit)
+    : CycleTime(0)
+    , Station(0)
+    , Precision(0)
+    , valid_calc(true)
 {
     this->index.clear();
     this->index.append(index);
     this->readUnits.append(*readUnit);
     generation_time= QDateTime::currentDateTime();
-
-    valid_calc=true;
 }
 
 modbus_channeldata::modbus_channeldata( int index, QList<QModbusDataUnit> readUnits)
+    : CycleTime(0)
+    , Station(0)
+    , Precision(0)
+    , valid_calc(true)
 {
     this->index.clear();
     this->index.append(index);
     this->readUnits=readUnits;
     generation_time= QDateTime::currentDateTime();
-
-    valid_calc=true;
 }
 
 int modbus_channeldata::getIndex() const

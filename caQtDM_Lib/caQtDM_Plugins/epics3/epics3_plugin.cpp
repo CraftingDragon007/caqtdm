@@ -49,6 +49,8 @@ QString Epics3Plugin::pluginName()
 }
 
 Epics3Plugin::Epics3Plugin()
+    : mutexknobdataP(nullptr)
+    , messagewindowP(nullptr)
 {
     qDebug() << "Epics3Plugin: Create";
 }

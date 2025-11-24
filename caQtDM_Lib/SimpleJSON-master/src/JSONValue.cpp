@@ -307,8 +307,10 @@ JSONValue *JSONValue::Parse(const wchar_t **data)
  * @access public
  */
 JSONValue::JSONValue(/*NULL*/)
+	: type(JSONType_Null)
+	, bool_value(false)
+	, number_value(0.0)
 {
-	type = JSONType_Null;
 }
 
 /**
@@ -319,9 +321,11 @@ JSONValue::JSONValue(/*NULL*/)
  * @param wchar_t* m_char_value The string to use as the value
  */
 JSONValue::JSONValue(const wchar_t *m_char_value)
+	: type(JSONType_String)
+	, string_value(m_char_value)
+	, bool_value(false)
+	, number_value(0.0)
 {
-	type = JSONType_String;
-	string_value = std::wstring(m_char_value);
 }
 
 /**
@@ -332,9 +336,11 @@ JSONValue::JSONValue(const wchar_t *m_char_value)
  * @param std::wstring m_string_value The string to use as the value
  */
 JSONValue::JSONValue(const std::wstring &m_string_value)
+	: type(JSONType_String)
+	, string_value(m_string_value)
+	, bool_value(false)
+	, number_value(0.0)
 {
-	type = JSONType_String;
-	string_value = m_string_value;
 }
 
 /**
@@ -345,9 +351,10 @@ JSONValue::JSONValue(const std::wstring &m_string_value)
  * @param bool m_bool_value The bool to use as the value
  */
 JSONValue::JSONValue(bool m_bool_value)
+	: type(JSONType_Bool)
+	, bool_value(m_bool_value)
+	, number_value(0.0)
 {
-	type = JSONType_Bool;
-	bool_value = m_bool_value;
 }
 
 /**
@@ -358,9 +365,10 @@ JSONValue::JSONValue(bool m_bool_value)
  * @param double m_number_value The number to use as the value
  */
 JSONValue::JSONValue(double m_number_value)
+	: type(JSONType_Number)
+	, bool_value(false)
+	, number_value(m_number_value)
 {
-	type = JSONType_Number;
-	number_value = m_number_value;
 }
 
 /**
@@ -371,9 +379,11 @@ JSONValue::JSONValue(double m_number_value)
  * @param JSONArray m_array_value The JSONArray to use as the value
  */
 JSONValue::JSONValue(const JSONArray &m_array_value)
+	: type(JSONType_Array)
+	, bool_value(false)
+	, number_value(0.0)
+	, array_value(m_array_value)
 {
-	type = JSONType_Array;
-	array_value = m_array_value;
 }
 
 /**
@@ -384,9 +394,11 @@ JSONValue::JSONValue(const JSONArray &m_array_value)
  * @param JSONObject m_object_value The JSONObject to use as the value
  */
 JSONValue::JSONValue(const JSONObject &m_object_value)
+	: type(JSONType_Object)
+	, bool_value(false)
+	, number_value(0.0)
+	, object_value(m_object_value)
 {
-	type = JSONType_Object;
-	object_value = m_object_value;
 }
 
 /**

@@ -253,7 +253,14 @@ void FingerSwipeGestureRecognizer::reset(QGesture *state)
     QGestureRecognizer::reset(state);
 }
 
-FingerSwipeGesture::FingerSwipeGesture(QObject *parent): QGesture(parent), m_triggered(false), m_cancelled(false)
+FingerSwipeGesture::FingerSwipeGesture(QObject *parent)
+    : QGesture(parent)
+    , m_central(nullptr)
+    , m_triggered(false)
+    , m_cancelled(false)
+    , m_touchupdate(false)
+    , m_begin(false)
+    , m_decision(false)
 { }
 
 FingerSwipeGesture::~FingerSwipeGesture()

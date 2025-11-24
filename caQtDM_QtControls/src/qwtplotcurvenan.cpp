@@ -31,6 +31,8 @@
 #include "qwtplotcurvenan.h"
 
 QwtPlotCurveNaN::QwtPlotCurveNaN(const QString& title)
+    : Interval(0.0)
+    , CurvType(TimeCurv)
 {
     setTitle(title);
 }
@@ -72,6 +74,8 @@ void QwtPlotCurveNaN::setInterval(curvType type, double interval)
 }
 
 QwtPlotIntervalCurveNaN::QwtPlotIntervalCurveNaN(const QString& title)
+    : Interval(0.0)
+    , CurvType(TimeCurv)
 {
     setTitle(title);
 }
