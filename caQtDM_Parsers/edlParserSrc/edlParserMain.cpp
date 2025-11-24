@@ -46,8 +46,13 @@ extern "C" {
 }
 
 // constructor
-myParserEDM::myParserEDM () {
-    zindex = 0;
+myParserEDM::myParserEDM ()
+    : xw(nullptr)
+    , edlParser(nullptr)
+    , file(nullptr)
+    , zindex(0)
+{
+    memset(zorder, 0, sizeof(zorder));
 }
 
 void myParserEDM::openFile(char *outFile)

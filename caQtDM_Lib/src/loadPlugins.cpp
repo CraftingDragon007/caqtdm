@@ -30,6 +30,7 @@
 #include "caQtDM_Lib_global.h"
 
 loadPlugins::loadPlugins()
+    : controlsInterface(nullptr)
 {
 }
 
