@@ -309,31 +309,53 @@ static struct mda_scan *scan_read(XDR *xdrs, int recursive)
   int i;
 
   scan = (struct mda_scan *) malloc( sizeof(struct mda_scan));
+  
+  // Initialize pointers to NULL to enable safe cleanup
+  scan->offsets = NULL;
+  scan->name = NULL;
+  scan->time = NULL;
+  scan->positioners = NULL;
+  scan->detectors = NULL;
+  scan->triggers = NULL;
+  scan->sub_scans = NULL;
 
-
-  if( !xdr_int16_t(xdrs, &(scan->scan_rank) ))
+  if( !xdr_int16_t(xdrs, &(scan->scan_rank) )) {
+    free(scan);
     return NULL;
-  if( !xdr_int32_t(xdrs, &(scan->requested_points) ))
+  }
+  if( !xdr_int32_t(xdrs, &(scan->requested_points) )) {
+    free(scan);
     return NULL;
-  if( !xdr_int32_t(xdrs, &(scan->last_point) ))
+  }
+  if( !xdr_int32_t(xdrs, &(scan->last_point) )) {
+    free(scan);
     return NULL;
+  }
 
   // this happens in corrupt files sometimes.
-  if( scan->scan_rank < 1)
+  if( scan->scan_rank < 1) {
+    free(scan);
     return NULL;
+  }
 
   if( scan->scan_rank > 1)
     {
       scan->offsets = (int32_t *) 
         malloc( scan->requested_points * sizeof(int32_t));
       if( !xdr_vector( xdrs, (char *) scan->offsets, scan->requested_points, 
-		       sizeof( int32_t), (xdrproc_t) xdr_int32_t))
+		       sizeof( int32_t), (xdrproc_t) xdr_int32_t)) {
+        free(scan->offsets);
+        free(scan);
 	return NULL;
+      }
 
       // there can be no zero offsets for the first "last_point" values
       for( i = 0; i < scan->last_point; i++)
-        if( scan->offsets[i] == 0)
+        if( scan->offsets[i] == 0) {
+          free(scan->offsets);
+          free(scan);
           return NULL;
+        }
     }
   else
     scan->offsets = NULL;
