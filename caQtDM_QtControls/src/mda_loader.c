@@ -218,14 +218,14 @@ static struct mda_positioner *positioner_read(XDR *xdrs)
   return positioner;
 
 cleanup:
-  // Free any allocated strings
-  if(positioner->name) free(positioner->name);
-  if(positioner->description) free(positioner->description);
-  if(positioner->step_mode) free(positioner->step_mode);
-  if(positioner->unit) free(positioner->unit);
-  if(positioner->readback_name) free(positioner->readback_name);
-  if(positioner->readback_description) free(positioner->readback_description);
-  if(positioner->readback_unit) free(positioner->readback_unit);
+  // Free any allocated strings (free(NULL) is safe)
+  free(positioner->name);
+  free(positioner->description);
+  free(positioner->step_mode);
+  free(positioner->unit);
+  free(positioner->readback_name);
+  free(positioner->readback_description);
+  free(positioner->readback_unit);
   free(positioner);
   return NULL;
 }
@@ -260,9 +260,9 @@ static struct mda_detector *detector_read(XDR *xdrs)
   return detector;
 
 cleanup:
-  if(detector->name) free(detector->name);
-  if(detector->description) free(detector->description);
-  if(detector->unit) free(detector->unit);
+  free(detector->name);
+  free(detector->description);
+  free(detector->unit);
   free(detector);
   return NULL;
 }
@@ -290,7 +290,7 @@ static struct mda_trigger *trigger_read(XDR *xdrs)
     return NULL;
   }
   if( !xdr_float(xdrs, &(trigger->command) )) {
-    if(trigger->name) free(trigger->name);
+    free(trigger->name);
     free(trigger);
     return NULL;
   }
