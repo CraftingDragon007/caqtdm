@@ -691,7 +691,7 @@ void caInclude::setMacroAndPositionsFromMacroStringList(QStringList macroList) {
     #endif
         Macro.remove(re);
         //printf(" MacroOrg: %s\n",qasc(Macro));
-        pattern = QString("(?:,+|^)\\[([^,]*[^\\]]*)\\]");
+        pattern = QString("(?:,+|\\s*|^)\\[([^,]*[^\\]]*)\\]");
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
         QRegExp rx(pattern);

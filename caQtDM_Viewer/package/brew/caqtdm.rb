@@ -30,6 +30,7 @@ class Caqtdm < Formula
     ENV["EPICSLIB"] += "/lib/#{ENV["EPICS_HOST_ARCH"]}" 
     ENV["CAQTDM_MODBUS"] = "1"
     ENV["CAQTDM_GPS"] = "1"
+    ENV["PRODUCT_BUNDLE_IDENTIFIER"] = "ch.psi.caqtdm"
     ENV["QTDIR"] = Formula["qt"].opt_prefix
     ENV["QTHOME"] = Formula["qt"].opt_prefix	
     ENV["QWTHOME"] = Formula["qwt"].opt_prefix
@@ -100,15 +101,21 @@ class Caqtdm < Formula
 
      
      
-     system ("echo '[PATH]' > #{prefix}/caQtDM.app/Contents/Resources/qt.conf")
-     system ("echo 'Prefix=..' >> #{prefix}/caQtDM.app/Contents/Resources/qt.conf")
-     system ("echo 'Plugins=../PlugIns' >> #{prefix}/caQtDM.app/Contents/Resources/qt.conf")
-     system ("echo ' ' >> #{prefix}/caQtDM.app/Contents/Resources/qt.conf")
+     # system ("echo '[PATH]' > #{prefix}/caQtDM.app/Contents/Resources/qt.conf")
+     # system ("echo 'Prefix=#{prefix}/caQtDM.app/Contents' >> #{prefix}/caQtDM.app/Contents/Resources/qt.conf")
+     # system ("echo 'Plugins=#{prefix}/caQtDM.app/Contents/PlugIns' >> #{prefix}/caQtDM.app/Contents/Resources/qt.conf")
+     # system ("echo ' ' >> #{prefix}/caQtDM.app/Contents/Resources/qt.conf")
 
      system ("defaults write #{prefix}/caQtDM.app/Contents/Info LSEnvironment -dict QT_PLUGIN_PATH #{prefix}/caQtDM.app/Contents/PlugIns")     
+     system ("defaults write #{prefix}/caQtDM.app/Contents/Info CFBundleIdentifier -string ch.psi.caQtDM")     
 
-     bin.install_symlink prefix/"caQtDM.app/Contents/MacOS/caQtDM" => "caqtdm"
 
+     # bin.install_symlink prefix/"caQtDM.app/Contents/MacOS/caQtDM" => "caqtdm"
+     system ("echo '#!/bin/sh' > #{prefix}/caQtDM.app/Contents/Resources/caqtdm")
+     system ("echo 'open -n --stdout $(tty) --stderr $(tty) #{prefix}/caQtDM.app --args \"$@\"' >> #{prefix}/caQtDM.app/Contents/Resources/caqtdm")
+     system ("echo ' ' >> #{prefix}/caQtDM.app/Contents/Resources/caqtdm")
+     system ("chmod 755 #{prefix}/caQtDM.app/Contents/Resources/caqtdm")
+     bin.install_symlink prefix/"caQtDM.app/Contents/Resources/caqtdm" => "caqtdm"
 
     end
 

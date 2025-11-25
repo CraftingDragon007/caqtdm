@@ -74,6 +74,9 @@ class CAQTDM_LIBSHARED_EXPORT MessageWindow: public QDockWidget
 private:
     static QString QtMsgToQString(QtMsgType type, const char *msg);
     QString m_logFilePath;
+
+    QString m_normalTextColorHex;
+    QString m_debugTextColorHex;
 protected:
 
     virtual void customEvent(QEvent* event);

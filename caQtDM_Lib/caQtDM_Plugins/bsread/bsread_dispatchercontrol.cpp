@@ -35,7 +35,6 @@
 bsread_dispatchercontrol::bsread_dispatchercontrol()
 {
     loop = new QEventLoop(this);
-    connect(qApp, SIGNAL(aboutToQuit()),this, SLOT(closeEvent()));
     mutexknobdataP = Q_NULLPTR;
     //Special Channels
     bsreadChannels.append("bsread:hash");
@@ -91,7 +90,6 @@ bsread_dispatchercontrol::bsread_dispatchercontrol()
 }
 bsread_dispatchercontrol::~bsread_dispatchercontrol()
 {
-    this->setTerminate();
     loop->quit();
     delete(loop);
     //qDebug()<<"Dispatcher stop";
@@ -811,7 +809,7 @@ void bsread_dispatchercontrol::finishReplyDelete()
     //qDebug()<<"From finishReplyDelete thread: ("<<QThread::currentThreadId()<<")";
 }
 
-void bsread_dispatchercontrol::closeEvent(){
+void bsread_dispatchercontrol::initiateShutdown(){
    //qDebug() << "bsread_dispatchercontrol:closeEvent ";
    this->setTerminate();
     while (bsreadconnections.count()!=0){

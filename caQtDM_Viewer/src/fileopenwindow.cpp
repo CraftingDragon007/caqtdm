@@ -82,6 +82,7 @@ bool HTTPCONFIGURATOR = false;
         #include <X11/Xlib.h>
         #include <X11/Xatom.h>
 
+        #undef KeyPress //remove the X11 defenition to access QEvent::KeyPress
         #define MESSAGE_SOURCE_OLD            0
         #define MESSAGE_SOURCE_APPLICATION    1
         #define MESSAGE_SOURCE_PAGER          2
@@ -1715,6 +1716,8 @@ void FileOpenWindow::Callback_ActionUnconnected()
     int countDisplayed = 0;
 
     if(pvWindow != (QMainWindow*) Q_NULLPTR) {
+        //refill the table with the actual valid data
+        fillPVtable(countPV, countNotConnected, countDisplayed);
         pvWindow->show();
         return;
     }
@@ -1748,6 +1751,9 @@ void FileOpenWindow::Callback_ActionUnconnected()
     for (int i = 0; i < count; i++) w += pvTable->columnWidth(i);
     int maxW = (w + count + pvTable->verticalHeader()->width() + pvTable->verticalScrollBar()->width());
     pvWindow->setMinimumWidth(maxW+25);
+
+    pvTable->installEventFilter(this);
+
 }
 
 void FileOpenWindow::Callback_PVwindowExit()
@@ -1985,7 +1991,30 @@ bool FileOpenWindow::event(QEvent *e)
 
 bool FileOpenWindow::eventFilter(QObject *obj, QEvent *event)
 {
-    Q_UNUSED(obj);
+
     if (event->type() == QEvent::MouseMove) caQtDM_TimeLeft = caQtDM_TimeOut;
-    return false;
+    if (obj == pvTable){
+        if (event->type() == QEvent::KeyPress)
+        {
+            QKeyEvent *ev = static_cast<QKeyEvent *>(event);
+            if(ev->matches(QKeySequence::Copy)){
+                QString text;
+                QItemSelectionRange range = pvTable->selectionModel()->selection().first();
+                for (auto i = range.top(); i <= range.bottom(); ++i)
+                {
+                    QStringList rowContents;
+                    for (auto j = range.left(); j <= range.right(); ++j)
+                        rowContents << pvTable->model()->index(i,j).data().toString();
+                    text += rowContents.join("\t");
+                    text += "\n";
+                }
+                text += "\n";
+                qDebug()<<text;
+                qApp->clipboard()->setText(text, QClipboard::Clipboard);
+                return true;
+            }
+        }
+    }
+
+    return QObject::eventFilter(obj, event);
 }
