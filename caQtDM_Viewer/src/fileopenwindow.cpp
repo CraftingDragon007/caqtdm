@@ -302,6 +302,9 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
 
         CaQtDM_Lib::slaveServer = options["slave_server"].toInt();
 
+        CaQtDM_Lib::webTimeout = options["web_timeout"].toUInt();
+        CaQtDM_Lib::interactionBasedTimeout = options["web_interaction_based_timeout"].toInt();
+
         WebSocketServer::instance().setup(web_port);
 
         connect(messageWindow, &MessageWindow::newMessageReceivedEvent, [](QString text){
@@ -894,6 +897,16 @@ void FileOpenWindow::timerEvent(QTimerEvent *event)
     if(caQtDM_TimeOutEnabled) {
         caQtDM_TimeLeft -= 1.0/3600.0;
         if(caQtDM_TimeLeft <= 0) {
+#ifndef MOBILE
+            qDebug() << "WSS::isIntialized()" << WebSocketServer::instance().isInitialized();
+            qDebug() << "interactionBasedTimeout()" << CaQtDM_Lib::interactionBasedTimeout;
+            qDebug() << "slaveServer" << CaQtDM_Lib::slaveServer;
+            if (WebSocketServer::instance().isInitialized() && CaQtDM_Lib::interactionBasedTimeout && CaQtDM_Lib::slaveServer) {
+                qDebug() << "Sending interaction based shutdown msg";
+                WebSocketServer::instance().sendInteractionBasedShutdownMsg();
+            }
+#endif
+
             QList<CaQtDM_Lib *> all = this->findChildren<CaQtDM_Lib *>();
             foreach(QWidget* widget, all) widget->close();
             if (sharedMemory.isAttached()) sharedMemory.detach();

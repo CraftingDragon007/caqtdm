@@ -149,6 +149,8 @@ public:
     static bool slaveServer;
     static bool vncServer;
     static bool noVncPlugin;
+    static bool interactionBasedTimeout;
+    static uint webTimeout;
 
     static void addWebChildProcess(QString file, QString macros, VncWebChildProcess* childProcess);
     static VncWebChildProcess* getWebChildProcess(QString file, QString macros);

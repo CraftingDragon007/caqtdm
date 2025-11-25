@@ -18,12 +18,14 @@ public:
     void sendLog(const QString text);
     void sendOpenFileRequest(const QString file, const QString macros, quint16 vncPort);
     void sendInstanceInfo(QWebSocket *receiver, quint16 vncPort);
+    void sendInteractionBasedShutdownMsg();
 
 private slots:
     void onNewConnection();
     void processTextMessage(const QString &message);
     void processBinaryMessage(const QByteArray &message);
     void socketDisconnected();
+    void shutdownNoUserTimeout();
 
 private:
     explicit WebSocketServer(QObject *parent = nullptr);

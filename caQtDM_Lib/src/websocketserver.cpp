@@ -61,7 +61,7 @@ void WebSocketServer::processTextMessage(const QString &message)
     qDebug() << "Text message received from" << pSender->peerAddress().toString() << ":" << pSender->peerPort() << ":" << message;
 
     if (pSender) {
-        if (message.startsWith("RESOLVE|")) {
+        if (message.startsWith("RESOLVE|") && !CaQtDM_Lib::slaveServer) {
             QStringList items = message.split('|');
             QString file;
             QString macros;
@@ -104,8 +104,6 @@ void WebSocketServer::processTextMessage(const QString &message)
                     } else {
                         if (result.value()->process() == nullptr || result.value()->process()->state() == QProcess::ProcessState::NotRunning) {
                             CaQtDM_Lib::webChildProcesses.remove(key);
-                            vncPort = result.value()->vncPort();
-                            webPort = result.value()->webPort();
                         } else {
                             sendInstanceInfo(pSender, result.value()->vncPort());
                             return;
@@ -166,12 +164,27 @@ void WebSocketServer::socketDisconnected()
     QWebSocket *pSocket = qobject_cast<QWebSocket *>(sender());
     if (pSocket) {
         qDebug() << "Client disconnected:" << pSocket->peerAddress().toString() << ":" << pSocket->peerPort();
+        int count;
         {
             QWriteLocker locker(&m_clientReadWriteLock);
             m_clients.removeAll(pSocket);
+            count = m_clients.count();
         }
         pSocket->deleteLater();
+
+        if (count == 0 && CaQtDM_Lib::slaveServer && !CaQtDM_Lib::interactionBasedTimeout) {
+            uint timeout = CaQtDM_Lib::webTimeout;
+            if (timeout == 0) timeout = 30 * 60;
+            uint timeoutMsec = timeout * 1000;
+            QTimer::singleShot(timeoutMsec, this, SLOT(shutdownNoUserTimeout()));
+        }
     }
+}
+
+void WebSocketServer::shutdownNoUserTimeout() {
+    QReadLocker locker(&m_clientReadWriteLock);
+    if (m_clients.count() > 0) return;
+    QCoreApplication::quit();
 }
 
 void WebSocketServer::sendLog(const QString text) {
@@ -191,6 +204,15 @@ void WebSocketServer::sendOpenFileRequest(const QString file, const QString macr
     foreach (QWebSocket *pSocket, m_clients) {
         if (pSocket != Q_NULLPTR) {
             pSocket->sendTextMessage("OPEN|" + fileName + '|' + macros);
+        }
+    }
+}
+
+void WebSocketServer::sendInteractionBasedShutdownMsg() {
+    QReadLocker locker(&m_clientReadWriteLock);
+    foreach (QWebSocket *pSocket, m_clients) {
+        if (pSocket != nullptr) {
+            pSocket->sendTextMessage("TIMEOUT|Interaction based timeout reached, reload the page to restart the session.");
         }
     }
 }

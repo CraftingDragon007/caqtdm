@@ -219,8 +219,10 @@ int main(int argc, char *argv[])
     bool server = false;
     bool use_novnc_plugin = false;
     bool slave_server = false;
+    bool web_interaction_based_timeout = false;
     quint16 port = 5900;
     quint16 web_port = port + 1000;
+    uint web_timeout = 0;
 
     for (numargs = argc, in = 1; in < numargs; in++) {
         qDebug() << argv[in];
@@ -326,7 +328,7 @@ int main(int argc, char *argv[])
             bool valid;
             port = QString(argv[in]).toUShort(&valid);
             if (!valid) {
-                printf("caQtDM -- Invalid server port %s specified, not enabling server mode", argv[in]);
+                printf("caQtDM -- Invalid server port %s specified, not enabling server mode\n", argv[in]);
                 server = false;
             } else {
                 if (port > std::numeric_limits<quint16>::max() - 1000) {
@@ -338,9 +340,21 @@ int main(int argc, char *argv[])
             bool valid;
             web_port = QString(argv[in]).toUShort(&valid);
             if (!valid) {
-                printf("caQtDM -- Invalid web server port %s specified, not enabling server mode", argv[in]);
+                printf("caQtDM -- Invalid web server port %s specified, not enabling server mode\n", argv[in]);
                 server = false;
             }
+        } else if (strcmp (argv[in], "-web_timeout") == 0) {
+            in++;
+            bool valid;
+            web_timeout = QString(argv[in]).toUInt(&valid);
+            if (!valid) {
+                printf("caQtDM -- Invalid timeout %s seconds specified, not enabling timeout for web child processes\n", argv[in]);
+            } else if (((double)web_timeout / 60 / 60) <= 0.021) {
+                printf("caQtDM -- Invalid web timeout %s seconds specified (min. 76s), disabling. This Switch is not meant for jokes!!!\n", argv[in]);
+                web_timeout = 0;
+            }
+        } else if (strcmp (argv[in], "-web_interaction_timeout") == 0) {
+            web_interaction_based_timeout = true;
         } else if (strncmp (argv[in], "-" , 1) == 0) {
             /* unknown application argument */
             printf("caQtDM -- Argument %d = [%s] is unknown!, possible -attach -macro -noMsg -stylefile -dg -x -print -httpconfig -noResize -option\n",in,argv[in]);
@@ -370,6 +384,8 @@ int main(int argc, char *argv[])
         options.insert("slave_server", QString::number(slave_server));
         options.insert("vnc_port", QString::number(port));
         options.insert("web_port", QString::number(web_port));
+        options.insert("web_timeout", QString::number(web_timeout));
+        options.insert("web_interaction_based_timeout", QString::number(web_interaction_based_timeout));
     }
 
     QApplication app(argc, argv);

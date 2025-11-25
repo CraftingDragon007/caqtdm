@@ -329,6 +329,8 @@ quint16 CaQtDM_Lib::webPort;
 bool CaQtDM_Lib::slaveServer;
 bool CaQtDM_Lib::vncServer;
 bool CaQtDM_Lib::noVncPlugin;
+bool CaQtDM_Lib::interactionBasedTimeout;
+uint CaQtDM_Lib::webTimeout;
 #endif
 
 /**
@@ -7447,15 +7449,23 @@ VncWebChildProcess* CaQtDM_Lib::startVncChildProcess(quint16 vncPort, quint16 we
         process_args.append(macros.trimmed());
     }
 
-    process_args.append(file);
+    QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
 
     if (!noVncPlugin) {
-        QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
         environment.remove("LD_PRELOAD");
-
-        child->setProcessEnvironment(environment);
     }
 
+    if (webTimeout != 0 && interactionBasedTimeout) {
+        environment.insert("CAQTDM_TIMEOUT_HOURS", QString::number((double)webTimeout / 60 / 60));
+        process_args.append("-web_interaction_timeout");
+    } else if (webTimeout != 0) {
+        process_args.append("-web_timeout");
+        process_args.append(QString::number(webTimeout));
+    }
+
+    process_args.append(file);
+
+    child->setProcessEnvironment(environment);
     child->setArguments(process_args);
 
     child->start();
