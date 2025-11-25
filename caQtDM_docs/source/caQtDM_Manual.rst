@@ -2413,6 +2413,7 @@ is the equivalent of the Related Display in MEDM
    |                     | item to toggle the marking of hidden buttons  |
    |                     | in case the user cannot find them.            |
    +---------------------+-----------------------------------------------+
+
    **Properties:**
    The following properties are available:
 
@@ -3187,7 +3188,9 @@ scanned for the given source characters ( or -sequences) and every occurrence wi
 given replacement characters ( or -sequence). Unit replacements do not affect the UI file or EPICS data
 and are purely visible and around for the caQtDM process that was started with them.
 To start a caQtDM process with custom unit replacements, the following environment variable has to be set with the wanted replacements:
-CAQTDM_CUSTOM_UNIT_REPLACEMENTS
+
+**CAQTDM_CUSTOM_UNIT_REPLACEMENTS**
+
 The syntax for the custom unit replacements is as follows:
 The characters are written either in utf-8 coded characters or as a hexadecimal or decimal code for the character in utf-8 coding.
 Hexadeciaml codes need to start with "0x", caQtDM will try to parse all other characters first as a decimal code, if they are not purely numerical it will
@@ -3196,9 +3199,13 @@ you can also just write them as a string without the need for commas. so "hi" wo
 Double quotes are possible but removed by caQtDM when parsing the environment variable, single quotes are treated literally as characters to replace, so don't use them to encapsulate.
 You have to first write the source characters you want to replace, then an equal sign (=) and finally the replacement characters that should be drawn instead. To set multiple
 character replacements, seperate them by semicolon (;). Parts that dont contain an equal sign but are seperated from other parts with semicolon are ignored. All put together this would be the structure:
-CAQTDM_CUSTOM_UNIT_REPLACEMENTS={sourceCharacters}={replacementCharacters};{anotherReplacement}
+
+``CAQTDM_CUSTOM_UNIT_REPLACEMENTS={sourceCharacters}={replacementCharacters};{anotherReplacement}``
+
 An example (that doesnt make much sense but displays many possibilities) would be:
-CAQTDM_CUSTOM_UNIT_REPLACEMENTS=charsToReplace=charsToUse;0x48,0x68=bye;charsWithHex,0x4f=something;
+
+``CAQTDM_CUSTOM_UNIT_REPLACEMENTS=charsToReplace=charsToUse;0x48,0x68=bye;charsWithHex,0x4f=something;``
+
 It can be seen that all combinations of strings, hex- and deciaml character codes are possible to form a source or replacement string.
 All replacements will be done sequentially, with the leftmost replacements being done first. Therefore, it can also be possible, that later replacements replace characters in a string
 that has already been replaced before by another replacements.
@@ -3206,9 +3213,13 @@ When doing custom unit replacements, always consider that your replacements migh
 processed string with the default unit replacements. To see how they are implemented, you might want to check out teh first few lines in caQtDM_Lib/src/mutexKnobData.cpp
 There are already some default unit replacements that were introduced because common systems had difficulties displaying widely-used characters.
 Those unit replacements always take place before custom unit replacements, you can disable them by setting the following environment variable to "false":
-CAQTDM_DEFAULT_UNIT_REPLACEMENTS
+
+**CAQTDM_DEFAULT_UNIT_REPLACEMENTS**
+
 It is not recommended to disable them, as they are tested on all common systems and should be working with most clients, however disabling might help
 in some edge cases.
+
+.. _copy.past:
 
 Copying and selecting Text
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -3217,6 +3228,7 @@ Multiple widgets support some kind of selection of their displayed values. All o
 They do not behave exactly the same, but their differences are relatively minor and mostly in how they are implemented: 
 
 **Comparison**
+
 +------------------------+--------+--------+--------------------------+-----------------------------+-----------------------+
 | Widget                 | Ctrl+C | Ctrl+A | Behaviour on Single Click| Behaviour on Double-Click   |  Selection on Change  |
 +========================+========+========+==========================+=============================+=======================+
@@ -3234,6 +3246,7 @@ They do not behave exactly the same, but their differences are relatively minor 
 +------------------------+--------------------------------------------+-----------------------------+-----------------------+
 
 **Shortcuts**
+
 Although the widgets might work differently, the shortcuts are the same across all of them. The shortcuts use, if any exists, the industry standard that most people are familiar with.
 When no industry standard is available, caQtDM uses the Combination ``Ctrl+Alt``, in combination with the first letter of the action performed (Ex. **R** for **R**eload in ``Ctrl+Alt+R``).
 
