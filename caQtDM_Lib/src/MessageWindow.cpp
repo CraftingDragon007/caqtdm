@@ -26,6 +26,7 @@
 
 #include "MessageWindow.h"
 #include "messageWindowWrapper.h"
+#include "qapplication.h"
 #include "qdatetime.h"
 #include <QCoreApplication>
 #include <QMutexLocker>
@@ -54,6 +55,11 @@ MessageWindow::MessageWindow(QWidget* parent) : QDockWidget(parent)
     QFont font("Monospace");
     font.setStyleHint(QFont::TypeWriter);
     msgTextEdit.setFont(font);
+
+    QApplication* guiApp = qobject_cast<QApplication*>(qApp);
+    QPalette palette = guiApp->palette();
+    m_normalTextColorHex = palette.color(QPalette::Active, QPalette::Text).name();
+    m_debugTextColorHex = palette.color(QPalette::Active, QPalette::Link).name();
 
     setFeatures(QDockWidget::NoDockWidgetFeatures);
     setWindowTitle(tr(WINDOW_TITLE));
@@ -170,16 +176,15 @@ void MessageWindow::postMsgEvent(QtMsgType type, char* msg)
             qWarning() << "Failed to write to logfile";
         }
     }
-
     switch (type) {
 #if QT_VERSION > QT_VERSION_CHECK(5, 0, 0)
     case QtInfoMsg:
-        qmsg.prepend("<FONT color=\"#000000\">");
+        qmsg.prepend(QString("<FONT color=\"%1\">").arg(m_normalTextColorHex));
         qmsg.append("</FONT>");
         break;
 #endif
     case QtDebugMsg:
-        qmsg.prepend("<FONT color=\"#0000FF\">");
+        qmsg.prepend(QString("<FONT color=\"%1\">").arg(m_debugTextColorHex));
         qmsg.append("</FONT>");
         break;
     case QtWarningMsg:
@@ -192,7 +197,7 @@ void MessageWindow::postMsgEvent(QtMsgType type, char* msg)
         qmsg.append("</FONT></B>");
         break;
     default:
-        qmsg.prepend("<FONT color=\"#000000\">");
+        qmsg.prepend(QString("<FONT color=\"%1\">").arg(m_normalTextColorHex));
         qmsg.append("</FONT>");
         break;
     }
