@@ -286,6 +286,8 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
     setGeometry(0,0, 300, 150);
     this->statusBar()->show();
 
+    connect(this, &FileOpenWindow::themeChanged, messageWindow, &MessageWindow::themeChanged);
+
     // connect action buttons
     connect( this->ui.fileAction, SIGNAL( triggered() ), this, SLOT(Callback_OpenButton()) );
     connect( this->ui.aboutAction, SIGNAL( triggered() ), this, SLOT(Callback_ActionAbout()) );
@@ -1984,6 +1986,14 @@ bool FileOpenWindow::event(QEvent *e)
         qDebug()<<"QEvent::Show!";
         // Qt 6.5.2 ShowMinimized=crash in QWidget::event better solution = setVisible(false)
         if (!debugWindow) this->setVisible(false);
+    }
+    return QWidget::event(e);
+}
+#else
+bool FileOpenWindow::event(QEvent *e)
+{
+    if (e->type() == QEvent::ThemeChange) {
+        emit themeChanged();
     }
     return QWidget::event(e);
 }
