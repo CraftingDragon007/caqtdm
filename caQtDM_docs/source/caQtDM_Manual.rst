@@ -3193,7 +3193,7 @@ To start a caQtDM process with custom unit replacements, the following environme
 
 The syntax for the custom unit replacements is as follows:
 The characters are written either in utf-8 coded characters or as a hexadecimal or decimal code for the character in utf-8 coding.
-Hexadeciaml codes need to start with "0x", caQtDM will try to parse all other characters first as a decimal code, if they are not purely numerical it will
+Hexadecimal codes need to start with "0x", caQtDM will try to parse all other characters first as a decimal code, if they are not purely numerical it will
 interpret them as utf-8 coded characters. Multiple characters that should be treated as one string have to be seperated by comma (,). If you use utf-8 coded characters,
 you can also just write them as a string without the need for commas. so "hi" would be written as "0x48,0x69", or simply just "hi".
 Double quotes are possible but removed by caQtDM when parsing the environment variable, single quotes are treated literally as characters to replace, so don't use them to encapsulate.
@@ -3210,7 +3210,7 @@ It can be seen that all combinations of strings, hex- and deciaml character code
 All replacements will be done sequentially, with the leftmost replacements being done first. Therefore, it can also be possible, that later replacements replace characters in a string
 that has already been replaced before by another replacements.
 When doing custom unit replacements, always consider that your replacements might not be done to the original string from EPICS, but on the already
-processed string with the default unit replacements. To see how they are implemented, you might want to check out teh first few lines in caQtDM_Lib/src/mutexKnobData.cpp
+processed string with the default unit replacements. To see how they are implemented, you might want to check out the first few lines in 
 There are already some default unit replacements that were introduced because common systems had difficulties displaying widely-used characters.
 Those unit replacements always take place before custom unit replacements, you can disable them by setting the following environment variable to "false":
 
