@@ -443,7 +443,9 @@ int main(int argc, char *argv[])
             file.open(QFile::ReadOnly);
             QString StyleSheet = QLatin1String(file.readAll());
             printf("caQtDM -- custom stylesheet file <%s> replaced the default stylesheet\n", qasc(fileNameStylesheet));
+            fflush(stdout);
             app.setStyleSheet(StyleSheet);
+            app.setProperty("user_defined_stylesheet", fileNameFound);
             file.close();
         }
         delete searchCustomStyleSheet;

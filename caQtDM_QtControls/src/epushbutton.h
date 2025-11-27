@@ -59,7 +59,7 @@ protected:
     virtual QSize minimumSizeHint() const;
     virtual bool eventFilter(QObject *obj, QEvent *event);
 
-    QSize calculateTextSpace();
+    QSize calculateTextSpace() override;
     QSize d_savedLabelSize;
 };
 

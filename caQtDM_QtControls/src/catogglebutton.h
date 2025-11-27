@@ -115,7 +115,7 @@ signals:
     void toggleButtonSignal(bool checked);
 
 protected:
-    QSize calculateTextSpace();
+    QSize calculateTextSpace() override;
     virtual bool event(QEvent *);
 
 private:

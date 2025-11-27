@@ -707,6 +707,10 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
 
         splash->deleteLater();
     }
+    // reapply a globally loaded user stylesheet, cainlude seems to disable it
+    if (qApp->property("user_defined_stylesheet").isValid() && (!qApp->property("user_defined_stylesheet").toString().isEmpty())){
+        qApp->setStyleSheet(qApp->styleSheet());
+    }
 
     // add a reload action
     QAction *ReloadWindowAction = new QAction(this);
@@ -3562,6 +3566,39 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
     #endif
 
         hmiConfigWidget->setProperty("Taken", true);
+    } if(wmSignalRescale* wmSignalRescaleWidget = qobject_cast<wmSignalRescale *>(w1)) {
+        // qDebug() << "create wmSignalRescale";
+        w1->setProperty("ObjectType", wmSignalRescale_Widget);
+
+        QString outputA = wmHandleSoftChannel(wmSignalRescaleWidget->softChannelA(), map, doNothing, w1->objectName());
+        QString outputB = wmHandleSoftChannel(wmSignalRescaleWidget->softChannelB(), map, doNothing, w1->objectName());
+
+        wmSignalRescaleWidget->setSoftChannelA(outputA);
+        wmSignalRescaleWidget->setSoftChannelB(outputB);
+
+        if (outputA.length() > 0) {
+            int num = addMonitor(myWidget, &kData, outputA, w1, specData, map, &pv);
+            integerList.append(num);
+            nbMonitors++;
+        }
+
+        if (outputB.length() > 0) {
+            int num = addMonitor(myWidget, &kData, outputB, w1, specData, map, &pv);
+            integerList.append(num);
+            nbMonitors++;
+        }
+
+        QWidget* container = wmSignalRescaleWidget->parentWidget();
+
+        if (container != Q_NULLPTR) {
+            container->installEventFilter(wmSignalRescaleWidget);
+        }
+
+        connect(wmSignalRescaleWidget, &wmSignalRescale::internalResizeEvent, this, &CaQtDM_Lib::wmHandleResize);
+
+        integerList.insert(0, nbMonitors);
+        wmSignalRescaleWidget->setProperty("MonitorList", integerList);
+        wmSignalRescaleWidget->setProperty("Taken", true);
     }
 
     //==================================================================================================================
@@ -3921,11 +3958,22 @@ void CaQtDM_Lib::UndefinedMacrosWindow()
     if(unknownMacrosList.count() > 0) macroTable->setRowCount(unknownMacrosList.count());
     else macroTable->setRowCount(1);
     while (i != unknownMacrosList.constEnd()) {
-        QStringList list = i.key().split("###", SKIP_EMPTY_PARTS);
+        QStringList list = i.key().split("###");
         //qDebug() << i.key() << "macro variable" << list.at(0) << "in widget" << list.at(1) << "in file" << list.at(2) << "is undefined";
-        macroTable->setItem(count, 0, new QTableWidgetItem(list.at(0)));
-        macroTable->setItem(count, 1, new QTableWidgetItem(list.at(1)));
-        macroTable->setItem(count++, 2, new QTableWidgetItem(list.at(2)));
+        if (list.length() < 3) continue;
+
+        QTableWidgetItem *macroItem = new QTableWidgetItem(list.at(0));
+        macroItem->setFlags(macroItem->flags() & ~Qt::ItemIsEditable);
+        macroTable->setItem(count, 0, macroItem);
+
+        QTableWidgetItem *widgetItem = new QTableWidgetItem(list.at(1));
+        widgetItem->setFlags(widgetItem->flags() & ~Qt::ItemIsEditable);
+        macroTable->setItem(count, 1, widgetItem);
+
+        QTableWidgetItem *fileNameItem = new QTableWidgetItem(list.at(2));
+        fileNameItem->setFlags(fileNameItem->flags() & ~Qt::ItemIsEditable);
+        macroTable->setItem(count++, 2, fileNameItem);
+
         ++i;
     }
     macroTable->resizeColumnsToContents();
@@ -6450,6 +6498,8 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
 
     } else if (caHMIConfig *cahmiConfigWidget = qobject_cast<caHMIConfig*>(w)) {
         Q_UNUSED(cahmiConfigWidget)
+    } else if (wmSignalRescale *wmSignalRescaleWidget = qobject_cast<wmSignalRescale*>(w)) {
+        Q_UNUSED(wmSignalRescaleWidget)
     } else {
         // something else (user defined monitors with non ca imageWidgets ?) ==============================================
         qDebug() << "unrecognized widget" << w->metaObject()->className();
@@ -7176,6 +7226,33 @@ void CaQtDM_Lib::hmiHandleIncomingEvent(QObject *target, QEvent *event, QEvent *
         }
     }
 
+}
+
+void CaQtDM_Lib::wmHandleResize(QObject* target, QWidget* wmSignalRescaleWidget, QResizeEvent *event, const QString &channelA, const QString &channelB)
+{
+    Q_UNUSED(target)
+    QSize size = event->size();
+    if (channelA.length() > 0) {
+        TreatRequestedValue(channelA, QString::number(size.width()), FormatType::decimal, wmSignalRescaleWidget);
+    }
+    if (channelB.length() > 0) {
+        TreatRequestedValue(channelB, QString::number(size.height()), FormatType::decimal, wmSignalRescaleWidget);
+    }
+}
+
+QString CaQtDM_Lib::wmHandleSoftChannel(QString channel, QMap<QString, QString> map, bool doNothing, QString objectName)
+{
+    channel = channel.trimmed();
+    if (channel.isEmpty()) return channel;
+    channel = treatMacro(map, channel, &doNothing, objectName);
+
+    auto foundIt = softvars.find(channel);
+    if (foundIt != softvars.end()) {
+        return foundIt.key();
+    } else {
+        qWarning() << "wmSignalRescale output channel" << channel << "in file" << savedFile[level] << "is not a softPV, output to soft channel is now disabled";
+        return QString();
+    }
 }
 
 /**

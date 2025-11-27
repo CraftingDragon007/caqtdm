@@ -42,5 +42,6 @@
         <file>pixmaps/wmsignal.png</file>
         <file>pixmaps/replacemacro.png</file>
         <file>pixmaps/input.png</file>
+        <file>pixmaps/wmrescale.png</file>
     </qresource>
 </RCC>

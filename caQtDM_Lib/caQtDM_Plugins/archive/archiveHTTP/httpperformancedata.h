@@ -52,6 +52,10 @@ public:
      * */
     void addNewResponse(quint64 responseBytes, int httpStatusCode, bool receivedContinueAt, QDateTime continueAtTime);
 
+    int httpStatusCode() const;
+
+    QDateTime lastUpdatedTime() const;
+
 private:
     QMutex m_globalMutex;
     QElapsedTimer m_requestTimer;
@@ -61,6 +65,7 @@ private:
     QDateTime m_beginTime;
     QDateTime m_endTime;
     QDateTime m_lastRetrievedTime;
+    QDateTime m_lastUpdatedTime;
     bool m_receivedContinueAt;
     int m_numberOfRequests;
     int m_responseBytes;

@@ -68,7 +68,7 @@ public:
     void setZmqcontex(void *value);
     void setMutexknobdataP(MutexKnobData *value);
 
-    void setTerminate();
+    void initiateShutdown();
 
     void setMessagewindow(MessageWindow *value);
     void ChannelVerification(QNetworkAccessManager* manager);
@@ -79,13 +79,14 @@ signals:
     //void requestFinished();
     void finished();
 private slots:
-    void closeEvent();
 public slots:
    void finishReplyConnect();
    void finishReplyDelete();
    void finishVerification();
    void process();
 
+private:
+   void setTerminate();
 
 protected:
 

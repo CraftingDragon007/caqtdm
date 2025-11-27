@@ -93,7 +93,8 @@ enum objectType {caCalc_Widget = 0,
                  caMultiLineString_Widget,
                  caMimeDisplay_Widget,
                  replaceMacro_Widget,
-                 caHMIConfig_Widget
+                 caHMIConfig_Widget,
+                 wmSignalRescale_Widget
                 };
 
 #endif

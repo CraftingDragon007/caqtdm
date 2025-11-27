@@ -153,7 +153,8 @@ SOURCES	+= \
     src/replacemacro.cpp \
     src/JSON.cpp \
     src/JSONValue.cpp \
-    src/textedit.cpp
+    src/textedit.cpp \
+    src/wmsignalrescale.cpp
 
 ADL_EDL_FILES {
     SOURCES	+= src/parseotherfile.cpp
@@ -185,7 +186,8 @@ HEADERS += src/networkaccess.h src/fileFunctions.h \
     src/JSON.h \
     src/JSONValue.h \
     src/networkmodel.h \
-    src/textedit.h
+    src/textedit.h \
+    src/wmsignalrescale.h
 SOURCES += src/networkaccess.cpp src/fileFunctions.cpp
 
 contains(QWT_VER_MIN, 0) {

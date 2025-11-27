@@ -181,11 +181,11 @@ void WorkerHTTP::getFromArchive(indexes indexNew,
             readdata_ok = false;
         }
 
+        httpPerformanceData->addNewResponse(m_httpRetrieval->responseSizeKB(),
+                                            m_httpRetrieval->httpStatusCode(),
+                                            m_httpRetrieval->hasContinueAt(),
+                                            m_httpRetrieval->continueAt());
         if (readdata_ok) {
-            httpPerformanceData->addNewResponse(m_httpRetrieval->responseSizeKB(),
-                                                m_httpRetrieval->httpStatusCode(),
-                                                m_httpRetrieval->hasContinueAt(),
-                                                m_httpRetrieval->continueAt());
             if (m_httpRetrieval->getCount() > 0) {
                 if (isBinned) {
                     // Get the data
@@ -227,10 +227,6 @@ void WorkerHTTP::getFromArchive(indexes indexNew,
                 throw;
             }
         } else {
-            httpPerformanceData->addNewResponse(m_httpRetrieval->responseSizeKB(),
-                                                m_httpRetrieval->httpStatusCode(),
-                                                m_httpRetrieval->hasContinueAt(),
-                                                m_httpRetrieval->continueAt());
             // If we intentionally did not send out a request because the bin count was too low, don't generate an error
             // If the request was redirected, an error has already been displayed but the request is not aborted, so don't generate an error
             if (!(binCountLessThanOne && isBinned) && !m_httpRetrieval->isRedirected()) {
