@@ -371,7 +371,7 @@ int main(int argc, char *argv[])
             if (dimensions.height <= 0 || dimensions.width <= 0) {
                 printf("caQtDM -- Negative or zero ui width / height found (%sx%s), not enabling server mode!", QString::number(dimensions.width).toUtf8().data(), QString::number(dimensions.height).toUtf8().data());
                 server = false;
-            } else qputenv("QT_QPA_PLATFORM", ("%1:size=" + QString::number(dimensions.width) + "x" + QString::number(dimensions.height) + ":depth=16:port=" + QString::number(port)).arg(use_novnc_plugin ? "novnc" : "vnc").toStdString());
+            } else qputenv("QT_QPA_PLATFORM", ("%1:size=" + QString::number(dimensions.width) + "x" + QString::number(dimensions.height) + ":depth=16:port=" + QString::number(port)).arg(use_novnc_plugin ? "novnc" : "vnc").toUtf8());
         }
     } else if (server) {
         printf("No ui file was specified, not enabling server mode!");
