@@ -106,7 +106,8 @@ server {
     }
 
     location / {
+        root /var/www/caqtdm_web/user;
         index index.html;
-        try_files /user$uri $uri/ =404;
+        try_files $uri $uri/ =404;
     }
 }
