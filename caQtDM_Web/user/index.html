@@ -281,6 +281,8 @@
         let newInstance = false;
         let file = null;
 
+        let heartbeat = null;
+
         function openLogWindow() {
           logWindow.classList.add('show');
           menuLogsButton.classList.remove('has-new');
@@ -605,6 +607,18 @@
                 socket.send(message);
               } else {
                 socket.send(getInstancePath());
+                if (heartbeat != null) {
+                  clearInterval(heartbeat);
+                  heartbeat = null;
+                }
+                heartbeat = setInterval(function() {
+                  if (socket.readyState === WebSocket.OPEN) {
+                    socket.send('PING');
+                  } else {
+                    clearInterval(heartbeat);
+                    heartbeat = null;
+                  }
+                }, 50000); //send a ping every 50 seconds
               }
             } catch (sendErr) {
               console.warn('WebSocket send failed:', sendErr);

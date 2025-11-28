@@ -61,7 +61,9 @@ void WebSocketServer::processTextMessage(const QString &message)
     qDebug() << "Text message received from" << pSender->peerAddress().toString() << ":" << pSender->peerPort() << ":" << message;
 
     if (pSender) {
-        if (message.startsWith("RESOLVE|") && !CaQtDM_Lib::slaveServer) {
+        if (message.startsWith("PING")) {
+            pSender->sendTextMessage("PONG");
+        }else if (message.startsWith("RESOLVE|") && !CaQtDM_Lib::slaveServer) {
             QStringList items = message.split('|');
             QString file;
             QString macros;
