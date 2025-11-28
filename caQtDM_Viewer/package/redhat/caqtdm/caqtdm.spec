@@ -8,6 +8,8 @@
 
 %global no_rpath %{getenv:CAQTDM_NORPATH}
 
+%global _epics_host_arch_from_env %{getenv:EPICS_HOST_ARCH}
+
 %ifarch x86_64
 %define EPICS_HOST_ARCH_FALLBACK linux-x86_64
 %else
@@ -18,9 +20,9 @@
 %endif
 %endif
 
-%define _DERIVED_EPICS_HOST_ARCH %( _os="$(uname -s | tr '[:upper:]' '[:lower:]')"; _arch="$(uname -m)"; if [ -n "$_os" ] && [ -n "$_arch" ]; then echo "${_os}-${_arch}"; else echo ""; fi )
+%define _epics_host_arch_derived_uname %( _os="$(uname -s | tr '[:upper:]' '[:lower:]')"; _arch="$(uname -m)"; if [ -n "$_os" ] && [ -n "$_arch" ]; then echo "${_os}-${_arch}"; else echo ""; fi )
 
-%define EPICS_HOST_ARCH %{?_DERIVED_EPICS_HOST_ARCH:-%{EPICS_HOST_ARCH_FALLBACK}}
+%define EPICS_HOST_ARCH %{_epics_host_arch_from_env:-%{_epics_host_arch_derived_uname:-%{EPICS_HOST_ARCH_FALLBACK}}}
 
 # build qt4 support (or not)
 %if (0%{?rhel} && 0%{?rhel} < 8) || (0%{?fedora} && 0%{?fedora} < 24)
