@@ -8,7 +8,19 @@
 
 %global no_rpath %{getenv:CAQTDM_NORPATH}
 
-%define EPICS_HOST_ARCH %(temp_derived_arch="$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)"; [ -z "$temp_derived_arch" ] && { temp_machine_arch="$(uname -m)"; case "$temp_machine_arch" in x86_64) temp_derived_arch="linux-x86_64" ;; aarch64) temp_derived_arch="linux-aarch64" ;; *) temp_derived_arch="linux-x86_64" ;; esac; }; echo "$temp_derived_arch")
+%ifarch x86_64
+%define EPICS_HOST_ARCH_FALLBACK linux-x86_64
+%else
+%ifarch aarch64
+%define EPICS_HOST_ARCH_FALLBACK linux-aarch64
+%else
+%define EPICS_HOST_ARCH_FALLBACK linux-x86_64
+%endif
+%endif
+
+%define _DERIVED_EPICS_HOST_ARCH %( _os="$(uname -s | tr '[:upper:]' '[:lower:]')"; _arch="$(uname -m)"; if [ -n "$_os" ] && [ -n "$_arch" ]; then echo "${_os}-${_arch}"; else echo ""; fi )
+
+%define EPICS_HOST_ARCH %{?_DERIVED_EPICS_HOST_ARCH:-%{EPICS_HOST_ARCH_FALLBACK}}
 
 # build qt4 support (or not)
 %if (0%{?rhel} && 0%{?rhel} < 8) || (0%{?fedora} && 0%{?fedora} < 24)
@@ -304,6 +316,7 @@ export EPICS_BASE=/usr/local/epics/base%{EPICS_TARGET_VERSION}
 
 %ifarch x86_64
 export QMAKESPEC=/usr/lib64/qt6/mkspecs/linux-g++-64
+%endif
 %ifarch aarch64
 export QMAKESPEC=/usr/lib64/qt6/mkspecs/linux-g++
 %endif
