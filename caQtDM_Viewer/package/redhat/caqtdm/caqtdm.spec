@@ -8,6 +8,8 @@
 
 %global no_rpath %{getenv:CAQTDM_NORPATH}
 
+%define EPICS_HOST_ARCH %(temp_derived_arch="$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)"; [ -z "$temp_derived_arch" ] && { temp_machine_arch="$(uname -m)"; case "$temp_machine_arch" in x86_64) temp_derived_arch="linux-x86_64" ;; aarch64) temp_derived_arch="linux-aarch64" ;; *) temp_derived_arch="linux-x86_64" ;; esac; }; echo "$temp_derived_arch")
+
 # build qt4 support (or not)
 %if (0%{?rhel} && 0%{?rhel} < 8) || (0%{?fedora} && 0%{?fedora} < 24)
 %global qt4 1
@@ -218,11 +220,9 @@ export QWTINCLUDE=/usr/include/qt5/qwt
 export QWTVERSION=6.1
 export QWTLIBNAME=qwt-qt5
 export EPICS_BASE=/usr/local/epics/base%{EPICS_TARGET_VERSION}
-# Set EPICS_HOST_ARCH if not set
-: "${EPICS_HOST_ARCH:=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)}"
-export EPICS_HOST_ARCH=${EPICS_HOST_ARCH:-linux-x86_64}
+export EPICS_HOST_ARCH=%{EPICS_HOST_ARCH}
 export EPICSINCLUDE=${EPICS_BASE}/include
-export EPICSLIB=${EPICS_BASE}/lib/$EPICS_HOST_ARCH
+export EPICSLIB=${EPICS_BASE}/lib/%{EPICS_HOST_ARCH}
 %if 0%{?rhel} >  7
 %define pythonversion $(python3 --version 2>&1 | cut -d ' ' -f 2 | cut -d '.' -f 1-2)
 export PYTHONVERSION=%{pythonversion}
@@ -262,11 +262,9 @@ export QWTINCLUDE=/usr/include/qwt
 export QWTVERSION=6.1
 export QWTLIBNAME=qwt
 export EPICS_BASE=/usr/local/epics/base%{EPICS_TARGET_VERSION}
-# Set EPICS_HOST_ARCH if not set
-: "${EPICS_HOST_ARCH:=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)}"
-export EPICS_HOST_ARCH=${EPICS_HOST_ARCH:-linux-x86_64}
+export EPICS_HOST_ARCH=%{EPICS_HOST_ARCH}
 export EPICSINCLUDE=${EPICS_BASE}/include
-export EPICSLIB=${EPICS_BASE}/lib/$EPICS_HOST_ARCH
+export EPICSLIB=${EPICS_BASE}/lib/%{EPICS_HOST_ARCH}
 export PYTHONVERSION=2.7
 %define pythonversion 2.7
 export PYTHONINCLUDE=/usr/include/python%{pythonversion}
@@ -303,17 +301,13 @@ export QWTINCLUDE=/usr/include/qt6/qwt
 export QWTVERSION=6.2
 export QWTLIBNAME=qwt-qt6
 export EPICS_BASE=/usr/local/epics/base%{EPICS_TARGET_VERSION}
-# Set EPICS_HOST_ARCH if not set
-: "${EPICS_HOST_ARCH:=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)}"
 
 %ifarch x86_64
 export QMAKESPEC=/usr/lib64/qt6/mkspecs/linux-g++-64
-export EPICS_HOST_ARCH=${EPICS_HOST_ARCH:-linux-x86_64}
-%endif
 %ifarch aarch64
 export QMAKESPEC=/usr/lib64/qt6/mkspecs/linux-g++
-export EPICS_HOST_ARCH=${EPICS_HOST_ARCH:-linux-aarch64}
 %endif
+export EPICS_HOST_ARCH=%{EPICS_HOST_ARCH}
 export EPICSINCLUDE=${EPICS_BASE}/include
 export EPICSLIB=${EPICS_BASE}/lib/$EPICS_HOST_ARCH
 %define pythonversion $(python3 --version 2>&1 | cut -d ' ' -f 2 | cut -d '.' -f 1-2)
@@ -423,7 +417,7 @@ popd
                 echo "/opt/caqtdm/lib/qt5/designer" >> %{buildroot}/etc/ld.so.conf.d/caqtdm.conf
                 echo "/opt/caqtdm/lib/qt5/controlsystems" >> %{buildroot}/etc/ld.so.conf.d/caqtdm.conf
         %endif
-                echo "${EPICS_BASE}/lib/${EPICS_HOST_ARCH}" >> %{buildroot}/etc/ld.so.conf.d/caqtdm.conf
+                echo "/usr/local/epics/base%{EPICS_TARGET_VERSION}/lib/${EPICS_HOST_ARCH}" >> %{buildroot}/etc/ld.so.conf.d/caqtdm.conf
 %endif
 
 %if 0%{?qt4}
