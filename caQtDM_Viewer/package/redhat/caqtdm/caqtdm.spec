@@ -12,7 +12,7 @@
 
 %define _epics_host_arch_derived_uname %( _os="$(uname -s | tr '[:upper:]' '[:lower:]')"; _arch="$(uname -m)"; if [ -n "$_os" ] && [ -n "$_arch" ]; then echo "${_os}-${_arch}"; else echo ""; fi )
 
-%define EPICS_HOST_ARCH %{_epics_host_arch_from_env:-%{_epics_host_arch_derived_uname}}
+%define EPICS_HOST_ARCH %([ -n "%{_epics_host_arch_from_env}" ] && echo "%{_epics_host_arch_from_env}" || echo "%{_epics_host_arch_derived_uname}")
 
 # build qt4 support (or not)
 %if (0%{?rhel} && 0%{?rhel} < 8) || (0%{?fedora} && 0%{?fedora} < 24)
