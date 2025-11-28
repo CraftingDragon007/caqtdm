@@ -423,6 +423,7 @@ popd
                 echo "/opt/caqtdm/lib/qt5/designer" >> %{buildroot}/etc/ld.so.conf.d/caqtdm.conf
                 echo "/opt/caqtdm/lib/qt5/controlsystems" >> %{buildroot}/etc/ld.so.conf.d/caqtdm.conf
         %endif
+                echo "${EPICS_BASE}/lib/${EPICS_HOST_ARCH}" >> %{buildroot}/etc/ld.so.conf.d/caqtdm.conf
 %endif
 
 %if 0%{?qt4}
