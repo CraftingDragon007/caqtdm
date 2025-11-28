@@ -1994,6 +1994,8 @@ bool FileOpenWindow::event(QEvent *e)
 {
     if (e->type() == QEvent::ThemeChange) {
         emit themeChanged();
+        // we don't retun true here, because we want the base implementation and
+        // all child items to also receive the ThemeChange event, so they can correctly change to the new theme.
     }
     return QWidget::event(e);
 }
