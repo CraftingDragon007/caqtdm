@@ -356,7 +356,7 @@ int main(int argc, char *argv[])
             }
         } else if (strcmp (argv[in], "-web_interaction_timeout") == 0) {
             web_interaction_based_timeout = true;
-        } else if (strcmp (argv[in], "-novnc_host")) {
+        } else if (strcmp (argv[in], "-novnc_host") == 0) {
             in++;
             host = QString(argv[in]);
         } else if (strncmp (argv[in], "-" , 1) == 0) {
