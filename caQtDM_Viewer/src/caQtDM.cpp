@@ -395,6 +395,10 @@ int main(int argc, char *argv[])
         options.insert("web_port", QString::number(web_port));
         options.insert("web_timeout", QString::number(web_timeout));
         options.insert("web_interaction_based_timeout", QString::number(web_interaction_based_timeout));
+#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
+        // fix dpi for (no)VNC with qt5
+        qputenv("QT_FONT_DPI", QString::number(96).toUtf8());
+#endif
     }
 
     QApplication app(argc, argv);
