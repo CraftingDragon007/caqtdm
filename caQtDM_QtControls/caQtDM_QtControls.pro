@@ -196,6 +196,14 @@ HEADERS += src/networkaccess.h src/fileFunctions.h \
     src/networkmodel.h \
     src/textedit.h \
     src/wmsignalrescale.h
+
+cahmi{
+HEADERS += \
+    src/cahmiconfig.h \
+    src/cahmiconfigtransferitem.h \
+}
+
+
 SOURCES += src/networkaccess.cpp src/fileFunctions.cpp
 
 contains(QWT_VER_MIN, 0) {
