@@ -34,9 +34,11 @@
 #include <iostream>
 #include <sstream>
 
+#if QT_VERSION > QT_VERSION_CHECK(5,0,0)
 #ifndef MOBILE
 #include "hmisharedeventbus.h"
 #include "hmisharedconfiglistmanager.h"
+#endif
 #endif
 
 #ifndef MOBILE_ANDROID

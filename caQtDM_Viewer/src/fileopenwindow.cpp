@@ -49,9 +49,11 @@ bool HTTPCONFIGURATOR = false;
 #include <fstream>
 #include <string>
 
+#if QT_VERSION > QT_VERSION_CHECK(5,0,0)
 #ifndef MOBILE
 #include <hmisharedeventbus.h>
 #include <hmisharedconfiglistmanager.h>
+#endif
 #endif
 
 #include <QFileDialog>
