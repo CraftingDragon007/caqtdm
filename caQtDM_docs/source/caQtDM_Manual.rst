@@ -142,7 +142,7 @@ locally without installing.
    the test directory.
 #. in case you have qwt 6.1 or greater you will have to use the file qwt_thermo_marker_61
    in caQtDM_QtControls/src. (*instead of qwt_thermo_marker*)
-#. in case you are already using Qt5 or Qt6 with qwt6.2 the build process should also be
+#. in case you are already using Qt5 or Qt6 with qwt6.3 the build process should also be
    straight forward.
 #. Instructions for compiling caQtDM on Windows/Linux/Mac Requirements:
 
@@ -389,6 +389,26 @@ Development history
 The following list describe the new features and bug fixes for every
 release. You can follow the development history and detect if a bug in
 the used version has been solved.
+
+.. container::
+
+   4.6.0
+   
+- update fix for unconnected Channels
+- ``%read`` command for cainclude and caRelatedDisplay
+- old files cleanup
+- implement pipelines for various target systems (github actions)
+- added various packing mechanissmen
+- caWavetable got some signals and slots for generating for vertical and horizontal sync
+- caWavetable added header manipulation functions
+- fix in RPM dependencies
+- cainfo Panel corrections and remove EPICS data requests (avoid unesseary channel searchs)
+- recoloring caDoubleTabWidget via Stylesheets
+- added a CloseOnExit0 for the caScriptbutton
+- added the localisation for characters to caMenu and caMessageButton
+- added selecting/copy/paste mechanisem at various parts of the caqtdm
+- caMessageButton can now set strings
+- changed the build system that for linux systems to build without RPATH
 
 .. container::
 
@@ -2263,6 +2283,76 @@ is the equivalent of the Composite in MEDM
    placing a semicolon after the file name and entering them like on the
    command line.
 
+   **Properties:**
+   The following properties are available:
+
+   ``macroList``
+      List of strings to define macros. As in the commandline multiple macros have to be seperated by commas. If it is needed 
+      you can load a macrolist from a text file with the command %(read <path>/<filename>)
+      Type: name/identifier (string)
+
+   ``xPositionsOrChannels``
+      in case stacking is position the x position inside the caInclude Widget can be defined here. This can be a constant or a channel
+      Type: name/identifier (string)	
+
+   ``yPositionsOrChannels``
+      in case stacking is position the y position inside the caInclude Widget can be defined here. This can be a constant or a channel
+      Type: name/identifier (string)
+
+   ``xCorrectionFactor``
+      linear conversion factor for the x position (channel value -> display coordinates)
+      Type: number (float)
+
+   ``yCorrectionFactor``
+      linear conversion factor for the x position (channel value -> display coordinates)
+      Type: number (float)
+
+   ``filename``
+      UI file name that is loaded and displayed inside the area of the caInclude Widget. 
+      Type: name/identifier (string)
+   ``stacking``
+      
+
+      Type: options (enum)
+
+   ``maximumLines``
+   ``maximumColumns``
+   ``adjustSizeToContents``
+   ``verticalSpacing``
+   ``horizontalSpacing``
+   ``frameShape``
+   ``frameShadow``
+   ``frameLineWidth``
+   ``frameColor``
+   ``visibility + Calc + channels``
+
+
+   ``lable``
+      String to define a lable in the menue-Mode. The icon that is display can be removed with adding a "-" in the beginning of the string
+      Type: name/identifier (string)
+
+   ``lablesList``
+      List of strings to name the buttons/menu entries.
+      Type: name/identifier (string)
+
+   ``filesList``
+      List of strings of UI files to be loaded.
+      Type: name/identifier (string)
+
+
+
+
+
+   ``fontScaleMode``
+      Menue to define the behavior of the lables during rescaling.
+      Type: options (enum)
+
+   ``stackingMode``
+      To define the stacking generated buttons on the display (Menue/Row/Column/RowColumn/Hidden.  
+      The hidden option can be used when the loading gets triggered by signal.
+      Type: options (enum)
+
+
 --------------
 
 .. _caDoubleTabWidget:
@@ -3211,6 +3301,9 @@ All replacements will be done sequentially, with the leftmost replacements being
 that has already been replaced before by another replacements.
 When doing custom unit replacements, always consider that your replacements might not be done to the original string from EPICS, but on the already
 processed string with the default unit replacements. To see how they are implemented, you might want to check out the first few lines in 
+
+``caQtDM_Lib/src/mutexKnobData.cpp``
+
 There are already some default unit replacements that were introduced because common systems had difficulties displaying widely-used characters.
 Those unit replacements always take place before custom unit replacements, you can disable them by setting the following environment variable to "false":
 
