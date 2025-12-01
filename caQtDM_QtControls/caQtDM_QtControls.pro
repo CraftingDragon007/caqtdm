@@ -85,7 +85,6 @@ SOURCES	+= \
     src/caimage.cpp \
     src/cagraphics.cpp \
     src/capolyline.cpp \
-    src/hmiapplicationeventfilter.cpp \
     src/searchfile.cpp \
     src/elabel.cpp \
     src/esimplelabel.cpp \
@@ -159,6 +158,7 @@ SOURCES	+= \
 
 cahmi{
 SOURCES	+= \
+    src/hmiapplicationeventfilter.cpp \
     src/cahmiconfig.cpp \
     src/cahmiconfigtransferitem.cpp \
 }
@@ -182,12 +182,8 @@ XDR_HACK {
     HEADERS +=  src/cadoubletabwidgetextensionfactory.h  src/capolylinetaskmenu.h
 }
 
-QT += network
 HEADERS += src/networkaccess.h src/fileFunctions.h \
-    src/cahmiconfig.h \
-    src/cahmiconfigtransferitem.h \
     src/calinedraw.h \
-    src/hmiapplicationeventfilter.h \
     src/plotHelperClasses.h \
     src/wmsignalpropagator.h \
     src/replacemacro.h \
@@ -199,6 +195,7 @@ HEADERS += src/networkaccess.h src/fileFunctions.h \
 
 cahmi{
 HEADERS += \
+    src/hmiapplicationeventfilter.h \
     src/cahmiconfig.h \
     src/cahmiconfigtransferitem.h \
 }
