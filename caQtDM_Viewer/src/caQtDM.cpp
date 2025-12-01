@@ -112,7 +112,12 @@ struct WidgetDimensions {
 
 
 WidgetDimensions getWidgetDimensionsFromUi(const QString& uiFilePath) {
-    QFile file(uiFilePath);
+    QFileInfo *fileInfo = CaQtDM_Lib::getAbsoluteUiFilePath(uiFilePath);
+    if (fileInfo == nullptr) {
+        qWarning() << "Error: File does not exist" << uiFilePath;
+        return {};
+    }
+    QFile file(fileInfo->absoluteFilePath());
     if (!file.open(QFile::ReadOnly | QSaveFile::Text)) {
         qWarning() << "Error: Cannot open UI file" << uiFilePath << ":" << file.errorString();
         return {};
@@ -220,7 +225,7 @@ int main(int argc, char *argv[])
     bool use_novnc_plugin = false;
     bool slave_server = false;
     bool web_interaction_based_timeout = false;
-    QString host = "localhost";
+    QString host = "127.0.0.1";
     quint16 port = 5900;
     quint16 web_port = port + 1000;
     uint web_timeout = 0;
