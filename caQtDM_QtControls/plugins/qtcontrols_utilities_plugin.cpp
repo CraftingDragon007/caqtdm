@@ -240,7 +240,7 @@ QWidget *caMimeDisplayInterface::createWidget(QWidget *parent)
 {
     return new caMimeDisplay(parent);
 }
-
+#ifdef CAHMI
 caHMIConfigInterface::caHMIConfigInterface(QObject *parent): CustomWidgetInterface_Utilities(parent)
 {
     strng name[5], type[5] = {"", "", "", "", ""};
@@ -264,6 +264,7 @@ caHMIConfigInterface::caHMIConfigInterface(QObject *parent): CustomWidgetInterfa
 QWidget *caHMIConfigInterface::createWidget(QWidget *parent){
     return new caHMIConfig(parent);
 }
+#endif
 
 wmSignalRescaleInterface::wmSignalRescaleInterface(QObject *parent): CustomWidgetInterface_Utilities(parent)
 {
@@ -300,7 +301,7 @@ QList<QDesignerCustomWidgetInterface*> CustomWidgetCollectionInterface_Utilities
 {
     return d_plugins;
 }
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0) 
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
 #else
 Q_EXPORT_PLUGIN2(QtControls, CustomWidgetCollectionInterface_Utilities)
 #endif
