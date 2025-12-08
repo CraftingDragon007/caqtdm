@@ -99,7 +99,7 @@ if [ "$1" -ge 1 ]; then
         chown root:root %{KEY_FILE}
         
         openssl req -x509 -new -nodes -key %{KEY_FILE} -sha256 -days 365 \
-            -subj "/C=US/ST=State/L=City/O=%{APP_NAME}/CN=${FQDN}" \
+            -subj "/C=CH/ST=Aargau/L=Villigen PSI/O=Paul Scherrer Institut/OU=%{APP_NAME}/CN=${FQDN}" \
             -out %{CERT_FILE}
 
         chmod 0644 %{CERT_FILE}

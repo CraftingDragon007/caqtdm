@@ -7395,7 +7395,7 @@ QFileInfo* CaQtDM_Lib::getAbsoluteUiFilePath(QString file) {
         }
     }
 
-    if (!fileInfo->exists()) return nullptr;
+    if (!fileInfo->exists() || !fileInfo->isFile()) return nullptr;
     return fileInfo;
 }
 
