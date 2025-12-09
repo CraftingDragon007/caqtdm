@@ -7335,15 +7335,20 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
             return;
         }
 
-        QFileInfo* fileInfo = getAbsoluteUiFilePath(files[indx].trimmed());
-        if (fileInfo == nullptr) {
+        QString file = files[indx].trimmed();
+
+        fileFunctions filefunction;
+        filefunction.checkFileAndDownload(file);
+
+        searchFile *filecheck = new searchFile(file);
+        QString absolutePath = filecheck->findFile();
+        filecheck->deleteLater();
+
+        if (absolutePath.isNull()) {
             qWarning("caQtDM_Web -- caRelatedDisplay ui file not found");
             QMessageBox::critical(this, "Error - File not found", "The specified path is either invalid or CAQTDM_DISPLAY_PATH hasn't been correctly set");
             return;
         }
-
-        QString absolutePath = fileInfo->absoluteFilePath();
-        delete fileInfo;
 
         quint16 new_vnc_port = vncPort +
                 vncPortIndex;
@@ -7362,7 +7367,7 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
                 new_vnc_port = existing->vncPort();
                 new_web_port = existing->webPort();
             } else if (WebSocketServer::instance().isInitialized()) {
-                WebSocketServer::instance().sendOpenFileRequest(absolutePath, macros, existing->vncPort());
+                WebSocketServer::instance().sendOpenFileRequest(file, macros, existing->vncPort());
                 return;
             }
         } else vncPortIndex++;
@@ -7370,7 +7375,7 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
         VncWebChildProcess *item = startVncChildProcess(new_vnc_port, new_web_port, absolutePath, macros, this);
 
         if (WebSocketServer::instance().isInitialized()) {
-            WebSocketServer::instance().sendOpenFileRequest(absolutePath, macros, new_vnc_port);
+            WebSocketServer::instance().sendOpenFileRequest(file, macros, new_vnc_port);
         }
 
         addWebChildProcess(absolutePath, macros, item);
@@ -7380,37 +7385,6 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
 
 
 #ifndef MOBILE
-QFileInfo* CaQtDM_Lib::getAbsoluteUiFilePath(QString file) {
-    QFileInfo* fileInfo = new QFileInfo(file);
-    if (!fileInfo->exists()) {
-        foreach (QString uiPath, qgetenv("CAQTDM_DISPLAY_PATH").split(':')) {
-            QDir uiDir(uiPath);
-            if (uiDir.exists()) {
-                QString combined = uiDir.filePath(file);
-                if (QFile::exists(combined)) {
-                    fileInfo = new QFileInfo(combined);
-                    break;
-                }
-            }
-        }
-    }
-
-    if (!fileInfo->exists() || !fileInfo->isFile()) return nullptr;
-    return fileInfo;
-}
-
-bool CaQtDM_Lib::isAbsolutePathRequired(QString file) {
-    QFileInfo info = QFileInfo(file);
-    if (!info.exists() || !info.isFile()) return true;
-    QString relativeName = info.fileName();
-    QFileInfo* relativeInfo = getAbsoluteUiFilePath(relativeName);
-    if (relativeInfo == nullptr) return true;
-
-    bool result = (info.absoluteFilePath() == relativeInfo->absoluteFilePath());
-    delete relativeInfo;
-    return !result;
-}
-
 QString CaQtDM_Lib::getChildProcessKey(QString absoluteFilePath, QString macros) {
     QString key = absoluteFilePath;
     if (macros.length() > 0) {
@@ -7420,14 +7394,9 @@ QString CaQtDM_Lib::getChildProcessKey(QString absoluteFilePath, QString macros)
     return key;
 }
 
-void CaQtDM_Lib::addWebChildProcess(QString file, QString macros, VncWebChildProcess* childProcess) {
-    QFileInfo* fileInfo = getAbsoluteUiFilePath(file);
-    if (fileInfo == nullptr) return;
+void CaQtDM_Lib::addWebChildProcess(QString absoluteFilePath, QString macros, VncWebChildProcess* childProcess) {
 
-    QString absolutePath = fileInfo->absoluteFilePath();
-    delete fileInfo;
-
-    QString key = getChildProcessKey(absolutePath, macros);
+    QString key = getChildProcessKey(absoluteFilePath, macros);
 
     QWriteLocker webChildProcessesLocker(&webChildProcessesLock);
     webChildProcesses.insert(key, childProcess);
@@ -7437,18 +7406,12 @@ void CaQtDM_Lib::addWebChildProcess(QString file, QString macros, VncWebChildPro
 /// \brief This function queries vncWebChildProcesses for an item,
 /// if the result is nullptr or the process is no longer running,
 /// then the item is also removed from the list.
-/// \param file The ui file that the child process has loaded
+/// \param absoluteFilePath The absolute file path to the ui file that the child process has loaded
 /// \param macros The corresponding macros of the child process
 /// \return The resulting item or nullptr if nothing was found or the item itself is a nullptr
 ///
-VncWebChildProcess* CaQtDM_Lib::getWebChildProcess(QString file, QString macros) {
-    QFileInfo* fileInfo = getAbsoluteUiFilePath(file);
-    if (fileInfo == nullptr) return nullptr;
-
-    QString absolutePath = fileInfo->absoluteFilePath();
-    delete fileInfo;
-
-    QString key = getChildProcessKey(absolutePath, macros);
+VncWebChildProcess* CaQtDM_Lib::getWebChildProcess(QString absoluteFilePath, QString macros) {
+    QString key = getChildProcessKey(absoluteFilePath, macros);
 
     QWriteLocker webChildProcessesLocker(&webChildProcessesLock);
     auto result = webChildProcesses.find(key);

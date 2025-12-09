@@ -111,13 +111,18 @@ struct WidgetDimensions {
 
 
 
-WidgetDimensions getWidgetDimensionsFromUi(const QString& uiFilePath) {
-    QFileInfo *fileInfo = CaQtDM_Lib::getAbsoluteUiFilePath(uiFilePath);
-    if (fileInfo == nullptr) {
+WidgetDimensions getWidgetDimensionsFromUi(QString& uiFilePath) {
+    fileFunctions filefunction;
+    filefunction.checkFileAndDownload(uiFilePath);
+
+    searchFile *filecheck = new searchFile(uiFilePath);
+    uiFilePath = filecheck->findFile();
+    filecheck->deleteLater();
+    if (uiFilePath.isNull()) {
         qWarning() << "Error: File does not exist" << uiFilePath;
         return {};
     }
-    QFile file(fileInfo->absoluteFilePath());
+    QFile file(uiFilePath);
     if (!file.open(QFile::ReadOnly | QSaveFile::Text)) {
         qWarning() << "Error: Cannot open UI file" << uiFilePath << ":" << file.errorString();
         return {};
@@ -335,7 +340,7 @@ int main(int argc, char *argv[])
             port = QString(argv[in]).toUShort(&valid);
             if (!valid) {
                 printf("caQtDM -- Invalid server port %s specified, not enabling server mode\n", argv[in]);
-                server = false;
+                exit(1);
             } else {
                 if (port > std::numeric_limits<quint16>::max() - 1000) {
                     web_port = port - 1000;
@@ -347,7 +352,7 @@ int main(int argc, char *argv[])
             web_port = QString(argv[in]).toUShort(&valid);
             if (!valid) {
                 printf("caQtDM -- Invalid web server port %s specified, not enabling server mode\n", argv[in]);
-                server = false;
+                exit(1);
             }
         } else if (strcmp (argv[in], "-web_timeout") == 0) {
             in++;
@@ -379,12 +384,15 @@ int main(int argc, char *argv[])
         if (dimensions.found) {
             if (dimensions.height <= 0 || dimensions.width <= 0) {
                 printf("caQtDM -- Negative or zero ui width / height found (%sx%s), not enabling server mode!", QString::number(dimensions.width).toUtf8().data(), QString::number(dimensions.height).toUtf8().data());
-                server = false;
+                exit(1);
             } else qputenv("QT_QPA_PLATFORM", ("%1:size=" + QString::number(dimensions.width) + "x" + QString::number(dimensions.height) + ":depth=16:port=" + QString::number(port) + (use_novnc_plugin ? ":host=" + host : "")).arg(use_novnc_plugin ? "novnc" : "vnc").toUtf8());
+        } else {
+            printf("caQtDM was unable to determin the widget dimensions, please specify a valid ui file");
+            exit(1);
         }
     } else if (server) {
         printf("No ui file was specified, not enabling server mode!");
-        server = false;
+        exit(1);
     }
 
     if (server) {

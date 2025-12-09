@@ -3,6 +3,7 @@
 #include <QDebug>
 #include <QFileInfo>
 #include <QHostAddress>
+#include <fileFunctions.h>
 
 WebSocketServer::WebSocketServer(QObject *parent) : QObject(parent), m_isInitialized(false)
 {}
@@ -77,6 +78,29 @@ void WebSocketServer::processTextMessage(const QString &message)
                 return;
             }
 
+#if defined(_MSC_VER)
+            QRegularExpression driveRegex("^[A-Za-z]:(?:\\\\|/)?", QRegularExpression::CaseInsensitiveOption);
+            if (file.startsWith('/') || file.startsWith('\\') || driveRegex.match(file).hasMatch()) {
+#else
+            if (file.startsWith('/')) {
+#endif
+                pSender->sendTextMessage("ERROR|No absolutes paths are allowed! Please specify a relative path.");
+                return;
+            }
+
+
+            fileFunctions filefunction;
+            filefunction.checkFileAndDownload(file);
+
+            searchFile *filecheck = new searchFile(file);
+            file = filecheck->findFile();
+            filecheck->deleteLater();
+
+            if (file.isNull()) {
+                pSender->sendTextMessage("ERROR|File not found");
+                return;
+            }
+
             QString key = file;
             if (!macros.isEmpty()) {
                 key += '\0';
@@ -112,22 +136,6 @@ void WebSocketServer::processTextMessage(const QString &message)
                         }
                     }
                 } else incrementVncPort = true;
-            }
-
-            if (!QFile::exists(file)) {
-                bool found = false;
-                foreach (QString path , qgetenv("CAQTDM_DISPLAY_PATH").split(':')) {
-                    if (QFile::exists(path + file)) {
-                        found = true;
-                        file = path + file;
-                        break;
-                    }
-                }
-
-                if (!found) {
-                    pSender->sendTextMessage("ERROR|File not found");
-                    return;
-                }
             }
 
             if (incrementVncPort) {
@@ -199,13 +207,11 @@ void WebSocketServer::sendLog(const QString text) {
 }
 
 void WebSocketServer::sendOpenFileRequest(const QString file, const QString macros, quint16 vncPort) {
-    QFileInfo fileInfo(file);
-    QString fileName = CaQtDM_Lib::isAbsolutePathRequired(file) ? fileInfo.absoluteFilePath() : fileInfo.fileName();
     QString pathStr = QString::number(vncPort % 100);
     QReadLocker locker(&m_clientReadWriteLock);
     foreach (QWebSocket *pSocket, m_clients) {
         if (pSocket != Q_NULLPTR) {
-            pSocket->sendTextMessage("OPEN|" + fileName + '|' + macros);
+            pSocket->sendTextMessage("OPEN|" + file + '|' + macros);
         }
     }
 }

@@ -152,12 +152,9 @@ public:
     static bool interactionBasedTimeout;
     static uint webTimeout;
 
-    static void addWebChildProcess(QString file, QString macros, VncWebChildProcess* childProcess);
-    static VncWebChildProcess* getWebChildProcess(QString file, QString macros);
+    static void addWebChildProcess(QString absoluteFilePath, QString macros, VncWebChildProcess* childProcess);
+    static VncWebChildProcess* getWebChildProcess(QString absoluteFilePath, QString macros);
     static QString getChildProcessKey(QString absoluteFilePath, QString macros);
-
-    static QFileInfo* getAbsoluteUiFilePath(QString file);
-    static bool isAbsolutePathRequired(QString file);
 
     static VncWebChildProcess* startVncChildProcess(quint16 vncPort, quint16 webPort, QString file, QString macros, QWidget* parent = nullptr);
 #endif
