@@ -563,9 +563,9 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
     setContextMenuPolicy(Qt::CustomContextMenu);
     connect(this, SIGNAL(customContextMenuRequested(const QPoint&)), this, SLOT(ShowContextMenu(const QPoint&)));
 
+#ifndef MOBILE
     this->globalEventFilter = new HMIApplicationEventFilter(this);
 
-#ifndef MOBILE
     if (qApp != Q_NULLPTR){
         //qDebug() << "GLOBAL EVENT FILTER INSTALLED FOR CAHMICONFIG!!!!!!!!";
         qApp->installEventFilter(globalEventFilter);
@@ -4010,7 +4010,7 @@ void CaQtDM_Lib::GlobalShortcutWindow() {
 
     QSet<QString> uuidsToRemove;
     qint64 threeSecondsAgo = QDateTime::currentDateTime().addSecs(-3).toMSecsSinceEpoch();
-
+#ifndef MOBILE
     if (HmiSharedConfigListManager::instance().isInitialized()) {
         auto currentExternalItems = HmiSharedConfigListManager::instance().readList();
         QMutableListIterator<QSharedPointer<caHMIConfigTransferItem>> iterator(currentExternalItems);
@@ -4136,6 +4136,7 @@ void CaQtDM_Lib::GlobalShortcutWindow() {
     if (shortcutWindow == Q_NULLPTR) return;
     shortcutWindow->close();
     shortcutWindow->deleteLater();
+#endif
 }
 
 void CaQtDM_Lib::Callback_UndefinedMacrowindowExit(){
@@ -6948,6 +6949,7 @@ void CaQtDM_Lib::Callback_WaveEntryChanged(const QString& text, int index)
 
 void CaQtDM_Lib::Callback_ExternalHmiEventReceived(int eventType, int senderPid, qint64 timestamp, const QByteArray& payload)
 {
+#ifndef MOBILE
     Q_UNUSED(timestamp)
     if (senderPid == QApplication::applicationPid()) return; // ignore own events
     if (eventType == EventTypes::KeyPress) {
@@ -6974,6 +6976,7 @@ void CaQtDM_Lib::Callback_ExternalHmiEventReceived(int eventType, int senderPid,
         QEvent *constructed = new QMouseEvent(type, QPointF(x, y), QPointF(x, y), Qt::MouseButton::NoButton, Qt::MouseButton::NoButton, Qt::KeyboardModifier::NoModifier);
         this->hmiHandleIncomingEvent(Q_NULLPTR, constructed, constructed, true);
     }
+#endif
 }
 
 void CaQtDM_Lib::hmiHandleKeyPressed(QObject *target, QKeyEvent *event)

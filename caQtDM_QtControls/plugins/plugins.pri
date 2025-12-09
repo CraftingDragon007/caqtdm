@@ -8,14 +8,10 @@ contains(QT_VER_MAJ, 5) {
       CONFIG += plugin qt thread warn_on cahmi
       QT += widgets uitools opengl
       DEFINES += CAHMI
-      ios | android {
-         greaterThan(QT_MINOR_VERSION, 4) {
-            QT += uiplugin
-         } else {
-            QT += designer
-         }
-      } else {
-          QT += designer
+      !MOBILE {
+        QT += designer
+      }else{
+        QT += uiplugin
       }
 }
 contains(QT_VER_MAJ, 6) {
@@ -24,6 +20,8 @@ contains(QT_VER_MAJ, 6) {
       DEFINES += CAHMI
       !MOBILE {
         QT += designer
+      }else{
+        QT += uiplugin
       }
 }
 TEMPLATE = lib

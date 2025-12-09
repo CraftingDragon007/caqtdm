@@ -838,7 +838,9 @@ caQtDM_Viewer {
                     searchheader.value=NO
                     weakobjc.name=CLANG_ENABLE_OBJC_WEAK
                     weakobjc.value=YES
-                    QMAKE_MAC_XCODE_SETTINGS += assetIcon launchImage searchheader weakobjc
+                    platformdefenition.name=SUPPORTED_PLATFORMS
+                    platformdefenition.value=iphonesimulator iphoneos
+                    QMAKE_MAC_XCODE_SETTINGS += assetIcon launchImage searchheader weakobjc platformdefenition
 
                     QMAKE_INFO_PLIST += $$PWD/caQtDM_Viewer/src/IOS/Info.plist
                     QMAKE_ASSET_CATALOGS += $$PWD/caQtDM_Viewer/src/IOS/Assets.xcassets
@@ -848,8 +850,8 @@ caQtDM_Viewer {
                     iphonesimulator {
                          message("caQtDM_viewer configuration : iphonesimulator")
                          # when .dylib and .a in same directory, macos takes .dylib, so separate the libraries
-                         LIBS += $$(EPICSLIB)/libca.a
-                         LIBS += $$(EPICSLIB)/libCom.a
+                         LIBS += $$(EPICS_BASE)/lib/ios-x86/libca.a
+                         LIBS += $$(EPICS_BASE)/lib/ios-x86/libCom.a
                          LIBS += $$(QWTHOME)/lib/lib$$(QWTLIBNAME).a
                          #LIBS += $$(QWTHOME)/lib/lib$$(QWTLIBNAME)_iphonesimulator.a
                          # build simulator only for 32 bit
@@ -858,9 +860,8 @@ caQtDM_Viewer {
                     }
                     iphoneos {
                         message("caQtDM_viewer configuration : iphoneos")
-
-                         LIBS += $$(EPICSLIB)/libca.a
-                         LIBS += $$(EPICSLIB)/libCom.a
+                         LIBS += $$(EPICS_BASE)/lib/ios-arm/libca.a
+                         LIBS += $$(EPICS_BASE)/lib/ios-arm/libCom.a
                          LIBS += $$(QWTHOME)/lib/lib$$(QWTLIBNAME).a
 
                          ###############################################################################

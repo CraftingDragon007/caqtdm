@@ -114,6 +114,39 @@ int setenv(const char *name, const char *value, int overwrite)
   #include <mach/vm_statistics.h>
 #endif
 
+// in case of tablets, use static plugins linked in
+#ifdef MOBILE
+Q_IMPORT_PLUGIN(CustomWidgetCollectionInterface_Controllers);
+Q_IMPORT_PLUGIN(CustomWidgetCollectionInterface_Monitors);
+Q_IMPORT_PLUGIN(CustomWidgetCollectionInterface_Graphics);
+Q_IMPORT_PLUGIN(CustomWidgetCollectionInterface_Utilities);
+Q_IMPORT_PLUGIN(DemoPlugin);
+Q_IMPORT_PLUGIN(Epics3Plugin);
+Q_IMPORT_PLUGIN(environmentPlugin);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 9, 0)
+#ifdef CAQTDM_MODBUS
+Q_IMPORT_PLUGIN(modbusPlugin);
+#endif
+#ifdef CAQTDM_GPS
+Q_IMPORT_PLUGIN(gpsPlugin);
+#endif
+#endif
+//*************************************
+#ifdef EPICS4
+Q_IMPORT_PLUGIN(Epics4Plugin);
+#endif
+#ifdef ARCHIVESF
+Q_IMPORT_PLUGIN(ArchiveSF_Plugin);
+#endif
+#ifdef ARCHIVEHIPA
+Q_IMPORT_PLUGIN(ArchiveHIPA_Plugin);
+#endif
+#ifdef ARCHIVEPRO
+Q_IMPORT_PLUGIN(ArchivePRO_Plugin);
+#endif
+//*************************************
+
+#endif
 
 
 
@@ -242,41 +275,9 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
     // set for epics longer waveforms
     QString maxBytes = (QString)  qgetenv("EPICS_CA_MAX_ARRAY_BYTES");
     if(maxBytes.size() == 0) setenv("EPICS_CA_MAX_ARRAY_BYTES", "150000000", 1);
-
-    // in case of tablets, use static plugins linked in
 #ifdef MOBILE
-    Q_IMPORT_PLUGIN(CustomWidgetCollectionInterface_Controllers);
-    Q_IMPORT_PLUGIN(CustomWidgetCollectionInterface_Monitors);
-    Q_IMPORT_PLUGIN(CustomWidgetCollectionInterface_Graphics);
-    Q_IMPORT_PLUGIN(CustomWidgetCollectionInterface_Utilities);
-    Q_IMPORT_PLUGIN(DemoPlugin);
-    Q_IMPORT_PLUGIN(Epics3Plugin);
-    Q_IMPORT_PLUGIN(environmentPlugin);
-#if QT_VERSION >= QT_VERSION_CHECK(5, 9, 0)
-    #ifdef CAQTDM_MODBUS
-        Q_IMPORT_PLUGIN(modbusPlugin);
-    #endif
-    #ifdef CAQTDM_GPS
-        Q_IMPORT_PLUGIN(gpsPlugin);
-    #endif
-#endif
-//*************************************
-#ifdef EPICS4
-    Q_IMPORT_PLUGIN(Epics4Plugin);
-#endif
-#ifdef ARCHIVESF
-    Q_IMPORT_PLUGIN(ArchiveSF_Plugin);
-#endif
-#ifdef ARCHIVEHIPA
-    Q_IMPORT_PLUGIN(ArchiveHIPA_Plugin);
-#endif
-#ifdef ARCHIVEPRO
-    Q_IMPORT_PLUGIN(ArchivePRO_Plugin);
-#endif
-//*************************************
     Q_INIT_RESOURCE(qtcontrolsplugin);  // load resources from resource file
 #endif
-
     // message window used by library and here
     messageWindow = new MessageWindow();
 

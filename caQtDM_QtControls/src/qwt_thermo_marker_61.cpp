@@ -1192,5 +1192,6 @@ QRect QwtThermoMarker::alarmRect( const QRect &fillRect ) const
     return alarmRect;
 }
 
-
+#ifndef MOBILE
 #include "moc_qwt_thermo_marker_61.cpp"
+#endif
