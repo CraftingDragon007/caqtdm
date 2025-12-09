@@ -194,12 +194,28 @@
       border-radius: 2px;
       display: none;
     }
+    #menu-progress {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: auto;
+    }
+    #progress-text {
+      width: 30px;
+      text-align: right;
+      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+      font-size: 13px;
+      color: #334155;
+    }
   </style>
   </head>
   <body>
     <div id="menu-bar" role="menubar">
       <span id="menu-title">caQtDM Web</span>
       <button type="button" id="menu-logs" aria-haspopup="dialog" aria-expanded="false" aria-controls="log-window">Logs</button>
+      <div id="menu-progress" style="display: none;">
+        <p>Loading: </p><p id="progress-text"> 1%</p><progress id="progress-bar" value="1" max="100" style="width: 120px;"></progress>
+      </div>
     </div>
     <iframe
         id="vnc-container"
@@ -633,6 +649,41 @@
             }
             if (data.startsWith('ERROR|')) {
               showErrorDialog(data.slice(6));
+              return;
+            }
+            if (data.startsWith('PROGRESS|')) {
+              const progressText = document.getElementById('progress-text');
+              const progressBar = document.getElementById('progress-bar');
+              const menuProgress = document.getElementById('menu-progress');
+              const progress = parseInt(data.slice(9), 10);
+              if (!isNaN(progress)) {
+                const percent = Math.round((progress / progressBar.max) * 100);
+                const digitSpace = percent < 10 ? '  ' : (percent < 100 ? ' ' : '');
+                progressText.textContent = digitSpace + percent + '%';
+                progressBar.value = progress;
+                if (progress >= progressBar.max) {
+                  setTimeout(function() {
+                    menuProgress.style.display = 'none';
+                  }, 5000);
+                }
+              } else {
+                console.warn('Invalid PROGRESS value:', data.slice(9));
+              }
+              return;
+            }
+            if (data.startsWith('INIT_PROGRESS|')) {
+              const progressText = document.getElementById('progress-text');
+              const progressBar = document.getElementById('progress-bar');
+              const menuProgress = document.getElementById('menu-progress');
+              const [init, max] = data.slice(14).split('|').map(function(v) { return parseInt(v, 10); });
+              if (!isNaN(init) && !isNaN(max)) {
+                progressBar.max = max;
+                progressBar.value = init;
+                progressText.textContent = '  ' + Math.round((init / max) * 100) + '%';
+                menuProgress.style.display = 'flex';
+              } else {
+                console.warn('Invalid INIT_PROGRESS values:', data.slice(14));
+              }
               return;
             }
             if (data.startsWith('TIMEOUT|')) {

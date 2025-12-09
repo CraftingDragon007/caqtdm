@@ -20,6 +20,8 @@ public:
     void sendInstanceInfo(QWebSocket *receiver, quint16 vncPort);
     void sendInteractionBasedShutdownMsg();
 
+    void sendProgressInfo(int initialProgress, int maxProgress);
+    void sendProgressUpdate(int progress);
 private slots:
     void onNewConnection();
     void processTextMessage(const QString &message);

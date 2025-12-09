@@ -624,10 +624,15 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
     }
 
     if(nbIncludes > 0 && !thisFileFull.contains(POPUPDEFENITION)) {
-        splash = new SplashScreen(parent);
-        splash->setMaximum(nbIncludes);
-        splash->show();
-        splash->setProgress(0);
+        if (vncServer && WebSocketServer::instance().isInitialized()) {
+            WebSocketServer::instance().sendProgressInfo(0, nbIncludes);
+        } else {
+            splash = new SplashScreen(parent);
+            splash->setMaximum(nbIncludes);
+            splash->show();
+            splash->setProgress(0);
+
+        }
     }
 
     savedFile[0] = fi.baseName();
@@ -700,7 +705,7 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
 
     // due to crash in connection with the splash screen, changed
     // these instructions to the botton of this class
-    if(nbIncludes > 0 && !thisFileFull.contains(POPUPDEFENITION)) {
+    if(nbIncludes > 0 && !thisFileFull.contains(POPUPDEFENITION) && !vncServer) {
         Sleep::msleep(200);
         // this seems to causes the crash and is not really needed here?
         //splash->finish(this);
@@ -2811,7 +2816,9 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         if(nbIncludes > 0 && !thisFileFull.contains(POPUPDEFENITION)) {
             for (int i = topIncludesWidgetList.count()-1; i >= 0; --i) {
                 if(w1 ==  topIncludesWidgetList.at(i)) {
-                    splash->setProgress(splashCounter++);
+                    if (vncServer && WebSocketServer::instance().isInitialized()) {
+                        WebSocketServer::instance().sendProgressUpdate(splashCounter++);
+                    } else splash->setProgress(splashCounter++);
                     break;
                 }
             }

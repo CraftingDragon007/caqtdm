@@ -224,3 +224,21 @@ void WebSocketServer::sendInteractionBasedShutdownMsg() {
         }
     }
 }
+
+void WebSocketServer::sendProgressInfo(int initialProgress, int maxProgress) {
+    QReadLocker locker(&m_clientReadWriteLock);
+    foreach (QWebSocket *pSocket, m_clients) {
+        if (pSocket != nullptr) {
+            pSocket->sendTextMessage(QString("INIT_PROGRESS|%1|%2").arg(QString::number(initialProgress), QString::number(maxProgress)));
+        }
+    }
+}
+
+void WebSocketServer::sendProgressUpdate(int progress) {
+    QReadLocker locker(&m_clientReadWriteLock);
+    foreach (QWebSocket *pSocket, m_clients) {
+        if (pSocket != nullptr) {
+            pSocket->sendTextMessage(QString("PROGRESS|%1").arg(QString::number(progress)));
+        }
+    }
+}
