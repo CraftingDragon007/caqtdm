@@ -581,7 +581,7 @@ caQtDM_Lib {
                 DESTDIR = $$(CAQTDM_COLLECT)
       		OBJECTS_DIR = ./obj
                 # removed no standard python under Mac
-                # CONFIG += Define_Build_Python
+                CONFIG += Define_Build_Python
 
    	}
 
@@ -1150,7 +1150,9 @@ Define_Build_Python {
 
 	    }
 	    unix:macx {
-               !isEmpty($$(PYTHONINCLUDE)){
+               _PYTHONINCLUDE=$$(PYTHONINCLUDE)
+               !isEmpty(_PYTHONINCLUDE){
+                    message("using MAC python settings")
                     DEFINES += PYTHON
                     LIBS += -L$(PYTHONLIB)  -lpython$(PYTHONVERSION)
                     INCLUDEPATH += += $(PYTHONINCLUDE)
