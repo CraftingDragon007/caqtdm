@@ -692,8 +692,40 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
         splash->deleteLater();
     }
     // reapply a globally loaded user stylesheet, cainlude seems to disable it
+    printf("caQtDM -- user_defined_stylesheet: %s \n",qasc(qApp->property("user_defined_stylesheet").toString()));
+    fflush(stdout);
     if (qApp->property("user_defined_stylesheet").isValid() && (!qApp->property("user_defined_stylesheet").toString().isEmpty())){
-        qApp->setStyleSheet(qApp->styleSheet());
+        QString stylereload = (QString)  qgetenv("CAQTDM_STYLESHEET_RELOAD");
+        //if (stylereload.isEmpty()) qApp->setStyleSheet(qApp->styleSheet());
+
+        if (stylereload.contains("file",Qt::CaseInsensitive)){
+            searchFile *searchDefaultStyleSheet = new searchFile(qApp->property("user_defined_stylesheet").toString());
+            QString fileNameFound = searchDefaultStyleSheet->findFile();
+            printf("caQtDM -- custom stylesheet found: %s\n",qasc(fileNameFound));
+            if(!fileNameFound.isEmpty()) {
+                QFile file(fileNameFound);
+                file.open(QFile::ReadOnly);
+                QString StyleSheet = QLatin1String(file.readAll());
+                printf("caQtDM -- custom stylesheet file <%s> replaced the default stylesheet\n", qasc(fileNameFound));
+                fflush(stdout);
+                if (!stylereload.contains("later",Qt::CaseInsensitive)) qApp->setStyleSheet(StyleSheet);
+                file.close();
+            }
+            delete searchDefaultStyleSheet;
+        }
+        if (stylereload.contains("apply",Qt::CaseInsensitive)){
+            qApp->setStyleSheet(qApp->styleSheet());
+        }
+        if (stylereload.contains("print",Qt::CaseInsensitive)){
+            QString data=qApp->styleSheet();
+            printf("caQtDM -- custom stylesheet file data:\n%s \n", qasc(data));
+            fflush(stdout);
+        }
+        if (stylereload.contains("later",Qt::CaseInsensitive)){
+            QTimer::singleShot(300, this, [] () {
+                    qApp->setStyleSheet(qApp->styleSheet());
+                });
+        }
     }
 
     // add a reload action

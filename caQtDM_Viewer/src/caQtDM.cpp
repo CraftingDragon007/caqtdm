@@ -312,7 +312,7 @@ int main(int argc, char *argv[])
             printf("caQtDM -- custom stylesheet file <%s> replaced the default stylesheet\n", qasc(fileNameStylesheet));
             fflush(stdout);
             app.setStyleSheet(StyleSheet);
-            app.setProperty("user_defined_stylesheet", fileNameFound);
+            qApp->setProperty("user_defined_stylesheet", fileNameStylesheet);
             file.close();
         }
         delete searchCustomStyleSheet;
