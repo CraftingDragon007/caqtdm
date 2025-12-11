@@ -168,22 +168,25 @@ OpcUaCore::OpcUaCore(QObject *parent)
 
     QObject::connect(
         m_client, &QOpcUaClient::errorChanged, this, [this](QOpcUaClient::ClientError error) {
+            QString errorMessage = "Client error: ";
+
             if (error == QOpcUaClient::ClientError::AccessDenied) {
-                VERBOSELOG("Client error: Got Access denied for: "
-                           << m_currentEndpointDescription.endpointUrl());
+                errorMessage += "Got Access denied";
+            } else if (error == QOpcUaClient::ClientError::ConnectionError) {
+                errorMessage += "Got Connection error";
 // Qt 5 has different internal error mappings...
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
             } else if (error == QOpcUaClient::ClientError::InvalidAuthenticationInformation) {
-                VERBOSELOG("Client error: Authentication information is invalid for: "
-                           << m_currentEndpointDescription.endpointUrl());
+                errorMessage += "Authentication information is invalid";
             } else if (error == QOpcUaClient::ClientError::NoMatchingUserIdentityTokenFound) {
-                VERBOSELOG("Client error: No matching authentication information found for: "
-                           << m_currentEndpointDescription.endpointUrl());
+                errorMessage += "No matching authentication information found";
 #endif
             } else {
-                VERBOSELOG("Client error: " << static_cast<int>(error) << " for: "
-                                            << m_currentEndpointDescription.endpointUrl());
+                errorMessage += QString::number(static_cast<int>(error));
             }
+
+            errorMessage += " for: " + m_currentEndpointDescription.endpointUrl();
+            VERBOSELOG(errorMessage);
         });
 }
 OpcUaCore::~OpcUaCore()
@@ -415,8 +418,13 @@ bool OpcUaCore::connectOpc(const QString &url)
 
             // If no endpoints are returned at all, there is something fundamentally wrong with the server.
             // Thus, not even the fallbackEndpoint is checked from the pv, and we error out here.
-            if (returnedEndpoints.isEmpty() || status != QOpcUa::UaStatusCode::Good) {
-                VERBOSELOG("No endpoints received or status not good.");
+            if (returnedEndpoints.isEmpty()) {
+                VERBOSELOG("No endpoints received.");
+                return;
+            }
+
+            if (status != QOpcUa::UaStatusCode::Good) {
+                VERBOSELOG("Received status not good: " << status);
                 return;
             }
 
