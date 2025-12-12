@@ -7399,7 +7399,7 @@ void CaQtDM_Lib::Callback_ScriptButton()
 {
 #ifndef MOBILE
     QString command = "";
-    bool displayWindow;
+    bool displayWindow,CloseOnExit0;
     caScriptButton *w = qobject_cast<caScriptButton *>(sender());
     command.append(w->getScriptCommand());
 
@@ -7414,9 +7414,10 @@ void CaQtDM_Lib::Callback_ScriptButton()
     }
 #endif
     displayWindow = w->getDisplayShowExecution();
+    CloseOnExit0 = w->getCloseExit0();
 
     if(w->getAccessW()) {
-        processWindow *t = new processWindow(this, displayWindow, w);
+        processWindow *t = new processWindow(this, displayWindow,CloseOnExit0, w);
         connect(t, SIGNAL(processClose()), this, SLOT(processTerminated()));
 #ifdef _MSC_VER
         t->setArguments(w->getScriptParam());
