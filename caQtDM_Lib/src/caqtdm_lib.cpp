@@ -329,6 +329,7 @@ quint16 CaQtDM_Lib::webPort;
 bool CaQtDM_Lib::slaveServer;
 bool CaQtDM_Lib::vncServer;
 bool CaQtDM_Lib::noVncPlugin;
+bool CaQtDM_Lib::noVncReadonly;
 bool CaQtDM_Lib::interactionBasedTimeout;
 uint CaQtDM_Lib::webTimeout;
 #endif
@@ -7484,7 +7485,11 @@ VncWebChildProcess* CaQtDM_Lib::startVncChildProcess(quint16 vncPort, quint16 we
         process_args.append(caQtDM_executable);
     }
     process_args.append("-server");
-    if (noVncPlugin) process_args.append("-novnc");
+    if (noVncPlugin) {
+        process_args.append("-novnc");
+        if (noVncReadonly)
+            process_args.append("-novnc_readonly");
+    }
     process_args.append("-slave_server");
     process_args.append("-server_port");
     process_args.append(QString::number(vncPort));

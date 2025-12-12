@@ -228,6 +228,7 @@ int main(int argc, char *argv[])
     bool resizing = true;
     bool server = false;
     bool use_novnc_plugin = false;
+    bool novnc_readonly = false;
     bool slave_server = false;
     bool web_interaction_based_timeout = false;
     QString host = "127.0.0.1";
@@ -332,6 +333,11 @@ int main(int argc, char *argv[])
             minimize = false;
         } else if (strcmp (argv[in], "-novnc") == 0) {
             use_novnc_plugin = true;
+        } else if (strcmp (argv[in], "-novnc_readonly") == 0) {
+            if (!use_novnc_plugin) {
+                printf("caQtDM -- the option novnc-readonly can only be used together with the qnovnc plugin (-novnc)");
+                exit(1);
+            } else novnc_readonly = true;
         } else if (strcmp (argv[in], "-slave_server") == 0) {
             slave_server = true;
         } else if (strcmp (argv[in], "-server_port") == 0) {
@@ -385,7 +391,15 @@ int main(int argc, char *argv[])
             if (dimensions.height <= 0 || dimensions.width <= 0) {
                 printf("caQtDM -- Negative or zero ui width / height found (%sx%s), not enabling server mode!", QString::number(dimensions.width).toUtf8().data(), QString::number(dimensions.height).toUtf8().data());
                 exit(1);
-            } else qputenv("QT_QPA_PLATFORM", ("%1:size=" + QString::number(dimensions.width) + "x" + QString::number(dimensions.height) + ":depth=16:port=" + QString::number(port) + (use_novnc_plugin ? ":host=" + host : "")).arg(use_novnc_plugin ? "novnc" : "vnc").toUtf8());
+            } else qputenv("QT_QPA_PLATFORM",
+                        QString("%1:size=%2x%3:depth=16:port=%4%5:%6")
+                            .arg(use_novnc_plugin ? "novnc" : "vnc")
+                            .arg(dimensions.width)
+                            .arg(dimensions.height)
+                            .arg(port)
+                            .arg(use_novnc_plugin ? QString(":host=%1").arg(host) : "")
+                            .arg(novnc_readonly ? "readonly" : "")
+                            .toUtf8());
         } else {
             printf("caQtDM was unable to determin the widget dimensions, please specify a valid ui file");
             exit(1);
@@ -403,6 +417,8 @@ int main(int argc, char *argv[])
         options.insert("web_port", QString::number(web_port));
         options.insert("web_timeout", QString::number(web_timeout));
         options.insert("web_interaction_based_timeout", QString::number(web_interaction_based_timeout));
+        options.insert("novnc_readonly", QString::number(novnc_readonly));
+
 #if QT_VERSION < QT_VERSION_CHECK(6,0,0)
         // fix dpi for (no)VNC with qt5
         qputenv("QT_FONT_DPI", QString::number(96).toUtf8());

@@ -289,6 +289,7 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
     if (options["vnc_server"].toInt() == 1) {
         CaQtDM_Lib::vncServer = options["vnc_server"].toInt();
         CaQtDM_Lib::noVncPlugin = options["novnc_plugin"].toInt();
+        CaQtDM_Lib::noVncReadonly = options["novnc_readonly"].toInt();
 
         bool ok;
         quint16 web_port = options["web_port"].toUShort(&ok);

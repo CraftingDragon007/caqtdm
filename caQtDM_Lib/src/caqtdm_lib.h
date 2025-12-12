@@ -149,6 +149,7 @@ public:
     static bool slaveServer;
     static bool vncServer;
     static bool noVncPlugin;
+    static bool noVncReadonly;
     static bool interactionBasedTimeout;
     static uint webTimeout;
 
