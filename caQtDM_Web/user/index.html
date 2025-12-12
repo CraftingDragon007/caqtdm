@@ -292,6 +292,7 @@
         const MIN_RESIZE_HEIGHT = 160;
 
         let failedOnce = false;
+        let connectedOnce = false;
         let isNonNumericPath = false;
         let resolvedInstance = null;
         let newInstance = false;
@@ -621,14 +622,17 @@
           }
 
           socket.onopen = function() {
+            const dateTime = formatDateTime(new Date());
             if (failedOnce && !newInstance) {
               reconnectDelay = 1000;
               failedOnce = false;
               setTimeout(function() {
-                const dateTime = formatDateTime(new Date());
-                addLogMessage('<font color="green">' + dateTime + ' Reconnected to server.</font>');
+                if (connectedOnce)
+                  addLogMessage('<font color="green">' + dateTime + ' Reconnected to server.</font>');
                 iframe.contentWindow.location.reload();
               }, 1000);
+            } else if ((resolvedInstance != null || !isNonNumericPath) && !connectedOnce) {
+              addLogMessage('<font color="green">' + dateTime + ' Connected to server.</font>');
             }
             newInstance = false;
             try {
@@ -637,6 +641,8 @@
                 const message = 'RESOLVE|' + path + '|' + macros;
                 socket.send(message);
               } else {
+                connectedOnce = true;
+                failedOnce = false;
                 socket.send(getInstancePath());
                 if (heartbeat != null) {
                   clearInterval(heartbeat);
@@ -740,6 +746,10 @@
               // ask for instance again, as the path could've changed
               resolvedInstance = null;
               path = file;
+            }
+            if (connectedOnce && !failedOnce && !newInstance) {
+              const dateTime = formatDateTime(new Date());
+              addLogMessage('<font color="red">' + dateTime + ' Disconnected from server.</font>');
             }
             scheduleReconnect();
           };
