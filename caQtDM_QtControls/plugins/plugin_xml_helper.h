@@ -15,12 +15,14 @@
  *  You should have received a copy of the GNU General Public License
  *  along with the caQtDM Framework.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  Copyright (c) 2010 - 2014
+ *  Copyright (c) 2010 - 2025
  *
- *  Author:
+ *  Authors:
  *    Anton Mezger
+ *    Julian Houba
  *  Contact details:
  *    anton.mezger@psi.ch
+ *    julian.houba@psi.ch
  */
 
 #ifndef PLUGIN_XML_HELPER_H
