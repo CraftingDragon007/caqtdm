@@ -1,0 +1,77 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Registry helpers for the caQtDM modular build graph.
+
+include_guard(GLOBAL)
+
+include(CMakeParseArguments)
+
+set_property(GLOBAL PROPERTY CAQTDM_SUBPROJECTS "")
+
+function(caqtdm_register_subproject)
+    set(options)
+    set(oneValueArgs NAME PATH CONDITION)
+    set(multiValueArgs DEPENDS)
+    cmake_parse_arguments(SUB "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+
+    if(NOT SUB_NAME)
+        message(FATAL_ERROR "caqtdm_register_subproject requires NAME")
+    endif()
+    if(NOT SUB_PATH)
+        message(FATAL_ERROR "caqtdm_register_subproject requires PATH")
+    endif()
+
+    if(NOT SUB_CONDITION)
+        set(SUB_CONDITION "TRUE")
+    endif()
+
+    get_property(existing GLOBAL PROPERTY CAQTDM_SUBPROJECTS)
+    if(NOT existing)
+        set(existing "")
+    endif()
+    list(APPEND existing "${SUB_NAME}")
+    set_property(GLOBAL PROPERTY CAQTDM_SUBPROJECTS "${existing}")
+
+    set_property(GLOBAL PROPERTY CAQTDM_SUBPROJECT_${SUB_NAME}_PATH "${SUB_PATH}")
+    set_property(GLOBAL PROPERTY CAQTDM_SUBPROJECT_${SUB_NAME}_DEPENDS "${SUB_DEPENDS}")
+    set_property(GLOBAL PROPERTY CAQTDM_SUBPROJECT_${SUB_NAME}_CONDITION "${SUB_CONDITION}")
+endfunction()
+
+function(caqtdm_add_registered_subprojects)
+    get_property(subprojects GLOBAL PROPERTY CAQTDM_SUBPROJECTS)
+    if(NOT subprojects)
+        return()
+    endif()
+
+    foreach(name IN LISTS subprojects)
+        get_property(path GLOBAL PROPERTY CAQTDM_SUBPROJECT_${name}_PATH)
+        get_property(depends GLOBAL PROPERTY CAQTDM_SUBPROJECT_${name}_DEPENDS)
+        get_property(condition GLOBAL PROPERTY CAQTDM_SUBPROJECT_${name}_CONDITION)
+        if(NOT condition)
+            set(condition TRUE)
+        endif()
+
+        set(add_project FALSE)
+        if(${condition})
+            set(add_project TRUE)
+        else()
+            message(STATUS "Skipping subproject ${name}: condition '${condition}' not satisfied")
+        endif()
+
+        if(add_project)
+            set(subdir "${CMAKE_CURRENT_SOURCE_DIR}/${path}")
+            if(EXISTS "${subdir}/CMakeLists.txt")
+                message(STATUS "Adding subproject ${name} (${path})")
+                add_subdirectory(${path})
+                if(depends)
+                    foreach(dep IN LISTS depends)
+                        if(TARGET ${name} AND TARGET ${dep})
+                            add_dependencies(${name} ${dep})
+                        endif()
+                    endforeach()
+                endif()
+            else()
+                message(STATUS "Subproject ${name} (${path}) skipped: no CMakeLists.txt yet")
+            endif()
+        endif()
+    endforeach()
+endfunction()

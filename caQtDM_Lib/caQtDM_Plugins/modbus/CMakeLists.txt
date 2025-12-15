@@ -1,0 +1,9 @@
+caqtdm_add_plugin(modbus_plugin
+    SOURCES
+        modbus_Plugin.cpp
+        modbus_decode.cpp
+        modbus_channeldata.cpp
+    QT_COMPONENTS
+        Network
+        Concurrent
+        SerialBus)

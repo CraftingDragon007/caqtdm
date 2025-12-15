@@ -55,6 +55,7 @@ class FontScalingWidget
 	int scaleMode() { return d_scaleMode; }
 	void setScaleMode(int m);
     void setVerticalLabel(const bool &vertical) {d_vertical = vertical;}
+        virtual QSize calculateTextSpace() {return QSize(0,0);}
 	
   protected:
 	void rescaleFont(const QString& text, const QSize &);
@@ -72,7 +73,6 @@ class FontScalingWidget
 	QWidget *d_widget;
 	QFont d_savedFont;
 	
-    virtual QSize calculateTextSpace() {return QSize(0,0);}
 	static bool longerThan(const QString& s1, const QString& s2) { return s1.length() > s2.length(); }
 };
 

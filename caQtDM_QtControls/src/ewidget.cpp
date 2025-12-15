@@ -4,6 +4,7 @@
 #include "fontscalingwidget.h"
 #include <QApplication>
 #define qstoc(x) ""
+#include <algorithm>
 
 EWidget::EWidget(QWidget *parent) : QWidget(parent)
 {
@@ -39,7 +40,7 @@ void EWidget::resizeEvent(QResizeEvent *e)
   }
   if(pointSizes.size())
   {
-	qSort(pointSizes.begin(), pointSizes.end());
+	std::sort(pointSizes.begin(), pointSizes.end());
 	foreach(QWidget *w, findChildren<QWidget *>())
 	{
 	  FontScalingWidget *fsw = dynamic_cast<FontScalingWidget *>(w);

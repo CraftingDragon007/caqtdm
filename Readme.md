@@ -7,6 +7,24 @@ an older house-made system. Moreover support has already been introduced for EPI
 In case of existing MEDM files, these can be translated to Qt xml files by using the utility adl2ui contained in the package. Normally nothing will have to be changed in the resulting files, but in case of small problems, like for instance in overlapping order, the Qt4-designer can be used to correct these. However when you start from scratch, you will develop your screens with the Qt4-designer and display them by the caQtDM utility, which takes care of the data acquisition/control and the display. The conventions for the widgets and channels are fully compatible with MEDM and some other widgets have been added. The MEDM manual will give you normally all the necessary explanations for the different widgets while the mechanisms are the same. However you will have to get accustomed with the Qt4-designer utility and a quick look at its manual delivered with it, should give you an idea.
 
 # Build / Install / Run
+## Experimental CMake entry point
+The legacy qmake-based build system is being migrated to CMake. The new top-level `CMakeLists.txt` mirrors the dependency graph defined in `all.pro` and performs the same environment validation (`QTHOME`, `QWTHOME`, `EPICS_BASE`, `EPICS_HOST_ARCH`). While the individual subprojects are converted, the CMake run will simply skip directories that do not yet provide their own `CMakeLists.txt`.
+
+To experiment with the new entry point:
+
+```bash
+mkdir -p build
+cd build
+cmake .. \
+  -DCAQTDM_QT_PREFIX=/path/to/Qt/6.5.3/gcc_64 \
+  -DCAQTDM_QWT_PREFIX=/path/to/qwt-6.2.0 \
+  -DCAQTDM_EPICS_BASE=/path/to/epics \
+  -DCAQTDM_EPICS_HOST_ARCH=linux-x86_64
+cmake --build .
+```
+
+Once a subdirectory gains first-class CMake support it will automatically be added to the build without changing the top-level configuration.
+
 
 ## Linux
 For building and installing caqtdm following requirements have to met:

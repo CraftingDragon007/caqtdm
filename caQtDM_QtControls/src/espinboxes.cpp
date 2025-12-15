@@ -20,7 +20,7 @@ QSize ECommonSpinBox::d_sizeHint(const QString& text) const
   QFont f = d_spin->font();
   f.setPointSize(10);
   QFontMetrics fm(f);
-  int w = fm.width(text);
+  int w = fm.horizontalAdvance(text);
   w += 10; /* extra space for spin buttons */
   return QSize(w, 26); 
 }
@@ -111,4 +111,3 @@ QSize EDoubleSpinBox::minimumSizeHint() const
 	return QDoubleSpinBox::minimumSizeHint();
   return d_minimumSizeHint(text());
 }
-

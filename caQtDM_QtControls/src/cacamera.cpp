@@ -49,7 +49,7 @@
 #include <QtZlib/zlib.h>
 #endif
 
-#if defined(linux)|| defined TARGET_OS_MAC || defined(__FreeBSD__)
+#if defined(linux) || defined(__linux__) || defined(Q_OS_LINUX) || defined(TARGET_OS_MAC) || defined(Q_OS_MACOS) || defined(__FreeBSD__)
 #include <zconf.h>
 #include <zlib.h>
 #endif

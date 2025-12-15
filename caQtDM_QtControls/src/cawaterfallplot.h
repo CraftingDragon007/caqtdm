@@ -23,6 +23,9 @@
  *    anton.mezger@psi.ch
  */
 
+#ifndef CAWATERFALLPLOT_H
+#define CAWATERFALLPLOT_H
+
 #if defined(_MSC_VER)
  //to avoid macro redefinition
  #define _MATH_DEFINES_DEFINED
@@ -399,3 +402,5 @@ private:
 public  Q_SLOTS:
     void TimeOut();
 };
+
+#endif // CAWATERFALLPLOT_H

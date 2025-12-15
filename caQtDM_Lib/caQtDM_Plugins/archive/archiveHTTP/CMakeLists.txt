@@ -1,0 +1,12 @@
+caqtdm_add_plugin(archiveHTTP_plugin
+    SOURCES
+        archivehttp_plugin.cpp
+        httpretrieval.cpp
+        ../archiverGeneral.cpp
+        httpperformancedata.cpp
+        urlhandlerhttp.cpp
+        workerHttp.cpp
+        workerHttpThread.cpp
+    QT_COMPONENTS
+        Network
+        UiTools)
