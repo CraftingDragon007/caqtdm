@@ -56,9 +56,15 @@
 
       if (this.header) {
         this.header.addEventListener('pointerdown', this.onDragStart.bind(this));
+        // Prevent touch scroll/gestures from canceling pointer events during drag
+        try { this.header.style.touchAction = 'none'; } catch (_e) {}
+        try { this.header.style.cursor = 'move'; } catch (_e) {}
       }
       if (this.resizeHandle) {
         this.resizeHandle.addEventListener('pointerdown', this.onResizeStart.bind(this));
+        // Prevent touch scroll/gestures from canceling pointer events during resize
+        try { this.resizeHandle.style.touchAction = 'none'; } catch (_e) {}
+        try { this.resizeHandle.style.cursor = 'nwse-resize'; } catch (_e) {}
       }
       if (this.closeButton) {
         this.closeButton.addEventListener('click', this.close.bind(this));
@@ -157,8 +163,11 @@
       this.isDragging = true;
       this.dragOffsetX = event.clientX - rect.left;
       this.dragOffsetY = event.clientY - rect.top;
-      document.addEventListener('pointermove', this.onDragMoveBound = this.onDragMove.bind(this));
-      document.addEventListener('pointerup', this.onDragEndBound = this.onDragEnd.bind(this));
+      // Capture the pointer so we continue to receive events even
+      // if the cursor leaves the window or moves over an iframe
+      try { this.root.setPointerCapture(event.pointerId); } catch (_e) {}
+      this.root.addEventListener('pointermove', this.onDragMoveBound = this.onDragMove.bind(this));
+      this.root.addEventListener('pointerup', this.onDragEndBound = this.onDragEnd.bind(this));
       event.preventDefault();
     }
 
@@ -181,8 +190,9 @@
     onDragEnd() {
       if (!this.isDragging) return;
       this.isDragging = false;
-      document.removeEventListener('pointermove', this.onDragMoveBound);
-      document.removeEventListener('pointerup', this.onDragEndBound);
+      try { this.root.releasePointerCapture && this.root.releasePointerCapture(this.dragCaptureId); } catch (_e) {}
+      this.root.removeEventListener('pointermove', this.onDragMoveBound);
+      this.root.removeEventListener('pointerup', this.onDragEndBound);
     }
 
     onResizeStart(event) {
@@ -195,8 +205,10 @@
       this.resizeStartHeight = rect.height;
       this.resizeStartX = event.clientX;
       this.resizeStartY = event.clientY;
-      document.addEventListener('pointermove', this.onResizeMoveBound = this.onResizeMove.bind(this));
-      document.addEventListener('pointerup', this.onResizeEndBound = this.onResizeEnd.bind(this));
+      // Capture the pointer so resize continues even if cursor leaves
+      try { this.root.setPointerCapture(event.pointerId); } catch (_e) {}
+      this.root.addEventListener('pointermove', this.onResizeMoveBound = this.onResizeMove.bind(this));
+      this.root.addEventListener('pointerup', this.onResizeEndBound = this.onResizeEnd.bind(this));
       event.preventDefault();
     }
 
@@ -221,8 +233,9 @@
     onResizeEnd() {
       if (!this.isResizing) return;
       this.isResizing = false;
-      document.removeEventListener('pointermove', this.onResizeMoveBound);
-      document.removeEventListener('pointerup', this.onResizeEndBound);
+      try { this.root.releasePointerCapture && this.root.releasePointerCapture(this.resizeCaptureId); } catch (_e) {}
+      this.root.removeEventListener('pointermove', this.onResizeMoveBound);
+      this.root.removeEventListener('pointerup', this.onResizeEndBound);
     }
 
     static closeTopMost() {
@@ -254,7 +267,7 @@
 
   const urlBuilderPopup = new PopupWindow({
     root: urlBuilderWindow,
-    header: urlBuilderWindow.querySelector('[data-popup-header]') || urlBuilderWindow, // fallback if specific header not present
+    header: urlBuilderWindow.querySelector('[data-popup-header]') || urlBuilderWindow,
     resizeHandle: urlBuilderWindow.querySelector('[data-popup-resize]') || null,
     menuButton: menuUrlBuilderButton,
     closeButton: urlBuilderClose,
