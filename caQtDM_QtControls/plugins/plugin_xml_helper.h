@@ -41,19 +41,16 @@ static QString XmlFunc(const char *clss, const char *name, int x, int y, int w, 
     Q_UNUSED(propertytext);
 #endif
 
-    // Create XML document using Qt's DOM API
     QDomDocument doc;
     QDomElement uiElement = doc.createElement("ui");
     uiElement.setAttribute("language", "c++");
     doc.appendChild(uiElement);
 
-    // Create widget element
     QDomElement widgetElement = doc.createElement("widget");
     widgetElement.setAttribute("class", clss);
     widgetElement.setAttribute("name", name);
     uiElement.appendChild(widgetElement);
 
-    // Create geometry property
     QDomElement geometryProp = doc.createElement("property");
     geometryProp.setAttribute("name", "geometry");
     widgetElement.appendChild(geometryProp);
