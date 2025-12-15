@@ -25,6 +25,7 @@ bool WebSocketServer::setup(quint16 port) {
         qDebug() << "WebSocketServer listening on port" << port;
         connect(m_pWebSocketServer, &QWebSocketServer::newConnection,
                 this, &WebSocketServer::onNewConnection);
+        tryScheduleTimeout(0); // Maybe first user leaves immediately
         m_isInitialized = true;
         return true;
     } else {
@@ -192,12 +193,16 @@ void WebSocketServer::socketDisconnected()
         }
         pSocket->deleteLater();
 
-        if (count == 0 && CaQtDM_Lib::slaveServer && !CaQtDM_Lib::interactionBasedTimeout) {
-            uint timeout = CaQtDM_Lib::webTimeout;
-            if (timeout == 0) timeout = 30 * 60;
-            uint timeoutMsec = timeout * 1000;
-            QTimer::singleShot(timeoutMsec, this, SLOT(shutdownNoUserTimeout()));
-        }
+        tryScheduleTimeout(count);
+    }
+}
+
+void WebSocketServer::tryScheduleTimeout(int count) {
+    if (count == 0 && CaQtDM_Lib::slaveServer && !CaQtDM_Lib::interactionBasedTimeout) {
+        uint timeout = CaQtDM_Lib::webTimeout;
+        if (timeout == 0) timeout = 30 * 60;
+        uint timeoutMsec = timeout * 1000;
+        QTimer::singleShot(timeoutMsec, this, SLOT(shutdownNoUserTimeout()));
     }
 }
 

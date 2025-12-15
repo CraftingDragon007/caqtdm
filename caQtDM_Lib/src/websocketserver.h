@@ -37,6 +37,8 @@ private:
     QReadWriteLock m_clientReadWriteLock;
     bool m_isInitialized;
 
+    void tryScheduleTimeout(int count);
+
     WebSocketServer(const WebSocketServer&) = delete;
     WebSocketServer& operator=(const WebSocketServer&) = delete;
 
