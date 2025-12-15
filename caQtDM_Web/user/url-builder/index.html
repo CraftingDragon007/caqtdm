@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>caQtDM Web URL Builder</title>
+		<link rel="stylesheet" href="index.css">
+	</head>
+	<body>
+		<main class="page">
+			<header class="header">
+				<h1 class="title">caQtDM WebURL Builder</h1>
+			</header>
+
+			<section class="card" aria-label="URL inputs">
+				<label class="field">
+					<span class="label">File path (relative)</span>
+					<input
+						id="filePath"
+						class="input"
+						type="text"
+						inputmode="text"
+						autocomplete="off"
+						spellcheck="false"
+						placeholder="relative/path/to/file.ui"
+					>
+					<span class="hint">Allowed extensions: .ui, .prc, .adl, .edl</span>
+				</label>
+
+				<label class="field">
+					<span class="label">Macros</span>
+					<textarea
+						id="macros"
+						class="textarea"
+						rows="4"
+						autocomplete="off"
+						spellcheck="false"
+						placeholder="NAME1=VALUE1;NAME2=VALUE2;NAME3=VALUE3"
+					></textarea>
+					<span class="hint">Format: key=value;key=value;... (semicolon or newline separated)</span>
+				</label>
+			</section>
+
+			<section class="card" aria-label="Generated URL">
+				<label class="field">
+					<span class="label">Generated URL</span>
+					<input id="generatedUrl" class="input" type="text" readonly>
+				</label>
+
+				<div class="actions">
+					<button type="button" id="copyBtn" class="button" disabled>Copy</button>
+					<button type="button" id="openBtn" class="button primary" disabled>Open</button>
+				</div>
+
+				<p id="status" class="status" aria-live="polite"></p>
+			</section>
+		</main>
+
+		<script src="index.js"></script>
+	</body>
+</html>

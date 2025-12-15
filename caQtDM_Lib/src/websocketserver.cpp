@@ -88,6 +88,16 @@ void WebSocketServer::processTextMessage(const QString &message)
                 return;
             }
 
+            QString normalized = file.replace('\\', '/');
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+            QStringList parts = normalized.split('/', QString::SkipEmptyParts);
+#else
+            QStringList parts = normalized.split('/', Qt::SkipEmptyParts);
+#endif
+            if (parts.contains("..")) {
+                pSender->sendTextMessage("ERROR|Directory traversal (../) is not allowed! Please specify a safe relative path.");
+                return;
+            }
 
             fileFunctions filefunction;
             filefunction.checkFileAndDownload(file);

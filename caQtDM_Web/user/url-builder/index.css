@@ -1,0 +1,128 @@
+:root {
+  color-scheme: light dark;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  line-height: 1.4;
+  background: Canvas;
+  color: CanvasText;
+}
+
+.page {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.header {
+  margin-bottom: 12px;
+}
+
+body.embedded .header {
+  display: none;
+}
+
+.title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 650;
+}
+
+.card {
+  border: 1px solid color-mix(in srgb, CanvasText 22%, Canvas);
+  border-radius: 10px;
+  padding: 14px;
+  margin: 12px 0;
+  background: Canvas;
+}
+
+.field {
+  display: block;
+  margin: 10px 0;
+}
+
+.label {
+  display: block;
+  font-size: 13px;
+  margin-bottom: 6px;
+  opacity: 0.9;
+}
+
+.input,
+.textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 14px;
+  padding: 10px 10px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, CanvasText 30%, Canvas);
+  background: Field;
+  color: FieldText;
+}
+
+.textarea {
+  resize: vertical;
+}
+
+.hint {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.button {
+  border: 1px solid color-mix(in srgb, CanvasText 30%, Canvas);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  background: color-mix(in srgb, AccentColor 12%, ButtonFace);
+  color: ButtonText;
+  cursor: pointer;
+}
+
+.button.primary {
+  font-weight: 600;
+  background: AccentColor;
+  color: AccentColorText;
+  border-color: color-mix(in srgb, AccentColor 65%, Canvas);
+}
+
+.button:focus-visible,
+.input:focus-visible,
+.textarea:focus-visible {
+  outline: 2px solid Highlight;
+  outline-offset: 2px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .card {
+    border-color: color-mix(in srgb, CanvasText 28%, Canvas);
+  }
+
+  .input,
+  .textarea,
+  .button {
+    border-color: color-mix(in srgb, CanvasText 36%, Canvas);
+  }
+}
+
+.button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.status {
+  margin: 10px 0 0;
+  font-size: 13px;
+  opacity: 0.85;
+  min-height: 1.3em;
+}
