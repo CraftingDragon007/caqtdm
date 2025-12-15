@@ -24,19 +24,212 @@
   const urlBuilderClose = document.getElementById('url-builder-close');
   const urlBuilderOpenTab = document.getElementById('url-builder-open-tab');
   let dialogTimeout = null;
-  let isDragging = false;
-  let dragOffsetX = 0;
-  let dragOffsetY = 0;
-  let isResizing = false;
-  let resizeStartWidth = 0;
-  let resizeStartHeight = 0;
-  let resizeStartX = 0;
-  let resizeStartY = 0;
-  let logWindowManuallyPositioned = false;
-  // Shared geometry constraints for the draggable/resizable log window.
-  const MIN_PADDING = 12;
-  const MIN_RESIZE_WIDTH = 240;
-  const MIN_RESIZE_HEIGHT = 160;
+  const DEFAULT_MIN_PADDING = 12;
+  const DEFAULT_MIN_RESIZE_WIDTH = 240;
+  const DEFAULT_MIN_RESIZE_HEIGHT = 160;
+
+  class PopupWindow {
+    static zCounter = 1000;
+    static openStack = [];
+
+    constructor(opts) {
+      this.root = opts.root;
+      this.header = opts.header;
+      this.resizeHandle = opts.resizeHandle || null;
+      this.menuButton = opts.menuButton || null;
+      this.closeButton = opts.closeButton || null;
+      this.minPadding = opts.minPadding != null ? opts.minPadding : DEFAULT_MIN_PADDING;
+      this.minWidth = opts.minWidth != null ? opts.minWidth : DEFAULT_MIN_RESIZE_WIDTH;
+      this.minHeight = opts.minHeight != null ? opts.minHeight : DEFAULT_MIN_RESIZE_HEIGHT;
+      this.onOpen = opts.onOpen || null;
+      this.onClose = opts.onClose || null;
+
+      this.isDragging = false;
+      this.dragOffsetX = 0;
+      this.dragOffsetY = 0;
+      this.isResizing = false;
+      this.resizeStartWidth = 0;
+      this.resizeStartHeight = 0;
+      this.resizeStartX = 0;
+      this.resizeStartY = 0;
+      this.manuallyPositioned = false;
+
+      if (this.header) {
+        this.header.addEventListener('pointerdown', this.onDragStart.bind(this));
+      }
+      if (this.resizeHandle) {
+        this.resizeHandle.addEventListener('pointerdown', this.onResizeStart.bind(this));
+      }
+      if (this.closeButton) {
+        this.closeButton.addEventListener('click', this.close.bind(this));
+      }
+      if (this.menuButton) {
+        this.menuButton.addEventListener('click', this.toggle.bind(this));
+      }
+      this.root.addEventListener('pointerdown', () => this.bringToFront());
+
+      window.addEventListener('resize', () => this.ensureInView());
+      document.addEventListener('pointercancel', () => this.onDragEnd());
+      document.addEventListener('pointercancel', () => this.onResizeEnd());
+    }
+
+    bringToFront() {
+      PopupWindow.zCounter += 1;
+      this.root.style.zIndex = String(PopupWindow.zCounter);
+    }
+
+    isShown() {
+      return this.root.classList.contains('show');
+    }
+
+    open() {
+      if (this.isShown()) return;
+      this.root.classList.add('show');
+      this.bringToFront();
+      if (this.menuButton) this.menuButton.setAttribute('aria-expanded', 'true');
+      if (typeof this.onOpen === 'function') this.onOpen();
+      // Focus the first focusable element, fallback to root
+      try { this.root.focus(); } catch (_e) {}
+      this.ensureInView();
+      PopupWindow.openStack.push(this);
+    }
+
+    close() {
+      if (!this.isShown()) return;
+      this.root.classList.remove('show');
+      if (this.menuButton) this.menuButton.setAttribute('aria-expanded', 'false');
+      if (typeof this.onClose === 'function') this.onClose();
+      // Remove from stack if present
+      const idx = PopupWindow.openStack.lastIndexOf(this);
+      if (idx !== -1) PopupWindow.openStack.splice(idx, 1);
+      // Return focus to menu button to keep keyboard flow
+      if (this.menuButton) this.menuButton.focus();
+    }
+
+    toggle() {
+      if (this.isShown()) this.close(); else this.open();
+    }
+
+    prepareManualPosition(rect) {
+      if (this.manuallyPositioned) return;
+      this.root.style.left = rect.left + 'px';
+      this.root.style.top = rect.top + 'px';
+      this.root.style.right = 'auto';
+      this.root.style.maxHeight = 'none';
+      this.manuallyPositioned = true;
+      this.ensureInView();
+    }
+
+    ensureInView() {
+      if (!this.manuallyPositioned || !this.isShown()) return;
+      const MIN_PADDING = this.minPadding;
+      const maxWidth = Math.max(0, window.innerWidth - (2 * MIN_PADDING));
+      const maxHeight = Math.max(0, window.innerHeight - (2 * MIN_PADDING));
+      let rect = this.root.getBoundingClientRect();
+      let width = rect.width;
+      let height = rect.height;
+      if (maxWidth > 0 && width > maxWidth) {
+        width = maxWidth;
+        this.root.style.width = width + 'px';
+      }
+      if (maxHeight > 0 && height > maxHeight) {
+        height = maxHeight;
+        this.root.style.height = height + 'px';
+      }
+      rect = this.root.getBoundingClientRect();
+      width = rect.width;
+      height = rect.height;
+      const maxLeft = Math.max(0, window.innerWidth - width - MIN_PADDING);
+      const maxTop = Math.max(0, window.innerHeight - height - MIN_PADDING);
+      const nextLeft = Math.min(Math.max(MIN_PADDING, rect.left), maxLeft);
+      const nextTop = Math.min(Math.max(MIN_PADDING, rect.top), maxTop);
+      this.root.style.left = nextLeft + 'px';
+      this.root.style.top = nextTop + 'px';
+      this.root.style.right = 'auto';
+    }
+
+    onDragStart(event) {
+      if (event.button !== 0 && event.pointerType !== 'touch') return;
+      if (event.target && event.target.closest('button')) return;
+      let rect = this.root.getBoundingClientRect();
+      this.prepareManualPosition(rect);
+      rect = this.root.getBoundingClientRect();
+      this.isDragging = true;
+      this.dragOffsetX = event.clientX - rect.left;
+      this.dragOffsetY = event.clientY - rect.top;
+      document.addEventListener('pointermove', this.onDragMoveBound = this.onDragMove.bind(this));
+      document.addEventListener('pointerup', this.onDragEndBound = this.onDragEnd.bind(this));
+      event.preventDefault();
+    }
+
+    onDragMove(event) {
+      if (!this.isDragging) return;
+      const MIN_PADDING = this.minPadding;
+      const width = this.root.offsetWidth;
+      const height = this.root.offsetHeight;
+      let newLeft = event.clientX - this.dragOffsetX;
+      let newTop = event.clientY - this.dragOffsetY;
+      const maxLeft = Math.max(0, window.innerWidth - width - MIN_PADDING);
+      const maxTop = Math.max(0, window.innerHeight - height - MIN_PADDING);
+      newLeft = Math.min(Math.max(MIN_PADDING, newLeft), maxLeft);
+      newTop = Math.min(Math.max(MIN_PADDING, newTop), maxTop);
+      this.root.style.left = newLeft + 'px';
+      this.root.style.top = newTop + 'px';
+      this.root.style.right = 'auto';
+    }
+
+    onDragEnd() {
+      if (!this.isDragging) return;
+      this.isDragging = false;
+      document.removeEventListener('pointermove', this.onDragMoveBound);
+      document.removeEventListener('pointerup', this.onDragEndBound);
+    }
+
+    onResizeStart(event) {
+      if (event.button !== 0 && event.pointerType !== 'touch') return;
+      let rect = this.root.getBoundingClientRect();
+      this.prepareManualPosition(rect);
+      rect = this.root.getBoundingClientRect();
+      this.isResizing = true;
+      this.resizeStartWidth = rect.width;
+      this.resizeStartHeight = rect.height;
+      this.resizeStartX = event.clientX;
+      this.resizeStartY = event.clientY;
+      document.addEventListener('pointermove', this.onResizeMoveBound = this.onResizeMove.bind(this));
+      document.addEventListener('pointerup', this.onResizeEndBound = this.onResizeEnd.bind(this));
+      event.preventDefault();
+    }
+
+    onResizeMove(event) {
+      if (!this.isResizing) return;
+      const MIN_PADDING = this.minPadding;
+      const deltaX = event.clientX - this.resizeStartX;
+      const deltaY = event.clientY - this.resizeStartY;
+      const maxWidth = Math.max(0, window.innerWidth - (2 * MIN_PADDING));
+      const maxHeight = Math.max(0, window.innerHeight - (2 * MIN_PADDING));
+      const minWidth = maxWidth > 0 ? Math.min(this.minWidth, maxWidth) : 0;
+      const minHeight = maxHeight > 0 ? Math.min(this.minHeight, maxHeight) : 0;
+      const targetWidth = this.resizeStartWidth + deltaX;
+      const targetHeight = this.resizeStartHeight + deltaY;
+      const newWidth = Math.max(minWidth, Math.min(targetWidth, maxWidth || targetWidth));
+      const newHeight = Math.max(minHeight, Math.min(targetHeight, maxHeight || targetHeight));
+      this.root.style.width = newWidth + 'px';
+      this.root.style.height = newHeight + 'px';
+      this.ensureInView();
+    }
+
+    onResizeEnd() {
+      if (!this.isResizing) return;
+      this.isResizing = false;
+      document.removeEventListener('pointermove', this.onResizeMoveBound);
+      document.removeEventListener('pointerup', this.onResizeEndBound);
+    }
+
+    static closeTopMost() {
+      const top = PopupWindow.openStack[PopupWindow.openStack.length - 1];
+      if (top) top.close();
+    }
+  }
 
   let failedOnce = false;
   let connectedOnce = false;
@@ -47,47 +240,28 @@
 
   let heartbeat = null;
 
-  function openLogWindow() {
-    logWindow.classList.add('show');
-    menuLogsButton.classList.remove('has-new');
-    menuLogsButton.setAttribute('aria-expanded', 'true');
-    logWindow.focus();
-    ensureLogWindowInView();
-  }
+  const logPopup = new PopupWindow({
+    root: logWindow,
+    header: logHeader,
+    resizeHandle: logResizeHandle,
+    menuButton: menuLogsButton,
+    closeButton: logClose,
+    minPadding: DEFAULT_MIN_PADDING,
+    minWidth: DEFAULT_MIN_RESIZE_WIDTH,
+    minHeight: DEFAULT_MIN_RESIZE_HEIGHT,
+    onOpen: function() { menuLogsButton.classList.remove('has-new'); },
+  });
 
-  function closeLogWindow() {
-    logWindow.classList.remove('show');
-    menuLogsButton.setAttribute('aria-expanded', 'false');
-    menuLogsButton.focus();
-  }
-
-  function toggleLogWindow() {
-    if (logWindow.classList.contains('show')) {
-      closeLogWindow();
-    } else {
-      openLogWindow();
-    }
-  }
-
-  function openUrlBuilderWindow() {
-    urlBuilderWindow.classList.add('show');
-    menuUrlBuilderButton.setAttribute('aria-expanded', 'true');
-    urlBuilderWindow.focus();
-  }
-
-  function closeUrlBuilderWindow() {
-    urlBuilderWindow.classList.remove('show');
-    menuUrlBuilderButton.setAttribute('aria-expanded', 'false');
-    menuUrlBuilderButton.focus();
-  }
-
-  function toggleUrlBuilderWindow() {
-    if (urlBuilderWindow.classList.contains('show')) {
-      closeUrlBuilderWindow();
-    } else {
-      openUrlBuilderWindow();
-    }
-  }
+  const urlBuilderPopup = new PopupWindow({
+    root: urlBuilderWindow,
+    header: urlBuilderWindow.querySelector('[data-popup-header]') || urlBuilderWindow, // fallback if specific header not present
+    resizeHandle: urlBuilderWindow.querySelector('[data-popup-resize]') || null,
+    menuButton: menuUrlBuilderButton,
+    closeButton: urlBuilderClose,
+    minPadding: DEFAULT_MIN_PADDING,
+    minWidth: 360,
+    minHeight: 220,
+  });
 
   function parseLogMarkup(raw) {
     const container = document.createElement('div');
@@ -124,149 +298,22 @@
     entry.appendChild(parseLogMarkup(html));
     logContent.appendChild(entry);
     logContent.scrollTop = logContent.scrollHeight;
-    if (!logWindow.classList.contains('show')) {
+    if (!logPopup.isShown()) {
       menuLogsButton.classList.add('has-new');
     }
   }
 
-  menuLogsButton.addEventListener('click', toggleLogWindow);
-  logClose.addEventListener('click', closeLogWindow);
-
-  menuUrlBuilderButton.addEventListener('click', toggleUrlBuilderWindow);
-  urlBuilderClose.addEventListener('click', closeUrlBuilderWindow);
   if (urlBuilderOpenTab) {
     urlBuilderOpenTab.addEventListener('click', function() {
       window.open('/url-builder', '_blank', 'noopener');
-      closeUrlBuilderWindow();
+      urlBuilderPopup.close();
     });
   }
 
   document.addEventListener('keydown', function(event) {
     if (event.key !== 'Escape') return;
-    if (urlBuilderWindow.classList.contains('show')) {
-      closeUrlBuilderWindow();
-      return;
-    }
-    if (logWindow.classList.contains('show')) closeLogWindow();
+    PopupWindow.closeTopMost();
   });
-
-  function prepareManualPosition(rect) {
-    if (logWindowManuallyPositioned) return;
-    logWindow.style.left = rect.left + 'px';
-    logWindow.style.top = rect.top + 'px';
-    logWindow.style.right = 'auto';
-    logWindow.style.maxHeight = 'none';
-    logWindowManuallyPositioned = true;
-    ensureLogWindowInView();
-  }
-
-  function ensureLogWindowInView() {
-    if (!logWindowManuallyPositioned) return;
-    const maxWidth = Math.max(0, window.innerWidth - (2 * MIN_PADDING));
-    const maxHeight = Math.max(0, window.innerHeight - (2 * MIN_PADDING));
-    let rect = logWindow.getBoundingClientRect();
-    let width = rect.width;
-    let height = rect.height;
-    if (maxWidth > 0 && width > maxWidth) {
-      width = maxWidth;
-      logWindow.style.width = width + 'px';
-    }
-    if (maxHeight > 0 && height > maxHeight) {
-      height = maxHeight;
-      logWindow.style.height = height + 'px';
-    }
-    rect = logWindow.getBoundingClientRect();
-    width = rect.width;
-    height = rect.height;
-    const maxLeft = Math.max(0, window.innerWidth - width - MIN_PADDING);
-    const maxTop = Math.max(0, window.innerHeight - height - MIN_PADDING);
-    const nextLeft = Math.min(Math.max(MIN_PADDING, rect.left), maxLeft);
-    const nextTop = Math.min(Math.max(MIN_PADDING, rect.top), maxTop);
-    logWindow.style.left = nextLeft + 'px';
-    logWindow.style.top = nextTop + 'px';
-    logWindow.style.right = 'auto';
-  }
-
-  function onDragStart(event) {
-    if (event.button !== 0 && event.pointerType !== 'touch') return;
-    if (event.target && event.target.closest('button')) return;
-    let rect = logWindow.getBoundingClientRect();
-    prepareManualPosition(rect);
-    rect = logWindow.getBoundingClientRect();
-    isDragging = true;
-    dragOffsetX = event.clientX - rect.left;
-    dragOffsetY = event.clientY - rect.top;
-    document.addEventListener('pointermove', onDragMove);
-    document.addEventListener('pointerup', onDragEnd);
-    event.preventDefault();
-  }
-
-  function onDragMove(event) {
-    if (!isDragging) return;
-    const width = logWindow.offsetWidth;
-    const height = logWindow.offsetHeight;
-    let newLeft = event.clientX - dragOffsetX;
-    let newTop = event.clientY - dragOffsetY;
-    const maxLeft = Math.max(0, window.innerWidth - width - MIN_PADDING);
-    const maxTop = Math.max(0, window.innerHeight - height - MIN_PADDING);
-    newLeft = Math.min(Math.max(MIN_PADDING, newLeft), maxLeft);
-    newTop = Math.min(Math.max(MIN_PADDING, newTop), maxTop);
-    logWindow.style.left = newLeft + 'px';
-    logWindow.style.top = newTop + 'px';
-    logWindow.style.right = 'auto';
-  }
-
-  function onDragEnd() {
-    if (!isDragging) return;
-    isDragging = false;
-    document.removeEventListener('pointermove', onDragMove);
-    document.removeEventListener('pointerup', onDragEnd);
-  }
-
-  function onResizeStart(event) {
-    if (event.button !== 0 && event.pointerType !== 'touch') return;
-    let rect = logWindow.getBoundingClientRect();
-    prepareManualPosition(rect);
-    rect = logWindow.getBoundingClientRect();
-    isResizing = true;
-    resizeStartWidth = rect.width;
-    resizeStartHeight = rect.height;
-    resizeStartX = event.clientX;
-    resizeStartY = event.clientY;
-    document.addEventListener('pointermove', onResizeMove);
-    document.addEventListener('pointerup', onResizeEnd);
-    event.preventDefault();
-  }
-
-  function onResizeMove(event) {
-    if (!isResizing) return;
-    const deltaX = event.clientX - resizeStartX;
-    const deltaY = event.clientY - resizeStartY;
-    const maxWidth = Math.max(0, window.innerWidth - (2 * MIN_PADDING));
-    const maxHeight = Math.max(0, window.innerHeight - (2 * MIN_PADDING));
-    const minWidth = maxWidth > 0 ? Math.min(MIN_RESIZE_WIDTH, maxWidth) : 0;
-    const minHeight = maxHeight > 0 ? Math.min(MIN_RESIZE_HEIGHT, maxHeight) : 0;
-    const targetWidth = resizeStartWidth + deltaX;
-    const targetHeight = resizeStartHeight + deltaY;
-    const newWidth = Math.max(minWidth, Math.min(targetWidth, maxWidth || targetWidth));
-    const newHeight = Math.max(minHeight, Math.min(targetHeight, maxHeight || targetHeight));
-    logWindow.style.width = newWidth + 'px';
-    logWindow.style.height = newHeight + 'px';
-    ensureLogWindowInView();
-  }
-
-  function onResizeEnd() {
-    if (!isResizing) return;
-    isResizing = false;
-    document.removeEventListener('pointermove', onResizeMove);
-    document.removeEventListener('pointerup', onResizeEnd);
-  }
-
-  logHeader.addEventListener('pointerdown', onDragStart);
-  logResizeHandle.addEventListener('pointerdown', onResizeStart);
-  window.addEventListener('resize', ensureLogWindowInView);
-  document.addEventListener('pointercancel', onDragEnd);
-  document.addEventListener('pointercancel', onResizeEnd);
 
   function isNumericPath(value) {
     const normalized = String(value).trim();
