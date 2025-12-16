@@ -38,6 +38,7 @@
 #include "hmisharedeventbus.h"
 #include "hmisharedconfiglistmanager.h"
 #include "websocketserver.h"
+#include "webportpool.h"
 #endif
 
 #ifndef MOBILE_ANDROID
@@ -7358,10 +7359,8 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
             return;
         }
 
-        quint16 new_vnc_port = vncPort +
-                vncPortIndex;
-        quint16 new_web_port = webPort +
-                vncPortIndex;
+        quint16 new_vnc_port;
+        quint16 new_web_port;
 
         QString macros;
         if (indx < args.count()) {
@@ -7372,13 +7371,19 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
 
         if (existing != nullptr) {
             if (existing->process() == nullptr || existing->process()->state() == QProcess::ProcessState::NotRunning) {
-                new_vnc_port = existing->vncPort();
-                new_web_port = existing->webPort();
+                existing->deleteLater();
             } else if (WebSocketServer::instance().isInitialized()) {
                 WebSocketServer::instance().sendOpenFileRequest(file, macros, existing->vncPort());
                 return;
             }
-        } else vncPortIndex++;
+        }
+
+        if (!WebPortPool::instance()->allocate(new_vnc_port, new_web_port)) {
+            qWarning() << "Failed to allocate ports for new instance" << file << "- pool exhausted ("
+                       << WebPortPool::instance()->freeCount() << "free)";
+            QMessageBox::critical(this, "Error - Couldn't start instance", "Maximum instance limit reached");
+            return;
+        }
 
         VncWebChildProcess *item = startVncChildProcess(new_vnc_port, new_web_port, absolutePath, macros, this);
 
@@ -7857,7 +7862,6 @@ void CaQtDM_Lib::resizeFullWindow(QRect& q)
 void CaQtDM_Lib::closeEvent(QCloseEvent* ce)
 {
     Q_UNUSED(ce);
-
     emit Signal_Closing();
 
     killTimer(loopTimerID);

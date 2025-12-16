@@ -232,8 +232,8 @@ int main(int argc, char *argv[])
     bool slave_server = false;
     bool web_interaction_based_timeout = false;
     QString host = "127.0.0.1";
-    quint16 port = 5900;
-    quint16 web_port = port + 1000;
+    quint16 port = 30001;
+    quint16 web_port = 30000;
     uint web_timeout = 0;
 
     for (numargs = argc, in = 1; in < numargs; in++) {
@@ -348,9 +348,9 @@ int main(int argc, char *argv[])
                 printf("caQtDM -- Invalid server port %s specified, not enabling server mode\n", argv[in]);
                 exit(1);
             } else {
-                if (port > std::numeric_limits<quint16>::max() - 1000) {
-                    web_port = port - 1000;
-                } else web_port = port + 1000;
+                if (port > std::numeric_limits<quint16>::max() - 1) {
+                    web_port = port - 1;
+                } else web_port = port + 1;
             }
         } else if (strcmp (argv[in], "-web_server_port") == 0) {
             in++;

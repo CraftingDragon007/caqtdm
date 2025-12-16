@@ -70,6 +70,7 @@ SOURCES += caqtdm_lib.cpp \
     src/causerid.cpp \
     src/hmisharedconfiglistmanager.cpp \
     src/hmisharedeventbus.cpp \
+    src/webportpool.cpp \
     vaPrintf.c \
     myMessageBox.cpp \
     limitsStripplotDialog.cpp \
@@ -95,6 +96,7 @@ HEADERS += caqtdm_lib.h\
     src/hmisharedconfiglistmanager.h \
     src/hmisharedeventbus.h \
     src/vncwebchildprocess.h \
+    src/webportpool.h \
     vaPrintf.h \
     myMessageBox.h \
     limitsStripplotDialog.h \

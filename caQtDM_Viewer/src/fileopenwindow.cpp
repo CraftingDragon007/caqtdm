@@ -53,6 +53,7 @@ bool HTTPCONFIGURATOR = false;
 #include <hmisharedeventbus.h>
 #include <hmisharedconfiglistmanager.h>
 #include <websocketserver.h>
+#include <webportpool.h>
 #endif
 
 #include <QFileDialog>

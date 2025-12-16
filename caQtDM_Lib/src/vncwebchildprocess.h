@@ -4,12 +4,13 @@
 #include "qdebug.h"
 #include <QObject>
 #include <QProcess>
+#include "webportpool.h"
 
 class VncWebChildProcess : public QObject {
     Q_OBJECT
 
 public:
-    VncWebChildProcess(QObject* parent = nullptr) : QObject(parent), m_process(nullptr), m_vncPort(5900), m_webPort(6900) {}
+    VncWebChildProcess(QObject* parent = nullptr) : QObject(parent), m_process(nullptr), m_vncPort(30000), m_webPort(30001) {}
     VncWebChildProcess(quint16 vncPort, quint16 webPort, QObject* parent = nullptr) : QObject(parent), m_vncPort(vncPort), m_webPort(webPort) {}
 
     quint16 vncPort() { return m_vncPort; }
@@ -41,6 +42,8 @@ public:
                 this, [this, pid](int exitCode, QProcess::ExitStatus exitStatus) {
             qDebug().noquote() << QString("child (pid: %1, vnc_port: %2) -- finished with exit code:").arg(pid).arg(m_vncPort) << exitCode
                      << "and exit status:" << exitStatus;
+            WebPortPool::instance()->release(m_vncPort);
+            WebPortPool::instance()->release(m_webPort);
         });
     }
 

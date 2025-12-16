@@ -17,7 +17,7 @@ public:
     bool isInitialized() const;
     void sendLog(const QString text);
     void sendOpenFileRequest(const QString file, const QString macros, quint16 vncPort);
-    void sendInstanceInfo(QWebSocket *receiver, quint16 vncPort);
+    void sendInstanceInfo(QWebSocket *receiver, quint16 vncPort, quint16 webPort);
     void sendInteractionBasedShutdownMsg();
 
     void sendProgressInfo(int initialProgress, int maxProgress);

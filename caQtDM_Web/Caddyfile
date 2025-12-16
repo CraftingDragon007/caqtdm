@@ -1,19 +1,10 @@
 localhost {
-	@noVNC path_regexp dynamic_port_route ^/websockify/([0-9]+)(.*)$
-	@caWebSocket path_regexp dynamic_port_route ^/instance/([0-9]+)(.*)$
+	@webSocket path_regexp dynamic_port_route ^/websockify/(3\d{4})$
 
-	handle @noVNC {
+	handle @webSocket {
 		uri strip_prefix /websockify/{re.dynamic_port_route.1}
 
-		reverse_proxy localhost:59{re.dynamic_port_route.1} {
-			header_up Host {http.request.host}
-		}
-	}
-
-	handle @caWebSocket {
-		uri strip_prefix /instance/{re.dynamic_port_route.1}
-
-		reverse_proxy localhost:69{re.dynamic_port_route.1} {
+		reverse_proxy localhost:{re.dynamic_port_route.1} {
 			header_up Host {http.request.host}
 		}
 	}

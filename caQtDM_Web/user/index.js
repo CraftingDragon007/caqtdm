@@ -1,6 +1,7 @@
 (function() {
   const params = new URLSearchParams(window.location.search);
-  let path = params.get('path') || '0';
+  let controlPath = params.get('control') || params.get('path') || '30000';
+  let noVNCPath = params.get('novnc') || params.get('novncPath') || '30001';
   const macros = params.get('macros') || '';
 
   const iframe = document.getElementById('vnc-container');
@@ -246,10 +247,11 @@
 
   let failedOnce = false;
   let connectedOnce = false;
-  let isNonNumericPath = false;
-  let resolvedInstance = null;
+  let isNonNumericControlPath = false;
+  let resolvedControlPath = null;
+  let resolvedNoVNCPath = null;
   let newInstance = false;
-  let file = null;
+  let originalControlFile = null;
 
   let heartbeat = null;
 
@@ -333,35 +335,44 @@
     return /^[0-9]+$/.test(normalized);
   }
 
-  function getInstancePath() {
-    if (resolvedInstance != null) {
-      return resolvedInstance;
+  function getControlPath() {
+    if (resolvedControlPath != null) {
+      return resolvedControlPath;
     }
-    if (path == null) return '00';
-    const value = String(path).trim();
-    if (value === '') return '00';
+    if (controlPath == null) return '30000';
+    const value = String(controlPath).trim();
+    if (value === '') return '30000';
     if (!isNumericPath(value)) {
-      isNonNumericPath = true;
-      return '00';
+      isNonNumericControlPath = true;
+      return '30000';
     }
-    return value.length === 1 ? '0' + value : value;
+    return value;
   }
 
-  function setIframeToPath(p) {
+  function getNoVNCPath() {
+    if (resolvedNoVNCPath != null) {
+      return resolvedNoVNCPath;
+    }
+    if (noVNCPath == null) return '30001';
+    const value = String(noVNCPath).trim();
+    if (value === '') return '30001';
+    return value;
+  }
+
+  function setIframeToNoVNCPath(p) {
     let value = p;
-    if (value == null || value === '') value = '0';
+    if (value == null || value === '') value = '30001';
     value = String(value).trim();
-    if (/^[0-9]$/.test(value)) value = '0' + value;
     if (value.startsWith('/noVNC') || value.startsWith('http')) {
       iframe.src = value;
-      path = value;
+      noVNCPath = value;
       return;
     }
-    path = value;
-    iframe.src = '/noVNC/vnc.html?path=/websockify/' + encodeURIComponent(getInstancePath()) + '&autoconnect=true&reconnect=true&reconnect_delay=5000-novnc_readonly &resize=scale';
+    noVNCPath = value;
+    iframe.src = '/noVNC/vnc.html?path=/websockify/' + encodeURIComponent(getNoVNCPath()) + '&autoconnect=true&reconnect=true&reconnect_delay=5000-novnc_readonly &resize=scale';
   }
 
-  setIframeToPath(path);
+  setIframeToNoVNCPath(noVNCPath);
 
   let reconnectDelay = 1000;
   let reconnectTimer = null;
@@ -449,7 +460,7 @@
 
   function connectWebSocket() {
     const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-    const wsUrl = wsProtocol + window.location.host + '/instance/' + encodeURIComponent(getInstancePath());
+    const wsUrl = wsProtocol + window.location.host + '/websockify/' + encodeURIComponent(getControlPath());
     let socket;
 
     try {
@@ -470,19 +481,19 @@
             addLogMessage('<font color="green">' + dateTime + ' Reconnected to server.</font>');
           iframe.contentWindow.location.reload();
         }, 1000);
-      } else if ((resolvedInstance != null || !isNonNumericPath) && !connectedOnce) {
+      } else if ((resolvedControlPath != null || !isNonNumericControlPath) && !connectedOnce) {
         addLogMessage('<font color="green">' + dateTime + ' Connected to server.</font>');
       }
       newInstance = false;
       try {
-        if (isNonNumericPath && resolvedInstance == null) {
+        if (isNonNumericControlPath && resolvedControlPath == null) {
           // Request instance number for non-numeric path
-          const message = 'RESOLVE|' + path + '|' + macros;
+          const message = 'RESOLVE|' + controlPath + '|' + macros;
           socket.send(message);
         } else {
           connectedOnce = true;
           failedOnce = false;
-          socket.send(getInstancePath());
+          socket.send(getControlPath());
           if (heartbeat != null) {
             clearInterval(heartbeat);
             heartbeat = null;
@@ -556,15 +567,17 @@
         return;
       }
       if (data.startsWith('INSTANCE|')) {
-        let instance = data.slice(9).trim();
-        if (isNonNumericPath && resolvedInstance == null) {
-          instance = instance.length === 1 ? '0' + instance : instance
-          resolvedInstance = instance;
-          file = path;
-          setIframeToPath(instance);
+        const payload = data.slice(9).split('|');
+        const nextNoVNCPath = (payload[0] || '').trim();
+        const nextControlPath = (payload[1] || '').trim();
+        if (isNonNumericControlPath && resolvedControlPath == null) {
+          resolvedControlPath = nextControlPath || '30000';
+          resolvedNoVNCPath = nextNoVNCPath || '30001';
+          originalControlFile = controlPath;
+          setIframeToNoVNCPath(resolvedNoVNCPath);
           socket.close();
           newInstance = true;
-          // onclose will call scheduleReconnect, which will use the resolved instance
+          // onclose will call scheduleReconnect, which will use the resolved control path
         }
         return;
       }
@@ -581,10 +594,11 @@
     };
 
     socket.onclose = function() {
-      if (isNonNumericPath && !newInstance && file != null) {
+      if (isNonNumericControlPath && !newInstance && originalControlFile != null) {
         // ask for instance again, as the path could've changed
-        resolvedInstance = null;
-        path = file;
+        resolvedControlPath = null;
+        resolvedNoVNCPath = null;
+        controlPath = originalControlFile;
       }
       if (connectedOnce && !failedOnce && !newInstance) {
         const dateTime = formatDateTime(new Date());

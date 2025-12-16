@@ -4,6 +4,7 @@
 #include <QFileInfo>
 #include <QHostAddress>
 #include <fileFunctions.h>
+#include "webportpool.h"
 
 WebSocketServer::WebSocketServer(QObject *parent) : QObject(parent), m_isInitialized(false)
 {}
@@ -118,10 +119,6 @@ void WebSocketServer::processTextMessage(const QString &message)
                 key += macros;
             }
 
-            quint16 vncPort = CaQtDM_Lib::vncPort + CaQtDM_Lib::vncPortIndex;
-            quint16 webPort = CaQtDM_Lib::webPort + CaQtDM_Lib::vncPortIndex;
-            bool incrementVncPort = false;
-
             {
                 QWriteLocker webChildProcessesLocker(&CaQtDM_Lib::webChildProcessesLock);
                 foreach (QString item, CaQtDM_Lib::webChildProcesses.keys()) {
@@ -137,20 +134,25 @@ void WebSocketServer::processTextMessage(const QString &message)
                     if (result.value() == nullptr) {
                         CaQtDM_Lib::webChildProcesses.remove(key);
                         qWarning().noquote() << QString("caQtDM_Web -- found undefined child process for file (and macros) %1, this shouldn't happen").arg(key.replace('\0', ' '));
-                        incrementVncPort = true;
                     } else {
                         if (result.value()->process() == nullptr || result.value()->process()->state() == QProcess::ProcessState::NotRunning) {
                             CaQtDM_Lib::webChildProcesses.remove(key);
                         } else {
-                            sendInstanceInfo(pSender, result.value()->vncPort());
+                            sendInstanceInfo(pSender, result.value()->vncPort(), result.value()->webPort());
                             return;
                         }
                     }
-                } else incrementVncPort = true;
+                }
             }
 
-            if (incrementVncPort) {
-                CaQtDM_Lib::vncPortIndex++;
+            quint16 vncPort;
+            quint16 webPort;
+
+            if (!WebPortPool::instance()->allocate(vncPort, webPort)) {
+                qWarning() << "Failed to allocate ports for new instance" << file << "- pool exhausted ("
+                           << WebPortPool::instance()->freeCount() << "free)";
+                pSender->sendTextMessage("ERROR|Maximum instance limit reached");
+                return;
             }
 
             VncWebChildProcess *item = CaQtDM_Lib::startVncChildProcess(vncPort, webPort, file, macros);
@@ -158,16 +160,14 @@ void WebSocketServer::processTextMessage(const QString &message)
                 QWriteLocker webChildProcessesLocker(&CaQtDM_Lib::webChildProcessesLock);
                 CaQtDM_Lib::webChildProcesses.insert(key, item);
             }
-            sendInstanceInfo(pSender, vncPort);
+            sendInstanceInfo(pSender, vncPort, webPort);
         }
     }
 }
 
-void WebSocketServer::sendInstanceInfo(QWebSocket *receiver, quint16 vncPort) {
+void WebSocketServer::sendInstanceInfo(QWebSocket *receiver, quint16 vncPort, quint16 webPort) {
     if (receiver == nullptr) return;
-
-    QString pathStr = QString::number(vncPort % 100);
-    receiver->sendTextMessage("INSTANCE|" + pathStr);
+    receiver->sendTextMessage("INSTANCE|" + QString::number(vncPort) + '|' + QString::number(webPort));
 }
 
 void WebSocketServer::processBinaryMessage(const QByteArray &message)

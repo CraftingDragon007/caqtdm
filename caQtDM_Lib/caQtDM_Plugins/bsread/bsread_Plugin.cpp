@@ -344,7 +344,7 @@ void bsreadPlugin::closeEvent(){
         }
     }
     if (DispatcherThread){
-        delete(DispatcherThread);
+        DispatcherThread->deleteLater();
     }
     if (Dispatcher){
         Dispatcher->deleteLater();
