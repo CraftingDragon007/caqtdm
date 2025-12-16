@@ -6,6 +6,7 @@ localhost {
 
 		reverse_proxy localhost:{re.dynamic_port_route.1} {
 			header_up Host {http.request.host}
+			header_up X-Real-IP {remote_host}
 		}
 	}
 

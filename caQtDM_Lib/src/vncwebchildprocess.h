@@ -26,7 +26,7 @@ public:
             QByteArray data = m_process->readAllStandardOutput();
             QTextStream stream(data);
             while (!stream.atEnd()) {
-                qDebug().noquote() << QString("child (pid: %1, vnc_port: %2) -- %3").arg(pid).arg(m_vncPort).arg(stream.readLine());
+                qDebug().noquote() << QString("child (pid: %1, vnc_port: %2, web_port: %3) -- %4").arg(pid).arg(m_vncPort).arg(m_webPort).arg(stream.readLine());
             }
         });
 
@@ -34,7 +34,7 @@ public:
             QByteArray data = m_process->readAllStandardError();
             QTextStream stream(data);
             while (!stream.atEnd()) {
-                qDebug().noquote() << QString("child (pid: %1, vnc_port: %2) -- %3").arg(pid).arg(m_vncPort).arg(stream.readLine());
+                qDebug().noquote() << QString("child (pid: %1, vnc_port: %2, web_port: %3) -- %4").arg(pid).arg(m_vncPort).arg(m_webPort).arg(stream.readLine());
             }
         });
 

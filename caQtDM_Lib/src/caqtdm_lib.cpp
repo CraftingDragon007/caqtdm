@@ -1561,6 +1561,16 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         //qDebug() << "create caMimeDisplay";
         w1->setProperty("ObjectType", caMimeDisplay_Widget);
 
+#ifndef MOBILE
+        mimeWidget->setVNCEnabled(vncServer);
+
+        connect(mimeWidget, &caMimeDisplay::triggerURLWeb, this, [](QString url) {
+            if (WebSocketServer::instance().isInitialized()) {
+                WebSocketServer::instance().sendOpenURLRequest(url);
+            }
+        });
+#endif
+
         QString text;
         text= mimeWidget->getLabels();
         if(reaffectText(map, &text, w1))  mimeWidget->setLabels(text);

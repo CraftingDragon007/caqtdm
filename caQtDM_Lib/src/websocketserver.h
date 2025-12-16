@@ -17,6 +17,7 @@ public:
     bool isInitialized() const;
     void sendLog(const QString text);
     void sendOpenFileRequest(const QString file, const QString macros, quint16 vncPort);
+    void sendOpenURLRequest(const QString url);
     void sendInstanceInfo(QWebSocket *receiver, quint16 vncPort, quint16 webPort);
     void sendInteractionBasedShutdownMsg();
 
@@ -38,6 +39,7 @@ private:
     bool m_isInitialized;
 
     void tryScheduleTimeout(int count);
+    QString getIPAddress(QWebSocket *client);
 
     WebSocketServer(const WebSocketServer&) = delete;
     WebSocketServer& operator=(const WebSocketServer&) = delete;

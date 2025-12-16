@@ -245,6 +245,85 @@
     }
   }
 
+  class Dialog {
+    constructor(opts) {
+      this.overlay = opts.overlay;
+      this.messageElement = opts.messageElement;
+      this.timeout = opts.timeout || null;
+      this.timeoutDuration = opts.timeoutDuration || 0;
+      this.buttons = opts.buttons || {}; // { buttonId: callback }
+      this.onBeforeOpen = opts.onBeforeOpen || null;
+      this.onAfterClose = opts.onAfterClose || null;
+
+      this.timeoutHandle = null;
+      this.setupButtonListeners();
+    }
+
+    setupButtonListeners() {
+      Object.entries(this.buttons).forEach(([buttonId, callback]) => {
+        const button = document.getElementById(buttonId);
+        if (button) {
+          button.addEventListener('click', () => {
+            if (typeof callback === 'function') {
+              callback();
+            }
+            this.close();
+          });
+        }
+      });
+    }
+
+    setMessage(message) {
+      if (this.messageElement) {
+        if (typeof message === 'string') {
+          this.messageElement.textContent = message;
+        } else {
+          this.messageElement.innerHTML = '';
+          this.messageElement.appendChild(message);
+        }
+      }
+    }
+
+    open(message) {
+      if (message) {
+        this.setMessage(message);
+      }
+      if (typeof this.onBeforeOpen === 'function') {
+        this.onBeforeOpen();
+      }
+      this.overlay.classList.add('show');
+      if (this.timeoutDuration > 0) {
+        this.startTimeout();
+      }
+    }
+
+    close() {
+      this.overlay.classList.remove('show');
+      this.clearTimeout();
+      if (typeof this.onAfterClose === 'function') {
+        this.onAfterClose();
+      }
+    }
+
+    isShown() {
+      return this.overlay.classList.contains('show');
+    }
+
+    startTimeout() {
+      this.clearTimeout();
+      this.timeoutHandle = setTimeout(() => {
+        this.close();
+      }, this.timeoutDuration);
+    }
+
+    clearTimeout() {
+      if (this.timeoutHandle) {
+        window.clearTimeout(this.timeoutHandle);
+        this.timeoutHandle = null;
+      }
+    }
+  }
+
   let failedOnce = false;
   let connectedOnce = false;
   let isNonNumericControlPath = false;
@@ -276,6 +355,74 @@
     minPadding: DEFAULT_MIN_PADDING,
     minWidth: 360,
     minHeight: 220,
+  });
+
+  const openFileDialog = new Dialog({
+    overlay: dialogOverlay,
+    messageElement: dialogMessage,
+    timeoutDuration: 30000,
+    buttons: {
+      'dialog-cancel': function() {
+        pendingOpenPath = null;
+        pendingOpenMacros = null;
+      },
+      'dialog-accept': function() {
+        if (!pendingOpenPath) {
+          pendingOpenPath = null;
+          pendingOpenMacros = null;
+          return;
+        }
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.set('path', pendingOpenPath);
+        if (pendingOpenMacros && pendingOpenMacros.trim() !== '') {
+          const convertedMacros = pendingOpenMacros.replace(/=/g, ':').replace(/;/g, ',');
+          newUrl.searchParams.set('macros', convertedMacros);
+        }
+        window.open(newUrl.toString(), '_blank', 'noopener');
+        pendingOpenPath = null;
+        pendingOpenMacros = null;
+      },
+    },
+  });
+
+  const errorDialog = new Dialog({
+    overlay: errorOverlay,
+    messageElement: errorMessage,
+    timeoutDuration: 0,
+    buttons: {
+      'error-ok': function() {},
+    },
+  });
+
+  let pendingUrl = null;
+  let pendingUrlType = 'url'; // 'url' or 'file'
+  let pendingFilePath = null;
+
+  const urlDialog = new Dialog({
+    overlay: dialogOverlay,
+    messageElement: dialogMessage,
+    timeoutDuration: 30000,
+    buttons: {
+      'dialog-cancel': function() {
+        pendingUrl = null;
+        pendingFilePath = null;
+        pendingUrlType = 'url';
+      },
+      'dialog-accept': function() {
+        if (pendingUrlType === 'file' && pendingFilePath) {
+          navigator.clipboard.writeText(pendingFilePath).then(function() {
+            console.log('Path copied to clipboard');
+          }).catch(function(err) {
+            console.error('Failed to copy path:', err);
+          });
+          pendingFilePath = null;
+          pendingUrlType = 'url';
+        } else if (pendingUrl) {
+          window.open(pendingUrl, '_blank', 'noopener');
+          pendingUrl = null;
+        }
+      },
+    },
   });
 
   function parseLogMarkup(raw) {
@@ -388,65 +535,6 @@
     }, reconnectDelay);
   }
 
-  function hideDialog() {
-    if (dialogTimeout) {
-      clearTimeout(dialogTimeout);
-      dialogTimeout = null;
-    }
-    dialogOverlay.classList.remove('show');
-    pendingOpenPath = null;
-    pendingOpenMacros = null;
-  }
-
-  function showOpenFileDialog(requestedPath, macros) {
-    pendingOpenPath = requestedPath;
-    pendingOpenMacros = macros;
-    let message = 'Open "' + requestedPath + '"?';
-
-    if (macros && macros.trim() !== '') {
-      const macroList = macros.split(';').filter(function(m) { return m.trim() !== ''; });
-      if (macroList.length > 0) {
-        message += '\n\nMacros:\n' + macroList.join('\n');
-      }
-    }
-
-    dialogMessage.textContent = message;
-    dialogOverlay.classList.add('show');
-    if (dialogTimeout) clearTimeout(dialogTimeout);
-    dialogTimeout = setTimeout(function() {
-      hideDialog();
-    }, 30000);
-  }
-
-  dialogCancel.addEventListener('click', hideDialog);
-
-  dialogAccept.addEventListener('click', function() {
-    if (!pendingOpenPath) {
-      hideDialog();
-      return;
-    }
-    const newUrl = new URL(window.location.href);
-    newUrl.searchParams.set('path', pendingOpenPath);
-    if (pendingOpenMacros && pendingOpenMacros.trim() !== '') {
-      // Convert macros from KEY=VALUE;KEY1=VALUE1 to KEY:VALUE,KEY1:VALUE1
-      const convertedMacros = pendingOpenMacros.replace(/=/g, ':').replace(/;/g, ',');
-      newUrl.searchParams.set('macros', convertedMacros);
-    }
-    window.open(newUrl.toString(), '_blank', 'noopener');
-    hideDialog();
-  });
-
-  function hideErrorDialog() {
-    errorOverlay.classList.remove('show');
-  }
-
-  function showErrorDialog(message) {
-    errorMessage.textContent = message;
-    errorOverlay.classList.add('show');
-  }
-
-  errorOk.addEventListener('click', hideErrorDialog);
-
   function formatDateTime(date) {
     const day = String(date.getDate()).padStart(2, '0');
     const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
@@ -519,7 +607,7 @@
         return;
       }
       if (data.startsWith('ERROR|')) {
-        showErrorDialog(data.slice(6));
+        errorDialog.open(data.slice(6));
         return;
       }
       if (data.startsWith('PROGRESS|')) {
@@ -558,12 +646,61 @@
         return;
       }
       if (data.startsWith('TIMEOUT|')) {
-        showErrorDialog('Connection timed out: ' + data.slice(8));
+        errorDialog.open('Connection timed out: ' + data.slice(8));
         reconnectDelay = -1; //disable further reconnects
-        errorOk.disabled = true;
-        errorOk.style.display = 'none';
+        const errorOkButton = document.getElementById('error-ok');
+        if (errorOkButton) {
+          errorOkButton.disabled = true;
+          errorOkButton.style.display = 'none';
+        }
         socket.close();
         iframe.src = 'about:blank';
+        return;
+      }
+      if (data.startsWith('OPEN_URL|')) {
+        const urlToOpen = data.slice(9).trim();
+        if (urlToOpen) {
+          if (urlToOpen.startsWith('file://')) {
+            const filePath = urlToOpen.slice(7);
+            pendingFilePath = filePath;
+            pendingUrlType = 'file';
+            const message = document.createElement('p');
+            message.textContent = 'File path: ';
+            const pathSpan = document.createElement('span');
+            pathSpan.textContent = filePath;
+            pathSpan.style.fontFamily = 'monospace';
+            message.appendChild(pathSpan);
+            urlDialog.setMessage(message);
+            // Update button text to "Copy"
+            const acceptButton = document.getElementById('dialog-accept');
+            if (acceptButton) {
+              acceptButton.textContent = 'Copy';
+            }
+            urlDialog.open();
+          } else {
+            pendingUrl = urlToOpen;
+            pendingUrlType = 'url';
+            const message = document.createElement('p');
+            message.textContent = 'Open URL: ';
+            const link = document.createElement('a');
+            link.href = urlToOpen;
+            link.target = '_blank';
+            link.rel = 'noopener';
+            link.textContent = urlToOpen;
+            link.addEventListener('click', function() {
+              urlDialog.close();
+            });
+            message.appendChild(link);
+            message.appendChild(document.createTextNode('?'));
+            urlDialog.setMessage(message);
+            // Update button text back to "Open"
+            const acceptButton = document.getElementById('dialog-accept');
+            if (acceptButton) {
+              acceptButton.textContent = 'Open';
+            }
+            urlDialog.open();
+          }
+        }
         return;
       }
       if (data.startsWith('INSTANCE|')) {
@@ -583,7 +720,18 @@
       }
       const openMatchPipe = data.match(/^OPEN\|([^|]+)\|(.*)$/);
       if (openMatchPipe) {
-        showOpenFileDialog(openMatchPipe[1], openMatchPipe[2]);
+        pendingOpenPath = openMatchPipe[1];
+        pendingOpenMacros = openMatchPipe[2];
+        let message = 'Open "' + pendingOpenPath + '"?';
+
+        if (pendingOpenMacros && pendingOpenMacros.trim() !== '') {
+          const macroList = pendingOpenMacros.split(';').filter(function(m) { return m.trim() !== ''; });
+          if (macroList.length > 0) {
+            message += '\n\nMacros:\n' + macroList.join('\n');
+          }
+        }
+
+        openFileDialog.open(message);
         return;
       }
     };

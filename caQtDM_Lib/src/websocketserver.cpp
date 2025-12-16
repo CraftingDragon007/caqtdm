@@ -35,6 +35,16 @@ bool WebSocketServer::setup(quint16 port) {
     }
 }
 
+QString WebSocketServer::getIPAddress(QWebSocket *client) {
+    const QNetworkRequest req = client->request();
+    QByteArray xRealIp = req.rawHeader("X-Real-IP");
+    if (!xRealIp.isEmpty()) {
+        return QString(xRealIp).trimmed();
+    }
+
+    return client->peerAddress().toString();
+}
+
 WebSocketServer::~WebSocketServer()
 {
     m_pWebSocketServer->close();
@@ -46,7 +56,7 @@ void WebSocketServer::onNewConnection()
 {
     QWebSocket *pSocket = m_pWebSocketServer->nextPendingConnection();
 
-    qDebug() << "New connection from:" << pSocket->peerAddress().toString() << ":" << pSocket->peerPort();
+    qDebug().noquote() << "New connection from:" << pSocket->peerAddress().toString() + ":" + QString::number(pSocket->peerPort()) << "(" + getIPAddress(pSocket) + ")";
 
     connect(pSocket, &QWebSocket::textMessageReceived, this, &WebSocketServer::processTextMessage);
     connect(pSocket, &QWebSocket::binaryMessageReceived, this, &WebSocketServer::processBinaryMessage);
@@ -61,7 +71,7 @@ void WebSocketServer::onNewConnection()
 void WebSocketServer::processTextMessage(const QString &message)
 {
     QWebSocket *pSender = qobject_cast<QWebSocket *>(sender());
-    qDebug() << "Text message received from" << pSender->peerAddress().toString() << ":" << pSender->peerPort() << ":" << message;
+    qDebug().noquote() << "Text message received from" << pSender->peerAddress().toString() + ":" + QString::number(pSender->peerPort()) << "(" + getIPAddress(pSender) + ")" << ":" << message;
 
     if (pSender) {
         if (message.startsWith("PING")) {
@@ -173,7 +183,7 @@ void WebSocketServer::sendInstanceInfo(QWebSocket *receiver, quint16 vncPort, qu
 void WebSocketServer::processBinaryMessage(const QByteArray &message)
 {
     QWebSocket *pSender = qobject_cast<QWebSocket *>(sender());
-    qDebug() << "Binary message received from" << pSender->peerAddress().toString() << ":" << pSender->peerPort() << ":" << message.size() << "bytes";
+    qDebug().noquote() << "Binary message received from" << pSender->peerAddress().toString() + ":" + QString::number(pSender->peerPort()) << "(" + getIPAddress(pSender) + ")" << ":" << message.size() << "bytes";
 
     if (pSender) {
         pSender->sendBinaryMessage("Server received your binary data");
@@ -184,7 +194,7 @@ void WebSocketServer::socketDisconnected()
 {
     QWebSocket *pSocket = qobject_cast<QWebSocket *>(sender());
     if (pSocket) {
-        qDebug() << "Client disconnected:" << pSocket->peerAddress().toString() << ":" << pSocket->peerPort();
+        qDebug().noquote() << "Client disconnected:" << pSocket->peerAddress().toString() + ":" + QString::number(pSocket->peerPort()) << "(" + getIPAddress(pSocket) + ")";
         int count;
         {
             QWriteLocker locker(&m_clientReadWriteLock);
@@ -227,6 +237,15 @@ void WebSocketServer::sendOpenFileRequest(const QString file, const QString macr
     foreach (QWebSocket *pSocket, m_clients) {
         if (pSocket != Q_NULLPTR) {
             pSocket->sendTextMessage("OPEN|" + file + '|' + macros);
+        }
+    }
+}
+
+void WebSocketServer::sendOpenURLRequest(const QString url) {
+    QReadLocker locker(&m_clientReadWriteLock);
+    foreach (QWebSocket *pSocket, m_clients) {
+        if (pSocket != Q_NULLPTR) {
+            pSocket->sendTextMessage("OPEN_URL|" + url);
         }
     }
 }
