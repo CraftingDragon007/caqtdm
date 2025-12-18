@@ -153,6 +153,8 @@ public:
     static bool interactionBasedTimeout;
     static uint webTimeout;
 
+    static bool webAllowInsecureCaShellCommands;
+
     static void addWebChildProcess(QString absoluteFilePath, QString macros, VncWebChildProcess* childProcess);
     static VncWebChildProcess* getWebChildProcess(QString absoluteFilePath, QString macros);
     static QString getChildProcessKey(QString absoluteFilePath, QString macros);

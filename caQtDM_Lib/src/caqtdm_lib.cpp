@@ -332,6 +332,7 @@ bool CaQtDM_Lib::vncServer;
 bool CaQtDM_Lib::noVncPlugin;
 bool CaQtDM_Lib::noVncReadonly;
 bool CaQtDM_Lib::interactionBasedTimeout;
+bool CaQtDM_Lib::webAllowInsecureCaShellCommands;
 uint CaQtDM_Lib::webTimeout;
 #endif
 
@@ -7738,6 +7739,10 @@ void CaQtDM_Lib::Callback_TableDoubleClicked(const QString& pv)
 
 void CaQtDM_Lib::Callback_ShellCommandClicked(int indx)
 {
+    if (vncServer && !webAllowInsecureCaShellCommands) {
+        QMessageBox::critical(this, "Error", "caShellCommand execution disabled due to security reasons");
+        return;
+    }
     QString separator((QChar)27);
 
     caShellCommand *choice = qobject_cast<caShellCommand *>(sender());

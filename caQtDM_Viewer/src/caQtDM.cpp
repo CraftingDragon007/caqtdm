@@ -231,6 +231,7 @@ int main(int argc, char *argv[])
     bool novnc_readonly = false;
     bool slave_server = false;
     bool web_interaction_based_timeout = false;
+    bool web_allow_insecure_cashell_commands = false;
     QString host = "127.0.0.1";
     quint16 port = 30001;
     quint16 web_port = 30000;
@@ -375,6 +376,9 @@ int main(int argc, char *argv[])
         } else if (strcmp (argv[in], "-novnc_host") == 0) {
             in++;
             host = QString(argv[in]);
+        } else if (strcmp (argv[in], "-web_allow_insecure_cashell_commands") == 0) {
+            web_allow_insecure_cashell_commands = true;
+            printf("caQtDM - Allowing executing of caShellCommands in web mode, please be careful!");
         } else if (strncmp (argv[in], "-" , 1) == 0) {
             /* unknown application argument */
             printf("caQtDM -- Argument %d = [%s] is unknown!, possible -attach -macro -noMsg -stylefile -dg -x -print -httpconfig -noResize -option\n",in,argv[in]);
@@ -418,6 +422,7 @@ int main(int argc, char *argv[])
         options.insert("web_timeout", QString::number(web_timeout));
         options.insert("web_interaction_based_timeout", QString::number(web_interaction_based_timeout));
         options.insert("novnc_readonly", QString::number(novnc_readonly));
+        options.insert("web_allow_insecure_cashell_commands", QString::number(web_allow_insecure_cashell_commands));
 
 #if QT_VERSION < QT_VERSION_CHECK(6,0,0)
         // fix dpi for (no)VNC with qt5
