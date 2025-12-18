@@ -84,37 +84,42 @@ int OPCUAPlugin::initCommunicationLayer(MutexKnobData *data,
 
         delete s;
 
-        if (!fileNameFound.isEmpty()) {
-            QFile file(fileNameFound);
-            if (file.open(QIODevice::ReadOnly)) {
-                QString msg = "opcua translation found: ";
-                msg.append(fileNameFound);
-                if (m_messageWindowP != Q_NULLPTR)
-                    m_messageWindowP->postMsgEvent(QtDebugMsg, msg.toUtf8().data());
+        if (fileNameFound.isEmpty()) {
+            if (m_messageWindowP) {
+                QString msg = "OPCUA: Couldn't find opcua database file: " + opcua_database_file;
+                m_messageWindowP->postMsgEvent(QtDebugMsg, msg.toUtf8().data());
+            }
+            continue;
+        }
 
-                QTextStream in(&file);
+        QFile file(fileNameFound);
+        if (file.open(QIODevice::ReadOnly)) {
+            QString msg = "opcua translation found: ";
+            msg.append(fileNameFound);
+            if (m_messageWindowP != Q_NULLPTR)
+                m_messageWindowP->postMsgEvent(QtDebugMsg, msg.toUtf8().data());
 
-                while (!in.atEnd()) {
-                    QString line = in.readLine();
-                    if (!line.trimmed().startsWith("#")) {
-                        int equalIndex = line.indexOf(
-                            "="); // Since Node Id's have '=' in them we have to make sure to only split at the first equal sign.
-                        if (equalIndex > 0) {
-                            QString key = line.left(equalIndex).trimmed();
-                            QString val = line.mid(equalIndex + 1).trimmed();
-                            m_translationMap.insert(key, val);
-                        }
+            QTextStream in(&file);
+
+            while (!in.atEnd()) {
+                QString line = in.readLine();
+                if (!line.trimmed().startsWith("#")) {
+                    int equalIndex = line.indexOf(
+                        "="); // Since Node Id's have '=' in them we have to make sure to only split at the first equal sign.
+                    if (equalIndex > 0) {
+                        QString key = line.left(equalIndex).trimmed();
+                        QString val = line.mid(equalIndex + 1).trimmed();
+                        m_translationMap.insert(key, val);
                     }
                 }
-                file.close();
             }
-        }
-    }
 
-    if (m_messageWindowP) {
-        for (const QString &file : opcua_database_files) {
-            QString msg = "OPCUA: Loaded database file: " + file;
-            m_messageWindowP->postMsgEvent(QtDebugMsg, msg.toUtf8().data());
+            file.close();
+
+            if (m_messageWindowP) {
+                QString msg = "OPCUA: Loaded database file: " + opcua_database_file;
+                m_messageWindowP->postMsgEvent(QtDebugMsg, msg.toUtf8().data());
+            }
         }
     }
 
