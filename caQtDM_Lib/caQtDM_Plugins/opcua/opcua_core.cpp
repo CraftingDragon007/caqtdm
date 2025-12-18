@@ -645,7 +645,7 @@ bool OpcUaCore::writeDataDynamically(QOpcUaNode *node,
     auto doWrite = [&](const QVariant &ref) {
         QVariant valueToWrite = makeValue(ref);
         if (!valueToWrite.isValid()) {
-            VERBOSELOG("Unsupported type");
+            VERBOSELOG("Unsupported type" << QT_VARIANT_TYPE(ref));
             return;
         }
 
@@ -727,6 +727,8 @@ bool OpcUaCore::writeValue(
             return QVariant::fromValue<uint32_t>(static_cast<uint32_t>(idata));
         case QMetaType::Short:
             return QVariant::fromValue<int16_t>(idata);
+        case QMetaType::UShort:
+            return QVariant::fromValue<uint16_t>(static_cast<uint16_t>(idata));
         case QMetaType::Bool:
             return QVariant::fromValue<bool>(idata != 0);
         case QMetaType::QString:
@@ -798,6 +800,10 @@ bool OpcUaCore::writeValues(const QString &nodeId,
         case QMetaType::Short:
             for (int i = 0; i < nelm; ++i)
                 values.append(QVariant::fromValue<int16_t>(data16[i]));
+            break;
+        case QMetaType::UShort:
+            for (int i = 0; i < nelm; ++i)
+                values.append(QVariant::fromValue<uint16_t>(static_cast<uint16_t>(data16[i])));
             break;
         case QMetaType::Bool:
             for (int i = 0; i < nelm; ++i)

@@ -982,6 +982,7 @@ caType OPCUAPlugin::generateCaTypeFromVariant(const QVariant &value, bool &isArr
     case QMetaType::ULong:
         return caLONG;
     case QMetaType::Short:
+    case QMetaType::UShort:
     case QMetaType::Bool:
         return caINT;
     case QMetaType::QString:
