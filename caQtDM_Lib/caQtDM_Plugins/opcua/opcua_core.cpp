@@ -477,6 +477,10 @@ void OpcUaCore::subscribeToNode(const SubscriptionSettings &subscriptionSettings
     }
 
     if (m_subscriptionNodes.contains(nodeId)) {
+        // In case we already have it and there is a value available, emit it in case the old subscription was lost
+        if (m_subscriptionNodes[nodeId]->valueAttribute().isValid()) {
+            emit valueRead(nodeId, m_subscriptionNodes[nodeId]->valueAttribute());
+        }
         return;
     }
 
