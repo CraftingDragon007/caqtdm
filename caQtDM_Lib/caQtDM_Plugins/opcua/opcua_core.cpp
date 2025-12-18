@@ -709,12 +709,13 @@ bool OpcUaCore::writeValue(
         case QMetaType::Float:
             return QVariant::fromValue<double>(rdata);
         case QMetaType::Int:
-        case QMetaType::UInt:
         case QMetaType::LongLong:
-        case QMetaType::ULongLong:
         case QMetaType::Long:
-        case QMetaType::ULong:
             return QVariant::fromValue<int32_t>(idata);
+        case QMetaType::ULongLong:
+        case QMetaType::ULong:
+        case QMetaType::UInt:
+            return QVariant::fromValue<uint32_t>(static_cast<uint32_t>(idata));
         case QMetaType::Short:
             return QVariant::fromValue<int16_t>(idata);
         case QMetaType::Bool:
@@ -774,13 +775,16 @@ bool OpcUaCore::writeValues(const QString &nodeId,
                 values.append(fdata[i]);
             break;
         case QMetaType::Int:
-        case QMetaType::UInt:
         case QMetaType::LongLong:
-        case QMetaType::ULongLong:
         case QMetaType::Long:
-        case QMetaType::ULong:
             for (int i = 0; i < nelm; ++i)
                 values.append(QVariant::fromValue<int32_t>(data32[i]));
+            break;
+        case QMetaType::UInt:
+        case QMetaType::ULongLong:
+        case QMetaType::ULong:
+            for (int i = 0; i < nelm; ++i)
+                values.append(QVariant::fromValue<uint32_t>(static_cast<uint32_t>(data32[i])));
             break;
         case QMetaType::Short:
             for (int i = 0; i < nelm; ++i)
