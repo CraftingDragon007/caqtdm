@@ -468,10 +468,13 @@ int OPCUAPlugin::pvClearMonitor(knobData *kData)
     m_knobDataIndicesForEndpoint[endpoint].removeAll(index);
     m_channelCache.remove(nodeId, index);
 
-    // Unsubscribe from node
-    OpcUaCore *core = Q_NULLPTR;
-    if (m_cores.contains(nodeId)) {
-        core = m_cores[nodeId];
+    // In case other knobDatas still use this node, return
+    if (m_channelCache.contains(nodeId))
+        return true;
+
+    // Else unsubscribe from the node
+    if (m_cores.contains(endpoint)) {
+        OpcUaCore *core = m_cores[endpoint];
         if (core->hasSubscription(nodeId)) {
             core->unsubscribeFromNode(nodeId);
         }
