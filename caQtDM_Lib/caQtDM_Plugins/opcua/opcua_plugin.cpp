@@ -286,7 +286,7 @@ int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
     {
         QMutexLocker lock(&m_mutex);
         if (!m_cores.contains(endpoint)) {
-            m_cores[endpoint] = new OpcUaCore();
+            m_cores[endpoint] = new OpcUaCore(this);
             m_connectionState[endpoint] = ConnectionState::NotConnected;
 
             core = m_cores[endpoint];

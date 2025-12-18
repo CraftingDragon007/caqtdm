@@ -205,6 +205,7 @@ private:
     int m_reconnectionAttempt;
     int m_reconnectionTimeoutMs;
     bool m_reconnecting;
+    bool m_ignoreNextDisconnect;
 
     /**
      * @brief Gets the Qt standard path for AppLocalDataLocation and uses that to form a path for PKI configurations

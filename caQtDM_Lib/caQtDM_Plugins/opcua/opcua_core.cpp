@@ -23,6 +23,7 @@
  */
 
 #include "opcua_core.h"
+#include <QApplication>
 #include <QDebug>
 #include <QStandardPaths>
 #include <QTimer>
@@ -128,9 +129,16 @@ OpcUaCore::OpcUaCore(QObject *parent)
         }
     });
 
+    m_ignoreNextDisconnect = false;
+
     // Handler to reconnect upon disconnections
     QObject::connect(m_client, &QOpcUaClient::disconnected, this, [this]() {
         emit disconnected();
+
+        if (m_ignoreNextDisconnect) {
+            m_ignoreNextDisconnect = false;
+            return;
+        }
 
         if (m_reconnecting)
             return;
@@ -188,7 +196,10 @@ OpcUaCore::OpcUaCore(QObject *parent)
             errorMessage += " for: " + m_currentEndpointDescription.endpointUrl();
             VERBOSELOG(errorMessage);
         });
+
+    QObject::connect(qApp, &QCoreApplication::aboutToQuit, this, &OpcUaCore::disconnectOpc);
 }
+
 OpcUaCore::~OpcUaCore()
 {
     clearAllSubscriptions();
@@ -196,12 +207,7 @@ OpcUaCore::~OpcUaCore()
 
     if (m_client) {
         QObject::disconnect(m_client);
-        if (m_client->state() != QOpcUaClient::Disconnected) {
-            QEventLoop loop;
-            QObject::connect(m_client, &QOpcUaClient::disconnected, &loop, &QEventLoop::quit);
-            m_client->disconnectFromEndpoint();
-            loop.exec();
-        }
+        disconnectOpc();
         m_client->deleteLater();
     }
 }
@@ -446,11 +452,14 @@ bool OpcUaCore::connectOpc(const QString &url)
 
 void OpcUaCore::disconnectOpc()
 {
-    if (m_client
-        && (m_client->state() == QOpcUaClient::ClientState::Connected
-            || m_client->state() == QOpcUaClient::ClientState::Connecting)) {
+    if (m_client && m_client->state() != QOpcUaClient::ClientState::Disconnected) {
         VERBOSELOG("Disconnecting from OPC UA Server....");
+        QEventLoop loop;
+        QObject::connect(m_client, &QOpcUaClient::disconnected, &loop, &QEventLoop::quit);
+        // This next disconnect should not be reconnnected
+        m_ignoreNextDisconnect = true;
         m_client->disconnectFromEndpoint();
+        loop.exec();
     } else {
         VERBOSELOG("Client not connected or already disconnected.");
     }
