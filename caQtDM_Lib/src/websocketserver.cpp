@@ -129,30 +129,17 @@ void WebSocketServer::processTextMessage(const QString &message)
                 key += macros;
             }
 
-            {
-                QWriteLocker webChildProcessesLocker(&CaQtDM_Lib::webChildProcessesLock);
-                foreach (QString item, CaQtDM_Lib::webChildProcesses.keys()) {
-                    QStringList splitItem = item.split('\0');
-                    QFileInfo info(splitItem[0]);
-                    if (key == info.fileName() + (splitItem.length() == 1 ? "" : '\0' + splitItem[1])) {
-                        key = item;
-                        break;
-                    }
-                }
-                auto result = CaQtDM_Lib::webChildProcesses.find(key);
-                if (result != CaQtDM_Lib::webChildProcesses.constEnd()) {
-                    if (result.value() == nullptr) {
-                        CaQtDM_Lib::webChildProcesses.remove(key);
-                        qWarning().noquote() << QString("caQtDM_Web -- found undefined child process for file (and macros) %1, this shouldn't happen").arg(key.replace('\0', ' '));
-                    } else {
-                        if (result.value()->process() == nullptr || result.value()->process()->state() == QProcess::ProcessState::NotRunning) {
-                            CaQtDM_Lib::webChildProcesses.remove(key);
-                        } else {
-                            sendInstanceInfo(pSender, result.value()->vncPort(), result.value()->webPort());
-                            return;
-                        }
-                    }
-                }
+            QStringList keyParts = key.split('\0');
+            QString macrosString;
+            if (keyParts.length() > 1) {
+                macrosString = keyParts[1];
+            }
+
+            VncWebChildProcess* process = CaQtDM_Lib::getWebChildProcess(file, macrosString);
+
+            if (process) {
+                sendInstanceInfo(pSender, process->vncPort(), process->webPort());
+                return;
             }
 
             quint16 vncPort;

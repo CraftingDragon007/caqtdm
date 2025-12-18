@@ -7435,17 +7435,52 @@ void CaQtDM_Lib::addWebChildProcess(QString absoluteFilePath, QString macros, Vn
 /// \return The resulting item or nullptr if nothing was found or the item itself is a nullptr
 ///
 VncWebChildProcess* CaQtDM_Lib::getWebChildProcess(QString absoluteFilePath, QString macros) {
-    QString key = getChildProcessKey(absoluteFilePath, macros);
 
-    QWriteLocker webChildProcessesLocker(&webChildProcessesLock);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
+    const auto skip_empty_parts = Qt::SkipEmptyParts;
+#else
+    const auto skip_empty_parts = QString::SkipEmptyParts;
+#endif
+
+    QString key;
+    QStringList incomingMacros = macros.split(';', skip_empty_parts);
+    incomingMacros.sort();
+
+    foreach (QString item, webChildProcesses.keys()) {
+        QStringList itemParts = item.split('\0');
+
+        if (itemParts.isEmpty() || itemParts[0] != absoluteFilePath) {
+            continue;
+        }
+
+        QStringList itemMacros;
+        if (itemParts.length() > 1) {
+            itemMacros = itemParts[1].split(';', skip_empty_parts);
+            itemMacros.sort();
+        }
+
+        if (incomingMacros == itemMacros) {
+            key = item;
+            break;
+        }
+    }
+
+    if (key.isEmpty()) {
+        return nullptr;
+    }
+
     auto result = webChildProcesses.find(key);
     if (result != webChildProcesses.end()) {
-        if (result.value() == nullptr) webChildProcesses.remove(key);
-        else {
-            if (result.value()->process() == nullptr || result.value()->process()->state() == QProcess::ProcessState::NotRunning) {
-                webChildProcesses.remove(key);
-            }
+        if (result.value() == nullptr) {
+            webChildProcesses.remove(key);
+            return nullptr;
         }
+
+        if (result.value()->process() == nullptr || result.value()->process()->state() == QProcess::ProcessState::NotRunning) {
+            webChildProcesses.remove(key);
+            return nullptr;
+        }
+
         return result.value();
     }
     return nullptr;
