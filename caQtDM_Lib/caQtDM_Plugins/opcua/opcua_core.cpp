@@ -499,11 +499,7 @@ void OpcUaCore::subscribeToNode(const SubscriptionSettings &subscriptionSettings
 void OpcUaCore::startMonitoringOfNode(QOpcUaNode *node)
 {
     QString nodeId = node->nodeId();
-    if (m_isConnectingToNode[nodeId]) {
-        return;
-    }
 
-    m_isConnectingToNode[nodeId] = true;
     int intervalMs = m_intervalMsForNodeId.value(nodeId, 10);
 
     auto conn = new QMetaObject::Connection;
@@ -511,6 +507,12 @@ void OpcUaCore::startMonitoringOfNode(QOpcUaNode *node)
         = QObject::connect(node, &QOpcUaNode::attributeRead, this, [=](QOpcUa::NodeAttributes attrs) {
               QObject::disconnect(*conn);
               delete conn;
+
+              if (m_activelyMonitoredNodes.contains(nodeId)) {
+                  return;
+              }
+              m_activelyMonitoredNodes.insert(nodeId);
+
               // Check for value errors
               QOpcUa::UaStatusCode statusCode = node->valueAttributeError();
               if (statusCode && statusCode != QOpcUa::UaStatusCode::Good) {
@@ -524,7 +526,7 @@ void OpcUaCore::startMonitoringOfNode(QOpcUaNode *node)
                   VERBOSELOG("Failed to read NodeClass for node: " << nodeId);
                   node->deleteLater();
                   m_subscriptionNodes.remove(nodeId);
-                  m_isConnectingToNode[nodeId] = false;
+                  m_activelyMonitoredNodes.remove(nodeId);
                   return;
               }
 
@@ -534,7 +536,7 @@ void OpcUaCore::startMonitoringOfNode(QOpcUaNode *node)
                   VERBOSELOG("Node " << nodeId << " is not a Variable. Subscription aborted.");
                   node->deleteLater();
                   m_subscriptionNodes.remove(nodeId);
-                  m_isConnectingToNode[nodeId] = false;
+                  m_activelyMonitoredNodes.remove(nodeId);
                   return;
               }
 
@@ -548,7 +550,7 @@ void OpcUaCore::startMonitoringOfNode(QOpcUaNode *node)
                   VERBOSELOG("Failed to enable monitoring for node: " << nodeId);
                   node->deleteLater();
                   m_subscriptionNodes.remove(nodeId);
-                  m_isConnectingToNode[nodeId] = false;
+                  m_activelyMonitoredNodes.remove(nodeId);
                   return;
               }
 
@@ -576,8 +578,6 @@ void OpcUaCore::startMonitoringOfNode(QOpcUaNode *node)
                                      & static_cast<quint8>(QOpcUa::AccessLevelBit::CurrentWrite);
                   emit accessLevelRead(nodeId, readAccess, writeAccess);
               }
-
-              m_isConnectingToNode[nodeId] = false;
           });
 
     node->readAttributes(QOpcUa::NodeAttribute::NodeClass | QOpcUa::NodeAttribute::UserAccessLevel
@@ -617,18 +617,20 @@ void OpcUaCore::unsubscribeFromNode(const QString &nodeId)
     if (!m_subscriptionNodes.contains(nodeId))
         return;
 
+    disableMonitoringForNode(nodeId);
+
     m_intervalMsForNodeId.remove(nodeId);
     QOpcUaNode *node = m_subscriptionNodes[nodeId];
     m_subscriptionNodes.remove(nodeId);
 
-    if (node) {
-        node->disableMonitoring(QOpcUa::NodeAttribute::Value);
+    if (node) {       
         node->deleteLater();
     }
 }
 
 void OpcUaCore::disableMonitoringForNode(const QString &nodeId)
 {
+    m_activelyMonitoredNodes.remove(nodeId);
     if (!m_subscriptionNodes.contains(nodeId))
         return;
     QOpcUaNode *node = m_subscriptionNodes[nodeId];

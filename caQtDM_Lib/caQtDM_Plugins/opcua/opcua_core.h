@@ -198,7 +198,7 @@ private:
     // Map of nodeId to node with all nodes that are configured to be subscribed to
     QMap<QString, QOpcUaNode *> m_subscriptionNodes;
     // Map of nodeId to wether or not the nodeId is currently being connected to
-    QMap<QString, bool> m_isConnectingToNode;
+    QSet<QString> m_activelyMonitoredNodes;
     // Map of nodeId to interval in Ms for its subscription
     QMap<QString, int> m_intervalMsForNodeId;
     PasswordCredentials m_passwordCredentials;
