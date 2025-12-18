@@ -152,10 +152,10 @@ void WebSocketServer::processTextMessage(const QString &message)
                 return;
             }
 
-            VncWebChildProcess *item = CaQtDM_Lib::startVncChildProcess(vncPort, webPort, file, macros);
+            process = CaQtDM_Lib::startVncChildProcess(vncPort, webPort, file, macros);
             {
                 QWriteLocker webChildProcessesLocker(&CaQtDM_Lib::webChildProcessesLock);
-                CaQtDM_Lib::webChildProcesses.insert(key, item);
+                CaQtDM_Lib::webChildProcesses.insert(key, process);
             }
             sendInstanceInfo(pSender, vncPort, webPort);
         }
