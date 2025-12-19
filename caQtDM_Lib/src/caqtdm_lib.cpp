@@ -7647,6 +7647,10 @@ void CaQtDM_Lib::Callback_ByteControllerClicked(int bit)
 void CaQtDM_Lib::Callback_ScriptButton()
 {
 #ifndef MOBILE
+    if (vncServer && !webAllowInsecureCaShellCommands) {
+        QMessageBox::critical(this, "Error", "caScriptButton script execution disabled due to security reasons");
+        return;
+    }
     QString command = "";
     bool displayWindow;
     caScriptButton *w = qobject_cast<caScriptButton *>(sender());
@@ -7774,10 +7778,12 @@ void CaQtDM_Lib::Callback_TableDoubleClicked(const QString& pv)
 
 void CaQtDM_Lib::Callback_ShellCommandClicked(int indx)
 {
+#ifndef MOBILE
     if (vncServer && !webAllowInsecureCaShellCommands) {
         QMessageBox::critical(this, "Error", "caShellCommand execution disabled due to security reasons");
         return;
     }
+#endif
     QString separator((QChar)27);
 
     caShellCommand *choice = qobject_cast<caShellCommand *>(sender());
