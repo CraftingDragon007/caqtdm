@@ -235,6 +235,7 @@ int main(int argc, char *argv[])
     QString host = "127.0.0.1";
     quint16 port = 30001;
     quint16 web_port = 30000;
+    quint16 web_instance_limit = 1000;
     uint web_timeout = 0;
 
     for (numargs = argc, in = 1; in < numargs; in++) {
@@ -367,9 +368,24 @@ int main(int argc, char *argv[])
             web_timeout = QString(argv[in]).toUInt(&valid);
             if (!valid) {
                 printf("caQtDM -- Invalid timeout %s seconds specified, not enabling timeout for web child processes\n", argv[in]);
+                web_timeout = 0;
             } else if (((double)web_timeout / 60 / 60) <= 0.021) {
                 printf("caQtDM -- Invalid web timeout %s seconds specified (min. 76s), disabling. This Switch is not meant for jokes!!!\n", argv[in]);
                 web_timeout = 0;
+            }
+        } else if (strcmp (argv[in], "-web_instance_limit") == 0) {
+            in++;
+            bool valid;
+            web_instance_limit = QString(argv[in]).toUInt(&valid);
+            if (!valid) {
+                printf("caQtDM -- Invalid instance limit %s specified, defaulting back to 1000\n", argv[in]);
+                web_instance_limit = 1000;
+            } else if (web_instance_limit == 0) {
+                printf("caQtDM -- Invalid instance limit 0 specified, number should be between 1 and 5000\n");
+                exit(1);
+            } else if (web_instance_limit > 5000) {
+                printf("caQtDM -- Too big instance limit %s specified, falling back to maximum of 5000\n", argv[in]);
+                web_instance_limit = 5000;
             }
         } else if (strcmp (argv[in], "-web_interaction_timeout") == 0) {
             web_interaction_based_timeout = true;
@@ -423,6 +439,8 @@ int main(int argc, char *argv[])
         options.insert("web_interaction_based_timeout", QString::number(web_interaction_based_timeout));
         options.insert("novnc_readonly", QString::number(novnc_readonly));
         options.insert("web_allow_insecure_cashell_commands", QString::number(web_allow_insecure_cashell_commands));
+        options.insert("web_instance_limit", QString::number(web_instance_limit));
+
 
 #if QT_VERSION < QT_VERSION_CHECK(6,0,0)
         // fix dpi for (no)VNC with qt5

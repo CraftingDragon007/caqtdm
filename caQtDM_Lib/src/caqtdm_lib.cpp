@@ -334,6 +334,7 @@ bool CaQtDM_Lib::noVncReadonly;
 bool CaQtDM_Lib::interactionBasedTimeout;
 bool CaQtDM_Lib::webAllowInsecureCaShellCommands;
 uint CaQtDM_Lib::webTimeout;
+quint16 CaQtDM_Lib::webInstanceLimit;
 #endif
 
 /**
@@ -7387,6 +7388,17 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
                 WebSocketServer::instance().sendOpenFileRequest(file, macros, existing->vncPort());
                 return;
             }
+        }
+
+        int processCount;
+        {
+            QReadLocker locker(&CaQtDM_Lib::webChildProcessesLock);
+            processCount = CaQtDM_Lib::webChildProcesses.count();
+        }
+
+        if (processCount >= CaQtDM_Lib::webInstanceLimit - 1) {
+            QMessageBox::critical(this, "Error - Couldn't start instance", "Maximum instance limit reached");
+            return;
         }
 
         if (!WebPortPool::instance()->allocate(new_vnc_port, new_web_port)) {

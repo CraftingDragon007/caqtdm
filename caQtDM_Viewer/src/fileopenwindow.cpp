@@ -308,6 +308,8 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
         CaQtDM_Lib::webTimeout = options["web_timeout"].toUInt();
         CaQtDM_Lib::interactionBasedTimeout = options["web_interaction_based_timeout"].toInt();
 
+        CaQtDM_Lib::webInstanceLimit = options["web_instance_limit"].toUShort();
+
         WebSocketServer::instance().setup(web_port);
 
         connect(messageWindow, &MessageWindow::newMessageReceivedEvent, [](QString text){

@@ -10,7 +10,7 @@
 #define WRITE_LOCK_SEM_KEY "caQtDM_HmiSharedEventBus_WriteLock_%1"
 
 // Configuration parameters
-#define MAX_PROCESS_SLOTS 256      // Maximum number of concurrent processes
+#define MAX_PROCESS_SLOTS 5000      // Maximum number of concurrent processes
 #define EVENT_PAYLOAD_SIZE 8192    // Fixed size for event data payload
 #define EVENT_BUFFER_CAPACITY 512 // Max events in the ring buffer
 

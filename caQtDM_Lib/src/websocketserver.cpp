@@ -146,6 +146,17 @@ void WebSocketServer::processTextMessage(const QString &message)
                 return;
             }
 
+            int processCount;
+            {
+                QReadLocker locker(&CaQtDM_Lib::webChildProcessesLock);
+                processCount = CaQtDM_Lib::webChildProcesses.count();
+            }
+
+            if (processCount >= CaQtDM_Lib::webInstanceLimit - 1) {
+                pSender->sendTextMessage("ERROR|Maximum instance limit reached");
+                return;
+            }
+
             quint16 vncPort;
             quint16 webPort;
 

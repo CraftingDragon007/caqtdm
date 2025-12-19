@@ -152,6 +152,7 @@ public:
     static bool noVncReadonly;
     static bool interactionBasedTimeout;
     static uint webTimeout;
+    static quint16 webInstanceLimit;
 
     static bool webAllowInsecureCaShellCommands;
 
