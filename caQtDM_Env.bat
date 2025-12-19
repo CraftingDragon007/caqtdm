@@ -208,7 +208,13 @@ echo.
 echo EPICSEXTENSIONS      	now defined as %EPICSEXTENSIONS%	for locating epics extensions
 echo QTDM_LIBINSTALL      	now defined as %QTDM_LIBINSTALL%	for libraries install 
 echo QTDM_BININSTALL      	now defined as %QTDM_BININSTALL%	for binaries install
-echo WIXHOME      		now defined as %WIXHOME%		for package generation 
+echo WIXHOME      		now defined as %WIXHOME%		for package generation
+echo.
+echo LIBCRYPTO			now defined as %LIBCRYPTO%		for linking opcua encryption
+echo.
+echo OPEN62541INCLUDE		now defined as %OPEN62541INCLUDE%	for including opcua backend
+echo OPEN62541LIBNAME		now defined as %OPEN62541LIBNAME%	for linking opcua backend
+echo OPEN62541LIBPATH		now defined as %OPEN62541LIBPATH%	for linking opcua backend
 echo ============================================================================================
  
 
