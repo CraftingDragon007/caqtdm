@@ -506,15 +506,41 @@
     return value;
   }
 
+  function sanitizeNoVNCUrl(raw) {
+    if (raw == null) return null;
+    const value = String(raw).trim();
+    if (value === '') return null;
+
+    // Allow only same-origin URLs under the /noVNC path.
+    try {
+      const url = new URL(value, window.location.origin);
+      if (url.origin !== window.location.origin) {
+        return null;
+      }
+      if (!url.pathname.startsWith('/noVNC')) {
+        return null;
+      }
+      if (url.protocol !== window.location.protocol) {
+        return null;
+      }
+      return url.toString();
+    } catch (e) {
+      return null;
+    }
+  }
+
   function setIframeToNoVNCPath(p) {
     let value = p;
     if (value == null || value === '') value = '30001';
     value = String(value).trim();
-    if (value.startsWith('/noVNC') || value.startsWith('http')) {
-      iframe.src = value;
+
+    const sanitizedUrl = sanitizeNoVNCUrl(value);
+    if (sanitizedUrl !== null) {
+      iframe.src = sanitizedUrl;
       noVNCPath = value;
       return;
     }
+
     noVNCPath = value;
     iframe.src = '/noVNC/vnc.html?path=/websockify/' + encodeURIComponent(getNoVNCPath()) + '&autoconnect=true&reconnect=true&reconnect_delay=5000-novnc_readonly &resize=scale';
   }
