@@ -47,6 +47,24 @@ body, html {
   margin-left: 6px;
   vertical-align: middle;
 }
+#menu-users {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(37, 99, 235, 0.1);
+  border-radius: 4px;
+  color: #1f2937;
+  font-size: 14px;
+}
+#users-label {
+  font-weight: 500;
+}
+#users-count {
+  font-weight: 600;
+  color: #2563eb;
+}
 #vnc-container {
   position: absolute;
   top: 32px;

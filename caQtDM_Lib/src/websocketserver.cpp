@@ -62,10 +62,14 @@ void WebSocketServer::onNewConnection()
     connect(pSocket, &QWebSocket::binaryMessageReceived, this, &WebSocketServer::processBinaryMessage);
     connect(pSocket, &QWebSocket::disconnected, this, &WebSocketServer::socketDisconnected);
 
+    int count;
     {
         QWriteLocker locker(&m_clientReadWriteLock);
         m_clients << pSocket;
+        count = m_clients.count();
     }
+
+    sendUserCountUpdate(count);
 }
 
 void WebSocketServer::processTextMessage(const QString &message)
@@ -191,6 +195,7 @@ void WebSocketServer::socketDisconnected()
         pSocket->deleteLater();
 
         tryScheduleTimeout(count);
+        sendUserCountUpdate(count);
     }
 }
 
@@ -260,6 +265,15 @@ void WebSocketServer::sendProgressUpdate(int progress) {
     foreach (QWebSocket *pSocket, m_clients) {
         if (pSocket != nullptr) {
             pSocket->sendTextMessage(QString("PROGRESS|%1").arg(QString::number(progress)));
+        }
+    }
+}
+
+void WebSocketServer::sendUserCountUpdate(int count) {
+    QReadLocker locker(&m_clientReadWriteLock);
+    foreach (QWebSocket *pSocket, m_clients) {
+        if (pSocket != nullptr) {
+            pSocket->sendTextMessage(QString("USERS|%1").arg(QString::number(count)));
         }
     }
 }

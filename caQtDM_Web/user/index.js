@@ -16,6 +16,7 @@
   const errorOk = document.getElementById('error-ok');
   const menuLogsButton = document.getElementById('menu-logs');
   const menuUrlBuilderButton = document.getElementById('menu-url-builder');
+  const usersCount = document.getElementById('users-count');
   const logWindow = document.getElementById('log-window');
   const logClose = document.getElementById('log-close');
   const logContent = document.getElementById('log-content');
@@ -628,6 +629,13 @@
 
     socket.onmessage = function(event) {
       const data = String(event.data || '');
+      if (data.startsWith('USERS|')) {
+        const userCount = parseInt(data.slice(6), 10);
+        if (!isNaN(userCount)) {
+          usersCount.textContent = String(userCount);
+        }
+        return;
+      }
       if (data.startsWith('LOG|')) {
         addLogMessage(data.slice(4));
         return;

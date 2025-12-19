@@ -19,7 +19,9 @@ public:
     void sendOpenFileRequest(const QString file, const QString macros, quint16 vncPort);
     void sendOpenURLRequest(const QString url);
     void sendInstanceInfo(QWebSocket *receiver, quint16 vncPort, quint16 webPort);
+
     void sendInteractionBasedShutdownMsg();
+    void sendUserCountUpdate(int count);
 
     void sendProgressInfo(int initialProgress, int maxProgress);
     void sendProgressUpdate(int progress);
