@@ -109,10 +109,15 @@ REM ============================================================================
   set SSLINC=%SSL%\inc32
   set SSLLIB=%SSL%\out32dll
  
+  set LIBCRYPTO=D:\qt\vcpkg\installed\x64-windows\bin\libcrypto-3-x64.dll
+  
   set CAQTDM_GPS=1
   set CAQTDM_MODBUS=1
 
   
+  OPEN62541INCLUDE=D:/qt/open62541/build/install/include
+  OPEN62541LIBNAME=open62541
+  OPEN62541LIBPATH=D:/qt/open62541/build/install/lib  
   
 GOTO PRINTOUT
 
@@ -159,10 +164,15 @@ REM ============================================================================
   set SSL=D:\qt\openssl-1.0.2n_VS16_64bit
   set SSLINC=%SSL%\inc32
   set SSLLIB=%SSL%\out32dll
+  
+  set LIBCRYPTO=D:\qt\vcpkg\installed\x64-windows\bin\libcrypto-3-x64.dll
 
   set CAQTDM_GPS=1
   set CAQTDM_MODBUS=1
-
+  
+  OPEN62541INCLUDE=D:/qt/open62541/build/install/include
+  OPEN62541LIBNAME=open62541
+  OPEN62541LIBPATH=D:/qt/open62541/build/install/lib
 
 
 GOTO PRINTOUT
