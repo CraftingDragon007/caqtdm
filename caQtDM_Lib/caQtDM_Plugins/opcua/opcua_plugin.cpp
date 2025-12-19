@@ -277,6 +277,9 @@ int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
         return false;
     };
 
+    knobData *kDataPtr = m_mutexKnobDataP->GetMutexKnobDataPtr(index);
+    qstrncpy(kDataPtr->edata.fec, endpoint.toLatin1().constData(), caqtdm_string_t_length);
+
     int samplingIntervalMs = getUpdateIntervalFromKnobData(kData);
     SubscriptionSettings pendingSubscription = {nodeId, samplingIntervalMs};
 
