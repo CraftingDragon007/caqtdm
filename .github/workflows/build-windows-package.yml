@@ -155,11 +155,11 @@ jobs:
               Write-Host "OpenSSL installation detected at: $path"
             }
           }
-
-         Get-Command openssl.exe | ForEach-Object {
-           Write-Host "openssl.exe found at: $($_.Source)"
-           & $_.Source version
-         }
+          
+          Get-Command openssl.exe | ForEach-Object {
+            Write-Host "openssl.exe found at: $($_.Source)"
+            & $_.Source version
+          }
 
       - name: Clone and build Qt OPC UA 
         shell: cmd
