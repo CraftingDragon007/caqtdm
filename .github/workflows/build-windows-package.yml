@@ -16,7 +16,7 @@ env:
   EPICS_BASE_DIR: ${{ github.workspace }}\deps\epics-base
   CAQTDM_DIR: ${{ github.workspace }}\caqtdm
 
-  OPENSSL_ROOT: "C:\Program Files\OpenSSL-Win64"
+  OPENSSL_ROOT: 'C:\Program Files\OpenSSL-Win64'
 
 jobs:
   build:
