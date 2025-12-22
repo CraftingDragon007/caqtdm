@@ -16,7 +16,7 @@ env:
   EPICS_BASE_DIR: ${{ github.workspace }}\deps\epics-base
   CAQTDM_DIR: ${{ github.workspace }}\caqtdm
 
-  OPENSSL_ROOT: '"C:\Program Files\OpenSSL"'
+  OPENSSL_ROOT: C:\Program Files\OpenSSL
 
 jobs:
   build:
@@ -176,7 +176,7 @@ jobs:
       
           mkdir build
           cd build
-          cmake .. -G "Ninja" -DQt6_DIR=%QT6_DIR% -DOPENSSL_ROOT_DIR=%OPENSSL_ROOT% -DCMAKE_INSTALL_PREFIX=%QT_ROOT_DIR%
+          cmake .. -G "Ninja" -DQt6_DIR=%QT6_DIR% -DOPENSSL_ROOT_DIR="%OPENSSL_ROOT%" -DCMAKE_INSTALL_PREFIX=%QT_ROOT_DIR%
           cmake --build . --config Release --target install
           endlocal
 
@@ -315,7 +315,6 @@ jobs:
           echo CAQTDM_SIGNER=Paul Scherrer Institut>> %GITHUB_ENV%
           echo CAQTDM_GPS=1 >> %GITHUB_ENV%
           echo CAQTDM_MODBUS=1 >> %GITHUB_ENV%
-          echo LIBCRYPTO=${{ env.OPENSSL_ROOT }}\bin\libcrypto-3-x64.dll>> %GITHUB_ENV%
 
       - name: Configure and Build caQtDM
         working-directory: ${{ env.CAQTDM_DIR }}
@@ -340,6 +339,7 @@ jobs:
       - name: Set packaging environment variables
         run: |
           echo ZMQ=${{ env.ZEROMQ_INSTALL_DIR }}\lib>> %GITHUB_ENV%
+          echo LIBCRYPTO=${{ env.OPENSSL_ROOT }}\bin\libcrypto-3-x64.dll>> %GITHUB_ENV%
 
       - name: Create caQtDM Windows package
         working-directory: ${{ env.CAQTDM_DIR }}\caQtDM_Viewer\package\windows
