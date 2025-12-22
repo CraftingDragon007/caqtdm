@@ -315,7 +315,7 @@ jobs:
           echo CAQTDM_SIGNER=Paul Scherrer Institut>> %GITHUB_ENV%
           echo CAQTDM_GPS=1 >> %GITHUB_ENV%
           echo CAQTDM_MODBUS=1 >> %GITHUB_ENV%
-          echo LIBCRYPTO=%DEPS_INSTALL_ROOT%\openssl\bin\libcrypto-3-x64.dll>> %GITHUB_ENV%
+          echo LIBCRYPTO=${{ env.OPENSSL_ROOT }}\bin\libcrypto-3-x64.dll>> %GITHUB_ENV%
 
       - name: Configure and Build caQtDM
         working-directory: ${{ env.CAQTDM_DIR }}
