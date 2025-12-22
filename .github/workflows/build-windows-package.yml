@@ -16,7 +16,7 @@ env:
   EPICS_BASE_DIR: ${{ github.workspace }}\deps\epics-base
   CAQTDM_DIR: ${{ github.workspace }}\caqtdm
 
-  OPENSSL_ROOT: ${{ github.workspace }}\deps\openssl
+  OPENSSL_ROOT: "C:\Program Files\OpenSSL-Win64"
 
 jobs:
   build:
@@ -146,8 +146,7 @@ jobs:
           DEPS_INSTALL_ROOT: ${{ env.DEPS_INSTALL_ROOT }}
         run: |
           choco feature enable -n=allowGlobalConfirmation
-          choco install openssl --params "/InstallDir:%DEPS_INSTALL_ROOT%\openssl" -y
-          RefreshEnv
+          choco install openssl  -y --no-progress
 
       - name: Clone and build Qt OPC UA 
         shell: cmd
