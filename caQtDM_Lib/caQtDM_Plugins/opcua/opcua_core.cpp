@@ -178,16 +178,30 @@ OpcUaCore::OpcUaCore(QObject *parent)
         m_client, &QOpcUaClient::errorChanged, this, [this](QOpcUaClient::ClientError error) {
             QString errorMessage = "Client error: ";
 
-            if (error == QOpcUaClient::ClientError::AccessDenied) {
+            if (error == QOpcUaClient::ClientError::InvalidUrl) {
+                errorMessage += "Url is invalid";
+            } else if (error == QOpcUaClient::ClientError::AccessDenied) {
                 errorMessage += "Got Access denied";
             } else if (error == QOpcUaClient::ClientError::ConnectionError) {
                 errorMessage += "Got Connection error";
-// Qt 5 has different internal error mappings...
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+            } else if (error == QOpcUaClient::ClientError::UnknownError) {
+                errorMessage += "Error unknown to Qt (unknown error)";
+            } else if (error == QOpcUaClient::ClientError::UnsupportedAuthenticationInformation) {
+                errorMessage += "Client provided unsupported authentication information";
+// Qt 6.10 brought us many more error messages which can be very helpful
+#if QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
             } else if (error == QOpcUaClient::ClientError::InvalidAuthenticationInformation) {
                 errorMessage += "Authentication information is invalid";
+            } else if (error == QOpcUaClient::ClientError::InvalidEndpointDescription) {
+                errorMessage += "Endpoint description is invalid";
             } else if (error == QOpcUaClient::ClientError::NoMatchingUserIdentityTokenFound) {
                 errorMessage += "No matching authentication information found";
+            } else if (error == QOpcUaClient::ClientError::UnsupportedSecurityPolicy) {
+                errorMessage += "Client doesnt support security policy offered";
+            } else if (error == QOpcUaClient::ClientError::InvalidPki) {
+                errorMessage += "Certificate or key of PKI could not be loaded / is invalid";
+            } else if (error == QOpcUaClient::ClientError::CertificateUntrusted) {
+                errorMessage += "Server certificate is untrusted";
 #endif
             } else {
                 errorMessage += QString::number(static_cast<int>(error));
