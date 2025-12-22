@@ -23,9 +23,6 @@ INCLUDEPATH    += ../
 INCLUDEPATH    += ../../src
 INCLUDEPATH    += ../../../caQtDM_QtControls/src
 
-INCLUDEPATH += $(OPEN62541INCLUDE)
-LIBS += -L$(OPEN62541LIBPATH) -l$(OPEN62541LIBNAME)
-
 HEADERS         = ../controlsinterface.h \
     opcua_plugin.h opcua_core.h \
     x509certificate.h

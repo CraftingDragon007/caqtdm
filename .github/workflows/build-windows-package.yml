@@ -16,6 +16,8 @@ env:
   EPICS_BASE_DIR: ${{ github.workspace }}\deps\epics-base
   CAQTDM_DIR: ${{ github.workspace }}\caqtdm
 
+  OPENSSL_ROOT: ${{ env.DEPS_INSTALL_ROOT }}\openssl
+
 jobs:
   build:
     name: Build windows package
@@ -137,6 +139,34 @@ jobs:
 
       - name: Create dependencies install directory
         run: if not exist ${{ env.DEPS_INSTALL_ROOT }} mkdir ${{ env.DEPS_INSTALL_ROOT }}
+
+      - name: Install openssl for qt opcua
+        shell: pwsh
+        env:
+          DEPS_INSTALL_ROOT: ${{ env.DEPS_INSTALL_ROOT }}
+        run: |
+          choco feature enable -n=allowGlobalConfirmation
+          choco install openssl --params "/InstallDir:%DEPS_INSTALL_ROOT%\openssl" -y
+          RefreshEnv
+
+      - name: Clone and build Qt OPC UA 
+        shell: cmd
+        run: |
+          setlocal
+          set QT6_DIR=%QT_ROOT_DIR%\lib\cmake\Qt6
+          set CMAKE_PREFIX_PATH=%QT_ROOT_DIR%
+      
+          set QTOPCUA_SRC=%GITHUB_WORKSPACE%\qtopcua-src
+          if exist "%QTOPCUA_SRC%" rmdir /s /q "%QTOPCUA_SRC%"
+          git clone https://code.qt.io/qt/qtopcua.git "%QTOPCUA_SRC%"
+          cd "%QTOPCUA_SRC%"
+          git checkout v${{ matrix.qt-version }}
+      
+          mkdir build
+          cd build
+          cmake .. -G "Ninja" -DQt6_DIR=%QT6_DIR% -DOPENSSL_ROOT_DIR=%OPENSSL_ROOT% -DCMAKE_INSTALL_PREFIX=%QT_ROOT_DIR%
+          cmake --build . --config Release --target install
+          endlocal
 
       - name: Clone Qwt
         if: steps.cache-qwt.outputs.cache-hit != 'true'
@@ -273,6 +303,7 @@ jobs:
           echo CAQTDM_SIGNER=Paul Scherrer Institut>> %GITHUB_ENV%
           echo CAQTDM_GPS=1 >> %GITHUB_ENV%
           echo CAQTDM_MODBUS=1 >> %GITHUB_ENV%
+          echo LIBCRYPTO=%DEPS_INSTALL_ROOT%\openssl\bin\libcrypto-3-x64.dll>> %GITHUB_ENV%
 
       - name: Configure and Build caQtDM
         working-directory: ${{ env.CAQTDM_DIR }}

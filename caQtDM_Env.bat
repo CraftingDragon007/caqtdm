@@ -170,9 +170,9 @@ REM ============================================================================
   set CAQTDM_GPS=1
   set CAQTDM_MODBUS=1
   
-  set OPEN62541INCLUDE=D:/qt/open62541/build/install/include
-  set OPEN62541LIBNAME=open62541
-  set OPEN62541LIBPATH=D:/qt/open62541/build/install/lib
+  OPEN62541INCLUDE=D:/qt/open62541/build/install/include
+  OPEN62541LIBNAME=open62541
+  OPEN62541LIBPATH=D:/qt/open62541/build/install/lib
 
 
 GOTO PRINTOUT
