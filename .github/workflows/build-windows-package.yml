@@ -142,11 +142,24 @@ jobs:
 
       - name: Install openssl for qt opcua
         shell: pwsh
-        env:
-          DEPS_INSTALL_ROOT: ${{ env.DEPS_INSTALL_ROOT }}
         run: |
           choco feature enable -n=allowGlobalConfirmation
           choco install openssl  -y --no-progress
+          Write-Host "OPENSSL_ROOT: $env:OPENSSL_ROOT"
+          $defaultPaths = @(
+            "C:\Program Files\OpenSSL-Win64",
+            "C:\Program Files (x86)\OpenSSL-Win32"
+          )
+          foreach ($path in $defaultPaths) {
+            if (Test-Path $path) {
+              Write-Host "OpenSSL installation detected at: $path"
+            }
+          }
+
+         Get-Command openssl.exe | ForEach-Object {
+           Write-Host "openssl.exe found at: $($_.Source)"
+           & $_.Source version
+         }
 
       - name: Clone and build Qt OPC UA 
         shell: cmd
