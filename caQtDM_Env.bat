@@ -114,11 +114,6 @@ REM ============================================================================
   set CAQTDM_GPS=1
   set CAQTDM_MODBUS=1
 
-  
-  set OPEN62541INCLUDE=D:/qt/open62541/build/install/include
-  set OPEN62541LIBNAME=open62541
-  set OPEN62541LIBPATH=D:/qt/open62541/build/install/lib  
-  
 GOTO PRINTOUT
 
 REM =============================================================================================
@@ -169,10 +164,6 @@ REM ============================================================================
 
   set CAQTDM_GPS=1
   set CAQTDM_MODBUS=1
-  
-  OPEN62541INCLUDE=D:/qt/open62541/build/install/include
-  OPEN62541LIBNAME=open62541
-  OPEN62541LIBPATH=D:/qt/open62541/build/install/lib
 
 
 GOTO PRINTOUT
@@ -211,10 +202,6 @@ echo QTDM_BININSTALL      	now defined as %QTDM_BININSTALL%	for binaries install
 echo WIXHOME      		now defined as %WIXHOME%		for package generation
 echo.
 echo LIBCRYPTO			now defined as %LIBCRYPTO%		for linking opcua encryption
-echo.
-echo OPEN62541INCLUDE		now defined as %OPEN62541INCLUDE%	for including opcua backend
-echo OPEN62541LIBNAME		now defined as %OPEN62541LIBNAME%	for linking opcua backend
-echo OPEN62541LIBPATH		now defined as %OPEN62541LIBPATH%	for linking opcua backend
 echo ============================================================================================
  
 
