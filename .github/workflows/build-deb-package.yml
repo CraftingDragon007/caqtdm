@@ -27,9 +27,32 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get install -y \
+          libssl-dev libmbedtls-dev \
           libncurses-dev libreadline-dev \
-          qtbase5-dev qt5-qmake libqwt-qt5-dev python3-dev qttools5-dev qttools5-dev libqt5svg5-dev libqt5designer5 libqt5svg5 libqt5x11extras5-dev libzmq3-dev libqt5serialbus5-dev qtpositioning5-dev
+          qtbase5-dev qtbase5-private-dev qt5-qmake libqwt-qt5-dev python3-dev qttools5-dev qttools5-dev libqt5svg5-dev libqt5designer5 libqt5svg5 libqt5x11extras5-dev libzmq3-dev libqt5serialbus5-dev qtpositioning5-dev
     
+    - name: Build and install Qt OPC UA
+      run: |
+        set -e
+
+        QTOPCUA_SRC="$GITHUB_WORKSPACE/qtopcua-src"
+        rm -rf "$QTOPCUA_SRC"
+
+        git clone https://code.qt.io/qt/qtopcua.git "$QTOPCUA_SRC"
+        cd "$QTOPCUA_SRC"
+        git checkout v5.15.2
+
+        # Workaround for conflicting compiler flags created with qmake from qtbase5-dev
+        sed -i 's/-Wno-format//g' src/3rdparty/open62541.pri
+
+        mkdir build
+        cd build
+
+        qmake ..
+        make -j$(nproc)
+
+        sudo make install
+
     - name: Build and install epics-base
       run: |
         cd caQtDM_Viewer/package/debian/epics-base
