@@ -29,6 +29,7 @@ jobs:
         # python is python3.
         pacman -S --noconfirm \
           qt6-base \
+          qt6-declarative \
           qt6-tools \
           openssl \
           zeromq \
@@ -38,7 +39,9 @@ jobs:
           ncurses \
           perl \
           readline \
-          qt6-svg
+          qt6-svg \
+          cmake \
+          ninja
 
         echo "Creating non-root user 'builder' for makepkg..."
         useradd -m -G wheel builder
@@ -138,6 +141,24 @@ jobs:
           install_aur_package epics-base
         "
       shell: bash
+
+    - name: Build and install Qt OPC UA
+      run: |
+        set -e
+
+        SRC=/opt/qtopcua-src
+        rm -rf "$SRC"
+        git clone https://code.qt.io/qt/qtopcua.git "$SRC"
+        cd "$SRC"
+        git checkout v6.10.1
+
+        mkdir build
+        cd build
+
+        cmake .. -G "Ninja" -DCMAKE_BUILD_TYPE=Release
+        cat config.summary
+        ninja
+        ninja install
 
     - name: Set up caQtDM specific environment variables
       run: |
