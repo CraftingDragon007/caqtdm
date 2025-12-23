@@ -31,7 +31,7 @@ jobs:
           libncurses-dev libreadline-dev \
           qtbase5-dev qtbase5-private-dev qt5-qmake libqwt-qt5-dev python3-dev qttools5-dev qttools5-dev libqt5svg5-dev libqt5designer5 libqt5svg5 libqt5x11extras5-dev libzmq3-dev libqt5serialbus5-dev qtpositioning5-dev
     
-    - name: Build and install Qt OPC UA
+    - name: Build and install Qt OPC UA DEB
       run: |
         set -e
 
@@ -49,9 +49,51 @@ jobs:
         cd build
 
         qmake ..
+        cat config.summary 
+
         make -j$(nproc)
 
-        sudo make install
+        # Now create a deb package
+        
+        STAGING_DIR="$QTOPCUA_SRC/deb"
+        make install INSTALL_ROOT="$STAGING_DIR"
+
+        mkdir -p "$STAGING_DIR/DEBIAN"
+        
+        DEB_NAME="libqt5opcua5-dev"
+        DEB_VERSION="5.15.2"
+
+        # Control File
+        cat > "$STAGING_DIR/DEBIAN/control" <<EOF
+        Package: $DEB_NAME
+        Version: $DEB_VERSION
+        Section: libs
+        Priority: optional
+        Architecture: amd64
+        Depends: libc6, libqt5core5a, libqt5network5
+        Maintainer: GitHub Action <action@github.com>
+        Description: Qt OPC UA library and headers (Custom Build)
+        EOF
+
+        # Shlibs File
+        echo "libQt5OpcUa 5 $DEB_NAME" > "$STAGING_DIR/DEBIAN/shlibs"
+
+        # Post-install script (ldconfig)
+        cat > "$STAGING_DIR/DEBIAN/postinst" <<EOF
+        #!/bin/sh
+        set -e
+        if [ "\$1" = "configure" ]; then
+            ldconfig
+        fi
+        EOF
+        chmod 0755 "$STAGING_DIR/DEBIAN/postinst"
+
+        # build & install
+        dpkg-deb --build "$STAGING_DIR" "$QTOPCUA_SRC/${DEB_NAME}_${DEB_VERSION}_amd64.deb"
+        sudo dpkg -i "$QTOPCUA_SRC/${DEB_NAME}_${DEB_VERSION}_amd64.deb"
+
+        # For it to be found when building caQtDM
+        echo "LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH" >> $GITHUB_ENV
 
     - name: Build and install epics-base
       run: |
