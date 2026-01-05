@@ -8,7 +8,7 @@ Homepage: http://caqtdm.github.io/
 
 Package: caqtdm
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libqwt-qt5-6, epics-base, libqt5designer5, libqt5svg5, python3 
+Depends: ${shlibs:Depends}, ${misc:Depends}, libqwt-qt5-6, epics-base, libqt5designer5, libqt5svg5, python3, libqt5positioning5-plugins, libqt5location5
 Description: Qt Widgets for Technical Applications
   caQtDM offers a collection of special widgets in order to display and control control system data in various ways. 
   The widgets have been inspired from the well known MEDM package used at many EPICS sites. 
