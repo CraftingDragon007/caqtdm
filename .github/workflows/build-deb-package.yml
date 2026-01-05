@@ -70,8 +70,8 @@ jobs:
         Section: libs
         Priority: optional
         Architecture: amd64
-        Depends: libc6, libqt5core5a, libqt5network5
-        Maintainer: GitHub Action <action@github.com>
+        Depends: libc6, libqt5core5a, libqt5network5, libmbedtls14t64
+        Maintainer: Helge Brands <helge.brands@psi.ch>
         Description: Qt OPC UA library and headers (Custom Build)
         EOF
 
