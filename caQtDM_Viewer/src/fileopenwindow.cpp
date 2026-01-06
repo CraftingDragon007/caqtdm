@@ -303,6 +303,8 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
             CaQtDM_Lib::vncPort = vnc_port;
         }
 
+        QString host = options["web_host"];
+
         CaQtDM_Lib::slaveServer = options["slave_server"].toInt();
 
         CaQtDM_Lib::webTimeout = options["web_timeout"].toUInt();
@@ -310,7 +312,7 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
 
         CaQtDM_Lib::webInstanceLimit = options["web_instance_limit"].toUShort();
 
-        WebSocketServer::instance().setup(web_port);
+        WebSocketServer::instance().setup(host, web_port);
 
         connect(messageWindow, &MessageWindow::newMessageReceivedEvent, [](QString text){
             WebSocketServer::instance().sendLog(text);

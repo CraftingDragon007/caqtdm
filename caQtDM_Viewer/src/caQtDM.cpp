@@ -399,9 +399,13 @@ int main(int argc, char *argv[])
             }
         } else if (strcmp (argv[in], "-web_interaction_timeout") == 0) {
             web_interaction_based_timeout = true;
-        } else if (strcmp (argv[in], "-novnc_host") == 0) {
+        } else if (strcmp (argv[in], "-host") == 0) {
             in++;
-            host = QString(argv[in]);
+            QHostAddress tempAddr;
+            if (tempAddr.setAddress(argv[in]))
+            {
+                host = QString(argv[in]);
+            } else printf("caQtDM -- Invalid host address %s provided, please use a proper address like 127.0.0.1 or 0.0.0.0 !\n", argv[in]);
         } else if (strcmp (argv[in], "-web_allow_insecure_cashell_commands") == 0) {
             web_allow_insecure_cashell_commands = true;
             printf("caQtDM - Allowing executing of caShellCommands in web mode, please be careful!");
@@ -444,6 +448,7 @@ int main(int argc, char *argv[])
         options.insert("novnc_plugin", QString::number(use_novnc_plugin));
         options.insert("slave_server", QString::number(slave_server));
         options.insert("vnc_port", QString::number(port));
+        options.insert("web_host", host);
         options.insert("web_port", QString::number(web_port));
         options.insert("web_timeout", QString::number(web_timeout));
         options.insert("web_interaction_based_timeout", QString::number(web_interaction_based_timeout));

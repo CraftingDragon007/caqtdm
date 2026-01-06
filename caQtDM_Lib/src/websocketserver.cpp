@@ -19,18 +19,22 @@ bool WebSocketServer::isInitialized() const {
 }
 
 bool WebSocketServer::setup(quint16 port) {
+    return setup("127.0.0.1", port);
+}
+
+bool WebSocketServer::setup(QString host, quint16 port) {
     m_pWebSocketServer = new QWebSocketServer(QStringLiteral("caQtDM Websocket Server"),
                                               QWebSocketServer::NonSecureMode, this);
 
-    if (m_pWebSocketServer->listen(QHostAddress::LocalHost, port)) {
-        qDebug() << "WebSocketServer listening on port" << port;
+    if (m_pWebSocketServer->listen(QHostAddress(host), port)) {
+        qDebug() << "WebSocketServer listening on port" << port << "on host" << host;
         connect(m_pWebSocketServer, &QWebSocketServer::newConnection,
                 this, &WebSocketServer::onNewConnection);
         tryScheduleTimeout(0); // Maybe first user leaves immediately
         m_isInitialized = true;
         return true;
     } else {
-        qCritical() << "Failed to start WebSocket server on port" << port << ":" << m_pWebSocketServer->errorString();
+        qCritical() << "Failed to start WebSocket server on port" << port << "on host" << host << ":" << m_pWebSocketServer->errorString();
         return false;
     }
 }

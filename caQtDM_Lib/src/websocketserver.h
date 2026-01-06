@@ -14,6 +14,7 @@ class CAQTDM_LIBSHARED_EXPORT WebSocketServer : public QObject
 public:
     static WebSocketServer& instance();
     bool setup(quint16 port);
+    bool setup(QString host, quint16 port);
     bool isInitialized() const;
     void sendLog(const QString text);
     void sendOpenFileRequest(const QString file, const QString macros, quint16 vncPort);
