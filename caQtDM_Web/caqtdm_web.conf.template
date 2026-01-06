@@ -15,8 +15,8 @@ server {
     add_header X-Content-Type-Options nosniff;
     add_header X-XSS-Protection "1; mode=block";
 
-    location ~* ^/websockify/(3\d{4})$ {
-        rewrite ^/websockify/(3\d{4})$ /$2 break;
+    location ~* "^/websockify/(3\d{4})$" {
+        rewrite "^/websockify/(3\d{4})$" /$1 break;
 
         proxy_pass http://127.0.0.1:$1;
         proxy_set_header Host $host;
@@ -76,8 +76,8 @@ server {
     add_header X-Content-Type-Options nosniff;
     add_header X-XSS-Protection "1; mode=block";
 
-    location ~* ^/websockify/(3\d{4})$ {
-        rewrite ^/websockify/(3\d{4})$ /$2 break;
+    location ~* "^/websockify/(3\d{4})$" {
+        rewrite "^/websockify/(3\d{4})$" /$1 break;
         
         proxy_pass http://127.0.0.1:$1;
         proxy_set_header Host $host;
