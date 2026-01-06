@@ -114,58 +114,71 @@ struct WidgetDimensions {
 WidgetDimensions getWidgetDimensionsFromUi(QString& uiFilePath) {
     fileFunctions filefunction;
     filefunction.checkFileAndDownload(uiFilePath);
-
     searchFile *filecheck = new searchFile(uiFilePath);
     uiFilePath = filecheck->findFile();
     filecheck->deleteLater();
+
     if (uiFilePath.isNull()) {
         qWarning() << "Error: File does not exist" << uiFilePath;
         return {};
     }
+
     QFile file(uiFilePath);
-    if (!file.open(QFile::ReadOnly | QSaveFile::Text)) {
+    if (!file.open(QFile::ReadOnly)) {
         qWarning() << "Error: Cannot open UI file" << uiFilePath << ":" << file.errorString();
         return {};
     }
 
     QXmlStreamReader xml(&file);
     WidgetDimensions dims;
+    WidgetDimensions fallbackDims;
 
     bool inTargetWidget = false;
     bool inGeometryProperty = false;
     bool inRectElement = false;
 
+    QString currentClass;
+    int currentWidth = 0;
+    int currentHeight = 0;
+
     while (!xml.atEnd() && !xml.hasError()) {
         QXmlStreamReader::TokenType token = xml.readNext();
 
         if (token == QXmlStreamReader::StartElement) {
-            if (xml.name() == "widget" && (xml.attributes().value("class") == "QMainWindow" || xml.attributes().value("class") == "QDialog")) {
+            if (xml.name() == "widget") {
                 inTargetWidget = true;
+                currentClass = xml.attributes().value("class").toString();
+                currentWidth = 0;
+                currentHeight = 0;
             } else if (inTargetWidget && xml.name() == "property" && xml.attributes().value("name") == "geometry") {
                 inGeometryProperty = true;
             } else if (inGeometryProperty && xml.name() == "rect") {
                 inRectElement = true;
             } else if (inRectElement && xml.name() == "width") {
-                xml.readNext();
-                if (xml.tokenType() == QXmlStreamReader::Characters) {
-                    dims.width = xml.text().toString().toInt();
-                }
+                currentWidth = xml.readElementText().toInt();
             } else if (inRectElement && xml.name() == "height") {
-                xml.readNext();
-                if (xml.tokenType() == QXmlStreamReader::Characters) {
-                    dims.height = xml.text().toString().toInt();
-                    dims.found = true;
-                    break;
-                }
+                currentHeight = xml.readElementText().toInt();
             }
-        } else if (token == QXmlStreamReader::EndElement) {
-            if (xml.name() == "widget" && inTargetWidget) {
-                inTargetWidget = false;
-                if (dims.found) break;
+        }
+        else if (token == QXmlStreamReader::EndElement) {
+            if (xml.name() == "rect") {
+                inRectElement = false;
             } else if (xml.name() == "property" && inGeometryProperty) {
                 inGeometryProperty = false;
-            } else if (xml.name() == "rect" && inRectElement) {
-                inRectElement = false;
+            } else if (xml.name() == "widget") {
+                if (currentClass == "QMainWindow" || currentClass == "QDialog") {
+                    dims.width = currentWidth;
+                    dims.height = currentHeight;
+                    dims.found = true;
+                    break;
+                } else if (currentClass == "QWidget") {
+                    if (currentWidth * currentHeight > fallbackDims.width * fallbackDims.height) {
+                        fallbackDims.width = currentWidth;
+                        fallbackDims.height = currentHeight;
+                        fallbackDims.found = true;
+                    }
+                }
+                inTargetWidget = false;
             }
         }
     }
@@ -174,7 +187,8 @@ WidgetDimensions getWidgetDimensionsFromUi(QString& uiFilePath) {
         qWarning() << "Error parsing UI file:" << xml.errorString();
     }
     file.close();
-    return dims;
+
+    return dims.found ? dims : fallbackDims;
 }
 
 int main(int argc, char *argv[])
