@@ -1,0 +1,24 @@
+services:
+  nginx:
+    image: caqtdm-web/nginx
+    build:
+      context: ../
+      dockerfile: docker/nginx/Dockerfile
+    ports:
+      - "8443:443"
+      - "8080:80"
+    networks:
+      - caqtdm-web
+    environment:
+      - PROXY_BACKEND=http://caqtdm
+
+  caqtdm:
+    image: caqtdm-web/caqtdm
+    build:
+      context: ../../
+      dockerfile: caQtDM_Web/docker/caqtdm/Dockerfile
+    networks:
+      - caqtdm-web
+
+networks:
+  caqtdm-web: {}
