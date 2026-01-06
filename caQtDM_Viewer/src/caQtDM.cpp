@@ -125,61 +125,57 @@ WidgetDimensions getWidgetDimensionsFromUi(QString& uiFilePath) {
 
     QFile file(uiFilePath);
     if (!file.open(QFile::ReadOnly)) {
-        qWarning() << "Error: Cannot open UI file" << uiFilePath << ":" << file.errorString();
+        qWarning() << "Error: Cannot open UI file" << uiFilePath;
         return {};
     }
 
     QXmlStreamReader xml(&file);
-    WidgetDimensions dims;
-    WidgetDimensions fallbackDims;
+    WidgetDimensions priorityDims;
+    WidgetDimensions firstWidgetDims;
 
-    bool inTargetWidget = false;
-    bool inGeometryProperty = false;
-    bool inRectElement = false;
-
+    bool inGeometry = false;
+    bool inRect = false;
     QString currentClass;
-    int currentWidth = 0;
-    int currentHeight = 0;
 
     while (!xml.atEnd() && !xml.hasError()) {
         QXmlStreamReader::TokenType token = xml.readNext();
 
         if (token == QXmlStreamReader::StartElement) {
-            if (xml.name() == "widget") {
-                inTargetWidget = true;
+            QString tagName = xml.name().toString();
+
+            if (tagName == "widget") {
                 currentClass = xml.attributes().value("class").toString();
-                currentWidth = 0;
-                currentHeight = 0;
-            } else if (inTargetWidget && xml.name() == "property" && xml.attributes().value("name") == "geometry") {
-                inGeometryProperty = true;
-            } else if (inGeometryProperty && xml.name() == "rect") {
-                inRectElement = true;
-            } else if (inRectElement && xml.name() == "width") {
-                currentWidth = xml.readElementText().toInt();
-            } else if (inRectElement && xml.name() == "height") {
-                currentHeight = xml.readElementText().toInt();
+            }
+            else if (tagName == "property" && xml.attributes().value("name") == "geometry") {
+                inGeometry = true;
+            }
+            else if (inGeometry && tagName == "rect") {
+                inRect = true;
+            }
+            else if (inRect && tagName == "width") {
+                int w = xml.readElementText().toInt();
+                if (currentClass == "QMainWindow" || currentClass == "QDialog") {
+                    priorityDims.width = w;
+                } else if (!firstWidgetDims.found) {
+                    firstWidgetDims.width = w;
+                }
+            }
+            else if (inRect && tagName == "height") {
+                int h = xml.readElementText().toInt();
+                if (currentClass == "QMainWindow" || currentClass == "QDialog") {
+                    priorityDims.height = h;
+                    priorityDims.found = true;
+                    break;
+                } else if (!firstWidgetDims.found) {
+                    firstWidgetDims.height = h;
+                    firstWidgetDims.found = true;
+                }
             }
         }
         else if (token == QXmlStreamReader::EndElement) {
-            if (xml.name() == "rect") {
-                inRectElement = false;
-            } else if (xml.name() == "property" && inGeometryProperty) {
-                inGeometryProperty = false;
-            } else if (xml.name() == "widget") {
-                if (currentClass == "QMainWindow" || currentClass == "QDialog") {
-                    dims.width = currentWidth;
-                    dims.height = currentHeight;
-                    dims.found = true;
-                    break;
-                } else if (currentClass == "QWidget") {
-                    if (currentWidth * currentHeight > fallbackDims.width * fallbackDims.height) {
-                        fallbackDims.width = currentWidth;
-                        fallbackDims.height = currentHeight;
-                        fallbackDims.found = true;
-                    }
-                }
-                inTargetWidget = false;
-            }
+            QString tagName = xml.name().toString();
+            if (tagName == "rect") inRect = false;
+            if (tagName == "property") inGeometry = false;
         }
     }
 
@@ -188,7 +184,7 @@ WidgetDimensions getWidgetDimensionsFromUi(QString& uiFilePath) {
     }
     file.close();
 
-    return dims.found ? dims : fallbackDims;
+    return priorityDims.found ? priorityDims : firstWidgetDims;
 }
 
 int main(int argc, char *argv[])
