@@ -287,6 +287,28 @@ double CaQtDM_Lib::rTime()
 }
 #endif
 
+
+/**
+ * helper for fixing file lists to work with relative paths
+ */
+bool fixFileListRelative(const QString &cainclude_path, QString *filelist)
+{
+  if(cainclude_path.isEmpty()) {return false;}
+
+  QStringList files = filelist->split(";", SKIP_EMPTY_PARTS);
+  bool affected = false;
+
+  for(int i=0; i< files.count(); i++) {
+    if (QFileInfo(files.at(i)).isRelative()){
+      files[i] = cainclude_path + files.at(i).trimmed();
+      affected = true;
+    }
+  }
+
+  if(affected){*filelist = files.join(";");}
+  return affected;
+}
+
 /**
  * CaQtDM_Lib destructor
  */
@@ -534,7 +556,12 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
     connect(this, SIGNAL(customContextMenuRequested(const QPoint&)), this, SLOT(ShowContextMenu(const QPoint&)));
 
     level=0;
-    cainclude_path="";
+    // cainclude_path="";
+
+    // Using just path here since it should work better with URLs than converting to abs path
+    //cainclude_path = fi.absolutePath() + "/";
+    cainclude_path = fi.path() + "/";
+
     // say for all widgets that they have to be treated, will be set to true when treated to avoid multiple use
     // by findChildren, and get the list of all the includes at this level
 
@@ -1398,7 +1425,9 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
         if(imageWidget->getFileName().size() > 0) {
             QString text = imageWidget->getFileName();
-            if(reaffectText(map, &text, w1))  imageWidget->setFileName(text);
+            // TODO: Need to prepend cainclude_path?
+            if(reaffectText(map, &text, w1) | fixFileListRelative(cainclude_path, &text)) imageWidget->setFileName(text);
+
         }
 
         // any error messages for this object?
@@ -1435,7 +1464,9 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         if(reaffectText(map, &text, w1))  relatedWidget->setArgs(text);
 
         text = relatedWidget->getFiles();
-        if(reaffectText(map, &text, w1))  relatedWidget->setFiles(text);
+        // must use bitwise OR to not short-circuit
+        if(reaffectText(map, &text, w1) | fixFileListRelative(cainclude_path, &text)) relatedWidget->setFiles(text);
+        //qDebug() << "RelatedDisplay files: " << text << fixFileListRelative(cainclude_path, text) << relatedWidget->getFiles();
 
         text = relatedWidget->getLabel();
         if(reaffectText(map, &text, w1))  relatedWidget->setLabel(text);
@@ -1461,7 +1492,8 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         if(reaffectText(map, &text, w1))  shellWidget->setArgs(text);
 
         text = shellWidget->getFiles();
-        if(reaffectText(map, &text, w1)) shellWidget->setFiles(text);
+        // must use bitwise OR to not short-circuit
+        if(reaffectText(map, &text, w1) | fixFileListRelative(cainclude_path, &text)) shellWidget->setFiles(text);
 
         text = shellWidget->getLabel();
         if(reaffectText(map, &text, w1))  shellWidget->setLabel(text);
@@ -1487,7 +1519,9 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         if(reaffectText(map, &text, w1))  mimeWidget->setArgs(text);
 
         text = mimeWidget->getFiles();
-        if(reaffectText(map, &text, w1)) mimeWidget->setFiles(text);
+
+        // must use bitwise or to not short-circuit
+        if(reaffectText(map, &text, w1) | fixFileListRelative(cainclude_path, &text)) mimeWidget->setFiles(text);
 
         text = mimeWidget->getLabel();
         if(reaffectText(map, &text, w1))  mimeWidget->setLabel(text);
@@ -2268,7 +2302,6 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         //==================================================================================================================
     } else if(caInclude* includeWidget = qobject_cast<caInclude *>(w1)) {
 
-        //qDebug() << "create caInclude" << w1;
         int maximumX=1;
         int maximumY=1;
         int posX=0;
@@ -2346,9 +2379,18 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
         // define the file to use
         QString providedFileName = includeWidget->getFileName().trimmed();
-        if (level>0){
+        // postMessage(QtDebugMsg, (char*) qasc(tr("file check A: %1").arg(providedFileName)));
+        //qDebug() << "filename A: " << providedFileName ;
+        //qDebug() << "filename cainclude_path: " << cainclude_path;
+
+        if (QFileInfo(providedFileName).isRelative()){
           providedFileName = cainclude_path + providedFileName;
         }
+
+        // postMessage(QtDebugMsg, (char*) qasc(tr("file check B: %1").arg(providedFileName)));
+        // qDebug() << "filename B: " << providedFileName ;
+
+
         reaffectText(map, &providedFileName, w1);
         QString fileName = providedFileName;
 
@@ -2628,32 +2670,28 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
                     //frame->setLayout(gridLayout);
                     //includeWidget->setLineSize(0);
                     level++;
+                    //create a stack of the cainclude_path to work properly with recursion
+                    QString cainclude_path_stacked = cainclude_path;
 
                     // keep actual filename
                     savedFile[level] = fi.baseName();
 
                     //qDebug() << "cainclude ++"<< cainclude_path << level << fi.baseName();
 
-                    // take into account recursive use of directories (bug fix of 6.9.2016)
-                    if(includeWidget->getFileName().trimmed().contains("/")) {
-                        QStringList pathcomponents=includeWidget->getFileName().trimmed().split("/");
-                        pathcomponents.erase(pathcomponents.end()-1);
-                        cainclude_path=cainclude_path+pathcomponents.join("/")+"/";
-                    }
+                    // Using just path here since it should work better with URLs than converting to abs path
+                    //cainclude_path = fi.absolutePath() + "/";
+                    cainclude_path = fi.path() + "/";
+                    // // take into account recursive use of directories (bug fix of 6.9.2016)
+                      // if(includeWidget->getFileName().trimmed().contains("/")) {
+                      //     QStringList pathcomponents=includeWidget->getFileName().trimmed().split("/");
+                      //     pathcomponents.erase(pathcomponents.end()-1);
+                      //     cainclude_path=cainclude_path+pathcomponents.join("/")+"/";
+                      // }
 
+                    // RECURSE TO LOWER WIDGETS
                     scanWidgets(thisW->findChildren<QWidget *>(), macroS);
 
-                    // take into account recursive use of directories
-                    if(cainclude_path.contains("/")) {
-                        QStringList pathcomponents=cainclude_path.split("/");
-                        pathcomponents.erase(pathcomponents.end()-1);// last added slash has to be deleted too
-                        pathcomponents.erase(pathcomponents.end()-1);
-                        if(pathcomponents.count()==0) {
-                            cainclude_path="";
-                        } else cainclude_path=pathcomponents.join("/")+"/";
-
-                    }
-
+                    cainclude_path = cainclude_path_stacked;
                     level--;
                     //qDebug() << "cainclude --"<< cainclude_path << level;
                 }
@@ -6577,7 +6615,7 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
         args[j] = macro_list_expanded.join(",");
     }
 
-    //qDebug() << "files:" << files;
+    //qDebug() << "RD files:" << files;
     //qDebug() << "args" <<  w->getArgs() << args;
 
     // get global macro, replace specified keys and build the macro string of caRelatedDisplay, but
