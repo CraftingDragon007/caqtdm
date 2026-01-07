@@ -1425,7 +1425,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
         if(imageWidget->getFileName().size() > 0) {
             QString text = imageWidget->getFileName();
-            // TODO: Need to prepend cainclude_path?
+            // must use bitwise OR to not short-circuit
             if(reaffectText(map, &text, w1) | fixFileListRelative(cainclude_path, &text)) imageWidget->setFileName(text);
 
         }
