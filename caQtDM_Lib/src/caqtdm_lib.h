@@ -595,6 +595,12 @@ private slots:
     }
 
     void Callback_printWindow() {
+#ifndef MOBILE
+        if (vncServer) {
+            QMessageBox::critical(this, "Error", "Printing disabled in web version");
+            return;
+        }
+#endif
         print();
     }
 

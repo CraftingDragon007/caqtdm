@@ -7896,6 +7896,12 @@ void CaQtDM_Lib::shellCommand(QString command) {
 
 void CaQtDM_Lib::closeWindow()
 {
+#ifndef MOBILE
+    if (vncServer && !slaveServer && this->property("open_as_popupwindow").isNull()) {
+        QMessageBox::critical(this, "Error", "Closing of main process prohibited in web mode");
+        return;
+    }
+#endif
     this->close();
 }
 
