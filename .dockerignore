@@ -1,5 +1,8 @@
 caQtDM_Web
 
+.git
+.github
+
 # Sphinx
 docs/build
 # Qt Creator
@@ -7,6 +10,7 @@ docs/build
 **/*.pro.user.*
 **/.qtc_clangd/
 **/*.qtc_*
+.qtcreator
 build/
 
 # Qmake
