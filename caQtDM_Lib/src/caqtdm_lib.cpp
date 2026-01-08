@@ -327,6 +327,7 @@ QReadWriteLock CaQtDM_Lib::webChildProcessesLock;
 quint16 CaQtDM_Lib::vncPortIndex = 1;
 quint16 CaQtDM_Lib::vncPort;
 quint16 CaQtDM_Lib::webPort;
+QString CaQtDM_Lib::webHost;
 bool CaQtDM_Lib::slaveServer;
 bool CaQtDM_Lib::vncServer;
 bool CaQtDM_Lib::noVncPlugin;
@@ -7577,6 +7578,9 @@ VncWebChildProcess* CaQtDM_Lib::startVncChildProcess(quint16 vncPort, quint16 we
         process_args.append("-web_timeout");
         process_args.append(QString::number(webTimeout));
     }
+
+    process_args.append("-host");
+    process_args.append(webHost);
 
     process_args.append(file);
 

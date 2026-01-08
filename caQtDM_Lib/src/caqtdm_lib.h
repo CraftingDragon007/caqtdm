@@ -146,6 +146,7 @@ public:
     static quint16 vncPortIndex;
     static quint16 vncPort;
     static quint16 webPort;
+    static QString webHost;
     static bool slaveServer;
     static bool vncServer;
     static bool noVncPlugin;
