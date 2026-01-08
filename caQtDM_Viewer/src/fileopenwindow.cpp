@@ -304,6 +304,7 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
         }
 
         QString host = options["web_host"];
+        CaQtDM_Lib::webHost = host;
 
         CaQtDM_Lib::slaveServer = options["slave_server"].toInt();
 
