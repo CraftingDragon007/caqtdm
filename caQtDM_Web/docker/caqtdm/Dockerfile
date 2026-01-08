@@ -97,7 +97,8 @@ RUN apk add --no-cache \
     ncurses \
     readline \
     perl \
-    zlib
+    zlib \
+    ttf-dejavu
 
 COPY caQtDM_Tests/ /opt/caqtdm/caqtdm_tests/
 

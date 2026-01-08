@@ -17,6 +17,8 @@ RUN sed -i 's|_INSTALL_HOSTNAME_|${INSTALL_HOSTNAME}|g' /etc/nginx/templates/caq
     sed -i 's|/etc/pki/tls/certs|/etc/nginx/ssl|g' /etc/nginx/templates/caqtdm_web.conf.template && \
     sed -i 's|/etc/pki/tls/private|/etc/nginx/ssl|g' /etc/nginx/templates/caqtdm_web.conf.template
 
+RUN echo "resolver 127.0.0.11 ipv6=off;" > /etc/nginx/conf.d/resolvers.conf
+
 RUN openssl genrsa -out /etc/nginx/ssl/${INSTALL_CERT_BASENAME}.key 2048 && \
     chmod 600 /etc/nginx/ssl/${INSTALL_CERT_BASENAME}.key && \
     openssl req -x509 -new -nodes \
