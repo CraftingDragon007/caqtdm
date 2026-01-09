@@ -113,7 +113,8 @@ ENV EPICS_CA_ADDR_LIST=sf-cagw.psi.ch:5062
 ENV EPICS_CA_MAX_ARRAY_BYTES=40000000
 
 ENV ENTRY_PANEL=tests.ui
+ENV EXTRA_ARGS=
 
 WORKDIR /app
 
-CMD ["sh", "-c", "/opt/caqtdm/lib/qt6/caQtDM -server -novnc -host 0.0.0.0 $ENTRY_PANEL"]
+CMD ["sh", "-c", "/opt/caqtdm/lib/qt6/caQtDM -server -novnc -host 0.0.0.0 $EXTRA_ARGS $ENTRY_PANEL"]
