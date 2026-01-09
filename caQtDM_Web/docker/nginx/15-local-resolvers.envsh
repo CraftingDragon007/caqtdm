@@ -1,0 +1,3 @@
+#!/bin/sh
+export DNS_SERVER=$(grep 'nameserver' /etc/resolv.conf | awk '{print $2}' | head -n 1)
+echo "Using DNS server: $DNS_SERVER"
