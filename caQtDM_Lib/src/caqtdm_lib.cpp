@@ -291,7 +291,7 @@ double CaQtDM_Lib::rTime()
 /**
  * helper for fixing file lists to work with relative paths
  */
-bool fixFileListRelative(const QString &cainclude_path, QString *filelist)
+bool fixFileListRelative(const QString &cainclude_path, QString *filelist, bool shell=false)
 {
   if(cainclude_path.isEmpty()) {return false;}
 
@@ -299,9 +299,16 @@ bool fixFileListRelative(const QString &cainclude_path, QString *filelist)
   bool affected = false;
 
   for(int i=0; i< files.count(); i++) {
-    if (QFileInfo(files.at(i)).isRelative()){
-      files[i] = cainclude_path + files.at(i).trimmed();
-      affected = true;
+    if(shell){
+        if (files.at(i).startsWith("./") and QFileInfo(files.at(i)).isRelative()){
+          files[i] = cainclude_path + files.at(i).trimmed();
+          affected = true;
+        }
+      }else{
+        if (QFileInfo(files.at(i)).isRelative()){
+          files[i] = cainclude_path + files.at(i).trimmed();
+          affected = true;
+        }
     }
   }
 
@@ -1493,7 +1500,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
         text = shellWidget->getFiles();
         // must use bitwise OR to not short-circuit
-        if(reaffectText(map, &text, w1) | fixFileListRelative(cainclude_path, &text)) shellWidget->setFiles(text);
+        if(reaffectText(map, &text, w1) | fixFileListRelative(cainclude_path, &text, true)) shellWidget->setFiles(text);
 
         text = shellWidget->getLabel();
         if(reaffectText(map, &text, w1))  shellWidget->setLabel(text);
