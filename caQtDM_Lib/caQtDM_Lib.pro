@@ -70,7 +70,6 @@ SOURCES += caqtdm_lib.cpp \
     src/causerid.cpp \
     src/hmisharedconfiglistmanager.cpp \
     src/hmisharedeventbus.cpp \
-    src/webportpool.cpp \
     vaPrintf.c \
     myMessageBox.cpp \
     limitsStripplotDialog.cpp \
@@ -78,8 +77,7 @@ SOURCES += caqtdm_lib.cpp \
     limitsDialog.cpp \
     sliderDialog.cpp \
     splashscreen.cpp \
-    loadPlugins.cpp  \
-    websocketserver.cpp
+    loadPlugins.cpp
     
 HEADERS += caqtdm_lib.h\
         caQtDM_Lib_global.h \
@@ -95,8 +93,6 @@ HEADERS += caqtdm_lib.h\
     src/hmi_common_event_defs.h \
     src/hmisharedconfiglistmanager.h \
     src/hmisharedeventbus.h \
-    src/vncwebchildprocess.h \
-    src/webportpool.h \
     vaPrintf.h \
     myMessageBox.h \
     limitsStripplotDialog.h \
@@ -107,12 +103,11 @@ HEADERS += caqtdm_lib.h\
     epicsExternals.h \
     inlines.h \
     loadPlugins.h \
-    caqtdm_lib_interface.h \
-    websocketserver.h
+    caqtdm_lib_interface.h
 
 !MOBILE {
-    SOURCES += myQProcess.cpp  processWindow.cpp
-    HEADERS += myQProcess.h  processWindow.h
+    SOURCES += myQProcess.cpp  processWindow.cpp  websocketserver.cpp  src/webportpool.cpp  src/weblaunchermanager.cpp
+    HEADERS += myQProcess.h  processWindow.h  websocketserver.h  src/vncwebchildprocess.h  src/webportpool.h src/weblaunchermanager.h
 }
 
 #if we want some info from the australian lightsource, define it above
