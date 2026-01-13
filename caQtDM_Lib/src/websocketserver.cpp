@@ -301,6 +301,6 @@ void WebSocketServer::sendLauncherInfo(QWebSocket *receiver) {
     QJsonValue value = WebLauncherManager::instance().getExpandedLauncherJson();
     if (!value.isNull() && receiver != nullptr && value.isObject()) {
         QJsonDocument doc(value.toObject());
-        receiver->sendTextMessage(QString("LAUNCHER|%1").arg(doc.toJson(QJsonDocument::Indented)));
+        receiver->sendTextMessage(QString("LAUNCHER|%1").arg(QString::fromUtf8(doc.toJson(QJsonDocument::Indented))));
     }
 }
