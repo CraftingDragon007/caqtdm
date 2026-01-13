@@ -309,3 +309,131 @@ body, html {
   flex: 1;
   background: #fff;
 }
+
+/* Launcher Menu Styles */
+.popup-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: #fff;
+  border: 1px solid #cbd5f5;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+  min-width: 200px;
+  z-index: 1150;
+  margin-top: 0;
+  pointer-events: none;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.15s ease, visibility 0.15s ease;
+}
+
+.popup-menu.show {
+  pointer-events: auto;
+  visibility: visible;
+  opacity: 1;
+  display: block !important;
+}
+
+.popup-submenu {
+  position: absolute;
+  top: -1px;
+  left: calc(100% - 1px);
+  background: #fff;
+  border: 1px solid #cbd5f5;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+  min-width: 200px;
+  z-index: 1151;
+  margin-left: 0;
+  margin-top: 0;
+  pointer-events: none;
+  visibility: hidden;
+  opacity: 0;
+}
+
+.popup-submenu.show {
+  pointer-events: auto;
+  visibility: visible;
+  opacity: 1;
+  display: block !important;
+}
+
+.menu-item {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  color: #1f2937;
+  font-size: 14px;
+  cursor: pointer;
+  position: relative;
+  white-space: nowrap;
+}
+
+.menu-item:hover {
+  background: rgba(37, 99, 235, 0.1);
+}
+
+.menu-item:focus {
+  outline: 2px solid #2563eb;
+  outline-offset: -2px;
+}
+
+.menu-item.menu-submenu::after {
+  content: '▶';
+  position: absolute;
+  right: 8px;
+  font-size: 10px;
+  color: #64748b;
+}
+
+.menu-item.menu-submenu {
+  position: relative;
+}
+
+.menu-item.menu-submenu:hover > .popup-submenu {
+  pointer-events: auto;
+  visibility: visible;
+  opacity: 1;
+}
+
+/* Hover bridge to prevent submenu from closing when moving to it */
+.menu-item.menu-submenu::before {
+  content: '';
+  position: absolute;
+  right: -10px;
+  top: 0;
+  bottom: 0;
+  width: 10px;
+  pointer-events: auto;
+}
+
+.menu-title {
+  padding: 8px 12px;
+  font-weight: 600;
+  color: #0606fe;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  pointer-events: none;
+  user-select: none;
+}
+
+.menu-separator {
+  margin: 4px 0;
+  border: none;
+  border-top: 1px solid #e2e8f0;
+  padding: 0;
+}
+
+.menu-cmd {
+  color: #9ca3af !important;
+  cursor: not-allowed;
+}
+
+.menu-cmd:hover {
+  background: transparent;
+}

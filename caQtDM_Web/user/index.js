@@ -335,6 +335,8 @@
 
   let heartbeat = null;
 
+  let launcherObject = null;
+
   const logPopup = new PopupWindow({
     root: logWindow,
     header: logHeader,
@@ -752,6 +754,19 @@
         }
         return;
       }
+      if (data.startsWith('LAUNCHER|')) {
+        const launcherPayload = data.slice(9);
+        try {
+          launcherObject = JSON.parse(launcherPayload);
+        } catch (e) {
+          console.warn('Failed to parse LAUNCHER payload:', e);
+          launcherObject = null;
+          return;
+        }
+
+        setupLauncherMenu();
+        return;
+      }
       const openMatchPipe = data.match(/^OPEN\|([^|]+)\|(.*)$/);
       if (openMatchPipe) {
         pendingOpenPath = openMatchPipe[1];
@@ -789,6 +804,204 @@
       scheduleReconnect();
     };
   }
+
+  function setupLauncherMenu() {
+    if (!launcherObject) return;
+    const launcherButton = document.getElementById('launcher');
+    const titleColor = launcherObject['menu-title'].style.split(': ')[1] || '#000000';
+
+    try { launcherButton.style.color = titleColor; } catch (_e) {}
+
+    if (launcherButton.style.color === '#000000' || launcherButton.style.color === 'rgb(0, 0, 0)' || launcherButton.style.color.toLowerCase() === 'black') {
+      launcherButton.style.color = '#1e293b'; //dark slate instead of black
+    }
+
+    launcherButton.textContent = launcherObject['menu-title'].text || 'Launcher';
+
+    if (launcherObject.menu && Array.isArray(launcherObject.menu) && launcherObject.menu.length > 0) {
+      launcherButton.style.display = 'inline-block';
+      createPopupPullDownMenu(launcherObject, launcherButton);
+    } else {
+      launcherButton.style.display = 'none';
+    }
+  }
+
+  function createPopupPullDownMenu(object, parentElement) {
+    const menuElement = document.createElement('div');
+    menuElement.id = 'launcher-menu';
+    menuElement.className = 'popup-menu';
+    menuElement.setAttribute('role', 'menu');
+    menuElement.setAttribute('aria-hidden', 'true');
+
+    /*
+    available types: object.type = 'title' | 'menu' | 'caqtdm' | 'cmd' | 'separator'
+    */
+
+    if (object.menu && Array.isArray(object.menu)) {
+      buildMenuItems(object.menu, menuElement);
+    }
+
+    parentElement.appendChild(menuElement);
+
+    // Show/hide menu on button click
+    parentElement.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const isShown = menuElement.classList.contains('show');
+      closeAllMenus();
+      if (!isShown) {
+        menuElement.classList.add('show');
+      }
+    });
+  }
+
+  function buildMenuItems(menuArray, containerElement) {
+    menuArray.forEach(function(item) {
+      if (item.type === 'separator') {
+        const separator = document.createElement('hr');
+        separator.className = 'menu-separator';
+        containerElement.appendChild(separator);
+      } else if (item.type === 'title') {
+        const titleItem = document.createElement('div');
+        titleItem.className = 'menu-title';
+        titleItem.textContent = item.text || '';
+        if (item.style) {
+          applyStyleToElement(titleItem, item.style);
+        }
+        containerElement.appendChild(titleItem);
+      } else if (item.type === 'menu') {
+        const menuButton = document.createElement('button');
+        menuButton.className = 'menu-item menu-submenu';
+        menuButton.setAttribute('role', 'menuitem');
+        menuButton.setAttribute('aria-haspopup', 'true');
+        menuButton.textContent = item.text || '';
+        if (item.style) {
+          applyStyleToElement(menuButton, item.style);
+        }
+
+        const submenu = document.createElement('div');
+        submenu.className = 'popup-submenu';
+        submenu.setAttribute('role', 'menu');
+
+        // Add submenu items recursively
+        if (item.menu && Array.isArray(item.menu)) {
+          buildMenuItems(item.menu, submenu);
+        }
+
+        menuButton.appendChild(submenu);
+
+        menuButton.addEventListener('mouseenter', function() {
+          submenu.classList.add('show');
+        });
+
+        menuButton.addEventListener('mouseleave', function() {
+          submenu.classList.remove('show');
+        });
+
+        submenu.addEventListener('mouseenter', function() {
+          submenu.classList.add('show');
+        });
+
+        submenu.addEventListener('mouseleave', function() {
+          submenu.classList.remove('show');
+        });
+
+        menuButton.addEventListener('click', function(e) {
+          e.stopPropagation();
+          submenu.classList.toggle('show');
+        });
+
+        containerElement.appendChild(menuButton);
+      } else if (item.type === 'caqtdm') {
+        // caQtDM action
+        const actionButton = document.createElement('button');
+        actionButton.className = 'menu-item menu-action';
+        actionButton.setAttribute('role', 'menuitem');
+        actionButton.textContent = item.text || '';
+        if (item.style) {
+          applyStyleToElement(actionButton, item.style);
+        }
+
+        actionButton.addEventListener('click', function(e) {
+          e.stopPropagation();
+          const filePath = item.path || item.panel;
+          if (filePath) {
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.set('path', filePath);
+            if (item.macros && item.macros.trim() !== '') {
+              const convertedMacros = item.macros.replace(/=/g, ':').replace(/;/g, ',');
+              newUrl.searchParams.set('macros', convertedMacros);
+            }
+            window.open(newUrl.toString(), '_blank', 'noopener');
+          }
+          closeAllMenus();
+        });
+
+        containerElement.appendChild(actionButton);
+      } else if (item.type === 'cmd') {
+        // Command action - show dialog with command
+        const cmdButton = document.createElement('button');
+        cmdButton.className = 'menu-item menu-action menu-cmd';
+        cmdButton.setAttribute('role', 'menuitem');
+        cmdButton.textContent = item.text || '';
+        if (item.style) {
+          applyStyleToElement(cmdButton, item.style);
+        }
+
+        cmdButton.addEventListener('click', function(e) {
+          e.stopPropagation();
+          if (item.command) {
+            const message = document.createElement('p');
+            message.textContent = 'Command: ';
+            const cmdSpan = document.createElement('span');
+            cmdSpan.textContent = item.command;
+            cmdSpan.style.fontFamily = 'monospace';
+            cmdSpan.style.wordBreak = 'break-all';
+            message.appendChild(cmdSpan);
+
+            pendingFilePath = item.command;
+            pendingUrlType = 'file';
+
+            const acceptButton = document.getElementById('dialog-accept');
+            if (acceptButton) {
+              acceptButton.textContent = 'Copy';
+            }
+            urlDialog.setMessage(message);
+            urlDialog.open();
+          }
+          closeAllMenus();
+        });
+
+        containerElement.appendChild(cmdButton);
+      }
+    });
+  }
+
+  function applyStyleToElement(element, styleString) {
+    if (!styleString) return;
+    const styles = styleString.split(';').filter(s => s.trim());
+    styles.forEach(function(style) {
+      const [prop, value] = style.split(':').map(s => s.trim());
+      if (prop && value) {
+        element.style[prop] = value;
+      }
+    });
+  }
+
+  function closeAllMenus() {
+    const allMenus = document.querySelectorAll('.popup-menu, .popup-submenu');
+    allMenus.forEach(function(menu) {
+      menu.classList.remove('show');
+    });
+  }
+
+  // Close menus when clicking outside
+  document.addEventListener('click', function(e) {
+    const launcherButton = document.getElementById('launcher');
+    if (launcherButton && (e.target === launcherButton || launcherButton.contains(e.target))) {
+      return;
+    }
+    closeAllMenus();
+  });
 
   connectWebSocket();
 })();
