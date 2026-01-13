@@ -545,7 +545,7 @@
     }
 
     noVNCPath = value;
-    iframe.src = '/noVNC/vnc.html?path=/websockify/' + encodeURIComponent(getNoVNCPath()) + '&autoconnect=true&reconnect=true&reconnect_delay=5000-novnc_readonly &resize=scale';
+    iframe.src = '/noVNC/vnc.html?path=/websockify/' + encodeURIComponent(getNoVNCPath()) + '&autoconnect=true&reconnect=true&reconnect_delay=5000&resize=scale';
   }
 
   setIframeToNoVNCPath(noVNCPath);
