@@ -2,6 +2,7 @@
 
 #include <QFile>
 #include <QJsonObject>
+#include <QJsonParseError>
 #include <fileFunctions.h>
 #include <searchfile.h>
 
