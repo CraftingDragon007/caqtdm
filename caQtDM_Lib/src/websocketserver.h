@@ -24,6 +24,8 @@ public:
     void sendInteractionBasedShutdownMsg();
     void sendUserCountUpdate(int count);
 
+    void sendLauncherInfo(QWebSocket *receiver);
+
     void sendProgressInfo(int initialProgress, int maxProgress);
     void sendProgressUpdate(int progress);
 private slots:

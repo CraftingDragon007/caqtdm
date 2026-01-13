@@ -54,6 +54,7 @@ bool HTTPCONFIGURATOR = false;
 #include <hmisharedconfiglistmanager.h>
 #include <websocketserver.h>
 #include <webportpool.h>
+#include <weblaunchermanager.h>
 #endif
 
 #include <QFileDialog>
@@ -318,6 +319,11 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
         connect(messageWindow, &MessageWindow::newMessageReceivedEvent, [](QString text){
             WebSocketServer::instance().sendLog(text);
         });
+
+        QString launcherFile = options["web_launcher_file"];
+        if (!launcherFile.isNull()) {
+            WebLauncherManager::instance().setup(launcherFile);
+        }
 
         ui.fileAction->setEnabled(false);
         ui.timedAction->setEnabled(false);

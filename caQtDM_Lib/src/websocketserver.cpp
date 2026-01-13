@@ -4,6 +4,7 @@
 #include <QFileInfo>
 #include <QHostAddress>
 #include <fileFunctions.h>
+#include "weblaunchermanager.h"
 #include "webportpool.h"
 
 WebSocketServer::WebSocketServer(QObject *parent) : QObject(parent), m_isInitialized(false)
@@ -74,6 +75,8 @@ void WebSocketServer::onNewConnection()
     }
 
     sendUserCountUpdate(count);
+
+    sendLauncherInfo(pSocket);
 }
 
 void WebSocketServer::processTextMessage(const QString &message)
@@ -290,5 +293,14 @@ void WebSocketServer::sendUserCountUpdate(int count) {
         if (pSocket != nullptr) {
             pSocket->sendTextMessage(QString("USERS|%1").arg(QString::number(count)));
         }
+    }
+}
+
+
+void WebSocketServer::sendLauncherInfo(QWebSocket *receiver) {
+    QJsonValue value = WebLauncherManager::instance().getExpandedLauncherJson();
+    if (!value.isNull() && receiver != nullptr && value.isObject()) {
+        QJsonDocument doc(value.toObject());
+        receiver->sendTextMessage(QString("LAUNCHER|%1").arg(doc.toJson(QJsonDocument::Indented)));
     }
 }

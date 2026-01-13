@@ -247,6 +247,7 @@ int main(int argc, char *argv[])
     quint16 web_port = 30000;
     quint16 web_instance_limit = 1000;
     uint web_timeout = 0;
+    QString web_launcher_file;
 
     for (numargs = argc, in = 1; in < numargs; in++) {
         qDebug() << argv[in];
@@ -406,6 +407,20 @@ int main(int argc, char *argv[])
             {
                 host = QString(argv[in]);
             } else printf("caQtDM -- Invalid host address %s provided, please use a proper address like 127.0.0.1 or 0.0.0.0 !\n", argv[in]);
+        } else if (strcmp (argv[in], "-web_launcher_root_file") == 0) {
+            in++;
+            web_launcher_file = argv[in];
+            fileFunctions filefunction;
+            filefunction.checkFileAndDownload(web_launcher_file);
+
+            searchFile *filecheck = new searchFile(web_launcher_file);
+            web_launcher_file = filecheck->findFile();
+            filecheck->deleteLater();
+
+            if (web_launcher_file.isNull()) {
+                printf("caQtDM -- Error: Web launcher file not found, exiting...");
+                return 1;
+            }
         } else if (strcmp (argv[in], "-web_allow_insecure_cashell_commands") == 0) {
             web_allow_insecure_cashell_commands = true;
             printf("caQtDM - Allowing executing of caShellCommands in web mode, please be careful!");
@@ -455,6 +470,7 @@ int main(int argc, char *argv[])
         options.insert("novnc_readonly", QString::number(novnc_readonly));
         options.insert("web_allow_insecure_cashell_commands", QString::number(web_allow_insecure_cashell_commands));
         options.insert("web_instance_limit", QString::number(web_instance_limit));
+        options.insert("web_launcher_file", web_launcher_file);
 
 
 #if QT_VERSION < QT_VERSION_CHECK(6,0,0)
