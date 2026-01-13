@@ -37,7 +37,7 @@
 #include "QDebug"
 #include <QFileDialog>
 #include <QLocale>
-#include <signal.h>
+#include "signalhandler.h"
 #include <iostream>
 #include <stdlib.h>
 #include "pipereader.h"
@@ -66,19 +66,6 @@
         #include <X11/Xlib.h>
         #include <X11/Xatom.h>
 #endif //CAQTDM_X11
-
-static void unixSignalHandler(int signum) {
-
-    Q_UNUSED(signum);
-
-    /*
-     * Make sure your Qt application gracefully quits.
-     * NOTE - purpose for calling qApp->exit(0):
-     *      1. Forces the Qt framework's "main event loop `qApp->exec()`" to quit looping.
-     *      2. Also emits the QCoreApplication::aboutToQuit() signal. This signal is used for cleanup code.
-     */
-    QCoreApplication::exit(0);
-}
 
 extern bool HTTPCONFIGURATOR;
 
@@ -604,15 +591,23 @@ int main(int argc, char *argv[])
     fileOpenWindow.move(0,0);
 #endif
 
-
-    if (signal(SIGINT, unixSignalHandler) == SIG_ERR) {
-        qFatal("ERR - %s(%d): An error occurred while setting a signal handler.\n", __FILE__,__LINE__);
-    }
-    if (signal(SIGTERM, unixSignalHandler) == SIG_ERR) {
-        qFatal("ERR - %s(%d): An error occurred while setting a signal handler.\n", __FILE__,__LINE__);
-    }
-
     QObject::connect(&app, SIGNAL(aboutToQuit()), &fileOpenWindow, SLOT(doSomething()));
+
+    if (SignalHandler::setupHandlers() != 0) {
+        qFatal("Failed to initialize Unix signal handlers");
+    }
+
+    SignalHandler handler;
+
+    QObject::connect(&handler, &SignalHandler::interruptReceived, &app, [&]() {
+        qDebug() << "Received SIGINT (Ctrl+C), shutting down...";
+        app.exit();
+    });
+
+    QObject::connect(&handler, &SignalHandler::terminateReceived, &app, [&]() {
+        qDebug() << "Received SIGTERM, shutting down...";
+        app.exit();
+    });
 
     int exitCode = 0;
     QString errorMessage;
