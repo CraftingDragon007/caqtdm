@@ -11,6 +11,8 @@ services:
       - caqtdm-web
     environment:
       - PROXY_BACKEND=http://caqtdm
+      - BASIC_AUTH_USER=user
+      - BASIC_AUTH_PASSWORD=password
 
   caqtdm:
     image: caqtdm-web/caqtdm

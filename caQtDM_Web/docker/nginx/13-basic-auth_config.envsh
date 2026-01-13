@@ -1,0 +1,6 @@
+#!/bin/sh
+if [ -n "$BASIC_AUTH_USER" ] && [ -n "$BASIC_AUTH_PASSWORD" ]; then
+    export AUTH_CONFIG="auth_basic \"Restricted\"; auth_basic_user_file /etc/nginx/.htpasswd;"
+else
+    export AUTH_CONFIG=""
+fi

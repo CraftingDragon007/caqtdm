@@ -1,6 +1,6 @@
 FROM nginx:mainline-alpine
 
-RUN apk add --no-cache openssl
+RUN apk add --no-cache openssl apache2-utils
 
 ENV INSTALL_HOSTNAME=localhost
 ENV INSTALL_CERT_BASENAME=caqtdm_web
@@ -16,7 +16,9 @@ RUN sed -i 's|_INSTALL_HOSTNAME_|${INSTALL_HOSTNAME}|g' /etc/nginx/templates/caq
     sed -i 's|_INSTALL_CERT_BASENAME_|${INSTALL_CERT_BASENAME}|g' /etc/nginx/templates/caqtdm_web.conf.template && \
     sed -i 's|http://127\.0\.0\.1|${PROXY_BACKEND}|g' /etc/nginx/templates/caqtdm_web.conf.template && \
     sed -i 's|/etc/pki/tls/certs|/etc/nginx/ssl|g' /etc/nginx/templates/caqtdm_web.conf.template && \
-    sed -i 's|/etc/pki/tls/private|/etc/nginx/ssl|g' /etc/nginx/templates/caqtdm_web.conf.template
+    sed -i 's|/etc/pki/tls/private|/etc/nginx/ssl|g' /etc/nginx/templates/caqtdm_web.conf.template && \
+    sed '/server {/a \    ${AUTH_CONFIG}' /etc/nginx/templates/caqtdm_web.conf.template > /etc/nginx/templates/caqtdm_web.conf.tmp && \
+    mv /etc/nginx/templates/caqtdm_web.conf.tmp /etc/nginx/templates/caqtdm_web.conf.template
 
 RUN echo 'resolver ${DNS_SERVER} ipv6=off;' > /etc/nginx/templates/resolvers.conf.template
 
@@ -33,5 +35,9 @@ RUN chown -R nginx:nginx /var/www/caqtdm_web && \
     chmod -R 755 /var/www/caqtdm_web && \
     find /var/www/caqtdm_web -type f -exec chmod 644 {} +
 
+COPY docker/nginx/12-basic-auth_htpasswd.sh /docker-entrypoint.d/12-basic-auth-htpasswd.sh
+RUN chmod +x /docker-entrypoint.d/12-basic-auth-htpasswd.sh
+COPY docker/nginx/13-basic-auth_config.envsh /docker-entrypoint.d/13-basic-auth_config.envsh
+RUN chmod +x /docker-entrypoint.d/13-basic-auth_config.envsh
 COPY docker/nginx/15-local-resolvers.envsh /docker-entrypoint.d/15-local-resolvers.envsh
 RUN chmod +x /docker-entrypoint.d/15-local-resolvers.envsh
