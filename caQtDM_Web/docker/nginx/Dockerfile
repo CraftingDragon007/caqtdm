@@ -27,7 +27,7 @@ RUN openssl genrsa -out /etc/nginx/ssl/${INSTALL_CERT_BASENAME}.key 2048 && \
     openssl req -x509 -new -nodes \
         -key /etc/nginx/ssl/${INSTALL_CERT_BASENAME}.key \
         -sha256 -days 365 \
-        -subj "/C=CH/ST=Aargau/L=Villigen PSI/O=Default Org/OU=caqtdm_web/CN=${INSTALL_HOSTNAME}" \
+        -subj "/C=CH/ST=Aargau/L=Villigen PSI/O=Paul Scherrer Institut/OU=caqtdm_web/CN=${INSTALL_HOSTNAME}" \
         -out /etc/nginx/ssl/${INSTALL_CERT_BASENAME}.crt && \
     chmod 644 /etc/nginx/ssl/${INSTALL_CERT_BASENAME}.crt
 
