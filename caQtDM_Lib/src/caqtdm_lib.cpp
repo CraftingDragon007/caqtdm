@@ -126,7 +126,8 @@
 #define INPUTDIALOG 	"Input Dialog"
 #define FILEDIALOG      "File Dialog"
 #define CHANGELIMITS 	"Change Limits/Precision"
-
+#define COPYIMAGE       "Copy Image"
+#define COPYDATACSV     "Copy Data as CSV"
 
 #define POPUPDEFENITION "popup.ui"
 
@@ -7877,9 +7878,6 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
         if((thermoWidget->getColorMode() == caThermo::Alarm_Default) || (thermoWidget->getColorMode() == caThermo::Alarm_Static)) strcpy(colMode, "Alarm");
         else strcpy(colMode, "Static");
 
-    } else if(caWaveTable* wavetableWidget = qobject_cast<caWaveTable *>(w)) {
-        wavetableWidget->clearSelection();
-
     } else if(caByte* byteWidget = qobject_cast<caByte *>(w)) {
         if(byteWidget->getColorMode() == caByte::Alarm) strcpy(colMode, "Alarm");
         else strcpy(colMode, "Static");
@@ -7944,6 +7942,11 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
         myMenu.addAction(GETINFO);
         myMenu.addAction(CHANGEVALUE);
 
+    } else if(caWaveTable* wavetableWidget = qobject_cast<caWaveTable *>(w)) {
+        wavetableWidget->clearSelection();
+        myMenu.addAction(GETINFO);
+        myMenu.addAction(COPYDATACSV);
+
         // all other widgets
     } else if(!onMain){
         // construct info for the pv we are pointing at
@@ -7962,6 +7965,7 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
         myMenu.addAction(CHANGEAXIS);
         myMenu.addAction(QWhatsThis::createAction());
         myMenu.addAction(RESETZOOM);
+        myMenu.addAction(COPYIMAGE);
     }
 
     // for catextentry add filedialog
@@ -8448,7 +8452,14 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
         } else if(selectedItem->text().contains(CHANGELIMITS)) {
             limitsDialog dialog(w, mutexKnobDataP, "Limits/Precision change", this);
             dialog.exec();
-
+        } else if(selectedItem->text().contains(COPYIMAGE)) {
+            if(caCartesianPlot* cartesianplotWidget = qobject_cast<caCartesianPlot *>(w)) {
+                cartesianplotWidget->copyImage();
+            }
+        } else if(selectedItem->text().contains(COPYDATACSV)) {
+            if(caWaveTable* wavetableWidget = qobject_cast<caWaveTable *>(w)) {
+                wavetableWidget->copyDataCSV();
+            }
         } else {
             // any action from environment ?
             if(validExecListItems) {

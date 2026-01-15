@@ -23,6 +23,7 @@
  *    erik.schwarz@psi.ch
  */
 
+#include "qclipboard.h"
 #if defined(_MSC_VER)
 #define NOMINMAX
 #include <windows.h>
@@ -234,6 +235,12 @@ void caCartesianPlot::resetZoom() {
     }
     // In this case the bounds have changed so emit the reset zoom signal.
     emit zoomHasReset();
+}
+
+void caCartesianPlot::copyImage() {
+    QImage image = this->grab().toImage();
+    QClipboard *clipboard = QGuiApplication::clipboard();
+    clipboard->setImage(image);
 }
 
 void caCartesianPlot::setZoom(const QRectF &newZoomRect)

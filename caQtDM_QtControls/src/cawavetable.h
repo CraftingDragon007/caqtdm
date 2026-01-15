@@ -155,6 +155,11 @@ public slots:
     void vscrollbarControl(int scrollvalue);
     void hscrollbarControl(int scrollvalue);
 
+    /**
+     * @brief copies the numerical data to the clipboard. Won't work with string data, char data will be copied numerically.
+     */
+    void copyDataCSV();
+
 private slots:
     void dataInput(int, int);
     void cellDoubleclicked(int, int);

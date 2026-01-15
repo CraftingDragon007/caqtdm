@@ -206,6 +206,49 @@ int caWaveTable::getHorizontalOffset() const
     return horizontalOffset;
 }
 
+void caWaveTable::copyDataCSV()
+{
+    if (rowcount == 0 || colcount == 0 || sizeSaved == 0 || keepData.size() == 0) return;
+
+    QVector<double> rawData = keepData;
+    QStringList stringData;
+    stringData.reserve(rawData.size());
+    for (int i = 0; i < qMin(sizeSaved, rawData.size()); i++) {
+        stringData.emplace_back(QString::number(rawData[i]));
+    }
+
+    // Create a csv string representing the tabular data encoded in the 1-Dimensional array
+    // Structure: All elements of the first row, then all elements of the second row etc.
+    // Reverse engineered from:
+    // row = index / colcount; -> 0 = colcount < index
+    // column = index - row * colcount;
+    QString text = "";
+    // For each row
+    for (int i = 0; i < rowcount; i++) {
+        bool gotAtLeastOne = false;
+        // Go over all elements in it, based on the offset which is calculated using the previous number of columns
+        for (int j = i * colcount; j < (i + 1) * colcount; j++) {
+            if (j >= stringData.size()) break; // Shouldn't happen
+
+            text += stringData[j] + ",";
+            gotAtLeastOne = true;
+        }
+        // If at least one element was added, replace the trailing comma with a newline
+        if (gotAtLeastOne) {
+            text[text.length() - 1] = '\n';
+        } else {
+            text.append('\n');
+        }
+    }
+    // If the text was filled, remove the trailing comma/newline
+    if (text.size() > 0) {
+        text.removeLast();
+    }
+
+    QClipboard *clipboard = QGuiApplication::clipboard();
+    clipboard->setText(text);
+}
+
 void caWaveTable::setHorizontalOffset(int newHorizontalOffset)
 {
     if (horizontalOffset == newHorizontalOffset)
