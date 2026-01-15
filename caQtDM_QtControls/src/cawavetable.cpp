@@ -34,6 +34,7 @@
 #include <stdio.h>
 #include <QHeaderView>
 #include <QApplication>
+#include <QGuiApplication>
 #include <QClipboard>
 #include <qnumeric.h>
 #include "cawavetable.h"
