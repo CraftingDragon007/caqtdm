@@ -216,7 +216,7 @@ void caWaveTable::copyDataCSV()
     QStringList stringData;
     stringData.reserve(rawData.size());
     for (int i = 0; i < qMin(sizeSaved, rawData.size()); i++) {
-        stringData.emplace_back(setValue(rawData[i], keepDatatype));
+        stringData.push_back(setValue(rawData[i], keepDatatype));
     }
 
     // Create a csv string representing the tabular data encoded in the 1-Dimensional array
