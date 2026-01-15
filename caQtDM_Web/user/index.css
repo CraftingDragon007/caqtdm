@@ -23,6 +23,9 @@ body, html {
   font-size: 14px;
 }
 #menu-title {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
   font-weight: 600;
   color: #1e293b;
 }
@@ -34,6 +37,9 @@ body, html {
   color: #1f2937;
   font-size: 14px;
   cursor: pointer;
+}
+#menu-logs {
+  margin-left: auto;
 }
 #menu-bar button:hover,
 #menu-bar button:focus {
@@ -48,7 +54,6 @@ body, html {
   vertical-align: middle;
 }
 #menu-users {
-  margin-left: auto;
   display: flex;
   align-items: center;
   gap: 6px;
