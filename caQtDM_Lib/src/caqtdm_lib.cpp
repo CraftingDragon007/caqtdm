@@ -8472,8 +8472,13 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
                                 dataIndex = MonitorList.at(1).toInt();
                                 knobData *kPtr =  mutexKnobDataP->GetMutexKnobDataPtr(dataIndex);
                                 if(kPtr != (knobData *) 0) command.replace("&P", kPtr->pv);
-                                command.replace(".X", "");  // this is only to get rid of our pseudo extensions .X or .Y for the archive cartesian plot
-                                command.replace(".Y", "");  // this is only to get rid of our pseudo extensions .X or .Y for the archive cartesian plot
+                                // Remove internal pseudo-extensions used by caCartesianPlots with archived channels
+                                command.replace(".X", "");
+                                command.replace(".Y", "");
+                                command.replace(".minX", "");
+                                command.replace(".maxX", "");
+                                command.replace(".minY", "");
+                                command.replace(".maxY", "");
                             }
                             shellCommand(command);
                         }
