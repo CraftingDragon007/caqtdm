@@ -156,7 +156,7 @@ public slots:
     void hscrollbarControl(int scrollvalue);
 
     /**
-     * @brief copies the numerical data to the clipboard. Won't work with string data, char data will be copied numerically.
+     * @brief copies the displayed tabular data to the clipboard in csv format, without headers. String values are ignored / don't work.
      */
     void copyDataCSV();
 

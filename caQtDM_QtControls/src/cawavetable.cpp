@@ -211,10 +211,12 @@ void caWaveTable::copyDataCSV()
     if (rowcount == 0 || colcount == 0 || sizeSaved == 0 || keepData.size() == 0) return;
 
     QVector<double> rawData = keepData;
+
+    // Get the string representation of the data as displayed to the user
     QStringList stringData;
     stringData.reserve(rawData.size());
     for (int i = 0; i < qMin(sizeSaved, rawData.size()); i++) {
-        stringData.emplace_back(QString::number(rawData[i]));
+        stringData.emplace_back(setValue(rawData[i], keepDatatype));
     }
 
     // Create a csv string representing the tabular data encoded in the 1-Dimensional array
@@ -242,7 +244,7 @@ void caWaveTable::copyDataCSV()
     }
     // If the text was filled, remove the trailing comma/newline
     if (text.size() > 0) {
-        text.removeLast();
+        text.remove(text.size() - 1, 1);
     }
 
     QClipboard *clipboard = QGuiApplication::clipboard();
