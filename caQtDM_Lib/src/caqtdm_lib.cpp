@@ -128,6 +128,7 @@
 #define CHANGELIMITS 	"Change Limits/Precision"
 #define COPYIMAGE       "Copy Image"
 #define COPYDATACSV     "Copy Data as CSV"
+#define PASTEDATACSV     "Paste Data as CSV"
 
 #define POPUPDEFENITION "popup.ui"
 
@@ -7946,6 +7947,7 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
         wavetableWidget->clearSelection();
         myMenu.addAction(GETINFO);
         myMenu.addAction(COPYDATACSV);
+        myMenu.addAction(PASTEDATACSV);
 
         // all other widgets
     } else if(!onMain){
@@ -8459,6 +8461,10 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
         } else if(selectedItem->text().contains(COPYDATACSV)) {
             if(caWaveTable* wavetableWidget = qobject_cast<caWaveTable *>(w)) {
                 wavetableWidget->copyDataCSV();
+            }
+        } else if(selectedItem->text().contains(PASTEDATACSV)) {
+            if(caWaveTable* wavetableWidget = qobject_cast<caWaveTable *>(w)) {
+                wavetableWidget->pasteDataCSV();
             }
         } else {
             // any action from environment ?

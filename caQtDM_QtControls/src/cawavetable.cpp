@@ -251,6 +251,61 @@ void caWaveTable::copyDataCSV()
     clipboard->setText(text);
 }
 
+void caWaveTable::pasteDataCSV()
+{
+    if (rowcount == 0 || colcount == 0) return;
+
+    QClipboard *clipboard = QGuiApplication::clipboard();
+    QString text = clipboard->text();
+
+    if (text.size() == 0) return;
+
+    // Serialize it into one row, as internally it is stored as such
+    text = text.replace("\n", ",");
+
+    // Now we can separate it into an array of values, congruent with the stored data
+    QStringList stringData;
+    stringData = text.split(",");
+
+    // Now set the data using the same functions called by the control system
+    if (keepDatatype == doubles) {
+        QVector<double> vector;
+        vector.reserve(stringData.size());
+        for (int i = 0; i < stringData.size(); i++) {
+            vector.push_back(stringData[i].toDouble());
+        }
+
+        setData(vector.data(), keepStatus, vector.size());
+    } else if (keepDatatype == longs) {
+        QVector<int> vector;
+        vector.reserve(stringData.size());
+        for (int i = 0; i < stringData.size(); i++) {
+            vector.push_back(stringData[i].toInt());
+        }
+
+        setData(vector.data(), keepStatus, vector.size());
+    } else if (keepDatatype == characters) {
+        QVector<char> vector;
+        vector.reserve(stringData.size());
+        for (int i = 0; i < stringData.size(); i++) {
+            vector.push_back(stringData[i].toInt());
+        }
+
+        setData(vector.data(), keepStatus, vector.size());
+    } else {
+        return;
+    }
+
+    // Since the data is now set, we only have to tell each cell that it has been changed, such that it is written back into the control system
+    for (int i = 0; i < rowcount; i++) {
+        for (int j = 0; j < colcount; j++) {
+            // blockIndex specifies that this item should be written back to the control system. will be reset after the write
+            blockIndex = toIndex(i, j);
+            dataInput(i, j);
+        }
+    }
+}
+
 void caWaveTable::setHorizontalOffset(int newHorizontalOffset)
 {
     if (horizontalOffset == newHorizontalOffset)
