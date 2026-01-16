@@ -10,11 +10,12 @@
       <button type="button" id="launcher" aria-haspopup="dialog" aria-expanded="false" aria-controls="launcher-menu" style="display: none">Launcher</button>
       <button type="button" id="menu-url-builder" aria-haspopup="dialog" aria-expanded="false" aria-controls="url-builder-window">URL Builder</button>
       <span id="menu-title">caQtDM Web</span>
-      <div id="menu-progress" style="display: none;">
-        <p>Loading: </p><p id="progress-text"> 1%</p><progress id="progress-bar" value="1" max="100" style="width: 120px;"></progress>
+      <div style="margin-left: auto; display: flex; align-items: center; gap: 12px;">
+        <div id="menu-progress" style="display: none;">
+          <p>Loading: </p><p id="progress-text"> 1%</p><progress id="progress-bar" value="1" max="100" style="width: 120px;"></progress>
+        </div>
+        <button type="button" id="menu-logs" aria-haspopup="dialog" aria-expanded="false" aria-controls="log-window">Logs</button>
       </div>
-
-      <button type="button" id="menu-logs" aria-haspopup="dialog" aria-expanded="false" aria-controls="log-window">Logs</button>
       <div id="menu-users">
         <span id="users-label">Users:</span>
         <span id="users-count">0</span>

@@ -38,9 +38,6 @@ body, html {
   font-size: 14px;
   cursor: pointer;
 }
-#menu-logs {
-  margin-left: auto;
-}
 #menu-bar button:hover,
 #menu-bar button:focus {
   background: rgba(37, 99, 235, 0.1);
@@ -215,7 +212,6 @@ body, html {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-left: auto;
 }
 #progress-text {
   width: 30px;
