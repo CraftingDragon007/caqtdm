@@ -37,6 +37,8 @@ SignalHandler::SignalHandler(QObject *parent) : QObject(parent) {
 #endif
 }
 
+SignalHandler::~SignalHandler() {}
+
 int SignalHandler::setupHandlers() {
 #ifdef _MSC_VER
     return SetConsoleCtrlHandler(windowsCtrlHandler, TRUE) ? 0 : 1;

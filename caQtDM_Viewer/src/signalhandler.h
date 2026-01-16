@@ -9,6 +9,7 @@ class SignalHandler : public QObject
     Q_OBJECT
 public:
     explicit SignalHandler(QObject *parent = nullptr);
+    ~SignalHandler();
     static int setupHandlers();
 
 private:
