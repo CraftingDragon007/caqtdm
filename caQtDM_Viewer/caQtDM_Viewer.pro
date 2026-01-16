@@ -80,13 +80,15 @@ SOURCES +=\
     fileopenwindow.cpp \
     messagebox.cpp \
     configDialog.cpp \
-    pipereader.cpp
+    pipereader.cpp \
+    signalhandler.cpp
 
 HEADERS  +=  \
     messagebox.h \
     fileopenwindow.h \
     configDialog.h \
-    pipereader.h
+    pipereader.h \
+    signalhandler.h
 
 FORMS += main.ui
 
