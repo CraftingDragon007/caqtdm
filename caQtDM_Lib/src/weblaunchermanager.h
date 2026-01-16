@@ -4,8 +4,9 @@
 #include <QObject>
 #include <QJsonValue>
 #include <QJsonArray>
+#include "caQtDM_Lib_global.h"
 
-class WebLauncherManager : public QObject
+class CAQTDM_LIBSHARED_EXPORT WebLauncherManager : public QObject
 {
     Q_OBJECT
 public:
