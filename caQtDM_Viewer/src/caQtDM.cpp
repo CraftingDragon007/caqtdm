@@ -594,20 +594,10 @@ int main(int argc, char *argv[])
     QObject::connect(&app, SIGNAL(aboutToQuit()), &fileOpenWindow, SLOT(doSomething()));
 
     if (SignalHandler::setupHandlers() != 0) {
-        qFatal("Failed to initialize Unix signal handlers");
+        qFatal("Failed to initialize system signal handlers");
     }
 
     SignalHandler handler;
-
-    QObject::connect(&handler, &SignalHandler::interruptReceived, &app, [&]() {
-        qDebug() << "Received SIGINT (Ctrl+C), shutting down...";
-        app.exit();
-    });
-
-    QObject::connect(&handler, &SignalHandler::terminateReceived, &app, [&]() {
-        qDebug() << "Received SIGTERM, shutting down...";
-        app.exit();
-    });
 
     int exitCode = 0;
     QString errorMessage;

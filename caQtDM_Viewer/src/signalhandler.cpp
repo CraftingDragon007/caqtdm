@@ -1,22 +1,47 @@
 #include "signalhandler.h"
+#include <QCoreApplication>
+#include <QDebug>
+
+#ifdef _MSC_VER
+#include <windows.h>
+#else
 #include <sys/socket.h>
 #include <unistd.h>
 #include <signal.h>
-#include <QCoreApplication>
+#endif
 
-int SignalHandler::sighandlerSockets[2];
+#ifndef _MSC_VER
+int SignalHandler::signalSocketPair[2];
 
-SignalHandler::SignalHandler(QObject *parent) : QObject(parent)
-{
-    socketNotifier = new QSocketNotifier(sighandlerSockets[1], QSocketNotifier::Read, this);
-    connect(socketNotifier, &QSocketNotifier::activated, this, &SignalHandler::handleSocketData);
+void SignalHandler::posixSignalHandler(int) {
+    char a = 1;
+    ::write(signalSocketPair[0], &a, sizeof(a));
+}
+#endif
+
+#ifdef _MSC_VER
+BOOL WINAPI windowsCtrlHandler(DWORD ctrlType) {
+    if (ctrlType == CTRL_C_EVENT || ctrlType == CTRL_CLOSE_EVENT) {
+        qDebug() << "Windows signal received. Exiting...";
+        QCoreApplication::exit(0);
+        return TRUE;
+    }
+    return FALSE;
+}
+#endif
+
+SignalHandler::SignalHandler(QObject *parent) : QObject(parent) {
+#ifndef _MSC_VER
+    socketNotifier = new QSocketNotifier(signalSocketPair[1], QSocketNotifier::Read, this);
+    connect(socketNotifier, &QSocketNotifier::activated, this, &SignalHandler::handleUnixSignal);
+#endif
 }
 
-int SignalHandler::setupHandlers()
-{
-    if (::socketpair(AF_UNIX, SOCK_STREAM, 0, sighandlerSockets)) {
-        return 1;
-    }
+int SignalHandler::setupHandlers() {
+#ifdef _MSC_VER
+    return SetConsoleCtrlHandler(windowsCtrlHandler, TRUE) ? 0 : 1;
+#else
+    if (::socketpair(AF_UNIX, SOCK_STREAM, 0, signalSocketPair)) return 1;
 
     struct sigaction sa;
     sa.sa_handler = SignalHandler::posixSignalHandler;
@@ -25,26 +50,17 @@ int SignalHandler::setupHandlers()
 
     if (::sigaction(SIGINT, &sa, nullptr) != 0) return 2;
     if (::sigaction(SIGTERM, &sa, nullptr) != 0) return 3;
-
     return 0;
+#endif
 }
 
-void SignalHandler::posixSignalHandler(int sig)
-{
-    ::write(sighandlerSockets[0], &sig, sizeof(sig));
-}
-
-void SignalHandler::handleSocketData()
-{
+#ifndef _MSC_VER
+void SignalHandler::handleUnixSignal() {
     socketNotifier->setEnabled(false);
-    int signalNumber;
-    ::read(sighandlerSockets[1], &signalNumber, sizeof(signalNumber));
+    char tmp;
+    ::read(signalSocketPair[1], &tmp, sizeof(tmp));
 
-    if (signalNumber == SIGINT) {
-        emit interruptReceived();
-    } else if (signalNumber == SIGTERM) {
-        emit terminateReceived();
-    }
-
-    socketNotifier->setEnabled(true);
+    qDebug() << "Unix signal received. Exiting...";
+    QCoreApplication::exit(0);
 }
+#endif

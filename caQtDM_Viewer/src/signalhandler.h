@@ -9,21 +9,16 @@ class SignalHandler : public QObject
     Q_OBJECT
 public:
     explicit SignalHandler(QObject *parent = nullptr);
-
-    static void posixSignalHandler(int sig);
-
     static int setupHandlers();
 
-signals:
-    void interruptReceived();
-    void terminateReceived();
-
-private slots:
-    void handleSocketData();
-
 private:
-    static int sighandlerSockets[2];
+#ifndef _MSC_VER
+    static int signalSocketPair[2];
+    static void posixSignalHandler(int sig);
     QSocketNotifier *socketNotifier;
+private slots:
+    void handleUnixSignal();
+#endif
 };
 
 #endif // SIGNALHANDLER_H
