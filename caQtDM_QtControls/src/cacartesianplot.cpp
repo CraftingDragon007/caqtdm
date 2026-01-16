@@ -33,6 +33,7 @@
 #include "cacartesianplot.h"
 #include "plotHelperClasses.h"
 #include <QtCore>
+#include <QGuiApplication>
 
 caCartesianPlot::caCartesianPlot(QWidget *parent) : QwtPlot(parent)
 {
