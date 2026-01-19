@@ -6308,6 +6308,8 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
                 }
             }
 
+            wavetableWidget->setAccessW(data.edata.accessW);
+
         } else if(data.specData[0] == 0){
             QStringList list;
             for(int i=0; i<qMax(1,wavetableWidget->getNumberOfRows()); i++) {
