@@ -17,7 +17,7 @@ public:
     bool setup(QString host, quint16 port);
     bool isInitialized() const;
     void sendLog(const QString text);
-    void sendOpenFileRequest(const QString file, const QString macros, quint16 vncPort);
+    void sendOpenFileRequest(const QString file, const QString macros);
     void sendOpenURLRequest(const QString url);
     void sendInstanceInfo(QWebSocket *receiver, quint16 vncPort, quint16 webPort);
 

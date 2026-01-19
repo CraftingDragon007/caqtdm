@@ -241,8 +241,7 @@ void WebSocketServer::sendLog(const QString text) {
     }
 }
 
-void WebSocketServer::sendOpenFileRequest(const QString file, const QString macros, quint16 vncPort) {
-    QString pathStr = QString::number(vncPort % 100);
+void WebSocketServer::sendOpenFileRequest(const QString file, const QString macros) {
     QReadLocker locker(&m_clientReadWriteLock);
     foreach (QWebSocket *pSocket, m_clients) {
         if (pSocket != Q_NULLPTR) {
