@@ -8997,11 +8997,19 @@ void CaQtDM_Lib::TreatOrdinaryValue(QString pvo, double value, int32_t idata,  Q
 long CaQtDM_Lib::getLongValueFromString(char *textValue, FormatType fType, char **end)
 {
     if(fType == octal) {
+        // Internally we represent octal values with 'O' prefix, but C-Standard is '0'
+        if(strlen(textValue) > (size_t) 1 && textValue[0] == 'O') {
+            textValue[0] = '0';
+        }
         return strtoul(textValue, end, 8);
     } else if(fType == hexadecimal) {
         return strtoul(textValue, end, 16);
     } else {
         if((strlen(textValue) > (size_t) 2) && (textValue[0] == '0') && (textValue[1] == 'x' || textValue[1] == 'X')) {
+            return strtoul(textValue, end, 16);
+        } else if(strlen(textValue) > (size_t) 1 && textValue[0] == 'O') {
+            // Same as for regular octal conversion
+            textValue[0] = '0';
             return strtoul(textValue, end, 16);
         } else {
             return strtol(textValue, end, 10);
