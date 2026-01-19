@@ -7949,7 +7949,9 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
         wavetableWidget->clearSelection();
         myMenu.addAction(GETINFO);
         myMenu.addAction(COPYDATACSV);
-        myMenu.addAction(PASTEDATACSV);
+        if (wavetableWidget->getAccessW()) {
+            myMenu.addAction(PASTEDATACSV);
+        }
 
         // all other widgets
     } else if(!onMain){
