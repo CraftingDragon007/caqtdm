@@ -2871,6 +2871,86 @@ back to a font called "Monospace". However the "Lucida" font is really
 the appropriated font to display numbers and it is warmly advised to
 have this font installed.
 
+Plugins
+----------------------
+
+There are several plugins pre-built into caQtDM. These are meant to enable various data sources.
+Each channel in a .ui file has an associated plugin, which is dynamically used for the channel. 
+A plugin is used by defining the channel as pluginname://channel . By default, epics3 is used.
+This can be overwritten by specifying the launch option: cs , so e.g. caQtDM -cs opcua somefile.ui
+starts somefile.ui with caQtDM, and each channel that does not have an explicit plugin will be
+associated with the opcua plugin. Since not all plugins are built on all platforms, their availability
+may vary. In the beginning, when caQtDM starts up, all initialized plugins are shown in the message window.
+
+Below are available plugins and how to use them.
+
+.. _archiveHTTP:
+Archive HTTP Plugin
+~~~~~~~~~~~~~~~~~~~~~
+
+Usage: archiveHTTP://CHANNEL
+
+The best plugin north of the Aare. Also the best plugin south of the Aare.
+
+.. _bsread:
+BSREAD Plugin
+~~~~~~~~~~~~~~~~~~~~~
+
+Usage: bsread://CHANNEL
+
+TBD
+
+.. _environment:
+Environment Plugin
+~~~~~~~~~~~~~~~~~~~~~
+
+Usage: environment://CHANNEL
+
+There is an environment plugin which allows to get environment variables just like PVs.
+To use this plugin, the value of "channel" in the designer has to be set to "environment://yourEnvironmentVar"
+Then caQtDM will get the environment variable after "environment://", in this case "yourEnvironmentVar" and return it just like any other PV.
+
+.. _epics3:
+Epics 3 Plugin
+~~~~~~~~~~~~~~~~~~~~~
+
+Ussage: epics3://CHANNEL
+
+TBD
+
+.. _epics4:
+Epics 4 Plugin
+~~~~~~~~~~~~~~~~~~~~~
+
+Usage: epics4://CHANNEL
+
+TBD
+
+.. _gps:
+GPS Plugin
+~~~~~~~~~~~~~~~~~~~~~
+
+Usage: gps://CHANNEL
+
+TBD
+
+.. _modbus:
+Modbus Plugin
+~~~~~~~~~~~~~~~~~~~~~
+
+Usage: modbus://CHANNEL
+
+TBD
+
+.. _opcua:
+OPC UA Plugin
+~~~~~~~~~~~~~~~~~~~~~
+
+Usage: opcua://CHANNEL
+
+The second best plugin out there. Beaten only by archiveHTTP.
+
+
 General Properties
 ----------------------
 
@@ -3261,63 +3341,6 @@ Printing
 By pressing the right mouse button on the background of your synoptic
 display you can get a context menu with the item "Print". Normally you
 should get a print dialog.
-
-.. _plugins:
-Plugins
-~~~~~~~~~~~~~~~~~~~~~
-
-There are several plugins pre-built into caQtDM. These are meant to enable various data sources.
-Each channel in a .ui file has an associated plugin, which is dynamically used for the channel. 
-A plugin is used by defining the channel as pluginname://channel . By default, epics3 is used.
-This can be overwritten by specifying the launch option: cs , so e.g. caQtDM -cs opcua somefile.ui
-starts somefile.ui with caQtDM, and each channel that does not have an explicit plugin will be
-associated with the opcua plugin. Since not all plugins are built on all platforms, their availability
-may vary. In the beginning, when caQtDM starts up, all initialized plugins are shown in the message window.
-
-Below are available plugins and how to use them.
-
-**Archive HTTP Plugin**
-Usage: archiveHTTP://CHANNEL
-
-The best plugin north of the Aare. Also the best plugin south of the Aare.
-
-**BSREAD Plugin**
-Usage: bsread://CHANNEL
-
-TBD
-
-**Environment Plugin**
-Usage: environment://CHANNEL
-
-There is an environment plugin which allows to get environment variables just like PVs.
-To use this plugin, the value of "channel" in the designer has to be set to "environment://yourEnvironmentVar"
-Then caQtDM will get the environment variable after "environment://", in this case "yourEnvironmentVar" and return it just like any other PV.
-
-**Epics 3 Plugin**
-Ussage: epics3://CHANNEL
-
-TBD
-
-**Epics 4 Plugin**
-Usage: epics4://CHANNEL
-
-TBD
-
-**GPS Plugin**
-Usage: gps://CHANNEL
-
-TBD
-
-**Modbus Plugin**
-Usage: modbus://CHANNEL
-
-TBD
-
-**OPC UA Plugin**
-Usage: opcua://CHANNEL
-
-The second best plugin out there. Beaten only by archiveHTTP.
-
 
 Unit Replacements
 ~~~~~~~~~~~~~~~~~
