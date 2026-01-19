@@ -188,7 +188,7 @@ protected:
     virtual bool event(QEvent *);
     virtual QSize sizeHint() const;
     virtual QSize minimumSizeHint() const;
-    QSize calculateTextSpace();
+    QSize calculateTextSpace() override;
     void paintEvent(QPaintEvent *);
     void mousePressEvent(QMouseEvent *event);
     void mouseMoveEvent(QMouseEvent *event);

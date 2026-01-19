@@ -33,6 +33,8 @@ Requires:       perl
 Provides:       epics-base-7.0.9 = %{version}-%{release}
 
 %define EPICS_BASE /usr/local/epics/base-7.0.9
+%global epics_docdir %{_docdir}/epics-base-7.0.9
+%global epics_licensedir %{_licensedir}/epics-base-7.0.9
 
 %description
 The Experimental Physics and Industrial Control System (EPICS) is a set of
@@ -108,8 +110,8 @@ EPICS_INSTALL=%{buildroot}${EPICS_BASE}
 mkdir -p ${EPICS_INSTALL}
 
 EPICS_INCLUDE="${EPICS_INSTALL}/include"
-EPICS_LICENSES=%{buildroot}/usr/share/licenses/epics-base-7.0.9
-EPICS_DOC=%{buildroot}/usr/share/doc/epics-base-7.0.9
+EPICS_LICENSES=%{buildroot}%{epics_licensedir}
+EPICS_DOC=%{buildroot}%{epics_docdir}
 SYS_BIN=%{buildroot}/usr/bin
 SYS_LIB=%{buildroot}/usr/%{_lib}
 SYS_INCLUDE=%{buildroot}/usr/include
@@ -130,10 +132,12 @@ cp -a ${EPICS_STAGING}/cfg ${EPICS_STAGING}/configure ${EPICS_STAGING}/db ${EPIC
 # Patch makeRPath.py to have a python3 shebang
 sed -i '1s|^.*$|#!/usr/bin/env python3|' ${EPICS_INSTALL}/bin/${EPICS_HOST_ARCH}/makeRPath.py
 
+# Copy the documentation to the appropriate location
+cp -a ${EPICS_STAGING}/html ${EPICS_DOC}/
 # Copy the license file to the appropriate location
 cp -a %{_builddir}/base-7.0.9/LICENSE ${EPICS_LICENSES}/LICENSE
 # Copy the license file into the source directory
-cp -a %{_builddir}/base-7.0.9/LICENSE %{_builddir}/../../SOURCES/
+cp -a %{_builddir}/base-7.0.9/LICENSE %{_sourcedir}/
 # Copy the documentation to the appropriate location
 cp -a ${EPICS_STAGING}/html ${EPICS_DOC}
 
@@ -181,8 +185,8 @@ FINAL_LOCATION=${EPICS_BASE}
 EOF
 
 %files
-%license LICENSE
-%doc %{EPICS_DOC}/html
+%license %{epics_licensedir}/LICENSE
+%doc %{epics_docdir}/html
 
 # The core EPICS_BASE directory and contents (excluding devel stuff)
 %dir %{EPICS_BASE}

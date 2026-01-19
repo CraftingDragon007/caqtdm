@@ -42,7 +42,9 @@
 #include <QFile>
 #include <QMap>
 #include <QtGui>
+#ifndef MOBILE
 #include <QtUiTools>
+#endif
 #include <QWhatsThis>
 #include <QTextBrowser>
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)

@@ -74,6 +74,10 @@ class CAQTDM_LIBSHARED_EXPORT MessageWindow: public QDockWidget
 private:
     static QString QtMsgToQString(QtMsgType type, const char *msg);
     QString m_logFilePath;
+
+    QString m_normalTextColorHex;
+    QString m_debugTextColorHex;
+    void redrawText(const QString& oldNormalTextColorHex, const QString& oldDebugTextColorHex);
 protected:
 
     virtual void customEvent(QEvent* event);
@@ -87,6 +91,9 @@ public:
     void clearText();
     QString getMessageBoxContents();
     QString getLogFilePath();
+
+public slots:
+    void themeChanged();
 };
 
 class CAQTDM_LIBSHARED_EXPORT MessageEvent: public QEvent

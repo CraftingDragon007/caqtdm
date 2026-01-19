@@ -115,7 +115,9 @@ caLineEdit::caLineEdit(QWidget *parent) : QLineEdit(parent), FontScalingWidget(t
 
     setFontScaleModeL(WidthAndHeight);
     newFocusPolicy(Qt::NoFocus);
-
+#ifdef MOBILE
+    setCompleter(Q_NULLPTR);
+#endif
     d_rescaleFontOnTextChanged = true;
 
     installEventFilter(this);

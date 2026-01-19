@@ -26,6 +26,7 @@
 
 #include "MessageWindow.h"
 #include "messageWindowWrapper.h"
+#include "qapplication.h"
 #include "qdatetime.h"
 #include <QCoreApplication>
 #include <QMutexLocker>
@@ -34,6 +35,7 @@
 #include <QFile>
 #include <QDebug>
 #include <QTextStream>
+#include <QScrollBar>
 #ifndef MOBILE_ANDROID
 #include <sys/timeb.h>
 #else
@@ -54,6 +56,11 @@ MessageWindow::MessageWindow(QWidget* parent) : QDockWidget(parent)
     QFont font("Monospace");
     font.setStyleHint(QFont::TypeWriter);
     msgTextEdit.setFont(font);
+
+    QApplication* guiApp = qobject_cast<QApplication*>(qApp);
+    QPalette palette = guiApp->palette();
+    m_normalTextColorHex = palette.color(QPalette::Active, QPalette::Text).name();
+    m_debugTextColorHex = palette.color(QPalette::Active, QPalette::Link).name();
 
     setFeatures(QDockWidget::NoDockWidgetFeatures);
     setWindowTitle(tr(WINDOW_TITLE));
@@ -155,6 +162,29 @@ QString MessageWindow::getLogFilePath()
     return m_logFilePath;
 }
 
+void MessageWindow::themeChanged() {
+    QApplication* guiApp = qobject_cast<QApplication*>(qApp);
+    QPalette palette = guiApp->palette();
+    QString oldColorNormalHex = m_normalTextColorHex;
+    QString oldColorDebugHex = m_debugTextColorHex;
+    m_normalTextColorHex = palette.color(QPalette::Active, QPalette::Text).name();
+    m_debugTextColorHex = palette.color(QPalette::Active, QPalette::Link).name();
+
+    if (oldColorNormalHex != m_normalTextColorHex || oldColorDebugHex != m_debugTextColorHex) {
+        redrawText(oldColorNormalHex, oldColorDebugHex);
+    }
+}
+
+void MessageWindow::redrawText(const QString& oldNormalTextColorHex, const QString& oldDebugTextColorHex) {
+    QString text = msgTextEdit.toHtml();
+    text = text.replace(oldNormalTextColorHex, m_normalTextColorHex).replace(oldDebugTextColorHex, m_debugTextColorHex);
+    msgTextEdit.setHtml(text);
+    QScrollBar *vScrollBar = msgTextEdit.verticalScrollBar();
+    if (vScrollBar) {
+        vScrollBar->setValue(vScrollBar->maximum());
+    }
+}
+
 void MessageWindow::postMsgEvent(QtMsgType type, char* msg)
 {
     QString qmsg = MessageWindow::QtMsgToQString(type, msg);
@@ -170,16 +200,15 @@ void MessageWindow::postMsgEvent(QtMsgType type, char* msg)
             qWarning() << "Failed to write to logfile";
         }
     }
-
     switch (type) {
 #if QT_VERSION > QT_VERSION_CHECK(5, 0, 0)
     case QtInfoMsg:
-        qmsg.prepend("<FONT color=\"#000000\">");
+        qmsg.prepend(QString("<FONT color=\"%1\">").arg(m_normalTextColorHex));
         qmsg.append("</FONT>");
         break;
 #endif
     case QtDebugMsg:
-        qmsg.prepend("<FONT color=\"#0000FF\">");
+        qmsg.prepend(QString("<FONT color=\"%1\">").arg(m_debugTextColorHex));
         qmsg.append("</FONT>");
         break;
     case QtWarningMsg:
@@ -192,7 +221,7 @@ void MessageWindow::postMsgEvent(QtMsgType type, char* msg)
         qmsg.append("</FONT></B>");
         break;
     default:
-        qmsg.prepend("<FONT color=\"#000000\">");
+        qmsg.prepend(QString("<FONT color=\"%1\">").arg(m_normalTextColorHex));
         qmsg.append("</FONT>");
         break;
     }

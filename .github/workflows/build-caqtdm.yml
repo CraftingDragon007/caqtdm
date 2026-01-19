@@ -13,6 +13,9 @@ jobs:
     container:
       image: archlinux/archlinux:latest
       options: --privileged
+    permissions:
+      contents: read
+      actions: write
 
     steps:
     - name: Set up build environment, create non-root user and install official repository dependencies
@@ -35,6 +38,7 @@ jobs:
           zeromq \
           python \
           qt6-5compat \
+          qt6-websockets \
           git \
           ncurses \
           perl \
@@ -137,7 +141,16 @@ jobs:
 
           cd \"\$AUR_DIR\" || { echo \"Error: Initial change to \$AUR_DIR failed.\"; exit 1; }
           
-          install_aur_package qwt-qt6
+          if git_clone_aur_with_fallback qwt-qt6; then
+            cd qwt-qt6 || { echo \"Error: Could not change to qwt-qt6 directory.\"; exit 1; }
+            patch -p1 < ../../.github/workflows/qwt-makepkg.patch
+
+            makepkg -si --noconfirm
+            cd \"\$AUR_DIR\" || { echo \"Error: Could not change back to \$AUR_DIR.\"; exit 1; }
+          else
+            echo \"Skipping 'qwt-qt6' due to cloning failure.\"
+          fi
+
           install_aur_package epics-base
         "
       shell: bash

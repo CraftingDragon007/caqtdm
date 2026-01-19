@@ -5,26 +5,27 @@ contains(QT_VER_MAJ, 4) {
       CONFIG += designer
 }
 contains(QT_VER_MAJ, 5) {
-      CONFIG += plugin qt thread warn_on
+      CONFIG += plugin qt thread warn_on cahmi
       QT += widgets uitools opengl
-      ios | android {
-         greaterThan(QT_MINOR_VERSION, 4) {
-            QT += uiplugin
-         } else {
-            QT += designer
-         }
-      } else {
-          QT += designer
+      DEFINES += CAHMI
+      !MOBILE {
+        QT += designer
+      }else{
+        QT += uiplugin
       }
 }
 contains(QT_VER_MAJ, 6) {
-      CONFIG += plugin qt thread warn_on
+      CONFIG += plugin qt thread warn_on cahmi
       QT += widgets uitools opengl
+      DEFINES += CAHMI
       !MOBILE {
         QT += designer
+      }else{
+        QT += uiplugin
       }
 }
 TEMPLATE = lib
+
 
 ios | android {
   CONFIG += static

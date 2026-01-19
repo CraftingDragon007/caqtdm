@@ -49,9 +49,11 @@ bool HTTPCONFIGURATOR = false;
 #include <fstream>
 #include <string>
 
+#if QT_VERSION > QT_VERSION_CHECK(5,0,0)
 #ifndef MOBILE
 #include <hmisharedeventbus.h>
 #include <hmisharedconfiglistmanager.h>
+#endif
 #endif
 
 #include <QFileDialog>
@@ -82,6 +84,7 @@ bool HTTPCONFIGURATOR = false;
         #include <X11/Xlib.h>
         #include <X11/Xatom.h>
 
+        #undef KeyPress //remove the X11 defenition to access QEvent::KeyPress
         #define MESSAGE_SOURCE_OLD            0
         #define MESSAGE_SOURCE_APPLICATION    1
         #define MESSAGE_SOURCE_PAGER          2
@@ -111,6 +114,39 @@ int setenv(const char *name, const char *value, int overwrite)
   #include <mach/vm_statistics.h>
 #endif
 
+// in case of tablets, use static plugins linked in
+#ifdef MOBILE
+Q_IMPORT_PLUGIN(CustomWidgetCollectionInterface_Controllers);
+Q_IMPORT_PLUGIN(CustomWidgetCollectionInterface_Monitors);
+Q_IMPORT_PLUGIN(CustomWidgetCollectionInterface_Graphics);
+Q_IMPORT_PLUGIN(CustomWidgetCollectionInterface_Utilities);
+Q_IMPORT_PLUGIN(DemoPlugin);
+Q_IMPORT_PLUGIN(Epics3Plugin);
+Q_IMPORT_PLUGIN(environmentPlugin);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 9, 0)
+#ifdef CAQTDM_MODBUS
+Q_IMPORT_PLUGIN(modbusPlugin);
+#endif
+#ifdef CAQTDM_GPS
+Q_IMPORT_PLUGIN(gpsPlugin);
+#endif
+#endif
+//*************************************
+#ifdef EPICS4
+Q_IMPORT_PLUGIN(Epics4Plugin);
+#endif
+#ifdef ARCHIVESF
+Q_IMPORT_PLUGIN(ArchiveSF_Plugin);
+#endif
+#ifdef ARCHIVEHIPA
+Q_IMPORT_PLUGIN(ArchiveHIPA_Plugin);
+#endif
+#ifdef ARCHIVEPRO
+Q_IMPORT_PLUGIN(ArchivePRO_Plugin);
+#endif
+//*************************************
+
+#endif
 
 
 
@@ -239,41 +275,9 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
     // set for epics longer waveforms
     QString maxBytes = (QString)  qgetenv("EPICS_CA_MAX_ARRAY_BYTES");
     if(maxBytes.size() == 0) setenv("EPICS_CA_MAX_ARRAY_BYTES", "150000000", 1);
-
-    // in case of tablets, use static plugins linked in
 #ifdef MOBILE
-    Q_IMPORT_PLUGIN(CustomWidgetCollectionInterface_Controllers);
-    Q_IMPORT_PLUGIN(CustomWidgetCollectionInterface_Monitors);
-    Q_IMPORT_PLUGIN(CustomWidgetCollectionInterface_Graphics);
-    Q_IMPORT_PLUGIN(CustomWidgetCollectionInterface_Utilities);
-    Q_IMPORT_PLUGIN(DemoPlugin);
-    Q_IMPORT_PLUGIN(Epics3Plugin);
-    Q_IMPORT_PLUGIN(environmentPlugin);
-#if QT_VERSION >= QT_VERSION_CHECK(5, 9, 0)
-    #ifdef CAQTDM_MODBUS
-        Q_IMPORT_PLUGIN(modbusPlugin);
-    #endif
-    #ifdef CAQTDM_GPS
-        Q_IMPORT_PLUGIN(gpsPlugin);
-    #endif
-#endif
-//*************************************
-#ifdef EPICS4
-    Q_IMPORT_PLUGIN(Epics4Plugin);
-#endif
-#ifdef ARCHIVESF
-    Q_IMPORT_PLUGIN(ArchiveSF_Plugin);
-#endif
-#ifdef ARCHIVEHIPA
-    Q_IMPORT_PLUGIN(ArchiveHIPA_Plugin);
-#endif
-#ifdef ARCHIVEPRO
-    Q_IMPORT_PLUGIN(ArchivePRO_Plugin);
-#endif
-//*************************************
     Q_INIT_RESOURCE(qtcontrolsplugin);  // load resources from resource file
 #endif
-
     // message window used by library and here
     messageWindow = new MessageWindow();
 
@@ -284,6 +288,8 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
     ui.setupUi(this);
     setGeometry(0,0, 300, 150);
     this->statusBar()->show();
+
+    connect(this, &FileOpenWindow::themeChanged, messageWindow, &MessageWindow::themeChanged);
 
     // connect action buttons
     connect( this->ui.fileAction, SIGNAL( triggered() ), this, SLOT(Callback_OpenButton()) );
@@ -1715,6 +1721,8 @@ void FileOpenWindow::Callback_ActionUnconnected()
     int countDisplayed = 0;
 
     if(pvWindow != (QMainWindow*) Q_NULLPTR) {
+        //refill the table with the actual valid data
+        fillPVtable(countPV, countNotConnected, countDisplayed);
         pvWindow->show();
         return;
     }
@@ -1748,6 +1756,9 @@ void FileOpenWindow::Callback_ActionUnconnected()
     for (int i = 0; i < count; i++) w += pvTable->columnWidth(i);
     int maxW = (w + count + pvTable->verticalHeader()->width() + pvTable->verticalScrollBar()->width());
     pvWindow->setMinimumWidth(maxW+25);
+
+    pvTable->installEventFilter(this);
+
 }
 
 void FileOpenWindow::Callback_PVwindowExit()
@@ -1981,11 +1992,44 @@ bool FileOpenWindow::event(QEvent *e)
     }
     return QWidget::event(e);
 }
+#else
+bool FileOpenWindow::event(QEvent *e)
+{
+    if (e->type() == QEvent::ThemeChange) {
+        emit themeChanged();
+        // we don't retun true here, because we want the base implementation and
+        // all child items to also receive the ThemeChange event, so they can correctly change to the new theme.
+    }
+    return QWidget::event(e);
+}
 #endif
 
 bool FileOpenWindow::eventFilter(QObject *obj, QEvent *event)
 {
-    Q_UNUSED(obj);
+
     if (event->type() == QEvent::MouseMove) caQtDM_TimeLeft = caQtDM_TimeOut;
-    return false;
+    if (obj == pvTable){
+        if (event->type() == QEvent::KeyPress)
+        {
+            QKeyEvent *ev = static_cast<QKeyEvent *>(event);
+            if(ev->matches(QKeySequence::Copy)){
+                QString text;
+                QItemSelectionRange range = pvTable->selectionModel()->selection().first();
+                for (auto i = range.top(); i <= range.bottom(); ++i)
+                {
+                    QStringList rowContents;
+                    for (auto j = range.left(); j <= range.right(); ++j)
+                        rowContents << pvTable->model()->index(i,j).data().toString();
+                    text += rowContents.join("\t");
+                    text += "\n";
+                }
+                text += "\n";
+                qDebug()<<text;
+                qApp->clipboard()->setText(text, QClipboard::Clipboard);
+                return true;
+            }
+        }
+    }
+
+    return QObject::eventFilter(obj, event);
 }
