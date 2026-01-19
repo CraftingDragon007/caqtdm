@@ -1641,6 +1641,9 @@ curves
 
       The above behaviour still has to be tested thoroughly. It appeared
       already that perhaps Count must be twice the value described above?
+      
+      You can also copy the current image of a caCartesianPlot (pixmap -> png)
+      using the context menu.
 
 --------------
 
@@ -3259,12 +3262,62 @@ By pressing the right mouse button on the background of your synoptic
 display you can get a context menu with the item "Print". Normally you
 should get a print dialog.
 
-Environment Plugin
-~~~~~~~~~~~~~~~~~~
+.. _plugins:
+Plugins
+~~~~~~~~~~~~~~~~~~~~~
+
+There are several plugins pre-built into caQtDM. These are meant to enable various data sources.
+Each channel in a .ui file has an associated plugin, which is dynamically used for the channel. 
+A plugin is used by defining the channel as pluginname://channel . By default, epics3 is used.
+This can be overwritten by specifying the launch option: cs , so e.g. caQtDM -cs opcua somefile.ui
+starts somefile.ui with caQtDM, and each channel that does not have an explicit plugin will be
+associated with the opcua plugin. Since not all plugins are built on all platforms, their availability
+may vary. In the beginning, when caQtDM starts up, all initialized plugins are shown in the message window.
+
+Below are available plugins and how to use them.
+
+**Archive HTTP Plugin**
+Usage: archiveHTTP://CHANNEL
+
+The best plugin north of the Aare. Also the best plugin south of the Aare.
+
+**BSREAD Plugin**
+Usage: bsread://CHANNEL
+
+TBD
+
+**Environment Plugin**
+Usage: environment://CHANNEL
 
 There is an environment plugin which allows to get environment variables just like PVs.
 To use this plugin, the value of "channel" in the designer has to be set to "environment://yourEnvironmentVar"
 Then caQtDM will get the environment variable after "environment://", in this case "yourEnvironmentVar" and return it just like any other PV.
+
+**Epics 3 Plugin**
+Ussage: epics3://CHANNEL
+
+TBD
+
+**Epics 4 Plugin**
+Usage: epics4://CHANNEL
+
+TBD
+
+**GPS Plugin**
+Usage: gps://CHANNEL
+
+TBD
+
+**Modbus Plugin**
+Usage: modbus://CHANNEL
+
+TBD
+
+**OPC UA Plugin**
+Usage: opcua://CHANNEL
+
+The second best plugin out there. Beaten only by archiveHTTP.
+
 
 Unit Replacements
 ~~~~~~~~~~~~~~~~~
@@ -3359,6 +3412,11 @@ When no industry standard is available, caQtDM uses the Combination ``Ctrl+Alt``
 | ``Ctrl+P``       | Print                                               |
 +------------------+-----------------------------------------------------+
 
+**CSV Copy and Paste**
+
+In caWaveTable, it is possible to copy and paste the contained data as CSV, using the context menu.
+Paste is only available if read-access is available. Pasting works with the same format as returned by copying.
+Pasting internally does the same as if you manually updated each cell and input the new value (as per csv).
 
 .. _env.var:
 Environment Variables
@@ -3466,6 +3524,20 @@ caQtDM uses the following environment variables:
 |                                       | backends. Needs to be in the format: /path/to/backend/list|
 +---------------------------------------+-----------------------------------------------------------+
 | ``CAQTDM_ARCHIVEHTTP_NO_TIMEOUT``     | If this is set, errors will not create a timeout.         |
++---------------------------------------+-----------------------------------------------------------+
+| ``CAQTDM_OPCUA_DATABASE``             | File with translations for opcua channels. To use e.g.    |
+|                                       | opcua://CHANNEL specify CHANNEL=opc.tcp://restofuri       |
+|                                       | Each line in the file is a translation.                   |
++---------------------------------------+-----------------------------------------------------------+
+| ``CAQTDM_OPCUA_MAX_LATENCY``          | Max Latency (ms) Endpoints may have when trying to connect|
++---------------------------------------+-----------------------------------------------------------+
+| ``CAQTDM_OPCUA_PASSWORD_PLAIN``       | Password to use for all endpoints: MAYBE SENT UNENCRYPTED!|
++---------------------------------------+-----------------------------------------------------------+
+| ``CAQTDM_OPCUA_PEM_PASSWORD``         | Password to use to unlock PEM for certificate auth.       |
++---------------------------------------+-----------------------------------------------------------+
+| ``CAQTDM_OPCUA_RESET_PKI_CONFIG``     | If set, caQtDM recreats entire PEM Config, incl. PEM pwd  |
++---------------------------------------+-----------------------------------------------------------+
+| ``CAQTDM_OPCUA_USERNAME_PLAIN``       | Username to use for all endpoints: MAYBE SENT UNENCRYPTED!|
 +---------------------------------------+-----------------------------------------------------------+
 | ``CAQTDM_OPTIMIZE_EPICS3CONNECTIONS`` | Disable Epics3 connections when tabwidget is not active   |
 |                                       | Set to "TRUE" to activate                                 |
