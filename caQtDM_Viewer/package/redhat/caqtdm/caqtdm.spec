@@ -533,7 +533,7 @@ popd
 %defattr(755,root,root)
 /opt/caqtdm/lib/qt4/caqtdm_designer
 /opt/caqtdm/lib/qt4/caqtdm
-
+/usr/share/fonts/caqtdm
 
 
 %files qt4
@@ -577,6 +577,7 @@ fi
 %defattr(755,root,root)
 /opt/caqtdm/lib/qt5/caqtdm_designer
 /opt/caqtdm/lib/qt5/caqtdm
+/usr/share/fonts/caqtdm
 %files qt5
 /usr/local/bin
 
@@ -616,6 +617,7 @@ fi
 %defattr(755,root,root)
 /opt/caqtdm/lib/qt6/caqtdm_designer
 /opt/caqtdm/lib/qt6/caqtdm
+/usr/share/fonts/caqtdm
 %files qt6
 /usr/local/bin
 
