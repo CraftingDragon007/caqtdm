@@ -422,7 +422,18 @@ int main(int argc, char *argv[])
     }
 
     if (server && fileName.length() > 0) {
-        WidgetDimensions dimensions = getWidgetDimensionsFromUi(fileName);
+        WidgetDimensions dimensions;
+        if (!geometry.isNull() && !geometry.isEmpty()) {
+            auto tempDims = geometry.split('x');
+            dimensions = WidgetDimensions();
+            dimensions.found = true;
+            if (tempDims.length() >= 2) {
+                dimensions.width = tempDims[0].split('+')[0].toInt(&dimensions.found);
+                dimensions.height = tempDims[1].split('+')[0].toInt(&dimensions.found);
+            }
+        }
+        if (!dimensions.found)
+            dimensions = getWidgetDimensionsFromUi(fileName);
         if (dimensions.found) {
             if (dimensions.height <= 0 || dimensions.width <= 0) {
                 printf("caQtDM -- Negative or zero ui width / height found (%sx%s), not enabling server mode!", QString::number(dimensions.width).toUtf8().data(), QString::number(dimensions.height).toUtf8().data());
