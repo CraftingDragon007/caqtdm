@@ -440,11 +440,11 @@ body, html {
 }
 
 #reconnect-overlay {
-  position: fixed;
-  top: 32px; /* Below menu bar */
+  position: absolute;
+  top: 0;
   left: 0;
   width: 100%;
-  height: calc(100% - 32px);
+  height: 100%;
   background: #f1f5f9;
   z-index: 1000;
   display: none;
@@ -479,4 +479,13 @@ body, html {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+#view-menu-wrapper {
+  position: relative;
+}
+
+#view-menu {
+  left: 0;
+  right: auto;
 }

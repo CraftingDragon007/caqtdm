@@ -5,6 +5,7 @@ import RFB from './noVNC/core/rfb.js';
   let controlPath = params.get('control') || params.get('path') || '30000';
   let noVNCPath = params.get('novnc') || params.get('novncPath') || '30001';
   const macros = params.get('macros') || '';
+  const kioskMode = params.has('kiosk') || params.has('display');
 
   const vncContainer = document.getElementById('vnc-container');
   const reconnectOverlay = document.getElementById('reconnect-overlay');
@@ -28,6 +29,20 @@ import RFB from './noVNC/core/rfb.js';
   const urlBuilderWindow = document.getElementById('url-builder-window');
   const urlBuilderClose = document.getElementById('url-builder-close');
   const urlBuilderOpenTab = document.getElementById('url-builder-open-tab');
+
+  if (kioskMode) {
+    const menuBar = document.getElementById('menu-bar');
+    if (menuBar) menuBar.style.display = 'none';
+    if (vncContainer) {
+      vncContainer.style.top = '0';
+      vncContainer.style.height = '100%';
+    }
+    if (reconnectOverlay) {
+      reconnectOverlay.style.top = '0';
+      reconnectOverlay.style.height = '100%';
+    }
+  }
+
   let dialogTimeout = null;
   const DEFAULT_MIN_PADDING = 12;
   const DEFAULT_MIN_RESIZE_WIDTH = 240;
@@ -1044,8 +1059,46 @@ import RFB from './noVNC/core/rfb.js';
     if (launcherButton && (e.target === launcherButton || launcherButton.contains(e.target))) {
       return;
     }
+    const viewButton = document.getElementById('menu-view');
+    if (viewButton && (e.target === viewButton || viewButton.contains(e.target))) {
+      return;
+    }
     closeAllMenus();
   });
+
+  // View Menu Logic
+  const viewButton = document.getElementById('menu-view');
+  const viewMenu = document.getElementById('view-menu');
+  const fullScreenItem = document.getElementById('view-fullscreen');
+
+  if (viewButton && viewMenu) {
+    viewButton.addEventListener('click', function(e) {
+      const isShown = viewMenu.classList.contains('show');
+      closeAllMenus();
+      if (!isShown) {
+        viewMenu.classList.add('show');
+        viewButton.setAttribute('aria-expanded', 'true');
+      } else {
+        viewButton.setAttribute('aria-expanded', 'false');
+      }
+    });
+  }
+
+  if (fullScreenItem) {
+    fullScreenItem.addEventListener('click', function() {
+      const elem = document.getElementById('vnc-container');
+      if (!document.fullscreenElement) {
+        elem.requestFullscreen().catch(err => {
+          console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+        });
+      } else {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        }
+      }
+      closeAllMenus();
+    });
+  }
 
   connectWebSocket();
 })();

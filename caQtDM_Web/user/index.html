@@ -14,6 +14,12 @@
         <div id="menu-progress" style="display: none;">
           <p>Loading: </p><p id="progress-text"> 1%</p><progress id="progress-bar" value="1" max="100" style="width: 120px;"></progress>
         </div>
+        <div id="view-menu-wrapper">
+          <button type="button" id="menu-view" aria-haspopup="true" aria-expanded="false" aria-controls="view-menu">View</button>
+          <div id="view-menu" class="popup-menu" role="menu" aria-labelledby="menu-view">
+            <button class="menu-item menu-action" id="view-fullscreen" role="menuitem">Full Screen</button>
+          </div>
+        </div>
         <button type="button" id="menu-logs" aria-haspopup="dialog" aria-expanded="false" aria-controls="log-window">Logs</button>
       </div>
       <div id="menu-users">
@@ -21,7 +27,14 @@
         <span id="users-count">0</span>
       </div>
     </div>
-    <div id="vnc-container"></div>
+    <div id="vnc-container">
+    <div id="reconnect-overlay">
+        <div class="reconnect-content">
+            <div class="spinner"></div>
+            <p>Connection lost. Reconnecting...</p>
+        </div>
+    </div>
+    </div>
 
     <div id="log-window" role="dialog" aria-modal="false" aria-labelledby="log-title" tabindex="-1">
       <div id="log-header">
@@ -72,13 +85,6 @@
           <button type="button" id="error-ok" class="primary">OK</button>
         </div>
       </div>
-    </div>
-
-    <div id="reconnect-overlay">
-        <div class="reconnect-content">
-            <div class="spinner"></div>
-            <p>Connection lost. Reconnecting...</p>
-        </div>
     </div>
 
     <script type="module" src="index.js"></script>
