@@ -1,10 +1,13 @@
+import RFB from './noVNC/core/rfb.js';
+
 (function() {
   const params = new URLSearchParams(window.location.search);
   let controlPath = params.get('control') || params.get('path') || '30000';
   let noVNCPath = params.get('novnc') || params.get('novncPath') || '30001';
   const macros = params.get('macros') || '';
 
-  const iframe = document.getElementById('vnc-container');
+  const vncContainer = document.getElementById('vnc-container');
+  const reconnectOverlay = document.getElementById('reconnect-overlay');
   const dialogOverlay = document.getElementById('dialog-overlay');
   const dialogMessage = document.getElementById('dialog-message');
   const dialogAccept = document.getElementById('dialog-accept');
@@ -337,6 +340,10 @@
 
   let launcherObject = null;
 
+  let rfb = null;
+  let rfbReconnectTimer = null;
+  let rfbReconnectDelay = 1000;
+
   const logPopup = new PopupWindow({
     root: logWindow,
     header: logHeader,
@@ -509,46 +516,78 @@
     return value;
   }
 
-  function sanitizeNoVNCUrl(raw) {
-    if (raw == null) return null;
-    const value = String(raw).trim();
-    if (value === '') return null;
+  function handleRFBDisconnect(e) {
+    if (isConnectedRFB) {
+      // console.log('RFB Disconnected', e ? e.detail : 'Manual');
+    }
+    isConnectedRFB = false;
+    rfb = null;
+    reconnectOverlay.classList.add('show');
+    scheduleRFBReconnect();
+  }
 
-    // Allow only same-origin URLs under the /noVNC path.
+  function handleRFBConnect() {
+    isConnectedRFB = true;
+    rfbReconnectDelay = 1000;
+    reconnectOverlay.classList.remove('show');
+  }
+
+  let isConnectedRFB = false;
+
+  function connectRFB() {
+    if (rfbReconnectTimer) {
+      clearTimeout(rfbReconnectTimer);
+      rfbReconnectTimer = null;
+    }
+
+    if (rfb) {
+      rfb.removeEventListener('disconnect', handleRFBDisconnect);
+      try { rfb.disconnect(); } catch (e) {}
+      rfb = null;
+    }
+
+    isConnectedRFB = false;
+    // Ensure overlay is shown when we start connecting or reconnecting
+    reconnectOverlay.classList.add('show');
+
+    let wsUrl;
+    const path = getNoVNCPath();
+
     try {
-      const url = new URL(value, window.location.origin);
-      if (url.origin !== window.location.origin) {
-        return null;
+      const tempUrl = new URL(path);
+      if (tempUrl.protocol === 'ws:' || tempUrl.protocol === 'wss:') {
+        wsUrl = path;
+      } else {
+        throw new Error("Not a WS URL");
       }
-      if (!url.pathname.startsWith('/noVNC')) {
-        return null;
-      }
-      if (url.protocol !== window.location.protocol) {
-        return null;
-      }
-      return url.toString();
     } catch (e) {
-      return null;
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+      wsUrl = wsProtocol + window.location.host + '/websockify/' + encodeURIComponent(path);
+    }
+
+    try {
+      rfb = new RFB(vncContainer, wsUrl);
+      rfb.scaleViewport = true;
+      rfb.addEventListener('connect', handleRFBConnect);
+      rfb.addEventListener('disconnect', handleRFBDisconnect);
+    } catch (e) {
+      console.error('RFB Init Failed:', e);
+      reconnectOverlay.classList.add('show');
+      scheduleRFBReconnect();
     }
   }
 
-  function setIframeToNoVNCPath(p) {
-    let value = p;
-    if (value == null || value === '') value = '30001';
-    value = String(value).trim();
-
-    const sanitizedUrl = sanitizeNoVNCUrl(value);
-    if (sanitizedUrl !== null) {
-      iframe.src = sanitizedUrl;
-      noVNCPath = value;
-      return;
-    }
-
-    noVNCPath = value;
-    iframe.src = '/noVNC/vnc.html?path=/websockify/' + encodeURIComponent(getNoVNCPath()) + '&autoconnect=true&reconnect=true&reconnect_delay=5000&resize=scale';
+  function scheduleRFBReconnect() {
+    if (rfbReconnectDelay < 0) return;
+    if (rfbReconnectTimer) return;
+    rfbReconnectTimer = setTimeout(function() {
+      rfbReconnectTimer = null;
+      rfbReconnectDelay = Math.min(rfbReconnectDelay * 2, 10000);
+      connectRFB();
+    }, rfbReconnectDelay);
   }
 
-  setIframeToNoVNCPath(noVNCPath);
+  connectRFB();
 
   let reconnectDelay = 1000;
   let reconnectTimer = null;
@@ -596,7 +635,7 @@
         setTimeout(function() {
           if (connectedOnce)
             addLogMessage('<font color="green">' + dateTime + ' Reconnected to server.</font>');
-          iframe.contentWindow.location.reload();
+          connectRFB();
         }, 1000);
       } else if ((resolvedControlPath != null || !isNonNumericControlPath) && !connectedOnce) {
         addLogMessage('<font color="green">' + dateTime + ' Connected to server.</font>');
@@ -690,7 +729,12 @@
           errorOkButton.style.display = 'none';
         }
         socket.close();
-        iframe.src = 'about:blank';
+        if (rfb) {
+          rfb.removeEventListener('disconnect', handleRFBDisconnect);
+          try { rfb.disconnect(); } catch (e) {}
+          rfb = null;
+        }
+        vncContainer.innerHTML = '';
         return;
       }
       if (data.startsWith('OPEN_URL|')) {
@@ -747,7 +791,7 @@
           resolvedControlPath = nextControlPath || '30000';
           resolvedNoVNCPath = nextNoVNCPath || '30001';
           originalControlFile = controlPath;
-          setIframeToNoVNCPath(resolvedNoVNCPath);
+          connectRFB();
           socket.close();
           newInstance = true;
           // onclose will call scheduleReconnect, which will use the resolved control path
