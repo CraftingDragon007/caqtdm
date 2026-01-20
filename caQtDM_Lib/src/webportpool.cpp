@@ -26,35 +26,34 @@ bool WebPortPool::allocate(quint16& port1, quint16& port2)
 {
     QMutexLocker lock(&m_mutex);
 
-    if (m_freePorts.isEmpty()) {
-        return false;
+    while (m_freePorts.size() >= 2) {
+        auto it1 = m_freePorts.begin();
+        quint16 p1 = *it1;
+        m_freePorts.erase(it1);
+
+        if (!isPortFree(QHostAddress("127.0.0.1"), p1)) {
+            continue;
+        }
+
+        auto it2 = m_freePorts.begin();
+        quint16 p2 = *it2;
+        m_freePorts.erase(it2);
+
+        if (!isPortFree(QHostAddress("127.0.0.1"), p2)) {
+            m_freePorts.insert(p1);
+            continue;
+        }
+
+        port1 = p1;
+        port2 = p2;
+
+        if (m_freePorts.size() < 100) {
+            emit lowPortsAvailable(static_cast<int>(m_freePorts.size()));
+        }
+        return true;
     }
 
-    auto it1 = m_freePorts.begin();
-    port1 = *it1;
-    m_freePorts.erase(it1);
-
-    if (m_freePorts.isEmpty()) {
-        m_freePorts.insert(port1);  // Rollback
-        return false;
-    }
-
-    auto it2 = m_freePorts.begin();
-    port2 = *it2;
-    m_freePorts.erase(it2);
-
-    // Strict bind-check on localhost
-    if (!isPortFree(QHostAddress("127.0.0.1"), port1) || !isPortFree(QHostAddress("127.0.0.1"), port2)) {
-        m_freePorts.insert(port1);
-        m_freePorts.insert(port2);
-        return false;
-    }
-
-    if (m_freePorts.size() < 100) {
-        emit lowPortsAvailable(static_cast<int>(m_freePorts.size()));
-    }
-
-    return true;
+    return false;
 }
 
 void WebPortPool::release(quint16 port)
