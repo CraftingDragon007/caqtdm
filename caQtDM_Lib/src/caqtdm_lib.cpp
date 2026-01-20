@@ -8026,6 +8026,13 @@ void CaQtDM_Lib::closeEvent(QCloseEvent* ce)
   */
 void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
 {
+    // prevent opening of popup windows when main window is to small to properly display them
+    if (IS_VNC && (this->width() < 380 || this->height() < 560)) {
+        if (WebSocketServer::instance().isInitialized())
+            WebSocketServer::instance().sendError("Widget is to small to be able to display a context menu or popup window");
+        return;
+    }
+
     QMenu myMenu;
     QPoint cursorPos =QCursor::pos() ;
     QString ClassName;

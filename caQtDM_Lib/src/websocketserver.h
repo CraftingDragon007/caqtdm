@@ -28,6 +28,8 @@ public:
 
     void sendProgressInfo(int initialProgress, int maxProgress);
     void sendProgressUpdate(int progress);
+
+    void sendError(QString message);
 private slots:
     void onNewConnection();
     void processTextMessage(const QString &message);

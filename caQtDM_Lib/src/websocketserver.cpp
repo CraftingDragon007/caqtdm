@@ -303,3 +303,12 @@ void WebSocketServer::sendLauncherInfo(QWebSocket *receiver) {
         receiver->sendTextMessage(QString("LAUNCHER|%1").arg(QString::fromUtf8(doc.toJson(QJsonDocument::Indented))));
     }
 }
+
+void WebSocketServer::sendError(QString message) {
+    QReadLocker locker(&m_clientReadWriteLock);
+    foreach (QWebSocket *pSocket, m_clients) {
+        if (pSocket != nullptr) {
+            pSocket->sendTextMessage(QString("ERROR|%1").arg(message));
+        }
+    }
+}
