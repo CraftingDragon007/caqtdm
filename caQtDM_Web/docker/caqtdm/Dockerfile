@@ -109,7 +109,7 @@ COPY --from=builder /usr/lib/qt6/plugins/platforms/libqnovnc.so /usr/lib/qt6/plu
 RUN mkdir -p /app/caqtdm_display_path
 
 ENV CAQTDM_DISPLAY_PATH=/app/caqtdm_display_path:/opt/caqtdm/caqtdm_tests
-ENV EPICS_CA_ADDR_LIST=sf-cagw.psi.ch:5062
+ENV EPICS_CA_ADDR_LIST=
 ENV EPICS_CA_MAX_ARRAY_BYTES=40000000
 
 ENV ENTRY_PANEL=tests.ui
