@@ -406,6 +406,11 @@ popd
 	cp %{_builddir}/%{name}-%{version}/caQtDM_QtControls/doc/*.css     %{buildroot}/opt/caqtdm/doc
 
 	cp -R %{_builddir}/%{name}-%{version}/build/* %{buildroot}
+
+        # Copy the lucida font to the installation directory
+        mkdir -p %{buildroot}/usr/share/fonts/caqtdm/
+        cp %{_builddir}/%{name}-%{version}/caQtDM_Viewer/lucida-sans-typewriter.ttf  %{buildroot}/usr/share/fonts/caqtdm/
+
                 
         # Create ld.so.conf.d/caqtdm.conf file because there is no rpath in the binaries
         # Only create the file when CAQTDM_NORPATH=1 (build option) is set
