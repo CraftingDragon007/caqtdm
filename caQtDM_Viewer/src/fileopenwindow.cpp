@@ -1477,6 +1477,28 @@ void FileOpenWindow::Callback_OpenNewFile(const QString& inputFile, const QStrin
         //qDebug() << "file" << fileNameFound << "will be loaded" << "macro=" << macroString;
         QPoint position(0,0);
         QMainWindow *mainWindow = loadMainWindow(position, fileNameFound, macroString, resizeString, printandexit, false, (geometry == ""));//if geometry is empty center window (for windows)
+        if (CaQtDM_Lib::vncServer) {
+            QByteArray envWidth = qgetenv("VIRTUAL_WIDTH");
+            QByteArray envHeight = qgetenv("VIRTUAL_HEIGHT");
+
+            if (!envWidth.isEmpty() && !envHeight.isEmpty()) {
+                bool wOk, hOk;
+
+                int width = envWidth.toInt(&wOk);
+                int height = envHeight.toInt(&hOk);
+
+                QSize minSize = mainWindow->minimumSize();
+                QSize maxSize = mainWindow->maximumSize();
+
+                width = qMin(width, maxSize.width());
+                height = qMin(height, maxSize.height());
+                width = qMax(width, minSize.width());
+                height = qMax(height, minSize.height());
+
+                qDebug() << "Setting window size to virtual monitor size" << width << height;
+                mainWindow->setGeometry(mainWindow->x(), mainWindow->y(), width, height);
+            }
+        }
         if(geometry != "") {
             parse_and_set_Geometry(mainWindow, geometry);
         }

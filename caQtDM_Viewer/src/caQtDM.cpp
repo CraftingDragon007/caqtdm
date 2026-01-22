@@ -423,14 +423,19 @@ int main(int argc, char *argv[])
 
     if (server && fileName.length() > 0) {
         WidgetDimensions dimensions;
-        if (!geometry.isNull() && !geometry.isEmpty()) {
-            auto tempDims = geometry.split('x');
+
+        QByteArray envWidth = qgetenv("VIRTUAL_WIDTH");
+        QByteArray envHeight = qgetenv("VIRTUAL_HEIGHT");
+        if (!envWidth.isEmpty() && !envHeight.isEmpty()) {
             dimensions = WidgetDimensions();
-            dimensions.found = true;
-            if (tempDims.length() >= 2) {
-                dimensions.width = tempDims[0].split('+')[0].toInt(&dimensions.found);
-                dimensions.height = tempDims[1].split('+')[0].toInt(&dimensions.found);
-            }
+            bool wOk, hOk;
+
+            dimensions.width = envWidth.toInt(&wOk);
+            dimensions.height = envHeight.toInt(&hOk);
+
+            dimensions.found = wOk && hOk;
+        } else {
+            dimensions.found = false;
         }
         if (!dimensions.found)
             dimensions = getWidgetDimensionsFromUi(fileName);
