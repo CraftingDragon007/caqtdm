@@ -5,7 +5,7 @@ import RFB from './noVNC/core/rfb.js';
   let controlPath = params.get('control') || params.get('path') || '30000';
   let noVNCPath = params.get('novnc') || params.get('novncPath') || '30001';
   const macros = params.get('macros') || '';
-  const kioskMode = params.has('kiosk') || params.has('display');
+  const displayMode = params.has('display');
 
   const vncContainer = document.getElementById('vnc-container');
   const reconnectOverlay = document.getElementById('reconnect-overlay');
@@ -30,7 +30,7 @@ import RFB from './noVNC/core/rfb.js';
   const urlBuilderClose = document.getElementById('url-builder-close');
   const urlBuilderOpenTab = document.getElementById('url-builder-open-tab');
 
-  if (kioskMode) {
+  if (displayMode) {
     const menuBar = document.getElementById('menu-bar');
     if (menuBar) menuBar.style.display = 'none';
     if (vncContainer) {
