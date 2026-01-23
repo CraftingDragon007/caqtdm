@@ -3439,7 +3439,16 @@ When no industry standard is available, caQtDM uses the Combination ``Ctrl+Alt``
 
 In caWaveTable, it is possible to copy and paste the contained data as CSV, using the context menu.
 Paste is only available if read-access is available. Pasting works with the same format as returned by copying.
-Pasting internally does the same as if you manually updated each cell and input the new value (as per csv).
+Pasting internally does the same as if you manually updated each cell and input the new value.
+
+By default, the column separator is a comma (,) and the row separator is a newline (\n).
+The separator can be changed by defining the environment variable ``CAQTDM_CSV_SEPARATOR``. It may only be a single char.
+
+If a custom header row is present (specified in the UI-File), then it will be added to the copied output, as the first line.
+Pasting a header is not possible. When pasted text has a first row that is detected to be a header row, that row is discarded.
+A row is detected to be a header row, when:
+- It is equivalent to the already present header row
+- It's first value cannot be converted to the same datatype as the first value of the second row
 
 .. _env.var:
 Environment Variables
@@ -3499,6 +3508,8 @@ caQtDM uses the following environment variables:
 |                                      | characters or hexadecimal / decimal utf-8     |
 |                                      | character codes, seperated by (,) , (=)       |
 |                                      | and (;).                                      |
++--------------------------------------+-----------------------------------------------+
+| ``CAQTDM_CSV_SEPARATOR``             | The CSV Separator used in certain operations. | 
 +--------------------------------------+-----------------------------------------------+
 | ``CAQTDM_SCREENSHOT_NAME``           | If caQtDM was started with -print this will   |
 |                                      | specify the name of the screenshot file       |

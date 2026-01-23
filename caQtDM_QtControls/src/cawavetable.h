@@ -144,6 +144,8 @@ public:
     int getVerticalOffset() const;
     void setVerticalOffset(int newVerticalOffset);
 
+    QString getHeaderCSV();
+
 public slots:
     void animation(QRect p) {
 #include "animationcode.h"
@@ -187,6 +189,7 @@ signals:
     void verticalScrollbarChanged(int);
     void horizontalScrollbarChanged(int);
 
+    void messageWindowOutput(const QtMsgType type, const QString &message);
 
 private:
     bool eventFilter(QObject *obj, QEvent *event);
@@ -238,6 +241,7 @@ private:
     int horizontalOffset;
     int verticalOffset;
 
+    QChar csvSeparator;
 };
 
 #endif
