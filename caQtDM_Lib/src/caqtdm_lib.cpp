@@ -284,6 +284,7 @@
 Q_DECLARE_METATYPE(QList<int>)
 Q_DECLARE_METATYPE(QTabWidget*)
 Q_DECLARE_METATYPE(QStackedWidget*)
+Q_DECLARE_METATYPE(QtMsgType)
 
 // this sleep will not block the GUI and QThread::msleep is protected in Qt4.8 (so do not use that)
 class Sleep
@@ -6775,6 +6776,10 @@ void CaQtDM_Lib::getStatesToggleAndLed(QWidget *widget, const knobData &data, co
             if(falseString.compare(str) == 0) state = Qt::Unchecked;
         }
     }
+}
+
+void CaQtDM_Lib::messageWindowOutput(const QtMsgType type, const QString &message) {
+    postMessage(type, message.toLatin1().data());
 }
 
 void CaQtDM_Lib::Callback_CaCalc(double value)
