@@ -604,14 +604,18 @@ void caLineEdit::setTextLine(const QString &txt)
         return;
     }
     pos = cursorPosition();
-    QLineEdit::setText(txt);
-    setCursorPosition(pos);
-    //printf("settext: %s <%s> <%s> cursor@%d\n", qasc(thisPV),  qasc(txt), pos);
+
 
     if(QLineEdit::text().size() != txt.size()) {
-       FontScalingWidget::rescaleFont(text(), d_savedTextSpace);
+       FontScalingWidget::rescaleFont(txt, d_savedTextSpace);
+       QLineEdit::setText(txt);
+       repaint();
+    }else{
+       QLineEdit::setText(txt);
     }
 
+    setCursorPosition(pos);
+    //printf("settext: %s <%s> <%s> cursor@%d\n", qasc(thisPV),  qasc(txt), pos);
 }
 
 
