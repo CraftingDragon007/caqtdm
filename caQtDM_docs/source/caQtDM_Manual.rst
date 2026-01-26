@@ -3563,13 +3563,15 @@ caQtDM uses the following environment variables:
 |                                       | opcua://CHANNEL specify CHANNEL=opc.tcp://restofuri       |
 |                                       | Each line in the file is a translation.                   |
 +---------------------------------------+-----------------------------------------------------------+
-| ``CAQTDM_OPCUA_MAX_LATENCY``          | Max Latency (ms) Endpoints may have when trying to connect|
+| ``CAQTDM_OPCUA_MAX_LATENCY``          | Max latency (ms) endpoints may have when trying to connect|
 +---------------------------------------+-----------------------------------------------------------+
 | ``CAQTDM_OPCUA_PASSWORD_PLAIN``       | Password to use for all endpoints: MAYBE SENT UNENCRYPTED!|
 +---------------------------------------+-----------------------------------------------------------+
 | ``CAQTDM_OPCUA_PEM_PASSWORD``         | Password to use to unlock PEM for certificate auth.       |
 +---------------------------------------+-----------------------------------------------------------+
-| ``CAQTDM_OPCUA_RESET_PKI_CONFIG``     | If set, caQtDM recreats entire PEM Config, incl. PEM pwd  |
+| ``CAQTDM_OPCUA_RESET_PKI_CONFIG``     | If set, caQtDM recreats entire PEM config, incl. PEM pwd  |
++---------------------------------------+-----------------------------------------------------------+
+| ``CAQTDM_OPCUA_SESSION_TIMEOUT``      | Session timeout  (ms) for opcua connections.              |
 +---------------------------------------+-----------------------------------------------------------+
 | ``CAQTDM_OPCUA_USERNAME_PLAIN``       | Username to use for all endpoints: MAYBE SENT UNENCRYPTED!|
 +---------------------------------------+-----------------------------------------------------------+
