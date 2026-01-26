@@ -132,7 +132,6 @@
 
 #define POPUPDEFENITION "popup.ui"
 
-#define IS_VNC (vncServer)
 
 #define WEB_CARELATED_DISPLAY_ERROR_MSG "Unable to open this caRelatedDisplay, please check your caQtDM Web configuration."
 
@@ -742,7 +741,7 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
     connect(ReloadAllWindowsAction, SIGNAL(triggered()), this, SLOT(Callback_reloadAllWindows()));
     this->addAction(ReloadAllWindowsAction);
 
-    if (!IS_VNC) {
+    if (!vncServer) {
         // add a print action
         QAction *PrintWindowAction = new QAction(this);
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -1748,7 +1747,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         // finish tooltip
         tooltip.append(ToolTipPostfix);
 
-        if (!IS_VNC)
+        if (!vncServer)
             cameraWidget->setToolTip(tooltip);
 
         cameraWidget->setProperty("Taken", true);
@@ -3109,7 +3108,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
         // finish tooltip
         tooltip.append(ToolTipPostfix);
-        if (!IS_VNC)
+        if (!vncServer)
             cartesianplotWidget->setToolTip(tooltip);
 
         // reaffect titles
@@ -3170,7 +3169,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
         // finish tooltip
         tooltip.append(ToolTipPostfix);
-        if (!IS_VNC)
+        if (!vncServer)
             waterfallplotWidget->setToolTip(tooltip);
 
         // insert dataindex list
@@ -3252,7 +3251,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
         // finish tooltip
         tooltip.append(ToolTipPostfix);
-        if (!IS_VNC)
+        if (!vncServer)
             stripplotWidget->setToolTip(tooltip);
 
         title = stripplotWidget->getTitlePlot();
@@ -3433,7 +3432,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
         // finish tooltip
         tooltip.append(ToolTipPostfix);
-        if (!IS_VNC)
+        if (!vncServer)
             scan2dWidget->setToolTip(tooltip);
 
         integerList.insert(0, nbMonitors); /* set property into stripplotWidget */
@@ -4391,7 +4390,7 @@ int CaQtDM_Lib::addMonitor(QWidget *thisW, knobData *kData, QString pv, QWidget 
     }
 
     tooltip.append(ToolTipPostfix);
-    if (!IS_VNC)
+    if (!vncServer)
         w->setToolTip(tooltip);
 
     memcpy(kData->specData, specData, sizeof(int) * NBSPECS);
@@ -7318,7 +7317,7 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
 
 
 
-    if (!IS_VNC) {
+    if (!vncServer) {
 
         // do we have to remove this window while removeparent was specified
         if(indx < removeParents.count()) {
@@ -8027,7 +8026,7 @@ void CaQtDM_Lib::closeEvent(QCloseEvent* ce)
 void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
 {
     // prevent opening of popup windows when main window is to small to properly display them
-    if (IS_VNC && (this->width() < 380 || this->height() < 560)) {
+    if (vncServer && (this->width() < 380 || this->height() < 560)) {
         if (WebSocketServer::instance().isInitialized())
             WebSocketServer::instance().sendError("Widget is to small to be able to display a context menu or popup window");
         return;
@@ -8267,7 +8266,7 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
         onMain = true;
         myMenu.addAction(UNDEFINEDMACROS);
         myMenu.addAction(GLOBALSHORTCUTS);
-        if (!IS_VNC) {
+        if (!vncServer) {
             myMenu.addAction(PRINTWINDOW);
             myMenu.addAction(RAISEWINDOW);
         }
@@ -8336,7 +8335,7 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
                 knobData *kPtr = mutexKnobDataP->GetMutexKnobDataPtr(dataIndex);
                 if((kPtr != (knobData *) Q_NULLPTR) && (strlen(kPtr->pv) > 0)) {
                     myMenu.addAction(INPUTDIALOG);
-                    if(((kPtr->edata.fieldtype == caSTRING) || (kPtr->edata.fieldtype == caCHAR)) && !IS_VNC) {
+                    if(((kPtr->edata.fieldtype == caSTRING) || (kPtr->edata.fieldtype == caCHAR)) && !vncServer) {
                         myMenu.addAction(FILEDIALOG);
                     }
                 }
@@ -9055,7 +9054,7 @@ int CaQtDM_Lib::InitVisibility(QWidget* widget, knobData* kData, QMap<QString, Q
         }
     }
     tooltip.append(ToolTipPostfix);
-    if (!IS_VNC)
+    if (!vncServer)
         if(nbMon> 0) widget->setToolTip(tooltip);
 
     // replace macros for imagecalc
