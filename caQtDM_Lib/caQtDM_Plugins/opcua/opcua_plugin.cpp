@@ -277,13 +277,15 @@ int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
         return false;
     };
 
+    const QString URI = endpoint + "/" + nodeId;
+
     knobData *kDataPtr = m_mutexKnobDataP->GetMutexKnobDataPtr(index);
     qstrncpy(kDataPtr->edata.fec, endpoint.toLatin1().constData(), caqtdm_string_t_length);
 
     int samplingIntervalMs = getUpdateIntervalFromKnobData(kData);
     SubscriptionSettings pendingSubscription = {nodeId, samplingIntervalMs};
 
-    m_channelCache.insert(nodeId, index);
+    m_channelCache.insert(URI, index);
 
     OpcUaCore *core;
     {
@@ -296,8 +298,8 @@ int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
             QObject::connect(core,
                              &OpcUaCore::valueRead,
                              this,
-                             [=](const QString &nodeId, const QVariant &value) {
-                                 auto range = m_channelCache.equal_range(nodeId);
+                             [=](const QString &URI, const QVariant &value) {
+                                 auto range = m_channelCache.equal_range(URI);
                                  for (auto it = range.first; it != range.second; ++it) {
                                      int idx = it.value();
                                      knobData kData = m_mutexKnobDataP->GetMutexKnobData(idx);
@@ -314,10 +316,10 @@ int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
             QObject::connect(core,
                              &OpcUaCore::accessLevelRead,
                              this,
-                             [=](const QString &nodeId,
+                             [=](const QString &URI,
                                  const bool &readAccess,
                                  const bool &writeAccess) {
-                                 auto range = m_channelCache.equal_range(nodeId);
+                                 auto range = m_channelCache.equal_range(URI);
                                  for (auto it = range.first; it != range.second; ++it) {
                                      int idx = it.value();
                                      knobData kData = m_mutexKnobDataP->GetMutexKnobData(idx);
@@ -365,8 +367,8 @@ int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
             QObject::connect(core,
                              &OpcUaCore::attributeGotError,
                              this,
-                             [=](const QString &nodeId, const QString &errorMsg) {
-                                 auto range = m_channelCache.equal_range(nodeId);
+                             [=](const QString &URI, const QString &errorMsg) {
+                                 auto range = m_channelCache.equal_range(URI);
                                  for (auto it = range.first; it != range.second; ++it) {
                                      int idx = it.value();
                                      knobData kData = m_mutexKnobDataP->GetMutexKnobData(idx);
@@ -460,6 +462,8 @@ int OPCUAPlugin::pvClearMonitor(knobData *kData)
         return false;
     };
 
+    const QString URI = endpoint + "/" + nodeId;
+
     if (nodeId.isEmpty()) {
         if (m_messageWindowP) {
             QString msg = QString("OPCUA: No nodeId found for index %1").arg(index);
@@ -469,10 +473,10 @@ int OPCUAPlugin::pvClearMonitor(knobData *kData)
     }
 
     m_knobDataIndicesForEndpoint[endpoint].removeAll(index);
-    m_channelCache.remove(nodeId, index);
+    m_channelCache.remove(URI, index);
 
     // In case other knobDatas still use this node, return
-    if (m_channelCache.contains(nodeId))
+    if (m_channelCache.contains(URI))
         return true;
 
     // Else unsubscribe from the node
@@ -482,20 +486,12 @@ int OPCUAPlugin::pvClearMonitor(knobData *kData)
             core->unsubscribeFromNode(nodeId);
         }
 
-        m_cores.remove(nodeId);
-
         // Check if any other node is still connected to this core
-        bool coreIsStillUsed = false;
-        for (auto it = m_cores.begin(); it != m_cores.end(); ++it) {
-            if (it.value() == core) {
-                coreIsStillUsed = true;
-            }
-        }
-
         // Remove the core if its not used anymore
-        if (!coreIsStillUsed) {
+        if (!core->hasAnySubscriptions()) {
             core->disconnectOpc();
             core->deleteLater();
+            m_cores.remove(endpoint);
         }
     }
 

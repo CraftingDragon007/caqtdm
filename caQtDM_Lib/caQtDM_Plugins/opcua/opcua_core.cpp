@@ -25,6 +25,8 @@
 #include "opcua_core.h"
 #include <QApplication>
 #include <QDebug>
+#include <QOpcUaConnectionSettings>
+#include <QOpcUaErrorState>
 #include <QStandardPaths>
 #include <QTimer>
 #include "qdir.h"
@@ -33,14 +35,13 @@
 #include "qopcuaauthenticationinformation.h"
 #include "qtcpsocket.h"
 #include "x509certificate.h"
-#include <qopcuaerrorstate.h>
 
-#define DEFAULT_OPCUA_PORT 4840
 #define INITIAL_RECONNECTION_TIMEOUT 100
 #define RECONNECTION_TIMEOUT_FACTOR 2
 #define MAX_RECONNECTION_TIMEOUT 60000
 
 #define DEFAULT_MAX_LATENCY 500
+#define DEFAULT_SESSION_TIMEOUT 3600000
 
 #define NOPASS_PLACEHOLDER "caQtDM"
 
@@ -62,6 +63,24 @@ OpcUaCore::OpcUaCore(QObject *parent)
     if (!m_client) {
         VERBOSELOG("Failed to create OPC UA client instance.");
         return;
+    }
+
+    QString timeString = qgetenv("CAQTDM_OPCUA_MAX_LATENCY");
+    {
+        bool ok = false;
+        m_maxLatency = std::chrono::milliseconds(timeString.toInt(&ok));
+        if (!ok) {
+            m_maxLatency = std::chrono::milliseconds(DEFAULT_MAX_LATENCY);
+        }
+    }
+
+    timeString = qgetenv("CAQTDM_OPCUA_SESSION_TIMEOUT");
+    {
+        bool ok = false;
+        m_sessionTimeout = std::chrono::milliseconds(timeString.toInt(&ok));
+        if (!ok) {
+            m_sessionTimeout = std::chrono::milliseconds(DEFAULT_SESSION_TIMEOUT);
+        }
     }
 
     QString username = qgetenv("CAQTDM_OPCUA_USERNAME_PLAIN");
@@ -142,8 +161,11 @@ OpcUaCore::OpcUaCore(QObject *parent)
 
         if (m_reconnecting)
             return;
-
         m_reconnecting = true;
+
+        // Welp, can't be monitoring anything when disconnected
+        m_activelyMonitoredNodes.clear();
+
         m_reconnectionAttempt = 0;
         m_reconnectionTimeoutMs = INITIAL_RECONNECTION_TIMEOUT;
 
@@ -162,6 +184,10 @@ OpcUaCore::OpcUaCore(QObject *parent)
                 return;
             }
 
+            QOpcUaConnectionSettings settings = m_client->connectionSettings();
+            settings.setSessionTimeout(m_sessionTimeout);
+            settings.setConnectTimeout(2 * m_maxLatency); // Give it some more time, since it might be experiencing issues
+            m_client->setConnectionSettings(settings);
             m_client->connectToEndpoint(m_currentEndpointDescription);
             m_reconnectionAttempt++;
             m_reconnectionTimeoutMs = qMin(
@@ -172,6 +198,15 @@ OpcUaCore::OpcUaCore(QObject *parent)
         });
 
         reconnectTimer->start(0);
+    });
+
+    QObject::connect(m_client, &QOpcUaClient::connectError, this, [](QOpcUaErrorState *state) {
+        QString errorMessage = "connectError: " + QString::number(state->errorCode()) + " ["
+                               + QMetaEnum::fromType<QOpcUa::UaStatusCode>().valueToKey(
+                                   state->errorCode())
+                               + "], isClientSideError: "
+                               + (state->isClientSideError() ? "yes" : "no");
+        VERBOSELOG(errorMessage);
     });
 
     QObject::connect(
@@ -221,7 +256,9 @@ OpcUaCore::~OpcUaCore()
 
     if (m_client) {
         QObject::disconnect(m_client);
-        disconnectOpc();
+        if (m_client->state() != QOpcUaClient::ClientState::Disconnected) {
+            disconnectOpc();
+        }
         m_client->deleteLater();
     }
 }
@@ -292,15 +329,6 @@ QOpcUaEndpointDescription OpcUaCore::getEndpointWithLowestLatency(
     QEventLoop loop;
     QTimer timer;
     timer.setSingleShot(true);
-    QString timeoutString = qgetenv("CAQTDM_OPCUA_MAX_LATENCY");
-    int timeout;
-    {
-        bool ok = false;
-        timeout = timeoutString.toInt(&ok);
-        if (!ok) {
-            timeout = DEFAULT_MAX_LATENCY;
-        }
-    }
 
     QObject::connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
 
@@ -331,7 +359,7 @@ QOpcUaEndpointDescription OpcUaCore::getEndpointWithLowestLatency(
     }
 
     // Try to connect to all endpoints for a certain time. Due to signal / slot mechanism, the fastest connection will usually be chosen.
-    timer.start(timeout);
+    timer.start(m_maxLatency);
     loop.exec();
 
     return chosenEndpoint;
@@ -421,7 +449,7 @@ bool OpcUaCore::connectOpc(const QString &url)
         VERBOSELOG("Client is not initialized.");
         return false;
     }
-    m_latestEndpointUrl = url;
+    m_latestEndpoint = url;
 
     auto conn = new QMetaObject::Connection;
     *conn = QObject::connect(
@@ -464,6 +492,10 @@ bool OpcUaCore::connectOpc(const QString &url)
             }
 #endif
 
+            QOpcUaConnectionSettings settings = m_client->connectionSettings();
+            settings.setSessionTimeout(m_sessionTimeout);
+            m_client->setConnectionSettings(settings);
+
             m_client->connectToEndpoint(chosenEndpoint);
             m_currentEndpointDescription = chosenEndpoint;
         });
@@ -501,7 +533,8 @@ void OpcUaCore::subscribeToNode(const SubscriptionSettings &subscriptionSettings
     if (m_subscriptionNodes.contains(nodeId)) {
         // In case we already have it and there is a value available, emit it in case the old subscription was lost
         if (m_subscriptionNodes[nodeId]->valueAttribute().isValid()) {
-            emit valueRead(nodeId, m_subscriptionNodes[nodeId]->valueAttribute());
+            QString URI = nodeId + "/" + m_latestEndpoint;
+            emit valueRead(URI, m_subscriptionNodes[nodeId]->valueAttribute());
         }
         return;
     }
@@ -535,10 +568,12 @@ void OpcUaCore::startMonitoringOfNode(QOpcUaNode *node)
               }
               m_activelyMonitoredNodes.insert(nodeId);
 
+              QString URI = m_latestEndpoint + "/" + nodeId;
+
               // Check for value errors
               QOpcUa::UaStatusCode statusCode = node->valueAttributeError();
               if (statusCode && statusCode != QOpcUa::UaStatusCode::Good) {
-                  emit attributeGotError(nodeId,
+                  emit attributeGotError(URI,
                                          QString::fromUtf8(
                                              QMetaEnum::fromType<QOpcUa::UaStatusCode>().valueToKey(
                                                  statusCode)));
@@ -579,12 +614,12 @@ void OpcUaCore::startMonitoringOfNode(QOpcUaNode *node)
               QObject::connect(node,
                                &QOpcUaNode::dataChangeOccurred,
                                this,
-                               [this, nodeId](QOpcUa::NodeAttribute attr, const QVariant &value) {
+                               [this, URI](QOpcUa::NodeAttribute attr, const QVariant &value) {
                                    if (attr == QOpcUa::NodeAttribute::Value) {
                                        if (value.isValid()) {
-                                           emit valueRead(nodeId, value);
+                                           emit valueRead(URI, value);
                                        } else {
-                                           emit attributeGotError(nodeId, "Invalid Value");
+                                           emit attributeGotError(URI, "Invalid Value");
                                        }
                                    }
                                });
@@ -598,7 +633,7 @@ void OpcUaCore::startMonitoringOfNode(QOpcUaNode *node)
                                     & static_cast<quint8>(QOpcUa::AccessLevelBit::CurrentRead);
                   bool writeAccess = accessLevel.value<quint8>()
                                      & static_cast<quint8>(QOpcUa::AccessLevelBit::CurrentWrite);
-                  emit accessLevelRead(nodeId, readAccess, writeAccess);
+                  emit accessLevelRead(URI, readAccess, writeAccess);
               }
           });
 
@@ -627,6 +662,10 @@ bool OpcUaCore::isClientConnected()
         return false;
     }
     return true;
+}
+
+bool OpcUaCore::hasAnySubscriptions() const {
+    return !m_subscriptionNodes.isEmpty();
 }
 
 bool OpcUaCore::hasSubscription(const QString &nodeId) const
@@ -716,7 +755,8 @@ bool OpcUaCore::writeDataDynamically(QOpcUaNode *node,
                                  if (existingValue.isValid()) {
                                      doWrite(existingValue);
                                  } else {
-                                     emit attributeGotError(node->nodeId(), "Invalid Value");
+                                     QString URI = m_latestEndpoint + "/"  + node->nodeId();
+                                     emit attributeGotError(URI, "Invalid Value");
                                  }
                              });
 
@@ -879,7 +919,7 @@ void OpcUaCore::updatePasswordCredentials(const PasswordCredentials &newPassword
     if (!m_currentEndpointDescription.endpointUrl().isEmpty()) {
         m_client->connectToEndpoint(m_currentEndpointDescription);
     } else {
-        connectOpc(m_latestEndpointUrl.toString());
+        connectOpc(m_latestEndpoint);
     }
     m_passwordCredentials = newPasswordCredentials;
 }

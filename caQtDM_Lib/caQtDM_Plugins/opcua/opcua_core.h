@@ -85,6 +85,11 @@ public:
      */
     void clearAllSubscriptions();
     /**
+     * @brief Checks if this node has any current subscriptions
+     * @return true if it does, false if it doesn't
+     */
+    bool hasAnySubscriptions() const;
+    /**
      * @brief Checks whether or not a nodeId is stored for subscribing
      * @param nodeId: nodeId to check
      * @return true if nodeId is stored as a subscription node, else false
@@ -192,7 +197,7 @@ private:
     QOpcUaClient *m_client;
     QString m_pemPassword;
     // Most recent url specified for connection
-    QUrl m_latestEndpointUrl;
+    QString m_latestEndpoint;
     // Holds information about the endpoint the core is currently connected to
     QOpcUaEndpointDescription m_currentEndpointDescription;
     // Map of nodeId to node with all nodes that are configured to be subscribed to
@@ -202,6 +207,8 @@ private:
     // Map of nodeId to interval in Ms for its subscription
     QMap<QString, int> m_intervalMsForNodeId;
     PasswordCredentials m_passwordCredentials;
+    std::chrono::milliseconds m_sessionTimeout;
+    std::chrono::milliseconds m_maxLatency;
     int m_reconnectionAttempt;
     int m_reconnectionTimeoutMs;
     bool m_reconnecting;

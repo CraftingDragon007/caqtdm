@@ -204,9 +204,9 @@ private:
     QMap<QString, int> m_passwordIndexForHost;
     // Maps host to respective PasswordCredentials
     QMap<QString, PasswordCredentials> m_passwordCredentialsForHost;
-    // Maps nodeId to knobData index
+    // Maps URI (endpoint + "/" + nodeId) to knobData index
     QMultiMap<QString, int> m_channelCache;
-    // Maps nodeId to core (multiple nodeId > core possible)
+    // Maps endpoint to core
     QMap<QString, OpcUaCore *> m_cores;
     // Maps endpoint to all knobData indices handled by it
     QMap<QString, QList<int>> m_knobDataIndicesForEndpoint;
