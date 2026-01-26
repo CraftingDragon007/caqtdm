@@ -581,7 +581,7 @@ int main(int argc, char *argv[])
     }
 #endif
 
-    FileOpenWindow fileOpenWindow (0, fileName, macroString, attach, minimize, geometry, printscreen, resizing, web_port, options);
+    FileOpenWindow fileOpenWindow (0, fileName, macroString, attach, minimize, geometry, printscreen, resizing, options);
     fileOpenWindow.setWindowIcon (QIcon(":/caQtDM.ico"));
     if (savetoimage) fileOpenWindow.setProperty("savetoimage", true);
     if (!server) fileOpenWindow.show();

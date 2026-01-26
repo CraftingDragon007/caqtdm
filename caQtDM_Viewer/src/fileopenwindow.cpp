@@ -203,7 +203,7 @@ void FileOpenWindow::TerminateAllInterfaces()
  */
 FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString macroString,
                                bool attach, bool minimize, QString geometry, bool printscreen, bool resizing,
-                               quint16 web_port, QMap<QString, QString> options): QMainWindow(parent)
+                               QMap<QString, QString> options): QMainWindow(parent)
 {
     // definitions for last opened file
     debugWindow = true;
