@@ -1238,26 +1238,33 @@ QMainWindow *FileOpenWindow::loadMainWindow(const QPoint &position, const QStrin
     free(asc);
 
     if (CaQtDM_Lib::vncServer) {
-        QByteArray envWidth = qgetenv("VIRTUAL_WIDTH");
-        QByteArray envHeight = qgetenv("VIRTUAL_HEIGHT");
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        // qt 6 timing issues, instant resize would destroy caInlcude
+        QTimer::singleShot(1000, [mainWindow]{
+#endif
+            QByteArray envWidth = qgetenv("VIRTUAL_WIDTH");
+            QByteArray envHeight = qgetenv("VIRTUAL_HEIGHT");
 
-        if (!envWidth.isEmpty() && !envHeight.isEmpty()) {
-            bool wOk, hOk;
+            if (!envWidth.isEmpty() && !envHeight.isEmpty()) {
+                bool wOk, hOk;
 
-            int width = envWidth.toInt(&wOk);
-            int height = envHeight.toInt(&hOk);
+                int width = envWidth.toInt(&wOk);
+                int height = envHeight.toInt(&hOk);
 
-            QSize minSize = mainWindow->minimumSize();
-            QSize maxSize = mainWindow->maximumSize();
+                QSize minSize = mainWindow->minimumSize();
+                QSize maxSize = mainWindow->maximumSize();
 
-            width = qMin(width, maxSize.width());
-            height = qMin(height, maxSize.height());
-            width = qMax(width, minSize.width());
-            height = qMax(height, minSize.height());
+                width = qMin(width, maxSize.width());
+                height = qMin(height, maxSize.height());
+                width = qMax(width, minSize.width());
+                height = qMax(height, minSize.height());
 
-            qDebug() << "Setting window size to virtual monitor size" << width << height;
-            mainWindow->setGeometry(mainWindow->x(), mainWindow->y(), width, height);
-        }
+                qDebug() << "Setting window size to virtual monitor size" << width << height;
+                mainWindow->setGeometry(mainWindow->x(), mainWindow->y(), width, height);
+            }
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        });
+#endif
     }
     return mainWindow;
 }
