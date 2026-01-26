@@ -491,7 +491,7 @@ bool OpcUaCore::connectOpc(const QString &url)
 
             // Qt 5 sends a cert even with no security policy, leading to some servers denying the connection because they thing an authentication is tried (with untrusted cert)
             // To workaround this issue, we reset the pki config when no security policy is requested.
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
             if (chosenEndpoint.securityPolicy()
                 == "http://opcfoundation.org/UA/SecurityPolicy#None") {
                 QOpcUaPkiConfiguration pkiConfig;
