@@ -25,7 +25,6 @@
 #include "opcua_core.h"
 #include <QApplication>
 #include <QDebug>
-#include <QOpcUaConnectionSettings>
 #include <QOpcUaErrorState>
 #include <QStandardPaths>
 #include <QTimer>
@@ -35,6 +34,10 @@
 #include "qopcuaauthenticationinformation.h"
 #include "qtcpsocket.h"
 #include "x509certificate.h"
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#include <QOpcUaConnectionSettings>
+#endif
 
 #define INITIAL_RECONNECTION_TIMEOUT 100
 #define RECONNECTION_TIMEOUT_FACTOR 2
@@ -184,10 +187,14 @@ OpcUaCore::OpcUaCore(QObject *parent)
                 return;
             }
 
+            // QOpcUaConnectionSettings not available in qt 5
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
             QOpcUaConnectionSettings settings = m_client->connectionSettings();
             settings.setSessionTimeout(m_sessionTimeout);
             settings.setConnectTimeout(2 * m_maxLatency); // Give it some more time, since it might be experiencing issues
             m_client->setConnectionSettings(settings);
+#endif
+
             m_client->connectToEndpoint(m_currentEndpointDescription);
             m_reconnectionAttempt++;
             m_reconnectionTimeoutMs = qMin(
@@ -484,7 +491,7 @@ bool OpcUaCore::connectOpc(const QString &url)
 
             // Qt 5 sends a cert even with no security policy, leading to some servers denying the connection because they thing an authentication is tried (with untrusted cert)
             // To workaround this issue, we reset the pki config when no security policy is requested.
-#if QT_VERSION > QT_VERSION_CHECK(6, 0, 0)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
             if (chosenEndpoint.securityPolicy()
                 == "http://opcfoundation.org/UA/SecurityPolicy#None") {
                 QOpcUaPkiConfiguration pkiConfig;
@@ -492,9 +499,12 @@ bool OpcUaCore::connectOpc(const QString &url)
             }
 #endif
 
+            // QOpcUaConnectionSettings not available in Qt 5
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
             QOpcUaConnectionSettings settings = m_client->connectionSettings();
             settings.setSessionTimeout(m_sessionTimeout);
             m_client->setConnectionSettings(settings);
+#endif
 
             m_client->connectToEndpoint(chosenEndpoint);
             m_currentEndpointDescription = chosenEndpoint;
