@@ -76,6 +76,14 @@ int OPCUAPlugin::initCommunicationLayer(MutexKnobData *data,
 
     fileFunctions fileFunction;
     foreach (QString opcua_database_file, opcua_database_files) {
+        if (opcua_database_file.startsWith("\"") || opcua_database_file.startsWith("\'")) {
+            opcua_database_file.remove(0, 1);
+        }
+
+        if (opcua_database_file.endsWith("\"") || opcua_database_file.endsWith("\'")) {
+            opcua_database_file.remove(opcua_database_file.length() - 1, 1);
+        }
+
         if (!url.isEmpty()) {
             fileFunction.checkFileAndDownload(opcua_database_file, url);
         }
