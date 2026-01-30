@@ -2994,6 +2994,7 @@ Special Fields:
 
 Supported OPC UA data types:
 	OPC UA offers many data types, not all are supported by the plugin. Here is a list of Qt-datatypes that are supported and what EPICS-datatypes they map to.
+	
 	- For simple values (v indicates: same as below):
       +-----------------------+----------+
       | QMetaType::Double     | caDOUBLE |
