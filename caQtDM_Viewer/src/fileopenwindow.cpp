@@ -1239,11 +1239,17 @@ QMainWindow *FileOpenWindow::loadMainWindow(const QPoint &position, const QStrin
     messageWindow->postMsgEvent(QtDebugMsg, asc);
     free(asc);
 
+    QPointer<QMainWindow> safeMainWindow = mainWindow;
+
     if (CaQtDM_Lib::vncServer) {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
         // qt 6 timing issues, instant resize would destroy caInlcude
-        QTimer::singleShot(1000, [mainWindow]{
+        QTimer::singleShot(1000, [safeMainWindow]{
 #endif
+            if (!safeMainWindow) {
+                qDebug() << "caQtDM_Lib destroyed before windows size adjustment";
+                return;
+            };
             QByteArray envWidth = qgetenv("VIRTUAL_WIDTH");
             QByteArray envHeight = qgetenv("VIRTUAL_HEIGHT");
 
@@ -1253,8 +1259,8 @@ QMainWindow *FileOpenWindow::loadMainWindow(const QPoint &position, const QStrin
                 int width = envWidth.toInt(&wOk);
                 int height = envHeight.toInt(&hOk);
 
-                QSize minSize = mainWindow->minimumSize();
-                QSize maxSize = mainWindow->maximumSize();
+                QSize minSize = safeMainWindow->minimumSize();
+                QSize maxSize = safeMainWindow->maximumSize();
 
                 width = qMin(width, maxSize.width());
                 height = qMin(height, maxSize.height());
@@ -1262,7 +1268,7 @@ QMainWindow *FileOpenWindow::loadMainWindow(const QPoint &position, const QStrin
                 height = qMax(height, minSize.height());
 
                 qDebug() << "Setting window size to virtual monitor size" << width << height;
-                mainWindow->setGeometry(mainWindow->x(), mainWindow->y(), width, height);
+                safeMainWindow->setGeometry(safeMainWindow->x(), safeMainWindow->y(), width, height);
             }
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
         });
