@@ -2995,27 +2995,27 @@ Special Fields:
 Supported OPC UA data types:
 	OPC UA offers many data types, not all are supported by the plugin. Here is a list of Qt-datatypes that are supported and what EPICS-datatypes they map to.
 	
-	- For simple values (v indicates: same as below):
+	- For simple values:
 		+-----------------------+----------+
 		| QMetaType::Double     | caDOUBLE |
 		+-----------------------+----------+
 		| QMetaType::Float      | caFLOAT  |
 		+-----------------------+----------+
-		| QMetaType::Int        | v        |
+		| QMetaType::Int        | caLONG   |
 		+-----------------------+----------+
-		| QMetaType::UInt       | v        |
+		| QMetaType::UInt       | caLONG   |
 		+-----------------------+----------+
-		| QMetaType::LongLong   | v        |
+		| QMetaType::LongLong   | caLONG   |
 		+-----------------------+----------+
-		| QMetaType::ULongLong  | v        |
+		| QMetaType::ULongLong  | caLONG   |
 		+-----------------------+----------+
-		| QMetaType::Long       | v        |
+		| QMetaType::Long       | caLONG   |
 		+-----------------------+----------+
 		| QMetaType::ULong      | caLONG   |
 		+-----------------------+----------+
-		| QMetaType::Short      | v        |
+		| QMetaType::Short      | caINT    |
 		+-----------------------+----------+
-		| QMetaType::UShort     | v        |
+		| QMetaType::UShort     | caINT    |
 		+-----------------------+----------+
 		| QMetaType::Bool       | caINT    |
 		+-----------------------+----------+
