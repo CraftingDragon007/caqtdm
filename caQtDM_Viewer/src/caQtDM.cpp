@@ -284,10 +284,6 @@ int main(int argc, char *argv[])
             QApplication::setStyle(QStyleFactory::create(theme));
         } else {
             qWarning() << "caQtDM -- Invalid theme" << theme << "specified, falling back to default system theme";
-            qWarning() << "caQtDM -- Available theme options are:";
-            foreach (const QString &item, availableThemes) {
-                qWarning().noquote() << item;
-            }
         }
     }
 
