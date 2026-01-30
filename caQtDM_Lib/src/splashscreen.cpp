@@ -48,9 +48,10 @@ SplashScreen::SplashScreen(QWidget *parent) : QSplashScreen(), m_progress(0)
 #endif
 
 {
-    Qt::WindowFlags flags = (Qt::WindowFlags)0;
-    flags |= Qt::WindowStaysOnTopHint | Qt::SplashScreen ;
+    Qt::WindowFlags flags = Qt::WindowStaysOnTopHint | Qt::SplashScreen | Qt::FramelessWindowHint;
     setWindowFlags(flags);
+
+    setAttribute(Qt::WA_TranslucentBackground);
 
     m_maximum = 100;
 
@@ -66,19 +67,21 @@ SplashScreen::SplashScreen(QWidget *parent) : QSplashScreen(), m_progress(0)
     pixmapLoad.load(":caQtDM-logos.png");
     pixmap = pixmapLoad.scaled(pixmapLoad.size().width()*1.5, pixmapLoad.size().height()*1.5); // probably wrong
 #else
-    pixmap.load(":caQtDM-logos.png");
+
+    QDate currentDate = QDate::currentDate();
+    QString mappedSplashScreen = getMappedSplashScreenImage(currentDate);
+    if (!mappedSplashScreen.isEmpty()) {
+        pixmap.load(mappedSplashScreen);
+    } else {
+        pixmap.load(":caQtDM-logos.png");
+    }
+
 #endif
 
     this->resize(pixmap.size().width()+200, pixmap.size().height()+100);
 
-    // in order to have a pseudo-transparent image, I load the background (22.4.2015 do not do this anymore, while for Qt5 not ok anyhow
-//#ifndef MOBILE
-//    QPixmap desktopBackground= QPixmap::grabWindow(QApplication::desktop()->winId(), x()- width()/2, y()-height()/2, width(),height());
-//#else
-    QPixmap desktopBackground( width(),height());
-    desktopBackground.fill(Qt::gray);
-//#endif
-
+    QPixmap desktopBackground(width(), height());
+    desktopBackground.fill(Qt::transparent);
     // and merge the two pixmaps
     QPainter p;
     p.begin(&desktopBackground);
@@ -97,6 +100,49 @@ SplashScreen::SplashScreen(QWidget *parent) : QSplashScreen(), m_progress(0)
     this->setPixmap(desktopBackground);
     this->setCursor(Qt::BusyCursor);
     this->showMessage("loading include ui files", Qt::AlignBottom, QColor(Qt::black));
+}
+
+QString SplashScreen::getMappedSplashScreenImage(QDate date)
+{
+    QFile mappingFile(":splashScreenMapping.json");
+    if (!mappingFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+       qCritical() << "Couldn't open splashScreen mapping file";
+       return "";
+    }
+
+    QByteArray mappingData = mappingFile.readAll();
+    mappingFile.close();
+    QJsonDocument mappingDocument = QJsonDocument::fromJson(mappingData);
+    if (mappingDocument.isNull()) {
+       qCritical() << "Couldn't parse JSON from splashScreen mapping file";
+       return "";
+    }
+
+    QJsonObject mappingObject = mappingDocument.object();
+    QJsonValue mappedValue = mappingObject.value(date.toString(Qt::ISODate));
+
+    QString mappedImagePath;
+    if (mappedValue.isArray()) {
+       QJsonArray mappedValueArray = mappedValue.toArray();
+       mappedImagePath = mappedValueArray
+                             .at(QRandomGenerator::global()->bounded(mappedValueArray.size()))
+                             .toString();
+    } else {
+       mappedImagePath = mappedValue.toString();
+    }
+
+    if (mappedImagePath.isEmpty()) {
+       qCritical() << "splashScreen mapping file is empty";
+       return "";
+    }
+
+    QImageReader reader(mappedImagePath);
+    if (reader.format() != "png") {
+       qCritical() << "mapped splashScreen File is not a valid png: " << reader.fileName() << " error: " << reader.errorString();
+       return "";
+    }
+
+    return mappedImagePath;
 }
 
 void SplashScreen::setMaximum(int max)

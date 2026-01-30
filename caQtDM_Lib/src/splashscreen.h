@@ -40,7 +40,7 @@ public:
     explicit SplashScreen( QWidget *parent = 0);
     int m_progress;
     void setMaximum(int max);
-
+    QString getMappedSplashScreenImage(QDate date);
 
 public slots:
     void setProgress(int value)
