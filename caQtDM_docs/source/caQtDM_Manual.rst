@@ -2969,8 +2969,8 @@ Secure Communication using Signing / Encryption:
 	Encryption & Signing keys are generated the first time the plugin is loaded, and 
 
 Authentication:
-	If you need to connect to an endpoint that is secured with authentication, this is also possible. Supported options are:
-	- Username / Password | MAY BE UNSAFE; Can be transmitted in plain text.
+	If you need to connect to an endpoint that is secured with authentication, this is also possible.
+	- Username / Password | May be insecure, not recommended.
 		This can be useful, but depending on your configuration it can be insecure, as the password may be sent in plain text, so everyone sniffing the network could read it.
 		If you want to test it, use Wireshark, it has an OPC filter which will correctly decode it if its not encrypted.
 		To use a username and password, you can use the environment variables: CAQTDM_OPCUA_USERNAME_PLAIN and CAQTDM_OPCUA_PASSWORD_PLAIN. Careful: This will be sent tro every host you connect to, which might also lead to a compromise.
