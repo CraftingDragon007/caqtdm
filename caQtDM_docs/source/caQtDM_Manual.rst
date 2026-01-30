@@ -2966,7 +2966,7 @@ All loaded OPC UA translations are displayed in the caQtDM message window upon s
 
 Secure Communication using Signing / Encryption:
 	If your client was built with an encryption-enabled plugin, it will try to establish a secure connection first. If an endpoint or your client doesn't support a secure connection, a regular one will be used.
-	Encryption & Signing keys are generated the first time the plugin is loaded, and 
+	Encryption & signing keys are generated the first time the plugin is loaded and stored in your local app data location. 
 
 Authentication:
 	If you need to connect to an endpoint that is secured with authentication, this is also possible.
@@ -2974,23 +2974,23 @@ Authentication:
 	- Username / Password | May be insecure, not recommended.
 		This can be useful, but depending on your configuration it can be insecure, as the password may be sent in plain text, so everyone sniffing the network could read it.
 		If you want to test it, use Wireshark, it has an OPC filter which will correctly decode it if its not encrypted.
-		To use a username and password, you can use the environment variables: CAQTDM_OPCUA_USERNAME_PLAIN and CAQTDM_OPCUA_PASSWORD_PLAIN. Careful: This will be sent tro every host you connect to, which might also lead to a compromise.
-		You can also specify the username and password using caQtDM widgets, to have it runtime-only. For this, you can use the channels opcua://username and opcua://password.
-		These are writeable like regular channels, and the username is readable. The password channel won't be shown in the UI, the written value will be saved, but a placeholder displayed on the UI. These channels only visible to the local caQtDM process.
-		If those channels are updated, all host that don't have host-specific credentials will have all their connections refreshed. This also means that every host you connect to will be given those credentials.
-		To specify credentials only for one specific host, add it (including protocol & port) before /username or /password. so e.g. opcua://opc.tcp://localhost:4840/username and opcua://opc.tcp://localhost:4840/password.
+		To use a username and password, you can use the environment variables: ``CAQTDM_OPCUA_USERNAME_PLAIN`` and ``CAQTDM_OPCUA_PASSWORD_PLAIN``. Careful: This will be sent to every host you connect to, which might also lead to a compromise.
+		You can also specify the username and password using caQtDM widgets, to have it runtime-only. For this, you can use the channels ``opcua://username`` and ``opcua://password``.
+		These are writeable like regular channels, and the username is readable. The password channel won't show it's value in the UI. The written value will be saved, but a placeholder displayed on the UI. These channels are only accessible to the local caQtDM process.
+		If those channels are updated, all hosts that don't have host-specific credentials will have all their connections refreshed. This also means that every host you connect to will be given those credentials.
+		To specify credentials only for one specific host, add it (including protocol & port) before ``/username`` or ``/password``. so e.g. ``opcua://opc.tcp://localhost:4840/username`` and ``opcua://opc.tcp://localhost:4840/password``.
 		This way, you can input credentials at runtime, which will only be used for a specific host, others won't see it. But again, it may be transmitted in plain text.
 	- Certificate Authentication | The recommended way.
 		To be safe, prefer certificate authentication, if possible. 
 		If encryption is available for your plugin version, it will automatically create a PKI configuration. So if you are connecting to a host that supports certificate authentication, it will try to connect using your config.
-		You can either find the certificate in your local app data directory (QStandardPaths::AppLocalDataLocation) or in most OPC UA servers it will show attempted certificates in the settings, so you can simply try to connect once, then add the certificate to the server allow-list and retry the connection.
-		The private key is encrypted by default using a placeholder password (You can find it in the source code). If you want added security, you can use the environment variable CAQTDM_OPCUA_PEM_PASSWORD to specify a password to use for encrypting your private key.
-		In case you forgot the PEM password you once set, you can always reset your PKI configuration (careful, this means caQtDM creates a new key & certificate, so you'll have to reauthenticate those everywhere) by setting the environment variable: CAQTDM_OPCUA_RESET_PKI_CONFIG to something non-empty. Don't forget to unset this after starting caQtDM once with it enabled.
-		The certificate will be self-signed. Certificate and key are generated using QtOpcUa Classes and functions. Take a look at the source code if your concerned with about it's security.
+		You can either find the certificate in your local app data directory (``QStandardPaths::AppLocalDataLocation``) or in most OPC UA servers it will show attempted certificates in the settings, so you can simply try to connect once, then add the certificate to the server allow-list and retry the connection.
+		The private key is encrypted by default using a placeholder password (You can find it in the source code). If you want added security, you can use the environment variable ``CAQTDM_OPCUA_PEM_PASSWORD`` to specify a password to use for encrypting your private key.
+		In case you forgot the PEM password you once set, you can always reset your PKI configuration (careful, this means caQtDM creates a new key & certificate, so you'll have to reauthenticate those everywhere) by setting the environment variable: ``CAQTDM_OPCUA_RESET_PKI_CONFIG`` to something non-empty. Don't forget to unset this after starting caQtDM once with it enabled.
+		The certificate will be self-signed. Certificate and key are generated using QtOpcUa Classes and functions. Take a look at the source code if your concerned about it's security.
 		You can of course also generate a certificate yourself (manually) and place it in the correct folder. This might prove quite challenging though, as you have to fullfill the OPC UA Standard. Take a look at the source code (specifically: caQtDM_Lib/caQtDM_Plugins/opcua/x509certificate.cpp) if you really want to do this (Not recommended or supported).
 
 Special Fields:
-	The EPICS-Extension fields .NELM and .FTVL are also supported and populated with the most-closely value for OPC UA. Due to differences in supported data-types .FTVL can differ from the actual value. .NELM is 1 for simple variables and the array-length for arrays.
+	The EPICS-Extension fields .NELM and .FTVL are also supported and populated with the most-closely matching value from OPC UA. Due to differences in supported data-types .FTVL can differ from the actual value. .NELM is 1 for simple variables and the array-length for arrays.
 
 Supported OPC UA data types:
 	OPC UA offers many data types, not all are supported by the plugin. Here is a list of Qt-datatypes that are supported and what EPICS-datatypes they map to.
@@ -3022,22 +3022,22 @@ Supported OPC UA data types:
 		| QMetaType::QString    | caSTRING |
 		+-----------------------+----------+
 	- For arrays:
-		All 1-dimensional arrays consisting of exactly one type that is supported for simple values are also supported. If the Qt-Type is QOpcUaMultiDimensionalArray, so a multidimensional array, it will be flattened into a 1-D array. Writing back such flattened arrays will probably fail.
+		All 1-dimensional arrays consisting of exactly one type that is supported for simple values are also supported. If the Qt-Type is ``QOpcUaMultiDimensionalArray``, so a multidimensional array, it will be flattened into a 1-D array. Writing back such flattened arrays will probably fail.
 
 Mappings:
-	Description and Timestamp (shown by pvGetInfo) are mapped from QOpcUa::NodeAttribute::Description and the server-timestamp returned by QOpcUaNode::serverTimestamp(), respectively.
-	Access levels (read and write) are parsed from QOpcUa::NodeAttribute::UserAccessLevel.
+	Description and Timestamp (shown by ``Get Info`` dialog) are mapped from ``QOpcUa::NodeAttribute::Description`` and the server-timestamp returned by ``QOpcUaNode::serverTimestamp()``, respectively.
+	Access levels (read and write) are parsed from ``QOpcUa::NodeAttribute::UserAccessLevel``.
 
 Error handling:
-	If an attribute got an faulty value back from it's monitor, that will be shown in the caQtDM message window. Failed connections will do the same. Connection Errors are shown separately, also in the message window.
-	You may find additional info produced via qDebugs, which usually goes either to your terminal or system log-handler (e.g. in KDE).
+	If an attribute got a faulty value back from it's monitor, that will be shown in the caQtDM message window. Failed connections will do the same. Connection Errors are shown separately, also in the message window.
+	You may find additional info produced via ``qDebug``s, which usually goes either to your terminal or system log-handler (e.g. in KDE).
 
 Connection:
-	Besides negotiating for the highest security both the client and the server support, the plugin also scans hosts for the quickest endpoint. If no endpoints respond within a certain threshold, the connection is seen as a failure. Use CAQTDM_OPCUA_MAX_LATENCY (ms) to control this.
+	Besides negotiating for the highest security that both the client and the server support, the plugin also scans hosts for the quickest endpoint. If no endpoints respond within a certain threshold, the connection is seen as a failure. Use ``CAQTDM_OPCUA_MAX_LATENCY`` (ms) to control this.
 	The default is 500ms. This only affects the initial establishment of a connection, and has no effect during the connection.
-	In Qt-6, you can also specify CAQTDM_OPCUA_SESSION_TIMEOUT (ms) to define how long a session should be kept open if no data changes occur. Beware: this is only a suggestion to the server, it may respond with a different timeout instead.
+	In Qt-6, you can also specify ``CAQTDM_OPCUA_SESSION_TIMEOUT`` (ms) to define how long a session should be kept open if no data changes occur. Beware: this is only a suggestion to the server, it may respond with a different timeout instead.
 	If this timeout is reached, so no monitored variable of a host changed its value within this time, and also no data was written by the client, the connection is closed. However, this immediately triggers a reconnect, as described below, so you should be fine.
-	Do NOT force-kill caQtDM unless absolutely neccessary when OPC UA connections are open, since caQtDM usually won't have time to inform the server then. This leads to open dangling connections that stay open until the timeout is set. (Default is one hour)
+	Do NOT force-kill caQtDM unless absolutely neccessary when OPC UA connections are open, since caQtDM usually won't have time to inform the server then. This leads to dangling connections that stay open until the timeout is reached. (Default is one hour)
 	So while longer timeouts may be more suitable in long-term monitoring use-cases, short timeouts are safer if you force-kill caQtDM every now and then.
 	The secure channel, as per OPC UA specs, is automatically renewed by Qt.
 
