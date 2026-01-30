@@ -95,12 +95,17 @@ OpcUaCore::OpcUaCore(QObject *parent)
         m_passwordCredentials = {username, password};
     }
 
-    if (!qgetenv("CAQTDM_OPCUA_RESET_PKI_CONFIG").isEmpty()) {
-        VERBOSELOG("Resetting PKI Config.");
-        clearPkiConfig();
-    }
+    {
+        QMutexLocker locker(&s_resetPkiConfigMutex);
+        if (!qgetenv("CAQTDM_OPCUA_RESET_PKI_CONFIG").isEmpty()) {
+            // This should only be done once.
+            qunsetenv("CAQTDM_OPCUA_RESET_PKI_CONFIG");
+            VERBOSELOG("Resetting PKI Config.");
+            clearPkiConfig();
+        }
 
-    setupPkiConfig();
+        setupPkiConfig();
+    }
 
     QObject::connect(m_client,
                      &QOpcUaClient::passwordForPrivateKeyRequired,

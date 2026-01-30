@@ -628,10 +628,8 @@ bool OPCUAPlugin::setCredentialsPV(const QString &pvString, const char *sdata)
         kData.edata.monitorCount++;
         m_mutexKnobDataP->SetMutexKnobDataReceived(&kData);
 
-        for (auto it = m_cores.constKeyValueBegin(); it != m_cores.constKeyValueEnd(); it++) {
-            QString host = it->first;
-            host.remove(PROTOCOL_PREFIX);
-            m_cores[it->first]->setPemPassword(m_pemPassword);
+        for (auto &core : m_cores) {
+            core->setPemPassword(m_pemPassword);
         }
 
         return true;

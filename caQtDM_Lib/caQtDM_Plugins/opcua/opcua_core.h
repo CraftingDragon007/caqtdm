@@ -25,6 +25,7 @@
 #ifndef OPCUA_CORE_H
 #define OPCUA_CORE_H
 
+#include <QMutex>
 #include <QObject>
 #include <QUrl>
 #include <QtOpcUa/QOpcUaAddReferenceItem>
@@ -213,6 +214,8 @@ private:
     int m_reconnectionTimeoutMs;
     bool m_reconnecting;
     bool m_ignoreNextDisconnect;
+
+    static QMutex s_resetPkiConfigMutex;
 
     /**
      * @brief Gets the Qt standard path for AppLocalDataLocation and uses that to form a path for PKI configurations
