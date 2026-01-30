@@ -321,6 +321,8 @@ int bsreadPlugin::TerminateIO() {
 }
 
 void bsreadPlugin::closeEvent(){
+    if (ranCloseEvent) return;
+    ranCloseEvent = true;
     //qDebug() << "bsreadPlugin:closeEvent ";
     emit closeSignal();
     if (Dispatcher){

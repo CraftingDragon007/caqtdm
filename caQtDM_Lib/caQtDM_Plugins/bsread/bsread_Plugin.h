@@ -85,6 +85,7 @@ signals:
     void closeSignal();
 
 private:
+    bool ranCloseEvent = false;
     QMutex mutex;
     MutexKnobData *mutexknobdataP;
     MessageWindow *messagewindowP;
