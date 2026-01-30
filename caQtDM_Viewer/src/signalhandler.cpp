@@ -23,7 +23,7 @@ void SignalHandler::posixSignalHandler(int) {
 BOOL WINAPI windowsCtrlHandler(DWORD ctrlType) {
     if (ctrlType == CTRL_C_EVENT || ctrlType == CTRL_CLOSE_EVENT) {
         qDebug() << "Windows signal received. Exiting...";
-        QCoreApplication::exit(0);
+        QMetaObject::invokeMethod(qApp, "exit", Qt::QueuedConnection, Q_ARG(int, 0));
         return TRUE;
     }
     return FALSE;
