@@ -30,6 +30,10 @@ public:
     void sendProgressUpdate(int progress);
 
     void sendError(QString message);
+
+public slots:
+    void applicationShutdown();
+
 private slots:
     void onNewConnection();
     void processTextMessage(const QString &message);
@@ -44,6 +48,7 @@ private:
     QList<QWebSocket *> m_clients;
     QReadWriteLock m_clientReadWriteLock;
     bool m_isInitialized;
+    bool m_isShuttingDown;
 
     void tryScheduleTimeout(int count);
     QString getIPAddress(QWebSocket *client);

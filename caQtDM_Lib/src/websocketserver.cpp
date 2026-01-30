@@ -60,6 +60,13 @@ WebSocketServer::~WebSocketServer()
 void WebSocketServer::onNewConnection()
 {
     QWebSocket *pSocket = m_pWebSocketServer->nextPendingConnection();
+    if (m_isShuttingDown) {
+        if (pSocket != nullptr) {
+            pSocket->close(QWebSocketProtocol::CloseCodeNormal, "Application shutdown");
+            pSocket->deleteLater();
+        }
+        return;
+    }
 
     qDebug().noquote() << "New connection from:" << pSocket->peerAddress().toString() + ":" + QString::number(pSocket->peerPort()) << "(" + getIPAddress(pSocket) + ")";
 
@@ -201,6 +208,7 @@ void WebSocketServer::processBinaryMessage(const QByteArray &message)
 
 void WebSocketServer::socketDisconnected()
 {
+    if (m_isShuttingDown) return;
     QWebSocket *pSocket = qobject_cast<QWebSocket *>(sender());
     if (pSocket) {
         qDebug().noquote() << "Client disconnected:" << pSocket->peerAddress().toString() + ":" + QString::number(pSocket->peerPort()) << "(" + getIPAddress(pSocket) + ")";
@@ -311,4 +319,18 @@ void WebSocketServer::sendError(QString message) {
             pSocket->sendTextMessage(QString("ERROR|%1").arg(message));
         }
     }
+}
+
+void WebSocketServer::applicationShutdown() {
+    if (!m_isInitialized) return;
+    m_isShuttingDown = true;
+    QWriteLocker locker(&m_clientReadWriteLock);
+    foreach (QWebSocket *pSocket, m_clients) {
+        if (pSocket != nullptr) {
+            pSocket->close(QWebSocketProtocol::CloseCodeNormal, "Application shutdown");
+            m_clients.removeOne(pSocket);
+            pSocket->deleteLater();
+        }
+    }
+    m_pWebSocketServer->close();
 }

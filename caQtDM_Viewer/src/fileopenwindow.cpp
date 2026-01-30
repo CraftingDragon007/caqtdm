@@ -320,6 +320,8 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
             WebSocketServer::instance().sendLog(text);
         });
 
+        connect(qApp, &QCoreApplication::aboutToQuit, &WebSocketServer::instance(), &WebSocketServer::applicationShutdown);
+
         QString launcherFile = options["web_launcher_file"];
         if (!launcherFile.isNull()) {
             WebLauncherManager::instance().setup(launcherFile);
