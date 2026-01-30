@@ -36,6 +36,7 @@
 #include "x509certificate.h"
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#include <QMutex>
 #include <QOpcUaConnectionSettings>
 #endif
 
@@ -47,6 +48,8 @@
 #define DEFAULT_SESSION_TIMEOUT 3600000
 
 #define NOPASS_PLACEHOLDER "caQtDM"
+
+static QMutex s_resetPkiConfigMutex;
 
 OpcUaCore::OpcUaCore(QObject *parent)
     : QObject(parent)

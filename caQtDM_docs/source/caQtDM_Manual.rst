@@ -3045,7 +3045,8 @@ Connection:
 
 Reconnect:
 	If the plugin cannot connect to a host, or an ongoing connection suddenly stops, it will try reconnecting with an increasing interval.
-	Reloading a panel unsubscribes from all variables in the panel (and disconnects from the hosts if no subscriptions are left) and reconnects them. 
+	Reloading a panel unsubscribes from all variables in the panel (and disconnects from the hosts if no subscriptions are left) and reconnects them.
+	From Qt-6 onwards, reconnects apply a timeout of 2 * ``CAQTDM_OPCUA_MAX_LATENCY`` (ms).
 
 General Properties
 ----------------------
