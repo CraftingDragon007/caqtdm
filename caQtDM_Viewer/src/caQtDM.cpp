@@ -181,25 +181,13 @@ int main(int argc, char *argv[])
     Q_INIT_RESOURCE(qtcontrols);
 #endif
 
-    //MyApplication app(argc, argv);
-#if defined(_MSC_VER)
-#if QT_VERSION > QT_VERSION_CHECK(5, 0, 0)
-    // to avoid an error output: "Qt WebEngine seems to be initialized from a plugin"
-    QGuiApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
-#endif
-#endif
-
-
-#ifdef MOBILE_ANDROID
-    //qDebug() << QStyleFactory::keys();
-    app.setStyle(QStyleFactory::create("Fusion"));
-#endif
-
     // we do not want numbers with a group separators
     QLocale loc = QLocale::system();
     loc.setNumberOptions(QLocale::OmitGroupSeparator);
     loc.setDefault(loc);
 
+    QString theme = "";
+    int styleIndex = -1;
     QString fileNameStylesheet = "";
     QString fileName = "";
     QString macroString = "";
@@ -255,6 +243,11 @@ int main(int argc, char *argv[])
             in++;
             printf("caQtDM -- will load macro string from file <%s>\n", argv[in]);
             macroFile = QString(argv[in]);
+        } else if ( strcmp (argv[in], "-style" ) == 0 ) {
+            styleIndex = in;
+            in++;
+            printf("caQtDM -- using qt theme <%s>\n", argv[in]);
+            theme = QString(argv[in]);
         } else if ( strcmp (argv[in], "-stylefile" ) == 0 ) {
             in++;
             printf("caQtDM -- will replace the default stylesheet with stylesheet <%s>\n", argv[in]);
@@ -486,6 +479,63 @@ int main(int argc, char *argv[])
     QApplication::setOrganizationName("Paul Scherrer Institut");
     QApplication::setApplicationName("caQtDM");
     QApplication::setQuitOnLastWindowClosed(false);
+
+    searchFile *searchDefaultStyleSheet = new searchFile("caQtDM_stylesheet.qss");
+    QString fileNameFound = searchDefaultStyleSheet->findFile();
+    if(fileNameFound.isNull()) {
+        printf("caQtDM -- file <caQtDM_stylesheet.qss> could not be loaded, is 'CAQTDM_DISPLAY_PATH' <%s> defined?\n", qasc(searchDefaultStyleSheet->displayPath()));
+    } else {
+        QFile file(fileNameFound);
+        file.open(QFile::ReadOnly);
+        QString StyleSheet = QLatin1String(file.readAll());
+        printf("caQtDM -- file <caQtDM_stylesheet.qss> loaded as the default application stylesheet\n");
+        app.setStyleSheet(StyleSheet);
+        file.close();
+    }
+    delete searchDefaultStyleSheet;
+
+    // prevents QApplication from handling style on it's own
+    if (!theme.isEmpty() && styleIndex > -1) {
+        if (styleIndex < argc - 1) {
+            for (int j = styleIndex; j < argc - 2; ++j) {
+                argv[j] = argv[j + 2];
+            }
+            argc -= 2;
+        } else if (styleIndex == argc - 1) {
+            delete argv[styleIndex];
+            --argc;
+        }
+    }
+
+#if defined(_MSC_VER)
+#if QT_VERSION > QT_VERSION_CHECK(5, 0, 0)
+    // to avoid an error output: "Qt WebEngine seems to be initialized from a plugin"
+    QGuiApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
+#endif
+#endif
+
+    QApplication app(argc, argv);
+    QApplication::setOrganizationName("Paul Scherrer Institut");
+    QApplication::setApplicationName("caQtDM");
+
+#ifdef MOBILE_ANDROID
+    //qDebug() << QStyleFactory::keys();
+    app.setStyle(QStyleFactory::create("Fusion"));
+#endif
+
+    if (!theme.isEmpty()) {
+        QStringList availableThemes = QStyleFactory::keys();
+
+        if (availableThemes.contains(theme, Qt::CaseInsensitive)) {
+            QApplication::setStyle(QStyleFactory::create(theme));
+        } else {
+            qWarning() << "caQtDM -- Invalid theme" << theme << "specified, falling back to default system theme";
+            qWarning() << "caQtDM -- Available theme options are:";
+            foreach (const QString &item, availableThemes) {
+                qWarning().noquote() << item;
+            }
+        }
+    }
 
     searchFile *searchDefaultStyleSheet = new searchFile("caQtDM_stylesheet.qss");
     QString fileNameFound = searchDefaultStyleSheet->findFile();
