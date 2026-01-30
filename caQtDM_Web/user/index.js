@@ -451,28 +451,99 @@ import RFB from './noVNC/core/rfb.js';
   });
 
   function parseLogMarkup(raw) {
-    const container = document.createElement('div');
-    container.innerHTML = raw;
-    const fontElements = container.getElementsByTagName('font');
-    while (fontElements.length) {
-      const fontNode = fontElements[0];
-      const span = document.createElement('span');
-      const colorAttr = fontNode.getAttribute('color');
-      if (colorAttr) span.style.color = colorAttr;
-      while (fontNode.firstChild) {
-        span.appendChild(fontNode.firstChild);
-      }
-      if (fontNode.parentNode) {
-        fontNode.parentNode.replaceChild(span, fontNode);
-      } else {
-        container.appendChild(span);
-      }
-    }
     const fragment = document.createDocumentFragment();
-    while (container.firstChild) {
-      fragment.appendChild(container.firstChild);
+    const root = document.createElement('span');
+    fragment.appendChild(root);
+
+    const stack = [root];
+    const safeText = String(raw == null ? '' : raw);
+    const tagRegex = /<\s*\/?\s*[a-zA-Z][^>]*>/g;
+    let lastIndex = 0;
+
+    function appendText(text) {
+      if (!text) return;
+      stack[stack.length - 1].appendChild(document.createTextNode(text));
     }
-    return fragment;
+
+    function normalizeColor(value) {
+      const trimmed = String(value || '').trim();
+      if (!trimmed) return null;
+      const hexMatch = trimmed.match(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/);
+      if (hexMatch) return trimmed;
+      if (/^[a-zA-Z]+$/.test(trimmed)) return trimmed;
+      return null;
+    }
+
+    function parseTag(tag) {
+      const isClosing = /^<\s*\//.test(tag);
+      const nameMatch = tag.match(/^<\s*\/?\s*([a-zA-Z]+)/);
+      const tagName = nameMatch ? nameMatch[1].toLowerCase() : null;
+      return { isClosing, tagName, raw: tag };
+    }
+
+    function parseFontColor(tag) {
+      const attrMatch = tag.match(/color\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/i);
+      if (!attrMatch) return null;
+      return normalizeColor(attrMatch[2] || attrMatch[3] || attrMatch[4]);
+    }
+
+    let match;
+    while ((match = tagRegex.exec(safeText)) !== null) {
+      const tag = match[0];
+      appendText(safeText.slice(lastIndex, match.index));
+      lastIndex = match.index + tag.length;
+
+      const parsed = parseTag(tag);
+      if (!parsed.tagName) {
+        appendText(tag);
+        continue;
+      }
+
+      if (parsed.isClosing) {
+        if (parsed.tagName === 'b' || parsed.tagName === 'font') {
+          if (stack.length > 1) {
+            const last = stack[stack.length - 1];
+            if (last.dataset && last.dataset.tagName === parsed.tagName) {
+              stack.pop();
+            }
+          }
+        } else {
+          appendText(tag);
+        }
+        continue;
+      }
+
+      if (parsed.tagName !== 'b' && parsed.tagName !== 'font') {
+        appendText(tag);
+        continue;
+      }
+
+      if (parsed.tagName === 'b') {
+        const strong = document.createElement('strong');
+        strong.dataset.tagName = 'b';
+        stack[stack.length - 1].appendChild(strong);
+        stack.push(strong);
+        continue;
+      }
+
+      if (parsed.tagName === 'font') {
+        const span = document.createElement('span');
+        const color = parseFontColor(tag);
+        if (color) span.style.color = color;
+        span.dataset.tagName = 'font';
+        stack[stack.length - 1].appendChild(span);
+        stack.push(span);
+        continue;
+      }
+    }
+
+    appendText(safeText.slice(lastIndex));
+
+    const output = document.createDocumentFragment();
+    while (root.firstChild) {
+      output.appendChild(root.firstChild);
+    }
+    return output;
   }
 
   function addLogMessage(html) {
