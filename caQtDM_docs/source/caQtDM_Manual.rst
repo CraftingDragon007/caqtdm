@@ -2996,31 +2996,31 @@ Supported OPC UA data types:
 	OPC UA offers many data types, not all are supported by the plugin. Here is a list of Qt-datatypes that are supported and what EPICS-datatypes they map to.
 	
 	- For simple values (v indicates: same as below):
-      +-----------------------+----------+
-      | QMetaType::Double     | caDOUBLE |
-      +-----------------------+----------+
-      | QMetaType::Float      | caFLOAT  |
-      +-----------------------+----------+
-      | QMetaType::Int        | v        |
-      +-----------------------+----------+
-      | QMetaType::UInt       | v        |
-      +-----------------------+----------+
-      | QMetaType::LongLong   | v        |
-      +-----------------------+----------+
-      | QMetaType::ULongLong  | v        |
-      +-----------------------+----------+
-      | QMetaType::Long       | v        |
-      +-----------------------+----------+
-      | QMetaType::ULong      | caLONG   |
-      +-----------------------+----------+
-      | QMetaType::Short      | v        |
-      +-----------------------+----------+
-      | QMetaType::UShort     | v        |
-      +-----------------------+----------+
-      | QMetaType::Bool       | caINT    |
-      +-----------------------+----------+
-      | QMetaType::QString    | caSTRING |
-      +-----------------------+----------+
+		+-----------------------+----------+
+		| QMetaType::Double     | caDOUBLE |
+		+-----------------------+----------+
+		| QMetaType::Float      | caFLOAT  |
+		+-----------------------+----------+
+		| QMetaType::Int        | v        |
+		+-----------------------+----------+
+		| QMetaType::UInt       | v        |
+		+-----------------------+----------+
+		| QMetaType::LongLong   | v        |
+		+-----------------------+----------+
+		| QMetaType::ULongLong  | v        |
+		+-----------------------+----------+
+		| QMetaType::Long       | v        |
+		+-----------------------+----------+
+		| QMetaType::ULong      | caLONG   |
+		+-----------------------+----------+
+		| QMetaType::Short      | v        |
+		+-----------------------+----------+
+		| QMetaType::UShort     | v        |
+		+-----------------------+----------+
+		| QMetaType::Bool       | caINT    |
+		+-----------------------+----------+
+		| QMetaType::QString    | caSTRING |
+		+-----------------------+----------+
 	- For arrays:
 		All 1-dimensional arrays consisting of exactly one type that is supported for simple values are also supported. If the Qt-Type is QOpcUaMultiDimensionalArray, so a multidimensional array, it will be flattened into a 1-D array. Writing back such flattened arrays will probably fail.
 
