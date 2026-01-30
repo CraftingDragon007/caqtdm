@@ -2970,6 +2970,7 @@ Secure Communication using Signing / Encryption:
 
 Authentication:
 	If you need to connect to an endpoint that is secured with authentication, this is also possible.
+	
 	- Username / Password | May be insecure, not recommended.
 		This can be useful, but depending on your configuration it can be insecure, as the password may be sent in plain text, so everyone sniffing the network could read it.
 		If you want to test it, use Wireshark, it has an OPC filter which will correctly decode it if its not encrypted.
@@ -2992,22 +2993,33 @@ Special Fields:
 	The EPICS-Extension fields .NELM and .FTVL are also supported and populated with the most-closely value for OPC UA. Due to differences in supported data-types .FTVL can differ from the actual value. .NELM is 1 for simple variables and the array-length for arrays.
 
 Supported OPC UA data types:
-	OPC UA offers many data types, not all are supported by the plugin. Here is a list of Qt-datatypes that are supported and what EPICS-datatypes they map to:
-	- For simple values:
-		==================== =========
-		QMetaType::Double    caDOUBLE
-		QMetaType::Float     caFLOAT
-	    QMetaType::Int       v
-	    QMetaType::UInt      v
-	    QMetaType::LongLong  v
-	    QMetaType::ULongLong v
-	    QMetaType::Long      v
-	    QMetaType::ULong     caLONG
-	    QMetaType::Short     v
-	    QMetaType::UShort    v
-	    QMetaType::Bool      caINT
-	    QMetaType::QString   caSTRING
-		==================== =========
+	OPC UA offers many data types, not all are supported by the plugin. Here is a list of Qt-datatypes that are supported and what EPICS-datatypes they map to.
+	- For simple values (v indicates: same as below):
+      +-----------------------+----------+
+      | QMetaType::Double     | caDOUBLE |
+      +-----------------------+----------+
+      | QMetaType::Float      | caFLOAT  |
+      +-----------------------+----------+
+      | QMetaType::Int        | v        |
+      +-----------------------+----------+
+      | QMetaType::UInt       | v        |
+      +-----------------------+----------+
+      | QMetaType::LongLong   | v        |
+      +-----------------------+----------+
+      | QMetaType::ULongLong  | v        |
+      +-----------------------+----------+
+      | QMetaType::Long       | v        |
+      +-----------------------+----------+
+      | QMetaType::ULong      | caLONG   |
+      +-----------------------+----------+
+      | QMetaType::Short      | v        |
+      +-----------------------+----------+
+      | QMetaType::UShort     | v        |
+      +-----------------------+----------+
+      | QMetaType::Bool       | caINT    |
+      +-----------------------+----------+
+      | QMetaType::QString    | caSTRING |
+      +-----------------------+----------+
 	- For arrays:
 		All 1-dimensional arrays consisting of exactly one type that is supported for simple values are also supported. If the Qt-Type is QOpcUaMultiDimensionalArray, so a multidimensional array, it will be flattened into a 1-D array. Writing back such flattened arrays will probably fail.
 
