@@ -110,6 +110,7 @@ set(_caqtdm_lib_links
     Qt${QT_VERSION_MAJOR}::Network
     Qt${QT_VERSION_MAJOR}::UiTools
     caqtdm::qwt
+    caqtdm::qtcontrols
     ${CAQTDM_EPICS_CORE_LIBRARIES})
 
 if(QT_VERSION_MAJOR EQUAL 5)
