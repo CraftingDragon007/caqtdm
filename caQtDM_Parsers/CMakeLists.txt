@@ -39,7 +39,9 @@ if(NOT CAQTDM_ENABLE_MOBILE)
     add_library(caqtdm::adlparser_shared ALIAS adlParser_shared)
 
     install(TARGETS adlParser_shared
-        LIBRARY DESTINATION "${CAQTDM_INSTALL_LIBDIR}")
+        RUNTIME DESTINATION "${CAQTDM_INSTALL_BINDIR}"
+        LIBRARY DESTINATION "${CAQTDM_INSTALL_LIBDIR}"
+        ARCHIVE DESTINATION "${CAQTDM_INSTALL_LIBDIR}")
 endif()
 
 if(TARGET adlParser_shared)
@@ -83,7 +85,9 @@ if(UNIX)
         add_library(caqtdm::edlparser_shared ALIAS edlParser_shared)
 
         install(TARGETS edlParser_shared
-            LIBRARY DESTINATION "${CAQTDM_INSTALL_LIBDIR}")
+            RUNTIME DESTINATION "${CAQTDM_INSTALL_BINDIR}"
+            LIBRARY DESTINATION "${CAQTDM_INSTALL_LIBDIR}"
+            ARCHIVE DESTINATION "${CAQTDM_INSTALL_LIBDIR}")
     endif()
 
     if(TARGET edlParser_shared)
