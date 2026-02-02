@@ -100,4 +100,3 @@ jobs:
           subject-digest: ${{ steps.push-nginx.outputs.digest }}
           push-to-registry: true
 
-        
