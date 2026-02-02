@@ -75,6 +75,19 @@ set_target_properties(caqtdm PROPERTIES
     AUTOUIC_SEARCH_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
 target_compile_definitions(caqtdm PRIVATE ${_viewer_defs})
+
+# Windows-specific compiler definitions
+if(MSVC)
+    target_compile_definitions(caqtdm PRIVATE _CRT_SECURE_NO_WARNINGS)
+    
+    # MSVC-specific linker flags for Qt6
+    if(QT_VERSION_MAJOR EQUAL 6)
+        target_link_options(caqtdm PRIVATE 
+            /ENTRY:mainCRTStartup
+            /STACK:32000000)
+    endif()
+endif()
+
 caqtdm_target_version_info(caqtdm
     PRODUCT "Display Manager"
     FILENAME "caqtdm.exe")

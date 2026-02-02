@@ -78,6 +78,13 @@ elseif(QT_VERSION_MAJOR EQUAL 6)
     target_compile_definitions(qtcontrols PRIVATE QT_DISABLE_DEPRECATED_BEFORE=0x050000)
 endif()
 
+# Windows-specific compiler definitions
+if(MSVC)
+    target_compile_definitions(qtcontrols PRIVATE 
+        _CRT_SECURE_NO_WARNINGS
+        QTCON_MAKEDLL)
+endif()
+
 if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
     target_include_directories(qtcontrols PRIVATE /usr/local/include)
     target_link_libraries(qtcontrols PRIVATE z)
@@ -102,7 +109,9 @@ if(NOT TARGET caqtdm::qtcontrols)
 endif()
 
 install(TARGETS qtcontrols
-    LIBRARY DESTINATION "${CAQTDM_INSTALL_LIBDIR}")
+    RUNTIME DESTINATION "${CAQTDM_INSTALL_BINDIR}"
+    LIBRARY DESTINATION "${CAQTDM_INSTALL_LIBDIR}"
+    ARCHIVE DESTINATION "${CAQTDM_INSTALL_LIBDIR}")
 
 target_link_libraries(qtcontrols
     PUBLIC

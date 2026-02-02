@@ -89,11 +89,19 @@ if(NOT DEFINED CAQTDM_EPICS_HOST_ARCH OR "${CAQTDM_EPICS_HOST_ARCH}" STREQUAL ""
     if(IS_DIRECTORY "${_caqtdm_epics_lib_root}")
         file(GLOB _caqtdm_epics_arch_dirs RELATIVE "${_caqtdm_epics_lib_root}" "${_caqtdm_epics_lib_root}/*")
         list(FILTER _caqtdm_epics_arch_dirs INCLUDE REGEX "^[^\.].*")
-        # Prefer linux-like host directories if multiple are present.
+        # Prefer platform-specific host directories based on current system
         set(_caqtdm_epics_arch_guess "")
         foreach(_arch IN LISTS _caqtdm_epics_arch_dirs)
             if(IS_DIRECTORY "${_caqtdm_epics_lib_root}/${_arch}")
-                if(_caqtdm_epics_arch_guess STREQUAL "" OR _arch MATCHES "linux")
+                if(_caqtdm_epics_arch_guess STREQUAL "")
+                    set(_caqtdm_epics_arch_guess "${_arch}")
+                endif()
+                # Prefer matching current platform
+                if(WIN32 AND _arch MATCHES "windows|win32")
+                    set(_caqtdm_epics_arch_guess "${_arch}")
+                elseif(UNIX AND NOT APPLE AND _arch MATCHES "linux")
+                    set(_caqtdm_epics_arch_guess "${_arch}")
+                elseif(APPLE AND _arch MATCHES "darwin")
                     set(_caqtdm_epics_arch_guess "${_arch}")
                 endif()
             endif()

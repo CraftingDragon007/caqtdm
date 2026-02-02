@@ -36,10 +36,30 @@ function(caqtdm_add_plugin target)
         ${PLUGIN_EXTRA_INCLUDES})
 
     if(CAQTDM_EPICS_INCLUDE_DIR)
-        list(APPEND _plugin_includes
-            ${CAQTDM_EPICS_INCLUDE_DIR}
-            ${CAQTDM_EPICS_INCLUDE_DIR}/os/Linux
-            ${CAQTDM_EPICS_INCLUDE_DIR}/compiler/gcc)
+        list(APPEND _plugin_includes ${CAQTDM_EPICS_INCLUDE_DIR})
+        
+        # Add platform-specific EPICS include directories
+        if(WIN32)
+            list(APPEND _plugin_includes ${CAQTDM_EPICS_INCLUDE_DIR}/os/win32)
+            if(MSVC)
+                list(APPEND _plugin_includes ${CAQTDM_EPICS_INCLUDE_DIR}/compiler/msvc)
+            elseif(MINGW)
+                list(APPEND _plugin_includes ${CAQTDM_EPICS_INCLUDE_DIR}/compiler/gcc)
+            endif()
+        elseif(UNIX AND NOT APPLE)
+            list(APPEND _plugin_includes
+                ${CAQTDM_EPICS_INCLUDE_DIR}/os/Linux
+                ${CAQTDM_EPICS_INCLUDE_DIR}/compiler/gcc)
+        elseif(APPLE)
+            list(APPEND _plugin_includes
+                ${CAQTDM_EPICS_INCLUDE_DIR}/os/Darwin
+                ${CAQTDM_EPICS_INCLUDE_DIR}/compiler/clang
+                ${CAQTDM_EPICS_INCLUDE_DIR}/compiler/gcc)
+        elseif(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+            list(APPEND _plugin_includes
+                ${CAQTDM_EPICS_INCLUDE_DIR}/os/freebsd
+                ${CAQTDM_EPICS_INCLUDE_DIR}/compiler/clang)
+        endif()
     endif()
 
     if(CAQTDM_ANDROID_FUNCTIONS_INCLUDE)
@@ -77,6 +97,8 @@ function(caqtdm_add_plugin target)
     # Install runtime plugins (shared libraries) when not building for mobile
     if(NOT ANDROID AND NOT IOS)
         install(TARGETS ${target}
-            LIBRARY DESTINATION "${CAQTDM_INSTALL_CONTROL_PLUGINDIR}")
+            RUNTIME DESTINATION "${CAQTDM_INSTALL_CONTROL_PLUGINDIR}"
+            LIBRARY DESTINATION "${CAQTDM_INSTALL_CONTROL_PLUGINDIR}"
+            ARCHIVE DESTINATION "${CAQTDM_INSTALL_CONTROL_PLUGINDIR}")
     endif()
 endfunction()

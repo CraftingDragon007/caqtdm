@@ -36,6 +36,7 @@ endif()
 add_library(caqtdm::lib ALIAS caqtdm_lib)
 
 install(TARGETS caqtdm_lib
+    RUNTIME DESTINATION "${CAQTDM_INSTALL_BINDIR}"
     LIBRARY DESTINATION "${CAQTDM_INSTALL_LIBDIR}"
     ARCHIVE DESTINATION "${CAQTDM_INSTALL_LIBDIR}")
 
@@ -50,6 +51,11 @@ elseif(QT_VERSION_MAJOR EQUAL 6)
     target_compile_definitions(caqtdm_lib PRIVATE QT_DISABLE_DEPRECATED_BEFORE=0x050000)
 endif()
 
+# Windows-specific compiler definitions
+if(MSVC)
+    target_compile_definitions(caqtdm_lib PRIVATE _CRT_SECURE_NO_WARNINGS)
+endif()
+
 set(_caqtdm_lib_includes
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/src
@@ -60,9 +66,30 @@ set(_caqtdm_lib_includes
     ${CAQTDM_QWT_INCLUDE_DIR}
     ${CAQTDM_EPICS_INCLUDE_DIR})
 
-list(APPEND _caqtdm_lib_includes
-    ${CAQTDM_EPICS_INCLUDE_DIR}/os/Linux
-    ${CAQTDM_EPICS_INCLUDE_DIR}/compiler/gcc)
+if(WIN32)
+    list(APPEND _caqtdm_lib_includes
+        ${CAQTDM_EPICS_INCLUDE_DIR}/os/win32)
+    if(MSVC)
+        list(APPEND _caqtdm_lib_includes
+            ${CAQTDM_EPICS_INCLUDE_DIR}/compiler/msvc)
+    elseif(MINGW)
+        list(APPEND _caqtdm_lib_includes
+            ${CAQTDM_EPICS_INCLUDE_DIR}/compiler/gcc)
+    endif()
+elseif(UNIX AND NOT APPLE)
+    list(APPEND _caqtdm_lib_includes
+        ${CAQTDM_EPICS_INCLUDE_DIR}/os/Linux
+        ${CAQTDM_EPICS_INCLUDE_DIR}/compiler/gcc)
+elseif(APPLE)
+    list(APPEND _caqtdm_lib_includes
+        ${CAQTDM_EPICS_INCLUDE_DIR}/os/Darwin
+        ${CAQTDM_EPICS_INCLUDE_DIR}/compiler/clang
+        ${CAQTDM_EPICS_INCLUDE_DIR}/compiler/gcc)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+    list(APPEND _caqtdm_lib_includes
+        ${CAQTDM_EPICS_INCLUDE_DIR}/os/freebsd
+        ${CAQTDM_EPICS_INCLUDE_DIR}/compiler/clang)
+endif()
 
 if(CAQTDM_ANDROID_FUNCTIONS_INCLUDE)
     list(APPEND _caqtdm_lib_includes ${CAQTDM_ANDROID_FUNCTIONS_INCLUDE})
