@@ -80,7 +80,7 @@ function(caqtdm_add_plugin target)
         target_link_libraries(${target} PRIVATE Qt${QT_VERSION_MAJOR}::${component})
     endforeach()
 
-    target_link_libraries(${target} PRIVATE caqtdm::lib ${PLUGIN_EXTRA_LIBS})
+    target_link_libraries(${target} PRIVATE caqtdm_lib ${PLUGIN_EXTRA_LIBS})
 
     if(CAQTDM_QT_CORE5COMPAT_TARGET)
         target_link_libraries(${target} PRIVATE ${CAQTDM_QT_CORE5COMPAT_TARGET})
