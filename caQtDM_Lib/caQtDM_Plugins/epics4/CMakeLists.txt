@@ -23,3 +23,10 @@ caqtdm_add_plugin(epics4_plugin
         ${_epics4_link_libs})
 
 target_compile_definitions(epics4_plugin PRIVATE QT_NO_WARNING_OUTPUT QT_NO_DEBUG_OUTPUT)
+
+# MSVC-specific compiler flags for EPICS4
+if(MSVC)
+    target_compile_options(epics4_plugin PRIVATE
+        /Zc:twoPhase-
+        /Zc:referenceBinding)
+endif()
