@@ -193,10 +193,18 @@ CMake Warning: Ignoring extra path from command line: "Files\ZeroMQ\include"
 ZeroMQ header not found in C:\Program; disabling bsread plugin
 ```
 
-**ZeroMQ Library Names:** CMake automatically searches for Windows-specific library names including `libzmq-v143-mt-4_3_5`, `libzmq-v142-mt-4_3_5`, and `libzmq-mt-s-4_3_5`. If your library has a different name, you can specify it:
+**ZeroMQ Library Names:** CMake automatically detects the correct library name based on your Visual Studio version and ZeroMQ version. It constructs names like:
+- `libzmq-v143-mt-4_3_5.lib` for VS2022 with ZMQ 4.3.5
+- `libzmq-v142-mt-4_3_5.lib` for VS2019 with ZMQ 4.3.5
 
+Set `ZMQ_VERSION` environment variable if you have a different version:
 ```cmd
--DCAQTDM_ZMQ_LIBRARY_NAME=libzmq-v143-mt-4_3_5
+set ZMQ_VERSION=4.3.4
+```
+
+For static libraries, use:
+```cmd
+set ZMQ_LIB_SUFFIX=mt-s
 ```
 
 **Solution:** Use the `caQtDM_CMakeBuild.bat` script which automatically quotes paths, or manually add quotes around any path containing spaces.

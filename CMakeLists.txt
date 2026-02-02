@@ -543,40 +543,62 @@ set(CAQTDM_EPICS_CORE_LIBRARIES "${CAQTDM_EPICS_LIB_CA};${CAQTDM_EPICS_LIB_COM};
 
 if(CAQTDM_ENABLE_BSREAD_PLUGIN)
     set(_caqtdm_zmq_names)
+    
+    # Allow explicit override via environment variable or CMake variable
     if(CAQTDM_ZMQ_LIBRARY_NAME AND NOT "${CAQTDM_ZMQ_LIBRARY_NAME}" STREQUAL "")
         list(APPEND _caqtdm_zmq_names "${CAQTDM_ZMQ_LIBRARY_NAME}")
     endif()
     
-    # Add Windows-specific ZeroMQ library names
-    if(WIN32)
-        # Visual Studio builds: libzmq-v143-mt-4_3_5, libzmq-v142-mt-4_3_5, etc.
-        # Static builds: libzmq-mt-s-4_3_5
-        list(APPEND _caqtdm_zmq_names 
-            libzmq-v143-mt-4_3_5
-            libzmq-v142-mt-4_3_5
-            libzmq-v141-mt-4_3_5
-            libzmq-mt-s-4_3_5
-            libzmq-v143-mt-4_3_4
-            libzmq-v142-mt-4_3_4
-            libzmq-mt-s-4_3_4
-            libzmq-v143-mt-4_3_3
-            libzmq-v142-mt-4_3_3
-            libzmq-mt-s-4_3_3
-            libzmq-v143-mt-4_3_2
-            libzmq-v142-mt-4_3_2
-            libzmq-mt-s-4_3_2
-            libzmq-v143-mt
-            libzmq-v142-mt
-            libzmq-mt-s)
+    # Construct Windows-specific ZeroMQ library name based on compiler and version
+    if(WIN32 AND MSVC)
+        # Get ZMQ version from environment or default to 4_3_5
+        if(DEFINED ENV{ZMQ_VERSION})
+            set(_zmq_version "$ENV{ZMQ_VERSION}")
+            # Convert dots to underscores (e.g., 4.3.5 -> 4_3_5)
+            string(REPLACE "." "_" _zmq_version "${_zmq_version}")
+        else()
+            set(_zmq_version "4_3_5")
+        endif()
+        
+        # Detect Visual Studio version
+        if(MSVC_VERSION GREATER_EQUAL 1930)
+            # Visual Studio 2022 (v143)
+            set(_zmq_toolset "v143")
+        elseif(MSVC_VERSION GREATER_EQUAL 1920)
+            # Visual Studio 2019 (v142)
+            set(_zmq_toolset "v142")
+        elseif(MSVC_VERSION GREATER_EQUAL 1910)
+            # Visual Studio 2017 (v141)
+            set(_zmq_toolset "v141")
+        else()
+            # Default to v142
+            set(_zmq_toolset "v142")
+        endif()
+        
+        # Allow override with ZMQ_LIB_SUFFIX environment variable
+        if(DEFINED ENV{ZMQ_LIB_SUFFIX})
+            set(_zmq_constructed_name "libzmq-$ENV{ZMQ_LIB_SUFFIX}-${_zmq_version}")
+        else()
+            set(_zmq_constructed_name "libzmq-${_zmq_toolset}-mt-${_zmq_version}")
+        endif()
+        
+        message(STATUS "Detected Visual Studio toolset: ${_zmq_toolset}")
+        message(STATUS "Looking for ZeroMQ library: ${_zmq_constructed_name}.lib")
+        
+        list(APPEND _caqtdm_zmq_names "${_zmq_constructed_name}")
     endif()
     
+    # Add generic fallback names
     list(APPEND _caqtdm_zmq_names zmq libzmq)
+    
     find_library(CAQTDM_ZMQ_LIBRARY
         NAMES ${_caqtdm_zmq_names}
         HINTS ${CAQTDM_ZMQ_LIBRARY_DIR})
     if(NOT CAQTDM_ZMQ_LIBRARY)
         message(WARNING "ZeroMQ library not found in ${CAQTDM_ZMQ_LIBRARY_DIR}; disabling bsread plugin")
         set(CAQTDM_ENABLE_BSREAD_PLUGIN OFF CACHE BOOL "Build the bsread control system plugin" FORCE)
+    else()
+        message(STATUS "Found ZeroMQ library: ${CAQTDM_ZMQ_LIBRARY}")
     endif()
 endif()
 

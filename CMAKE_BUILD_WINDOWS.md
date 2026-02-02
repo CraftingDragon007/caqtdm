@@ -198,16 +198,29 @@ To enable Python support on Windows:
 - `CAQTDM_ZMQ_LIBRARY_DIR` - ZeroMQ library directory
 - `CAQTDM_ZMQ_LIBRARY_NAME` - Override ZeroMQ library name (optional)
 
-**ZeroMQ Library Naming on Windows:**
+**ZeroMQ Library Detection on Windows:**
 
-CMake automatically searches for Windows-specific ZeroMQ library names:
-- `libzmq-v143-mt-4_3_5.lib` - Visual Studio 2022 (v143), multithreaded, version 4.3.5
-- `libzmq-v142-mt-4_3_5.lib` - Visual Studio 2019 (v142), multithreaded, version 4.3.5
-- `libzmq-mt-s-4_3_5.lib` - Static library, multithreaded, version 4.3.5
+CMake automatically detects the correct ZeroMQ library name based on:
+- **Visual Studio version**: Automatically detects v143 (VS2022), v142 (VS2019), v141 (VS2017)
+- **ZeroMQ version**: From `ZMQ_VERSION` environment variable (default: 4_3_5)
 
-The build system will automatically find these libraries in your ZeroMQ installation directory. If you have a differently named library, specify it with:
+For example, with VS2022 and ZeroMQ 4.3.5, CMake looks for: `libzmq-v143-mt-4_3_5.lib`
+
+**Environment Variables for ZeroMQ:**
+- `ZMQ_VERSION` - ZeroMQ version (e.g., "4.3.5" or "4_3_5", default: 4_3_5)
+- `ZMQ_LIB_SUFFIX` - Custom library suffix to override auto-detection (e.g., "mt-s" for static)
+- `ZMQ_LIB_NAME` - Complete override of library name
+
+**Examples:**
 ```cmd
--DCAQTDM_ZMQ_LIBRARY_NAME=your-custom-zmq-lib-name
+REM Use specific version
+set ZMQ_VERSION=4.3.4
+
+REM Use static library
+set ZMQ_LIB_SUFFIX=mt-s
+
+REM Completely override library name
+set CAQTDM_ZMQ_LIBRARY_NAME=libzmq-custom-name
 ```
 
 **Installation:**
@@ -309,22 +322,34 @@ python --version
 CMake Warning: ZeroMQ library not found in C:\Program Files\ZeroMQ\lib; disabling bsread plugin
 ```
 
-**Cause:** ZeroMQ libraries on Windows have version-specific names that CMake must recognize.
+**Cause:** ZeroMQ libraries on Windows use version and compiler-specific names.
 
-**Solution:** The build system now automatically searches for common Windows ZeroMQ library names:
-- `libzmq-v143-mt-4_3_5.lib` (VS 2022)
-- `libzmq-v142-mt-4_3_5.lib` (VS 2019)
-- `libzmq-mt-s-4_3_5.lib` (static)
+**Solution:** CMake automatically constructs the correct library name based on:
+- Visual Studio version (v143 for VS2022, v142 for VS2019, v141 for VS2017)
+- ZeroMQ version from `ZMQ_VERSION` environment variable (default: 4_3_5)
 
 **Verify your library:**
 ```cmd
 dir "C:\Program Files\ZeroMQ\lib\*.lib"
 ```
 
-If you see a library like `libzmq-v143-mt-4_3_5.lib`, CMake should find it automatically. If you have a differently named library, you can specify it explicitly:
+You should see something like `libzmq-v143-mt-4_3_5.lib`. CMake will automatically detect and use this.
 
+**Customize detection:**
+
+If you have a different version:
 ```cmd
--DCAQTDM_ZMQ_LIBRARY_NAME=libzmq-v143-mt-4_3_5
+set ZMQ_VERSION=4.3.4
+```
+
+If you need a static library:
+```cmd
+set ZMQ_LIB_SUFFIX=mt-s
+```
+
+To override completely:
+```cmd
+set CAQTDM_ZMQ_LIBRARY_NAME=libzmq-v143-mt-4_3_5
 ```
 
 Or provide the full path:
