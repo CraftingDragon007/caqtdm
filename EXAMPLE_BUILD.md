@@ -173,6 +173,24 @@ dir "C:\Program Files\ZeroMQ\include\zmq.h"
 dir "C:\Program Files\ZeroMQ\lib\*.lib"
 ```
 
+**Important:** ZeroMQ is typically installed in `C:\Program Files\ZeroMQ` which contains a space. When passing this path to CMake, you **must** use quotes:
+
+```cmd
+REM Wrong - CMake will fail with "ignoring extra path" warning
+-DCAQTDM_ZMQ_INCLUDE_DIR=C:\Program Files\ZeroMQ\include
+
+REM Correct - quotes protect the space in the path
+-DCAQTDM_ZMQ_INCLUDE_DIR="C:\Program Files\ZeroMQ\include"
+```
+
+The error will look like:
+```
+CMake Warning: Ignoring extra path from command line: "Files\ZeroMQ\include"
+ZeroMQ header not found in C:\Program; disabling bsread plugin
+```
+
+**Solution:** Use the `caQtDM_CMakeBuild.bat` script which automatically quotes paths, or manually add quotes around any path containing spaces.
+
 ## Build Time
 
 Expected build time with Ninja on a modern system:

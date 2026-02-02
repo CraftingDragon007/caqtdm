@@ -177,6 +177,22 @@ This creates a Visual Studio solution that you can open in the IDE.
 - `CAQTDM_ENABLE_BSREAD_PLUGIN` - Enable bsread plugin (ON/OFF)
 - `CAQTDM_ENABLE_EPICS4_PLUGIN` - Enable EPICS4 plugin (ON/OFF)
 
+**Python Support:**
+- `CAQTDM_ENABLE_PYTHONCALC` - Enable Python-assisted calculations (default: OFF on Windows, ON on Linux)
+- `CAQTDM_PYTHON_VERSION` - Python version (e.g., "3.11")
+- `CAQTDM_PYTHON_INCLUDE_DIR` - Python include directory
+- `CAQTDM_PYTHON_LIBRARY_DIR` - Python library directory
+- `CAQTDM_PYTHON_LIBRARY` - Full path to Python library file
+
+To enable Python support on Windows:
+```cmd
+-DCAQTDM_ENABLE_PYTHONCALC=ON ^
+-DCAQTDM_PYTHON_VERSION=3.11 ^
+-DCAQTDM_PYTHON_INCLUDE_DIR=C:\Python311\include ^
+-DCAQTDM_PYTHON_LIBRARY_DIR=C:\Python311\libs ^
+-DCAQTDM_PYTHON_LIBRARY=C:\Python311\libs\python311.lib
+```
+
 **ZeroMQ (for bsread):**
 - `CAQTDM_ZMQ_INCLUDE_DIR` - ZeroMQ include directory
 - `CAQTDM_ZMQ_LIBRARY_DIR` - ZeroMQ library directory
@@ -186,7 +202,35 @@ This creates a Visual Studio solution that you can open in the IDE.
 - `CAQTDM_INSTALL_BINDIR` - Binary installation directory
 - `CAQTDM_INSTALL_LIBDIR` - Library installation directory
 
+**Important Note on Paths with Spaces:**
+
+When passing paths that contain spaces (like `C:\Program Files\ZeroMQ`) to CMake, you **must** enclose them in double quotes:
+
+```cmd
+-DCAQTDM_ZMQ_INCLUDE_DIR="C:\Program Files\ZeroMQ\include"
+```
+
+Without quotes, CMake will interpret the space as a separator and fail with warnings like:
+```
+CMake Warning: Ignoring extra path from command line: "Files\ZeroMQ\include"
+```
+
 ## Troubleshooting
+
+### Paths with Spaces Cause Errors
+
+**Problem:** CMake warnings about "Ignoring extra path" or libraries not found even though the path is correct.
+
+**Solution:** Ensure all paths with spaces are properly quoted:
+```cmd
+REM Wrong - will fail if path has spaces
+-DCAQTDM_ZMQ_INCLUDE_DIR=C:\Program Files\ZeroMQ\include
+
+REM Correct - quotes protect spaces
+-DCAQTDM_ZMQ_INCLUDE_DIR="C:\Program Files\ZeroMQ\include"
+```
+
+The `caQtDM_CMakeBuild.bat` script automatically handles this for you when using environment variables.
 
 ### CMake Cannot Find Qt
 
@@ -218,6 +262,32 @@ Install Ninja via:
 - Visual Studio Installer (Individual Components → Ninja)
 - Download from [ninja-build.org](https://ninja-build.org/)
 - Use `scoop install ninja` or `choco install ninja`
+
+### Python Library Not Found
+
+**Error:**
+```
+CMake Error: Could not find Python library for version 3.11.
+Set CAQTDM_PYTHON_LIBRARY or disable CAQTDM_ENABLE_PYTHONCALC.
+```
+
+**Solution 1 (Recommended):** Python calculations are disabled by default on Windows. If you don't need Python support, the build will proceed without this feature.
+
+**Solution 2:** If you want to enable Python calculations, install Python and specify its location:
+
+```cmd
+cmake .. ^
+  -DCAQTDM_ENABLE_PYTHONCALC=ON ^
+  -DCAQTDM_PYTHON_VERSION=3.11 ^
+  -DCAQTDM_PYTHON_INCLUDE_DIR=C:\Python311\include ^
+  -DCAQTDM_PYTHON_LIBRARY=C:\Python311\libs\python311.lib
+```
+
+To find your Python installation:
+```cmd
+where python
+python --version
+```
 
 ## Build Output
 

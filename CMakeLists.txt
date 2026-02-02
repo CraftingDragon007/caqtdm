@@ -412,7 +412,12 @@ if(_caqtdm_env_norpath)
 endif()
 option(CAQTDM_ENABLE_RPATH "Embed runtime search paths for third-party libraries" ${_default_rpath})
 
-option(CAQTDM_ENABLE_PYTHONCALC "Enable optional Python-assisted calculations" ON)
+set(_default_pythoncalc ON)
+if(WIN32)
+    # Python is not typically available by default on Windows
+    set(_default_pythoncalc OFF)
+endif()
+option(CAQTDM_ENABLE_PYTHONCALC "Enable optional Python-assisted calculations" ${_default_pythoncalc})
 option(CAQTDM_ENABLE_ARCHIVE_PLUGINS "Build archive plugins" ON)
 
 set(_default_bsread ${_caqtdm_env_bsread})
