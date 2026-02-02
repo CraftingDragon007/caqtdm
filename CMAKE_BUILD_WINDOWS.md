@@ -196,6 +196,19 @@ To enable Python support on Windows:
 **ZeroMQ (for bsread):**
 - `CAQTDM_ZMQ_INCLUDE_DIR` - ZeroMQ include directory
 - `CAQTDM_ZMQ_LIBRARY_DIR` - ZeroMQ library directory
+- `CAQTDM_ZMQ_LIBRARY_NAME` - Override ZeroMQ library name (optional)
+
+**ZeroMQ Library Naming on Windows:**
+
+CMake automatically searches for Windows-specific ZeroMQ library names:
+- `libzmq-v143-mt-4_3_5.lib` - Visual Studio 2022 (v143), multithreaded, version 4.3.5
+- `libzmq-v142-mt-4_3_5.lib` - Visual Studio 2019 (v142), multithreaded, version 4.3.5
+- `libzmq-mt-s-4_3_5.lib` - Static library, multithreaded, version 4.3.5
+
+The build system will automatically find these libraries in your ZeroMQ installation directory. If you have a differently named library, specify it with:
+```cmd
+-DCAQTDM_ZMQ_LIBRARY_NAME=your-custom-zmq-lib-name
+```
 
 **Installation:**
 - `CAQTDM_INSTALL_ROOT` - Installation root directory
@@ -287,6 +300,36 @@ To find your Python installation:
 ```cmd
 where python
 python --version
+```
+
+### ZeroMQ Library Not Found
+
+**Error:**
+```
+CMake Warning: ZeroMQ library not found in C:\Program Files\ZeroMQ\lib; disabling bsread plugin
+```
+
+**Cause:** ZeroMQ libraries on Windows have version-specific names that CMake must recognize.
+
+**Solution:** The build system now automatically searches for common Windows ZeroMQ library names:
+- `libzmq-v143-mt-4_3_5.lib` (VS 2022)
+- `libzmq-v142-mt-4_3_5.lib` (VS 2019)
+- `libzmq-mt-s-4_3_5.lib` (static)
+
+**Verify your library:**
+```cmd
+dir "C:\Program Files\ZeroMQ\lib\*.lib"
+```
+
+If you see a library like `libzmq-v143-mt-4_3_5.lib`, CMake should find it automatically. If you have a differently named library, you can specify it explicitly:
+
+```cmd
+-DCAQTDM_ZMQ_LIBRARY_NAME=libzmq-v143-mt-4_3_5
+```
+
+Or provide the full path:
+```cmd
+-DCAQTDM_ZMQ_LIBRARY="C:\Program Files\ZeroMQ\lib\libzmq-v143-mt-4_3_5.lib"
 ```
 
 ## Build Output

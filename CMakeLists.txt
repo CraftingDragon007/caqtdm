@@ -546,6 +546,30 @@ if(CAQTDM_ENABLE_BSREAD_PLUGIN)
     if(CAQTDM_ZMQ_LIBRARY_NAME AND NOT "${CAQTDM_ZMQ_LIBRARY_NAME}" STREQUAL "")
         list(APPEND _caqtdm_zmq_names "${CAQTDM_ZMQ_LIBRARY_NAME}")
     endif()
+    
+    # Add Windows-specific ZeroMQ library names
+    if(WIN32)
+        # Visual Studio builds: libzmq-v143-mt-4_3_5, libzmq-v142-mt-4_3_5, etc.
+        # Static builds: libzmq-mt-s-4_3_5
+        list(APPEND _caqtdm_zmq_names 
+            libzmq-v143-mt-4_3_5
+            libzmq-v142-mt-4_3_5
+            libzmq-v141-mt-4_3_5
+            libzmq-mt-s-4_3_5
+            libzmq-v143-mt-4_3_4
+            libzmq-v142-mt-4_3_4
+            libzmq-mt-s-4_3_4
+            libzmq-v143-mt-4_3_3
+            libzmq-v142-mt-4_3_3
+            libzmq-mt-s-4_3_3
+            libzmq-v143-mt-4_3_2
+            libzmq-v142-mt-4_3_2
+            libzmq-mt-s-4_3_2
+            libzmq-v143-mt
+            libzmq-v142-mt
+            libzmq-mt-s)
+    endif()
+    
     list(APPEND _caqtdm_zmq_names zmq libzmq)
     find_library(CAQTDM_ZMQ_LIBRARY
         NAMES ${_caqtdm_zmq_names}

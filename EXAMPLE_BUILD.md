@@ -173,6 +173,10 @@ dir "C:\Program Files\ZeroMQ\include\zmq.h"
 dir "C:\Program Files\ZeroMQ\lib\*.lib"
 ```
 
+You should see library files like:
+- `libzmq-v143-mt-4_3_5.lib` (Visual Studio 2022, dynamic)
+- `libzmq-mt-s-4_3_5.lib` (static library)
+
 **Important:** ZeroMQ is typically installed in `C:\Program Files\ZeroMQ` which contains a space. When passing this path to CMake, you **must** use quotes:
 
 ```cmd
@@ -187,6 +191,12 @@ The error will look like:
 ```
 CMake Warning: Ignoring extra path from command line: "Files\ZeroMQ\include"
 ZeroMQ header not found in C:\Program; disabling bsread plugin
+```
+
+**ZeroMQ Library Names:** CMake automatically searches for Windows-specific library names including `libzmq-v143-mt-4_3_5`, `libzmq-v142-mt-4_3_5`, and `libzmq-mt-s-4_3_5`. If your library has a different name, you can specify it:
+
+```cmd
+-DCAQTDM_ZMQ_LIBRARY_NAME=libzmq-v143-mt-4_3_5
 ```
 
 **Solution:** Use the `caQtDM_CMakeBuild.bat` script which automatically quotes paths, or manually add quotes around any path containing spaces.
