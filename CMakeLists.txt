@@ -603,8 +603,8 @@ if(CAQTDM_ENABLE_BSREAD_PLUGIN)
 endif()
 
 # Mirror the qmake dependency graph from all.pro using lightweight registrations.
-caqtdm_register_subproject(NAME caQtDM_QtControls PATH caQtDM_QtControls)
 caqtdm_register_subproject(NAME caQtDM_Parsers PATH caQtDM_Parsers)
+caqtdm_register_subproject(NAME caQtDM_QtControls PATH caQtDM_QtControls DEPENDS caQtDM_Parsers)
 caqtdm_register_subproject(NAME qtcontrols_controllers PATH caQtDM_QtControls/plugins/qtcontrols_controllers DEPENDS caQtDM_QtControls caQtDM_Lib)
 caqtdm_register_subproject(NAME qtcontrols_graphics PATH caQtDM_QtControls/plugins/qtcontrols_graphics DEPENDS caQtDM_QtControls caQtDM_Lib)
 caqtdm_register_subproject(NAME qtcontrols_monitors PATH caQtDM_QtControls/plugins/qtcontrols_monitors DEPENDS caQtDM_QtControls caQtDM_Lib)
