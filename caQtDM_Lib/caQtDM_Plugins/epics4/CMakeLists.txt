@@ -26,7 +26,7 @@ target_compile_definitions(epics4_plugin PRIVATE QT_NO_WARNING_OUTPUT QT_NO_DEBU
 
 # MSVC-specific compiler flags for EPICS4
 if(MSVC)
-    target_compile_options(epics4_plugin PRIVATE
-        /Zc:twoPhase-
-        /Zc:referenceBinding)
+    # Disable two-phase name lookup to help with template compilation
+    # Note: /Zc:referenceBinding is NOT included as it conflicts with EPICS pvData headers
+    target_compile_options(epics4_plugin PRIVATE /Zc:twoPhase-)
 endif()
