@@ -1248,27 +1248,30 @@ QMainWindow *FileOpenWindow::loadMainWindow(const QPoint &position, const QStrin
 #endif
             if (!safeMainWindow) {
                 qDebug() << "caQtDM_Lib destroyed before windows size adjustment";
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
                 return;
-            };
-            QByteArray envWidth = qgetenv("VIRTUAL_WIDTH");
-            QByteArray envHeight = qgetenv("VIRTUAL_HEIGHT");
+#endif
+            } else {
+                QByteArray envWidth = qgetenv("VIRTUAL_WIDTH");
+                QByteArray envHeight = qgetenv("VIRTUAL_HEIGHT");
 
-            if (!envWidth.isEmpty() && !envHeight.isEmpty()) {
-                bool wOk, hOk;
+                if (!envWidth.isEmpty() && !envHeight.isEmpty()) {
+                    bool wOk, hOk;
 
-                int width = envWidth.toInt(&wOk);
-                int height = envHeight.toInt(&hOk);
+                    int width = envWidth.toInt(&wOk);
+                    int height = envHeight.toInt(&hOk);
 
-                QSize minSize = safeMainWindow->minimumSize();
-                QSize maxSize = safeMainWindow->maximumSize();
+                    QSize minSize = safeMainWindow->minimumSize();
+                    QSize maxSize = safeMainWindow->maximumSize();
 
-                width = qMin(width, maxSize.width());
-                height = qMin(height, maxSize.height());
-                width = qMax(width, minSize.width());
-                height = qMax(height, minSize.height());
+                    width = qMin(width, maxSize.width());
+                    height = qMin(height, maxSize.height());
+                    width = qMax(width, minSize.width());
+                    height = qMax(height, minSize.height());
 
-                qDebug() << "Setting window size to virtual monitor size" << width << height;
-                safeMainWindow->setGeometry(safeMainWindow->x(), safeMainWindow->y(), width, height);
+                    qDebug() << "Setting window size to virtual monitor size" << width << height;
+                    safeMainWindow->setGeometry(safeMainWindow->x(), safeMainWindow->y(), width, height);
+                }
             }
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
         });
