@@ -6,7 +6,6 @@ endif()
 # The flag causes template instantiation errors in EPICS pvData headers
 if(MSVC)
     string(REPLACE "/permissive-" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-    string(REPLACE "-permissive-" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 endif()
 
 set(_epics4_required_libs pvAccess pvAccessCA pvData pvaClient nt)
