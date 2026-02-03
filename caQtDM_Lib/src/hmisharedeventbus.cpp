@@ -179,7 +179,9 @@ bool HmiSharedEventBus::sendEvent(int eventType, const QByteArray& payload) {
     if (!this_writeLockSemaphore.acquire()) {
         qCritical() << PREFIX << "Unable to aquire system semaphore, error:" << this_writeLockSemaphore.errorString();
         qCritical() << PREFIX << "To prevent crashes HmiShharedEventBus is now disabled!";
+#ifdef linux
         qCritical() << PREFIX << "Please clean up /tmp/*caQtDM* and restart the program if you want to use caHMIConfig features";
+#endif
         this_isInitialized = false;
         this_pollTimer.stop();
         return false;
@@ -198,9 +200,7 @@ bool HmiSharedEventBus::sendEvent(int eventType, const QByteArray& payload) {
         std::memset(event.data, 0, EVENT_PAYLOAD_SIZE); // Clear if no payload.
     }
 
-    int nextWriteIndex = (writeIndex + 1) % EVENT_BUFFER_CAPACITY;
-
-    this_header->currentWriteIndex = nextWriteIndex;
+    this_header->currentWriteIndex = (writeIndex + 1) % EVENT_BUFFER_CAPACITY;
     this_header->totalEventsWritten++;
 
     this_writeLockSemaphore.release();
