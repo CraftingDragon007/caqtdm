@@ -81,6 +81,12 @@ function(caqtdm_add_plugin target)
     endforeach()
 
     target_link_libraries(${target} PRIVATE caqtdm_lib qtcontrols ${PLUGIN_EXTRA_LIBS})
+    
+    # On Windows, plugins need direct access to EPICS libraries for calc functions (postfix, calcPerform)
+    # Even though caQtDM_Lib links to EPICS, Windows DLL model doesn't support transitive symbol access
+    if(CAQTDM_EPICS_CORE_LIBRARIES)
+        target_link_libraries(${target} PRIVATE ${CAQTDM_EPICS_CORE_LIBRARIES})
+    endif()
 
     if(CAQTDM_QT_CORE5COMPAT_TARGET)
         target_link_libraries(${target} PRIVATE ${CAQTDM_QT_CORE5COMPAT_TARGET})
