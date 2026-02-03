@@ -2,6 +2,12 @@ if(NOT CAQTDM_ENABLE_EPICS4_PLUGIN)
     return()
 endif()
 
+# Remove /permissive- flag from CMAKE_CXX_FLAGS for EPICS4 compatibility with MSVC
+# EPICS pvData headers use legacy C++ templates that require relaxed conformance
+if(MSVC)
+    string(REPLACE "/permissive-" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+endif()
+
 set(_epics4_required_libs pvAccess pvAccessCA pvData pvaClient nt)
 set(_epics4_link_libs ${CAQTDM_EPICS_CORE_LIBRARIES})
 foreach(_lib IN LISTS _epics4_required_libs)
@@ -26,8 +32,6 @@ target_compile_definitions(epics4_plugin PRIVATE QT_NO_WARNING_OUTPUT QT_NO_DEBU
 
 # MSVC-specific compiler flags for EPICS4
 if(MSVC)
-    # EPICS pvData headers require relaxed C++ conformance mode
-    # Note: This plugin is disabled by default on Windows+Ninja due to flag conflicts
-    # Use Visual Studio generator if EPICS4 support is needed on Windows
+    # Add /Zc:twoPhase- for two-phase template name lookup compatibility
     target_compile_options(epics4_plugin PRIVATE /Zc:twoPhase-)
 endif()
