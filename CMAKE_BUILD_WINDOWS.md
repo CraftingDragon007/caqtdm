@@ -175,7 +175,12 @@ This creates a Visual Studio solution that you can open in the IDE.
 - `CAQTDM_ENABLE_GPS_PLUGIN` - Enable GPS plugin (ON/OFF)
 - `CAQTDM_ENABLE_MODBUS_PLUGIN` - Enable Modbus plugin (ON/OFF)
 - `CAQTDM_ENABLE_BSREAD_PLUGIN` - Enable bsread plugin (ON/OFF)
-- `CAQTDM_ENABLE_EPICS4_PLUGIN` - Enable EPICS4 plugin (ON/OFF)
+- `CAQTDM_ENABLE_EPICS4_PLUGIN` - Enable EPICS4 plugin (default: OFF on Windows+Ninja, ON on Windows+VS or Linux)
+
+**Note:** The EPICS4 plugin is disabled by default when using the Ninja generator on Windows due to compiler flag conflicts between EPICS pvData headers and Qt's strict C++ conformance settings. If you need EPICS4 support on Windows, use the Visual Studio generator:
+```cmd
+cmake -G "Visual Studio 17 2022" -DCAQTDM_ENABLE_EPICS4_PLUGIN=ON ...
+```
 
 **Python Support:**
 - `CAQTDM_ENABLE_PYTHONCALC` - Enable Python-assisted calculations (default: OFF on Windows, ON on Linux)

@@ -26,17 +26,8 @@ target_compile_definitions(epics4_plugin PRIVATE QT_NO_WARNING_OUTPUT QT_NO_DEBU
 
 # MSVC-specific compiler flags for EPICS4
 if(MSVC)
-    # EPICS pvData headers are not compatible with strict MSVC conformance mode
-    # Use COMPILE_FLAGS property (string) which is appended AFTER CMAKE_CXX_FLAGS
-    # This allows us to override /permissive- with /permissive (without dash)
-    
-    # Get existing compile flags if any
-    get_target_property(_existing_flags epics4_plugin COMPILE_FLAGS)
-    if(NOT _existing_flags)
-        set(_existing_flags "")
-    endif()
-    
-    # Append our flags: disable two-phase lookup and enable permissive mode
-    set_target_properties(epics4_plugin PROPERTIES
-        COMPILE_FLAGS "${_existing_flags} /Zc:twoPhase- /permissive")
+    # EPICS pvData headers require relaxed C++ conformance mode
+    # Note: This plugin is disabled by default on Windows+Ninja due to flag conflicts
+    # Use Visual Studio generator if EPICS4 support is needed on Windows
+    target_compile_options(epics4_plugin PRIVATE /Zc:twoPhase-)
 endif()
