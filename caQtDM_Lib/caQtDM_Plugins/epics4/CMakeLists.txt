@@ -2,6 +2,13 @@ if(NOT CAQTDM_ENABLE_EPICS4_PLUGIN)
     return()
 endif()
 
+# Remove /permissive- from CMAKE_CXX_FLAGS for this subdirectory
+# The flag causes template instantiation errors in EPICS pvData headers
+if(MSVC)
+    string(REPLACE "/permissive-" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+    string(REPLACE "-permissive-" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+endif()
+
 set(_epics4_required_libs pvAccess pvAccessCA pvData pvaClient nt)
 set(_epics4_link_libs ${CAQTDM_EPICS_CORE_LIBRARIES})
 foreach(_lib IN LISTS _epics4_required_libs)
@@ -28,16 +35,4 @@ target_compile_definitions(epics4_plugin PRIVATE QT_NO_WARNING_OUTPUT QT_NO_DEBU
 if(MSVC)
     # Disable two-phase name lookup to help with template compilation
     target_compile_options(epics4_plugin PRIVATE /Zc:twoPhase-)
-    
-    # Remove /permissive- flag - it enables strict conformance mode which causes
-    # template instantiation errors in EPICS pvData headers (void& issues)
-    # This is needed for both Ninja and Visual Studio generators
-    get_target_property(_epics4_compile_options epics4_plugin COMPILE_OPTIONS)
-    if(_epics4_compile_options)
-        list(REMOVE_ITEM _epics4_compile_options "/permissive-" "-permissive-")
-        set_target_properties(epics4_plugin PROPERTIES COMPILE_OPTIONS "${_epics4_compile_options}")
-    endif()
-    
-    # Also add the permissive flag (no dash) to explicitly disable strict mode
-    target_compile_options(epics4_plugin PRIVATE /permissive)
 endif()
