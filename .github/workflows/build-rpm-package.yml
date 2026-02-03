@@ -87,12 +87,15 @@ jobs:
         rpmdev-setuptree
 
         # Download source
-        wget https://epics-controls.org/download/base/base-7.0.9.tar.gz
-        wget https://epics-controls.org/download/base/base-7.0.9.tar.gz.asc
+        git clone https://github.com/epics-base/epics-base.git --branch R7.0.10 --depth 1 base-7.0.10
+        cd base-7.0.10
+        git submodule update --init --recursive --jobs $(nproc)
+        cd ..
+        tar -czf base-7.0.10.tar.gz base-7.0.10
+        rm -rf base-7.0.10
 
         # Copy source and patches to rpmbuild directories
-        cp base-7.0.9.tar.gz ~/rpmbuild/SOURCES/
-        cp base-7.0.9.tar.gz.asc ~/rpmbuild/SOURCES/
+        cp base-7.0.10.tar.gz ~/rpmbuild/SOURCES/
         cp *.patch ~/rpmbuild/SOURCES/
         cp epics-base.spec ~/rpmbuild/SPECS/
 
@@ -105,7 +108,7 @@ jobs:
 
     - name: Install epics-base RPM
       run: |
-        rpm -ivh ~/rpmbuild/RPMS/*/epics-base-7.0.9-*.rpm
+        rpm -ivh ~/rpmbuild/RPMS/*/epics-base-7.0.10-*.rpm
 
     - name: Install caQtDM build dependencies (RHEL <10, non-Fedora — minimal Qt5 set)
       if: ${{ matrix.rhel_major < 10 && !contains(matrix.image, 'fedora') }}
@@ -152,7 +155,7 @@ jobs:
         cd caQtDM_Viewer/package/redhat/caqtdm
 
         # Set EPICS_BASE environment variable
-        export EPICS_BASE_TARGET=/usr/local/epics/base-7.0.9
+        export EPICS_BASE_TARGET=/usr/local/epics/base-7.0.10
 
         # The create-rpm.sh script will handle the rest
         chmod +x create-rpm.sh
