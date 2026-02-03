@@ -35,8 +35,10 @@
 #include "qtcpsocket.h"
 #include "x509certificate.h"
 
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 #include <QMutex>
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#include <CertificateDialog.h>
 #include <QOpcUaConnectionSettings>
 #endif
 
@@ -57,6 +59,8 @@ OpcUaCore::OpcUaCore(QObject *parent)
     , m_pemPassword("")
     , m_passwordCredentials({"", ""})
 {
+    m_isCertificateDialogOpen = false;
+
     QOpcUaProvider provider;
 
     QStringList backends = provider.availableBackends();
@@ -215,13 +219,33 @@ OpcUaCore::OpcUaCore(QObject *parent)
         reconnectTimer->start(0);
     });
 
-    QObject::connect(m_client, &QOpcUaClient::connectError, this, [](QOpcUaErrorState *state) {
-        QString errorMessage = "connectError: " + QString::number(state->errorCode()) + " ["
-                               + QMetaEnum::fromType<QOpcUa::UaStatusCode>().valueToKey(
-                                   state->errorCode())
-                               + "], isClientSideError: "
+    QObject::connect(m_client, &QOpcUaClient::connectError, this, [&](QOpcUaErrorState *state) {
+        QString statusCodeString = QMetaEnum::fromType<QOpcUa::UaStatusCode>().valueToKey(
+            state->errorCode());
+        QString errorMessage = "connectError: 0x" + QString::number(state->errorCode(), 16) + " ["
+                               + statusCodeString + "] at connection step: "
+                               + QString::number(static_cast<quint64>(state->connectionStep()))
+                               + ", isClientSideError: "
                                + (state->isClientSideError() ? "yes" : "no");
         VERBOSELOG(errorMessage);
+
+        if (state->errorCode() == QOpcUa::UaStatusCode::BadSecurityChecksFailed) {
+            errorMessage
+                = "This indicates your client certificate may not be trusted by the server. If "
+                  "that's the case, add it to the servers trusted certificates. The client "
+                  "certificate is stored under: " + m_client->pkiConfiguration().clientCertificateFile();
+            VERBOSELOG(errorMessage);
+        }
+
+        if (state->errorCode() == QOpcUa::UaStatusCode::BadCertificateUntrusted && !m_isCertificateDialogOpen) {
+            m_isCertificateDialogOpen = true;
+            CertificateDialog dialog(Q_NULLPTR);
+            errorMessage = tr("Server certificate validation failed with error 0x%1 (%2).\nClick 'Abort' to abort the connect, or 'Ignore' to continue connecting.")
+                       .arg(static_cast<ulong>(state->errorCode()), 8, 16, '0').arg(statusCodeString);
+            int result = dialog.showCertificate(errorMessage, m_currentEndpointDescription.serverCertificate(), m_client->pkiConfiguration().trustListDirectory());
+            state->setIgnoreError(result == 1);
+            m_isCertificateDialogOpen = false;
+        }
     });
 
     QObject::connect(
@@ -327,6 +351,7 @@ void OpcUaCore::setupPkiConfig()
     }
 
     m_client->setPkiConfiguration(pkiConfig);
+    m_client->setApplicationIdentity(pkiConfig.applicationIdentity());
 }
 
 QOpcUaEndpointDescription OpcUaCore::getEndpointWithLowestLatency(
