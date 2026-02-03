@@ -27,6 +27,17 @@ target_compile_definitions(epics4_plugin PRIVATE QT_NO_WARNING_OUTPUT QT_NO_DEBU
 # MSVC-specific compiler flags for EPICS4
 if(MSVC)
     # Disable two-phase name lookup to help with template compilation
-    # Note: /Zc:referenceBinding is NOT included as it conflicts with EPICS pvData headers
     target_compile_options(epics4_plugin PRIVATE /Zc:twoPhase-)
+    
+    # Remove /permissive- flag - it enables strict conformance mode which causes
+    # template instantiation errors in EPICS pvData headers (void& issues)
+    # This is needed for both Ninja and Visual Studio generators
+    get_target_property(_epics4_compile_options epics4_plugin COMPILE_OPTIONS)
+    if(_epics4_compile_options)
+        list(REMOVE_ITEM _epics4_compile_options "/permissive-" "-permissive-")
+        set_target_properties(epics4_plugin PROPERTIES COMPILE_OPTIONS "${_epics4_compile_options}")
+    endif()
+    
+    # Also add the permissive flag (no dash) to explicitly disable strict mode
+    target_compile_options(epics4_plugin PRIVATE /permissive)
 endif()
