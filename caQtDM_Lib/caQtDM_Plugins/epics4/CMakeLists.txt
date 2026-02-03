@@ -2,12 +2,6 @@ if(NOT CAQTDM_ENABLE_EPICS4_PLUGIN)
     return()
 endif()
 
-# Remove /permissive- from CMAKE_CXX_FLAGS for this subdirectory
-# The flag causes template instantiation errors in EPICS pvData headers
-if(MSVC)
-    string(REPLACE "/permissive-" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-endif()
-
 set(_epics4_required_libs pvAccess pvAccessCA pvData pvaClient nt)
 set(_epics4_link_libs ${CAQTDM_EPICS_CORE_LIBRARIES})
 foreach(_lib IN LISTS _epics4_required_libs)
@@ -34,4 +28,20 @@ target_compile_definitions(epics4_plugin PRIVATE QT_NO_WARNING_OUTPUT QT_NO_DEBU
 if(MSVC)
     # Disable two-phase name lookup to help with template compilation
     target_compile_options(epics4_plugin PRIVATE /Zc:twoPhase-)
+    
+    # Remove /permissive- flag that causes template errors in EPICS pvData
+    # Get current compile options
+    get_target_property(_compile_opts epics4_plugin COMPILE_OPTIONS)
+    if(_compile_opts)
+        # Remove /permissive- from the list
+        list(FILTER _compile_opts EXCLUDE REGEX "^[/-]permissive-$")
+        set_target_properties(epics4_plugin PROPERTIES COMPILE_OPTIONS "${_compile_opts}")
+    endif()
+    
+    # Also check and remove from interface compile options if present
+    get_target_property(_iface_opts epics4_plugin INTERFACE_COMPILE_OPTIONS)
+    if(_iface_opts)
+        list(FILTER _iface_opts EXCLUDE REGEX "^[/-]permissive-$")
+        set_target_properties(epics4_plugin PROPERTIES INTERFACE_COMPILE_OPTIONS "${_iface_opts}")
+    endif()
 endif()
