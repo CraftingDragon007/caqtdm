@@ -130,8 +130,8 @@ set(_viewer_links
     Qt${QT_VERSION_MAJOR}::Svg
     Qt${QT_VERSION_MAJOR}::UiTools
     Qt${QT_VERSION_MAJOR}::Network
-    caqtdm::lib
-    caqtdm::qtcontrols
+    caqtdm_lib
+    qtcontrols
     caqtdm::qwt)
 if(QT_VERSION_MAJOR EQUAL 5)
     list(APPEND _viewer_links Qt5::OpenGL)
@@ -163,11 +163,11 @@ install(TARGETS caqtdm
     RUNTIME DESTINATION "${CAQTDM_INSTALL_BINDIR}")
 
 if(CAQTDM_ENABLE_ADL_EDL)
-    if(TARGET caqtdm::adlparser)
-        target_link_libraries(caqtdm PRIVATE caqtdm::adlparser)
+    if(TARGET adlParser_static)
+        target_link_libraries(caqtdm PRIVATE adlParser_static)
     endif()
-    if(TARGET caqtdm::edlparser)
-        target_link_libraries(caqtdm PRIVATE caqtdm::edlparser)
+    if(TARGET edlParser_static)
+        target_link_libraries(caqtdm PRIVATE edlParser_static)
     endif()
 endif()
 
