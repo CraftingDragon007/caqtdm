@@ -40,7 +40,9 @@ public:
     explicit SplashScreen( QWidget *parent = 0);
     int m_progress;
     void setMaximum(int max);
-    QString getMappedSplashScreenImage(QDate date);
+    QString getMappedSplashScreenImage(QDate &date);
+    bool isEaster(QDate &date);
+    bool isCoffeeTime(QTime time);
 
 public slots:
     void setProgress(int value)
@@ -60,6 +62,7 @@ private:
         QPixmap pixmapLoad;
         int m_maximum;
 
+        std::pair<int, int> easter_gregorian(int y);
 };
 
 #endif

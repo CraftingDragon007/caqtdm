@@ -10,7 +10,11 @@
         <file alias="easter_caqtdm.png">splashScreenImages/easter_caqtdm.png</file>
         <file alias="halloween_caqtdm.png">splashScreenImages/halloween_caqtdm.png</file>
         <file alias="santa_caqtdm.png">splashScreenImages/santa_caqtdm.png</file>
-        <file alias="swiss_caqtdm.png">splashScreenImages/swiss_caqtdm.png</file>
         <file alias="waving_caqtdm.png">splashScreenImages/waving_caqtdm.png</file>
+        <file alias="coffee_caqtdm.png">splashScreenImages/coffee_caqtdm.png</file>
+        <file alias="spaghetti_caqtdm.png">splashScreenImages/spaghetti_caqtdm.png</file>
+        <file alias="willhelmtell_caqtdm.png">splashScreenImages/willhelmtell_caqtdm.png</file>
+        <file alias="pi_caqtdm.png">splashScreenImages/pi_caqtdm.png</file>
+        <file alias="christmas_caqtdm.png">splashScreenImages/christmas_caqtdm.png</file>
     </qresource>
 </RCC>

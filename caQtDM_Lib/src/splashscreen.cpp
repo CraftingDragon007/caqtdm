@@ -102,7 +102,7 @@ SplashScreen::SplashScreen(QWidget *parent) : QSplashScreen(), m_progress(0)
     this->showMessage("loading include ui files", Qt::AlignBottom, QColor(Qt::black));
 }
 
-QString SplashScreen::getMappedSplashScreenImage(QDate date)
+QString SplashScreen::getMappedSplashScreenImage(QDate &date)
 {
     QFile mappingFile(":splashScreenMapping.json");
     if (!mappingFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
@@ -119,7 +119,13 @@ QString SplashScreen::getMappedSplashScreenImage(QDate date)
     }
 
     QJsonObject mappingObject = mappingDocument.object();
-    QJsonValue mappedValue = mappingObject.value(date.toString(Qt::ISODate));
+    QJsonValue mappedValue = mappingObject.value(date.toString("MM-dd")); // month-day, zero-padded
+
+    if (isEaster(date) && mappingObject.contains("EASTER")) {
+       mappedValue = mappingObject.value("EASTER");
+    } else if (isCoffeeTime(QTime::currentTime()) && mappingObject.contains("COFFEE")) {
+       mappedValue = mappingObject.value("COFFEE");
+    }
 
     QString mappedImagePath;
     if (mappedValue.isArray()) {
@@ -143,6 +149,31 @@ QString SplashScreen::getMappedSplashScreenImage(QDate date)
     }
 
     return mappedImagePath;
+}
+
+bool SplashScreen::isEaster(QDate &date) {
+    return easter_gregorian(date.year()) == std::pair<int, int>(date.month(), date.day());
+}
+
+bool SplashScreen::isCoffeeTime(QTime time) {
+    return time.hour() == 16 && time.minute() == 0;
+}
+
+// from https://www.daniweb.com/programming/software-development/threads/463261/c-easter-day-calculation
+std::pair<int, int> SplashScreen::easter_gregorian(int y) {
+   if (y < 1583 || y > 9999) throw std::out_of_range("Gregorian years only");
+   int a = y % 19;
+   int b = y / 100, c = y % 100;
+   int d = b / 4, e = b % 4;
+   int f = (b + 8) / 25;
+   int g = (b - f + 1) / 3;
+   int h = (19*a + b - d - g + 15) % 30;
+   int i = c / 4, k = c % 4;
+   int l = (32 + 2*e + 2*i - h - k) % 7;
+   int m = (a + 11*h + 22*l) / 451;
+   int month = (h + l - 7*m + 114) / 31;          // 3=March, 4=April
+   int day   = ((h + l - 7*m + 114) % 31) + 1;
+   return {month, day};
 }
 
 void SplashScreen::setMaximum(int max)
