@@ -3465,3 +3465,111 @@ Reverse proxy setup for caQtDM Web (required)
 
 You can find example configurations for setting up nginx or Caddy as a reverse proxy in the `caQtDM_Web` directory of the caQtDM repository.
 
+Nginx
+>>>>>>
+
+The nginx template file is named `caqtdm_web.conf.template`. You can copy this file to your nginx configuration directory and rename it to `caqtdm_web.conf`.
+Please make sure to at least replace the following placeholders:
+
+- `_INSTALL_HOSTNAME_` with the hostname or IP address where caQtDM Web will be accessible.
+- `_INSTALL_CERT_BASENAME_` with the base name of your SSL certificate files (without the .crt or .key extension).
+
+You can also adjust other settings as needed, such as enabling basic authentication or switching to HTTP if SSL is not required.
+After configuring nginx, make sure to enable the configuration and restart nginx to apply the changes.
+
+.. code:: bash
+
+   # Debian/Ubuntu example
+   sudo ln -s /etc/nginx/sites-available/caqtdm_web.conf /etc/nginx/sites-enabled/caqtdm_web.conf
+   sudo systemctl restart nginx
+
+   # Red Hat/CentOS example
+   # There is no sites-available/sites-enabled structure by default, just copy the file to conf.d
+   sudo cp /etc/nginx/conf.d/caqtdm_web.conf.template /etc/nginx/conf.d/caqtdm_web.conf
+   sudo systemctl restart nginx
+
+   # Alpine Linux example
+   # Also no sites-available/sites-enabled structure by default, just copy the file to conf.d
+   sudo cp /etc/nginx/conf.d/caqtdm_web.conf.template /etc/nginx/conf.d/caqtdm_web.conf
+   sudo rc-service nginx restart
+
+
+Caddy
+>>>>>>
+
+The Caddy config is named `Caddyfile`.
+
+You can change it as needed, there are no required changes, but you might want to adjust the domain name.
+After configuring Caddy, make sure to copy the Caddyfile to the appropriate location (e.g., `/etc/caddy/Caddyfile`) and restart Caddy to apply the changes.
+For example, if you are using systemd:
+
+.. code:: bash
+
+   sudo systemctl restart caddy
+
+For testing purposes, you can also run Caddy directly from the command line:
+
+.. code:: bash
+
+   caddy run --config /path/to/Caddyfile 
+   # Use sudo if using privileged ports (<1024, e.g., 443 or 80)
+
+Others
+>>>>>>>
+
+You can also use other reverse proxies like Apache HTTP Server or Traefik.
+Please refer to their respective documentation for setting up a reverse proxy to forward requests to the caQtDM Web server.
+
+You can look at the `caqtdm_web.conf.template` and `Caddyfile` files for guidance on the necessary settings.
+
+caQtDM Web specific configuration options
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Command line options
+^^^^^^^^^^^^^^^^^^^^^
+
+
+When running caQtDM as a server, you can use the following command line options in addition to the regular caQtDM options:
+
+.. csv-table::
+   :header: "Option", "Description", "Notes", "Default"
+
+   "-server", "Run caQtDM as a web server", "Required for web mode", ""
+   "-novnc", "Enable qnovnc-platform-plugin for web access", "Required for web mode using qnovnc", ""
+   "-novnc_readonly", "Run caQtDM Web in read-only mode, disabling user interactions", "Useful for public displays", "none = Disabled"
+   "-slave_server", "Runs caQtDM Web like without management features (doesn't start new instances by itself)", "This is used internally when starting new instances from the main process, for example via caRelatedDisplay", "none = Disabled"
+   "-server_port", "The port on which the graphical server will listen", "For the main process this should be the start of a large port range + 1, for slave processes it will be assigned automatically", "30001"
+   "-web_server_port", "The port on which the management web socket server will listen", "For the main process this should be the start of a large port range, for slave processes it will be assigned automatically", "30000"
+   "-web_timeout", "Timeout in seconds for shutdown after inactivity (min. 76)", "Applies only to child processes. If no clients are connected for this amount of time, the server will shut down", "none = Disabled"
+   "-web_instance_limit", "Maximum number of caQtDM Web instances that can be started by the main process", "Limits resource usage, available port range has to be 2x this value", "1000"
+   "-web_interaction_timeout", "Change -web_timeout behaviour to trigger only when no user interactions happened for the given time", "Can only be used in combination with -web_timeout", "none = Disabled"
+   "-host", "Hostname or IP address to bind the web server to", "Useful if you have multiple network interfaces, has to be a valid IP address or hostname", "127.0.0.1"
+   "-web_launcher_root_file", "Path to a `pylauncher <https://github.com/paulscherrerinstitute/pylauncher>`__ json file that will be parsed and shown in the web ui", "Allows launching predefined panels from the web interface", "none = Disabled"
+   "-web_allow_insecure_cashell_commands", "Allows arbitrary :ref:`caShellCommand` and :ref:`caShellScript` execution from the web interface", "This can be a security risk, only enable if you are sure about the implications. If you enable this also make sure that your commands only invoke simple command line actions, it is not possible to display other graphical applications besides caQtDM panels", "none = Disabled"
+
+
+Enviroment variables
+^^^^^^^^^^^^^^^^^^^^^
+
+Regular
+>>>>>>>>
+
+You can use the following environment variables in addition to the regular caQtDM environment variables to configure caQtDM Web:
+
+.. csv-table::
+   :header: "Environment Variable", "Description", "Notes"
+
+   "VIRTUAL_WIDTH", "Width of the virtual display used by caQtDM Web", "Default is determined automatically based on the panel size"
+   "VIRTUAL_HEIGHT", "Height of the virtual display used by caQtDM Web", "Default is determined automatically based on the panel size"
+
+Docker specific
+>>>>>>>>>>>>>>>>
+
+When running caQtDM Web in a Docker container, you can use the following additional environment variables to configure the setup:
+
+.. csv-table::
+   :header: "Environment Variable", "Description", "Notes"
+
+   "ENTRY_PANEL", "Path to the main caQtDM UI file that should be served by default", "Required, default is the test panel if not specified"
+   "EXTRA_ARGS", "Additional command line arguments to pass to caQtDM, as docker would not allow passing them directly", "Optional, default is empty"
+
