@@ -1041,7 +1041,7 @@ import RFB from './noVNC/core/rfb.js';
         });
 
         containerElement.appendChild(menuButton);
-      } else if (item.type === 'caqtdm') {
+      } else if (item.type === 'caqtdm' || item.type === 'medm' || item.type === 'pep') {
         // caQtDM action
         const actionButton = document.createElement('button');
         actionButton.className = 'menu-item menu-action';
