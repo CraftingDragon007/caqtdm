@@ -3367,3 +3367,101 @@ caQtDM uses the following environment variables:
 | ``CAQTDM_MODBUS_DATABASE``            | Database to use for the modbus plugin                     |
 +---------------------------------------+-----------------------------------------------------------+
 
+caQtDM Web
+----------
+
+It is possible to run caQtDM as a web server application using
+`qnovnc-platform-plugin <https://github.com/CraftingDragon007/qnovnc-platform-plugin>`__. This allows you to run caQtDM in a headless
+environment and access it through a web browser.
+
+Docker setup (easiest)
+~~~~~~~~~~~~~~~~~~~~~~~
+
+.. _prebuilt-images:
+
+Prebuilt images
+^^^^^^^^^^^^^^^^^^^^^
+
+You can use prebuilt Docker images available on the GitHub Container Registry.
+
+To use those you can configure a docker-compose.yml file like this:
+
+.. code:: yaml
+
+   services:
+      nginx:
+         image: ghcr.io/craftingdragon007/caqtdm_nginx:feature-web_control
+         ports:
+            - "8443:443"
+            - "8080:80"
+         networks:
+            - caqtdm-web
+         environment:
+            - PROXY_BACKEND=http://caqtdm
+            - BASIC_AUTH_USER=user # Authentication is optional, you can just remove these two lines if you don't need it
+            - BASIC_AUTH_PASSWORD=password
+
+      caqtdm:
+         image: ghcr.io/craftingdragon007/caqtdm_web:feature-web_control
+         volumes:
+            - path_to_your_panels:/app/caqtdm_display_path # Replace with the path to your .ui files
+         environment:
+            - ENTRY_PANEL=your-main.ui # Replace with your main .ui file
+            - EPICS_CA_ADDR_LIST=your_epics_ca_addr_list # Replace with your EPICS CA address list (remove if not needed)
+   networks:
+      - caqtdm-web
+
+
+Make sure to replace the placeholders with your actual paths and settings.
+
+To start the services, run:
+
+.. code:: bash
+
+   docker compose up -d
+
+
+Building your own Docker image
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+To build your own Docker image for caQtDM Web, you can cd into the `caQtDM_Web/docker` directory and run the following command:
+
+.. code:: bash
+
+   docker compose build
+
+This will build the Docker image with caQtDM and the qnovnc-platform-plugin included.
+
+Make sure to adjust the compose.yaml file as needed for your setup, similar to the example provided with :ref:`prebuilt-images`.
+
+
+Normal Setup
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Setup caQtDM with qnovnc-platform-plugin
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+To set up caQtDM with qnovnc-platform-plugin, follow these steps:
+
+1. Clone the qnovnc-platform-plugin repository and build the plugin according to the instructions provided in the repository.
+
+2. Place the built plugin in either the Qt plugins directory or specify its location using the ``QT_PLUGIN_PATH`` environment variable.
+
+3. Start caQtDM with the following command:
+
+   .. code:: bash
+
+      caQtDM -server -novnc your-main.ui
+
+   Replace ``your-main.ui`` with the path to your main caQtDM UI that should be served by default.
+
+4. Setup a reverse proxy by following the steps in :ref:`reverse-proxy`
+
+
+.. _reverse-proxy:
+
+Reverse proxy setup for caQtDM Web (required)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+You can find example configurations for setting up nginx or Caddy as a reverse proxy in the `caQtDM_Web` directory of the caQtDM repository.
+
