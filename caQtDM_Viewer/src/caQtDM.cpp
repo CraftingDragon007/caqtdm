@@ -324,6 +324,7 @@ int main(int argc, char *argv[])
         } else if (strcmp (argv[in], "-server") == 0) {
             server = true;
             minimize = false;
+            theme = "Fusion";
         } else if (strcmp (argv[in], "-novnc") == 0) {
             use_novnc_plugin = true;
         } else if (strcmp (argv[in], "-novnc_readonly") == 0) {
@@ -475,25 +476,6 @@ int main(int argc, char *argv[])
 #endif
     }
 
-    QApplication app(argc, argv);
-    QApplication::setOrganizationName("Paul Scherrer Institut");
-    QApplication::setApplicationName("caQtDM");
-    QApplication::setQuitOnLastWindowClosed(false);
-
-    searchFile *searchDefaultStyleSheet = new searchFile("caQtDM_stylesheet.qss");
-    QString fileNameFound = searchDefaultStyleSheet->findFile();
-    if(fileNameFound.isNull()) {
-        printf("caQtDM -- file <caQtDM_stylesheet.qss> could not be loaded, is 'CAQTDM_DISPLAY_PATH' <%s> defined?\n", qasc(searchDefaultStyleSheet->displayPath()));
-    } else {
-        QFile file(fileNameFound);
-        file.open(QFile::ReadOnly);
-        QString StyleSheet = QLatin1String(file.readAll());
-        printf("caQtDM -- file <caQtDM_stylesheet.qss> loaded as the default application stylesheet\n");
-        app.setStyleSheet(StyleSheet);
-        file.close();
-    }
-    delete searchDefaultStyleSheet;
-
     // prevents QApplication from handling style on it's own
     if (!theme.isEmpty() && styleIndex > -1) {
         if (styleIndex < argc - 1) {
@@ -527,6 +509,9 @@ int main(int argc, char *argv[])
         QStringList availableThemes = QStyleFactory::keys();
 
         if (availableThemes.contains(theme, Qt::CaseInsensitive)) {
+            if (theme.toLower() == "oxygen" && server) {
+                qWarning() << "caQtDM_Web -- Warning: You can expect degraded performance using this theme (Oxygen) in server mode";
+            }
             QApplication::setStyle(QStyleFactory::create(theme));
         } else {
             qWarning() << "caQtDM -- Invalid theme" << theme << "specified, falling back to default system theme";
