@@ -938,7 +938,7 @@ import RFB from './noVNC/core/rfb.js';
   function setupLauncherMenu() {
     if (!launcherObject) return;
     const launcherButton = document.getElementById('launcher');
-    const titleColor = launcherObject['menu-title'].style.split(': ')[1] || '#000000';
+    const titleColor = launcherObject['menu-title']?.style?.split(': ')[1] || '#000000';
 
     try { launcherButton.style.color = titleColor; } catch (_e) {}
 
@@ -986,124 +986,147 @@ import RFB from './noVNC/core/rfb.js';
 
   function buildMenuItems(menuArray, containerElement) {
     menuArray.forEach(function(item) {
-      if (item.type === 'separator') {
-        const separator = document.createElement('hr');
-        separator.className = 'menu-separator';
-        containerElement.appendChild(separator);
-      } else if (item.type === 'title') {
-        const titleItem = document.createElement('div');
-        titleItem.className = 'menu-title';
-        titleItem.textContent = item.text || '';
-        if (item.style) {
-          applyStyleToElement(titleItem, item.style);
-        }
-        containerElement.appendChild(titleItem);
-      } else if (item.type === 'menu') {
-        const menuButton = document.createElement('button');
-        menuButton.className = 'menu-item menu-submenu';
-        menuButton.setAttribute('role', 'menuitem');
-        menuButton.setAttribute('aria-haspopup', 'true');
-        menuButton.textContent = item.text || '';
-        if (item.style) {
-          applyStyleToElement(menuButton, item.style);
-        }
-
-        const submenu = document.createElement('div');
-        submenu.className = 'popup-submenu';
-        submenu.setAttribute('role', 'menu');
-
-        // Add submenu items recursively
-        if (item.menu && Array.isArray(item.menu)) {
-          buildMenuItems(item.menu, submenu);
-        }
-
-        menuButton.appendChild(submenu);
-
-        menuButton.addEventListener('mouseenter', function() {
-          submenu.classList.add('show');
-        });
-
-        menuButton.addEventListener('mouseleave', function() {
-          submenu.classList.remove('show');
-        });
-
-        submenu.addEventListener('mouseenter', function() {
-          submenu.classList.add('show');
-        });
-
-        submenu.addEventListener('mouseleave', function() {
-          submenu.classList.remove('show');
-        });
-
-        menuButton.addEventListener('click', function(e) {
-          e.stopPropagation();
-          submenu.classList.toggle('show');
-        });
-
-        containerElement.appendChild(menuButton);
-      } else if (item.type === 'caqtdm' || item.type === 'medm' || item.type === 'pep') {
-        // caQtDM action
-        const actionButton = document.createElement('button');
-        actionButton.className = 'menu-item menu-action';
-        actionButton.setAttribute('role', 'menuitem');
-        actionButton.textContent = item.text || '';
-        if (item.style) {
-          applyStyleToElement(actionButton, item.style);
-        }
-
-        actionButton.addEventListener('click', function(e) {
-          e.stopPropagation();
-          const filePath = item.path || item.panel;
-          if (filePath) {
-            const newUrl = new URL(window.location.href);
-            newUrl.searchParams.set('path', filePath);
-            if (item.macros && item.macros.trim() !== '') {
-              const convertedMacros = item.macros.replace(/=/g, ':').replace(/;/g, ',');
-              newUrl.searchParams.set('macros', convertedMacros);
-            }
-            window.open(newUrl.toString(), '_blank', 'noopener');
-          }
-          closeAllMenus();
-        });
-
-        containerElement.appendChild(actionButton);
-      } else if (item.type === 'cmd') {
-        // Command action - show dialog with command
-        const cmdButton = document.createElement('button');
-        cmdButton.className = 'menu-item menu-action menu-cmd';
-        cmdButton.setAttribute('role', 'menuitem');
-        cmdButton.textContent = item.text || '';
-        if (item.style) {
-          applyStyleToElement(cmdButton, item.style);
-        }
-
-        cmdButton.addEventListener('click', function(e) {
-          e.stopPropagation();
-          if (item.command) {
-            const message = document.createElement('p');
-            message.textContent = 'Command: ';
-            const cmdSpan = document.createElement('span');
-            cmdSpan.textContent = item.command;
-            cmdSpan.style.fontFamily = 'monospace';
-            cmdSpan.style.wordBreak = 'break-all';
-            message.appendChild(cmdSpan);
-
-            pendingFilePath = item.command;
-            pendingUrlType = 'file';
-
-            const acceptButton = document.getElementById('dialog-accept');
-            if (acceptButton) {
-              acceptButton.textContent = 'Copy';
-            }
-            urlDialog.setMessage(message);
-            urlDialog.open();
-          }
-          closeAllMenus();
-        });
-
-        containerElement.appendChild(cmdButton);
+      const element = createMenuElement(item);
+      if (element) {
+        containerElement.appendChild(element);
       }
     });
+  }
+
+  function createMenuElement(item) {
+    if (!item || !item.type) return null;
+    if (item.type === 'separator') return createSeparator();
+    if (item.type === 'title') return createTitleItem(item);
+    if (item.type === 'menu') return createSubmenuItem(item);
+    if (item.type === 'cmd') return createCommandItem(item);
+    if (item.type === 'caqtdm' || item.type === 'medm' || item.type === 'pep') {
+      return createActionItem(item);
+    }
+    return null;
+  }
+
+  function createSeparator() {
+    const separator = document.createElement('hr');
+    separator.className = 'menu-separator';
+    return separator;
+  }
+
+  function createTitleItem(item) {
+    const titleItem = document.createElement('div');
+    titleItem.className = 'menu-title';
+    titleItem.textContent = item.text || '';
+    applyMenuMeta(titleItem, item);
+    return titleItem;
+  }
+
+  function createSubmenuItem(item) {
+    const menuButton = document.createElement('button');
+    menuButton.className = 'menu-item menu-submenu';
+    menuButton.setAttribute('role', 'menuitem');
+    menuButton.setAttribute('aria-haspopup', 'true');
+    menuButton.textContent = item.text || '';
+    applyMenuMeta(menuButton, item);
+
+    const submenu = document.createElement('div');
+    submenu.className = 'popup-submenu';
+    submenu.setAttribute('role', 'menu');
+
+    if (item.menu && Array.isArray(item.menu)) {
+      buildMenuItems(item.menu, submenu);
+    }
+
+    menuButton.appendChild(submenu);
+    bindSubmenuEvents(menuButton, submenu);
+    return menuButton;
+  }
+
+  function bindSubmenuEvents(menuButton, submenu) {
+    menuButton.addEventListener('mouseenter', function() {
+      submenu.classList.add('show');
+    });
+
+    menuButton.addEventListener('mouseleave', function() {
+      submenu.classList.remove('show');
+    });
+
+    submenu.addEventListener('mouseenter', function() {
+      submenu.classList.add('show');
+    });
+
+    submenu.addEventListener('mouseleave', function() {
+      submenu.classList.remove('show');
+    });
+
+    menuButton.addEventListener('click', function(e) {
+      e.stopPropagation();
+      submenu.classList.toggle('show');
+    });
+  }
+
+  function createActionItem(item) {
+    const actionButton = document.createElement('button');
+    actionButton.className = 'menu-item menu-action';
+    actionButton.setAttribute('role', 'menuitem');
+    actionButton.textContent = item.text || '';
+    applyMenuMeta(actionButton, item);
+
+    actionButton.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const filePath = item.path || item.panel;
+      if (filePath) {
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.set('path', filePath);
+        if (item.macros && item.macros.trim() !== '') {
+          const convertedMacros = item.macros.replace(/=/g, ':').replace(/;/g, ',');
+          newUrl.searchParams.set('macros', convertedMacros);
+        }
+        window.open(newUrl.toString(), '_blank', 'noopener');
+      }
+      closeAllMenus();
+    });
+
+    return actionButton;
+  }
+
+  function createCommandItem(item) {
+    const cmdButton = document.createElement('button');
+    cmdButton.className = 'menu-item menu-action menu-cmd';
+    cmdButton.setAttribute('role', 'menuitem');
+    cmdButton.textContent = item.text || '';
+    applyMenuMeta(cmdButton, item);
+
+    cmdButton.addEventListener('click', function(e) {
+      e.stopPropagation();
+      if (item.command) {
+        const message = document.createElement('p');
+        message.textContent = 'Command: ';
+        const cmdSpan = document.createElement('span');
+        cmdSpan.textContent = item.command;
+        cmdSpan.style.fontFamily = 'monospace';
+        cmdSpan.style.wordBreak = 'break-all';
+        message.appendChild(cmdSpan);
+
+        pendingFilePath = item.command;
+        pendingUrlType = 'file';
+
+        const acceptButton = document.getElementById('dialog-accept');
+        if (acceptButton) {
+          acceptButton.textContent = 'Copy';
+        }
+        urlDialog.setMessage(message);
+        urlDialog.open();
+      }
+      closeAllMenus();
+    });
+
+    return cmdButton;
+  }
+
+  function applyMenuMeta(element, item) {
+    applyTooltip(element, item.tip);
+    if (item.style) {
+      applyStyleToElement(element, item.style);
+    }
   }
 
   function applyStyleToElement(element, styleString) {
@@ -1112,9 +1135,32 @@ import RFB from './noVNC/core/rfb.js';
     styles.forEach(function(style) {
       const [prop, value] = style.split(':').map(s => s.trim());
       if (prop && value) {
-        element.style[prop] = value;
+        let adjustedValue = value;
+        if (typeof value === 'string' && value.startsWith('#')) {
+          adjustedValue = convertToHTML5Hex(value);
+        }
+        element.style[prop] = adjustedValue;
       }
     });
+  }
+
+  function convertToHTML5Hex(hex) {
+    const hex48bitRegex = /^#([0-9a-fA-F]{4})([0-9a-fA-F]{4})([0-9a-fA-F]{4})$/;
+    const match = hex.match(hex48bitRegex);
+
+    if (match) {
+      const r = match[1].substring(0, 2);
+      const g = match[2].substring(0, 2);
+      const b = match[3].substring(0, 2);
+      return `#${r}${g}${b}`.toLowerCase();
+    }
+
+    return hex;
+  }
+
+  function applyTooltip(element, tip) {
+    if (!element || !tip) return;
+    element.setAttribute('title', tip);
   }
 
   function closeAllMenus() {
