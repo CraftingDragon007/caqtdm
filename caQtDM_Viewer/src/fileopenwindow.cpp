@@ -914,9 +914,6 @@ void FileOpenWindow::timerEvent(QTimerEvent *event)
         caQtDM_TimeLeft -= 1.0/3600.0;
         if(caQtDM_TimeLeft <= 0) {
 #ifndef MOBILE
-            qDebug() << "WSS::isIntialized()" << WebSocketServer::instance().isInitialized();
-            qDebug() << "interactionBasedTimeout()" << CaQtDM_Lib::interactionBasedTimeout;
-            qDebug() << "slaveServer" << CaQtDM_Lib::slaveServer;
             if (WebSocketServer::instance().isInitialized() && CaQtDM_Lib::interactionBasedTimeout && CaQtDM_Lib::slaveServer) {
                 qDebug() << "Sending interaction based shutdown msg";
                 WebSocketServer::instance().sendInteractionBasedShutdownMsg();
