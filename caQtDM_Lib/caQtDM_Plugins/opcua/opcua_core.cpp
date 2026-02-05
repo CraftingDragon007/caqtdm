@@ -202,7 +202,8 @@ OpcUaCore::OpcUaCore(QObject *parent)
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
             QOpcUaConnectionSettings settings = m_client->connectionSettings();
             settings.setSessionTimeout(m_sessionTimeout);
-            settings.setConnectTimeout(2 * m_maxLatency); // Give it some more time, since it might be experiencing issues
+            settings.setConnectTimeout(
+                2 * m_maxLatency); // Give it some more time, since it might be experiencing issues
             m_client->setConnectionSettings(settings);
 #endif
 
@@ -227,7 +228,10 @@ OpcUaCore::OpcUaCore(QObject *parent)
         m_certificateTrustFailedAction = CertificateTrustFailedAction::Abort;
     }
     m_certificateDialog = new CertificateDialog(Q_NULLPTR);
-    QObject::connect(qApp, &QCoreApplication::aboutToQuit, m_certificateDialog, &CertificateDialog::reject);
+    QObject::connect(qApp,
+                     &QCoreApplication::aboutToQuit,
+                     m_certificateDialog,
+                     &CertificateDialog::reject);
     QObject::connect(m_client, &QOpcUaClient::connectError, this, [&](QOpcUaErrorState *state) {
         QString statusCodeString = QMetaEnum::fromType<QOpcUa::UaStatusCode>().valueToKey(
             state->errorCode());
@@ -242,7 +246,8 @@ OpcUaCore::OpcUaCore(QObject *parent)
             errorMessage
                 = "This indicates your client certificate may not be trusted by the server. If "
                   "that's the case, add it to the servers trusted certificates. The client "
-                  "certificate is stored under: " + m_client->pkiConfiguration().clientCertificateFile();
+                  "certificate is stored under: "
+                  + m_client->pkiConfiguration().clientCertificateFile();
             VERBOSELOG(errorMessage);
         }
 
@@ -368,10 +373,44 @@ void OpcUaCore::setupPkiConfig()
 
     m_client->setPkiConfiguration(pkiConfig);
     m_client->setApplicationIdentity(pkiConfig.applicationIdentity());
+    qDebug() << "set up pki config";
 }
 
-QOpcUaEndpointDescription OpcUaCore::getEndpointWithLowestLatency(
-    const QVector<QOpcUaEndpointDescription> &endpointDescriptions)
+int OpcUaCore::getValueForEndpoint(const QOpcUaEndpointDescription &description)
+{
+    int value = 0;
+    switch (description.securityMode()) {
+    case QOpcUaEndpointDescription::MessageSecurityMode::SignAndEncrypt:
+        value += 30;
+        break;
+    case QOpcUaEndpointDescription::MessageSecurityMode::Sign:
+        value += 20;
+        break;
+    case QOpcUaEndpointDescription::MessageSecurityMode::None:
+        value += 10;
+    default:
+        break;
+    }
+
+    QString securityPolicy = description.securityPolicy();
+    if (securityPolicy == "http://opcfoundation.org/UA/SecurityPolicy#Aes256_Sha256_RsaPss") {
+        value += 9;
+    } else if (securityPolicy == "http://opcfoundation.org/UA/SecurityPolicy#Basic256Sha256") {
+        value += 7;
+    } else if (securityPolicy
+               == "http://opcfoundation.org/UA/SecurityPolicy#Aes128_Sha256_RsaOaep") {
+        value += 5;
+    } else if (securityPolicy == "http://opcfoundation.org/UA/SecurityPolicy#Basic256") {
+        value += 3;
+    } else if (securityPolicy == "http://opcfoundation.org/UA/SecurityPolicy#Basic128Rsa15") {
+        value += 1;
+    }
+
+    return value;
+}
+
+QOpcUaEndpointDescription OpcUaCore::getEndpointWithHighestSecurity(
+    QVector<QOpcUaEndpointDescription> &endpointDescriptions)
 {
     QOpcUaEndpointDescription chosenEndpoint;
     chosenEndpoint.setEndpointUrl("");
@@ -380,43 +419,43 @@ QOpcUaEndpointDescription OpcUaCore::getEndpointWithLowestLatency(
         return chosenEndpoint;
     }
 
-    QList<QTcpSocket *> sockets;
-    std::atomic<bool> found(false);
+    // Sorts endpoints according to predefined security value, ranking message security mode first, then security policy
+    std::sort(endpointDescriptions.begin(),
+              endpointDescriptions.end(),
+              [](const auto &a, const auto &b) {
+                  return getValueForEndpoint(a) > getValueForEndpoint(b);
+              });
+
     QEventLoop loop;
     QTimer timer;
     timer.setSingleShot(true);
-
+    QObject::connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
     QObject::connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
 
-    // For each endpoint returned from the server, try to establish a simple tcp connection. The first endpoint that connects is chosen for further opcua communication.
-    for (int i = 0; i < endpointDescriptions.size(); ++i) {
-        QOpcUaEndpointDescription ep = endpointDescriptions.at(i);
-        QUrl url = ep.endpointUrl();
-        QTcpSocket *sock = new QTcpSocket(this);
-        sockets.append(sock);
+    QVector<QString> triedEndpoints;
+    for (auto &description : endpointDescriptions) {
+        QUrl url = description.endpointUrl();
+        QString endpoint = url.host() + ":" + QString::number(url.port(4840));
+        if (triedEndpoints.contains(endpoint)) {
+            continue;
+        }
+        triedEndpoints.push_back(endpoint);
 
-        QObject::connect(sock, &QTcpSocket::connected, this, [&, ep]() {
-            if (found.exchange(true))
-                return;
-            chosenEndpoint = ep;
+        QTcpSocket *sock = new QTcpSocket(this);
+        QObject::connect(sock, &QTcpSocket::connected, this, [&, description]() {
+            chosenEndpoint = description;
             timer.stop();
             loop.quit();
-            for (QTcpSocket *s : sockets) {
-                if (s) {
-                    if (s->state() == QAbstractSocket::ConnectedState) {
-                        s->abort();
-                    }
-                    s->deleteLater();
-                }
-            }
         });
-        ;
-        sock->connectToHost(url.host(), url.port());
-    }
 
-    // Try to connect to all endpoints for a certain time. Due to signal / slot mechanism, the fastest connection will usually be chosen.
-    timer.start(m_maxLatency);
-    loop.exec();
+        sock->connectToHost(url.host(), url.port());
+        timer.start(m_maxLatency);
+        loop.exec();
+
+        if (!chosenEndpoint.endpointUrl().isEmpty()) {
+            break;
+        }
+    }
 
     return chosenEndpoint;
 }
@@ -435,11 +474,10 @@ QOpcUaEndpointDescription OpcUaCore::chooseEndpointDescription(
     // Get all supported endpoints
     for (auto ep : endpointDescriptions) {
         if ((!isCertificateSupported
-             && ep.securityPolicy()
-                    == QStringLiteral("http://opcfoundation.org/UA/SecurityPolicy#None"))
+             && ep.securityMode() == QOpcUaEndpointDescription::MessageSecurityMode::None)
             || isCertificateSupported) {
             if (ep.userIdentityTokensRef().isEmpty()) {
-                // No tokens specified -> no username / password auth supported
+                // No tokens specified -> no auth supported
                 anonymousEndpoints.push_back(ep);
                 break;
             }
@@ -480,17 +518,17 @@ QOpcUaEndpointDescription OpcUaCore::chooseEndpointDescription(
     }
 
     // check if any certificate endpoints are reachable
-    chosenEndpoint = getEndpointWithLowestLatency(certificateEndpoints);
+    chosenEndpoint = getEndpointWithHighestSecurity(certificateEndpoints);
     if (!chosenEndpoint.endpointUrl().isEmpty()) {
         return chosenEndpoint;
     }
     // check if any username / password endpoints are reachable
-    chosenEndpoint = getEndpointWithLowestLatency(usernamePasswordEndpoints);
+    chosenEndpoint = getEndpointWithHighestSecurity(usernamePasswordEndpoints);
     if (!chosenEndpoint.endpointUrl().isEmpty()) {
         return chosenEndpoint;
     }
     // check if any anonymous endpoints are reachable
-    chosenEndpoint = getEndpointWithLowestLatency(anonymousEndpoints);
+    chosenEndpoint = getEndpointWithHighestSecurity(anonymousEndpoints);
     if (!chosenEndpoint.endpointUrl().isEmpty()) {
         return chosenEndpoint;
     }
@@ -541,14 +579,14 @@ bool OpcUaCore::connectOpc(const QString &url)
             // Qt 5 sends a cert even with no security policy, leading to some servers denying the connection because they thing an authentication is tried (with untrusted cert)
             // To workaround this issue, we reset the pki config when no security policy is requested.
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-            if (chosenEndpoint.securityPolicy()
-                == "http://opcfoundation.org/UA/SecurityPolicy#None") {
+            if (chosenEndpoint.securityMode()
+                == QOpcUaEndpointDescription::MessageSecurityMode::None) {
                 QOpcUaPkiConfiguration pkiConfig;
                 m_client->setPkiConfiguration(pkiConfig);
             }
 #endif
 
-            // QOpcUaConnectionSettings not available in Qt 5
+        // QOpcUaConnectionSettings not available in Qt 5
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
             QOpcUaConnectionSettings settings = m_client->connectionSettings();
             settings.setSessionTimeout(m_sessionTimeout);
@@ -723,7 +761,8 @@ bool OpcUaCore::isClientConnected()
     return true;
 }
 
-bool OpcUaCore::hasAnySubscriptions() const {
+bool OpcUaCore::hasAnySubscriptions() const
+{
     return !m_subscriptionNodes.isEmpty();
 }
 
@@ -743,7 +782,7 @@ void OpcUaCore::unsubscribeFromNode(const QString &nodeId)
     QOpcUaNode *node = m_subscriptionNodes[nodeId];
     m_subscriptionNodes.remove(nodeId);
 
-    if (node) {       
+    if (node) {
         node->deleteLater();
     }
 }
@@ -814,7 +853,7 @@ bool OpcUaCore::writeDataDynamically(QOpcUaNode *node,
                                  if (existingValue.isValid()) {
                                      doWrite(existingValue);
                                  } else {
-                                     QString URI = m_latestEndpoint + "/"  + node->nodeId();
+                                     QString URI = m_latestEndpoint + "/" + node->nodeId();
                                      emit attributeGotError(URI, "Invalid Value");
                                  }
                              });

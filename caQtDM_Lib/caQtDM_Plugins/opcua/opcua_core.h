@@ -25,7 +25,6 @@
 #ifndef OPCUA_CORE_H
 #define OPCUA_CORE_H
 
-#include <CertificateDialog.h>
 #include <QObject>
 #include <QUrl>
 #include <QtOpcUa/QOpcUaAddReferenceItem>
@@ -38,6 +37,7 @@
 #include <QtOpcUa/QOpcUaProvider>
 #include <QtOpcUa/QOpcUaQualifiedName>
 #include <QtOpcUa/QOpcUaReferenceDescription>
+#include <CertificateDialog.h>
 
 #define VERBOSELOG(msg) qDebug().nospace() << "[" << __FUNCTION__ << "]: " << msg
 
@@ -195,6 +195,9 @@ signals:
     void attributeGotError(const QString &nodeId, const QString &errorMsg);
 
 private:
+    /**
+     * @brief What to do when a server's certificate is not yet trusted
+     */
     enum CertificateTrustFailedAction {
         Prompt = -1,
         Abort,
@@ -232,22 +235,31 @@ private:
     static QString defaultPkiPath();
 
     /**
+     * @brief Gets the value (bigger is better) associated with an endpoint, based on it's security. So higher security equals more value.
+     * The value is calculated in such a way that the MessageSecurityMode has priority, and within the same message security mode, value is given for better security policies.
+     * @param description: The endpoint description to calculate the value for
+     * @return The numerical value associated with the given endpoint description
+     */
+    static int getValueForEndpoint(const QOpcUaEndpointDescription &description);
+
+    /**
      * @brief Deletes all pki configuration stored to the default PKI path
      */
     void clearPkiConfig();
 
     /**
-     * @brief Sets up a valid PKI configuration under the standard path
+     * @brief Sets up a valid PKI configuration under the standard path. Doesn't overwrite existing files.
      */
     void setupPkiConfig();
 
     /**
-     * @brief Tries to connecto to all given endpoints via tcp and approximately returns the one with the fastes response time
-     * @param endpointDescriptions: the list of endpoint(-description)s to check
-     * @return The fastests endpoint (as a description) or a description with an empty endpointUrl in case none replied within a certain timeout
+     * @brief Gets the endpoint with the highest security, that is from a host thats reachable via TCP.
+     * Security is based on message security mode and security policy.
+     * @param endpointDescriptions: The list of endpoint descriptions to check
+     * @return The endpoint description with the highest security, or an endpoint description with an empty endpointUrl if none are reachable.
      */
-    QOpcUaEndpointDescription getEndpointWithLowestLatency(
-        const QVector<QOpcUaEndpointDescription> &endpointDescriptions);
+    QOpcUaEndpointDescription getEndpointWithHighestSecurity(
+        QVector<QOpcUaEndpointDescription> &endpointDescriptions);
 
     /**
      * @brief Chooses an appropriate endpoint out of many, considering connectivity and security & what the client supports in it's current configuration

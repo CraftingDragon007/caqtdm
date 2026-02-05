@@ -1,3 +1,5 @@
+// The following file is taken from https://github.com/qt/qtopcua/
+
 // Copyright (C) 2018 Unified Automation GmbH
 // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
 
