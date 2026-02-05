@@ -25,6 +25,7 @@
 #ifndef OPCUA_CORE_H
 #define OPCUA_CORE_H
 
+#include <CertificateDialog.h>
 #include <QObject>
 #include <QUrl>
 #include <QtOpcUa/QOpcUaAddReferenceItem>
@@ -194,6 +195,12 @@ signals:
     void attributeGotError(const QString &nodeId, const QString &errorMsg);
 
 private:
+    enum CertificateTrustFailedAction {
+        Prompt = -1,
+        Abort,
+        Ignore,
+    };
+
     QOpcUaClient *m_client;
     QString m_pemPassword;
     // Most recent url specified for connection
@@ -209,6 +216,8 @@ private:
     PasswordCredentials m_passwordCredentials;
     std::chrono::milliseconds m_sessionTimeout;
     std::chrono::milliseconds m_maxLatency;
+    CertificateDialog *m_certificateDialog;
+    CertificateTrustFailedAction m_certificateTrustFailedAction;
     int m_reconnectionAttempt;
     int m_reconnectionTimeoutMs;
     bool m_reconnecting;

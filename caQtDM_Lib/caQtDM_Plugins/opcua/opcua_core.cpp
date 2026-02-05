@@ -38,7 +38,6 @@
 #include <QMutex>
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-#include <CertificateDialog.h>
 #include <QOpcUaConnectionSettings>
 #endif
 
@@ -219,6 +218,16 @@ OpcUaCore::OpcUaCore(QObject *parent)
         reconnectTimer->start(0);
     });
 
+    m_certificateTrustFailedAction = CertificateTrustFailedAction::Prompt;
+    bool ignoreCertificateErrors = !qgetenv("CAQTDM_OPCUA_IGNORE_CERTIFICATE_ERRORS").isEmpty();
+    bool dontShowCertificatePrompt = !qgetenv("CAQTDM_OPCUA_HIDE_CERTIFICATE_PROMPT").isEmpty();
+    if (ignoreCertificateErrors) {
+        m_certificateTrustFailedAction = CertificateTrustFailedAction::Ignore;
+    } else if (dontShowCertificatePrompt) {
+        m_certificateTrustFailedAction = CertificateTrustFailedAction::Abort;
+    }
+    m_certificateDialog = new CertificateDialog(Q_NULLPTR);
+    QObject::connect(qApp, &QCoreApplication::aboutToQuit, m_certificateDialog, &CertificateDialog::reject);
     QObject::connect(m_client, &QOpcUaClient::connectError, this, [&](QOpcUaErrorState *state) {
         QString statusCodeString = QMetaEnum::fromType<QOpcUa::UaStatusCode>().valueToKey(
             state->errorCode());
@@ -237,14 +246,20 @@ OpcUaCore::OpcUaCore(QObject *parent)
             VERBOSELOG(errorMessage);
         }
 
-        if (state->errorCode() == QOpcUa::UaStatusCode::BadCertificateUntrusted && !m_isCertificateDialogOpen) {
-            m_isCertificateDialogOpen = true;
-            CertificateDialog dialog(Q_NULLPTR);
-            errorMessage = tr("Server certificate validation failed with error 0x%1 (%2).\nClick 'Abort' to abort the connect, or 'Ignore' to continue connecting.")
-                       .arg(static_cast<ulong>(state->errorCode()), 8, 16, '0').arg(statusCodeString);
-            int result = dialog.showCertificate(errorMessage, m_currentEndpointDescription.serverCertificate(), m_client->pkiConfiguration().trustListDirectory());
-            state->setIgnoreError(result == 1);
-            m_isCertificateDialogOpen = false;
+        if (state->errorCode() == QOpcUa::UaStatusCode::BadCertificateUntrusted
+            && m_certificateTrustFailedAction == CertificateTrustFailedAction::Prompt
+            && !m_certificateDialog->isVisible()) {
+            errorMessage = tr("Server certificate validation failed with error 0x%1 (%2).\nClick "
+                              "'Abort' to abort the connect, or 'Ignore' to continue connecting. "
+                              "Click 'Trust' to connect and remember this certificate.")
+                               .arg(static_cast<ulong>(state->errorCode()), 8, 16, '0')
+                               .arg(statusCodeString);
+            int result = m_certificateDialog
+                             ->showCertificate(errorMessage,
+                                               m_currentEndpointDescription.serverCertificate(),
+                                               m_client->pkiConfiguration().trustListDirectory());
+            state->setIgnoreError(result == CertificateTrustFailedAction::Ignore);
+            m_certificateTrustFailedAction = static_cast<CertificateTrustFailedAction>(result);
         }
     });
 
@@ -290,6 +305,7 @@ OpcUaCore::OpcUaCore(QObject *parent)
 
 OpcUaCore::~OpcUaCore()
 {
+    m_certificateDialog->deleteLater();
     clearAllSubscriptions();
     QObject::disconnect(this);
 
