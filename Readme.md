@@ -10,9 +10,8 @@ In case of existing MEDM files, these can be translated to Qt xml files by using
 ## Experimental CMake entry point
 The legacy qmake-based build system is being migrated to CMake. The new top-level `CMakeLists.txt` mirrors the dependency graph defined in `all.pro` and performs the same environment validation (`QTHOME`, `QWTHOME`, `EPICS_BASE`, `EPICS_HOST_ARCH`).
 
-**📖 For detailed Windows build instructions with CMake and Ninja, see:**
+**📖 For detailed Windows build instructions with CMake, see:**
 - **[CMAKE_BUILD_WINDOWS.md](CMAKE_BUILD_WINDOWS.md)** - Complete guide for Windows builds
-- **[EXAMPLE_BUILD.md](EXAMPLE_BUILD.md)** - Step-by-step example with specific paths
 - **Quick start:** Run `caQtDM_CMakeBuild.bat` after configuring `caQtDM_Env.bat`
 
 ### Linux / Unix
