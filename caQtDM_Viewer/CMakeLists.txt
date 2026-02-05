@@ -75,6 +75,19 @@ set_target_properties(caqtdm PROPERTIES
     AUTOUIC_SEARCH_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
 target_compile_definitions(caqtdm PRIVATE ${_viewer_defs})
+
+# Windows-specific compiler definitions
+if(MSVC)
+    target_compile_definitions(caqtdm PRIVATE _CRT_SECURE_NO_WARNINGS)
+    
+    # MSVC-specific linker flags for Qt6
+    if(QT_VERSION_MAJOR EQUAL 6)
+        target_link_options(caqtdm PRIVATE 
+            /ENTRY:mainCRTStartup
+            /STACK:32000000)
+    endif()
+endif()
+
 caqtdm_target_version_info(caqtdm
     PRODUCT "Display Manager"
     FILENAME "caqtdm.exe")
@@ -117,8 +130,8 @@ set(_viewer_links
     Qt${QT_VERSION_MAJOR}::Svg
     Qt${QT_VERSION_MAJOR}::UiTools
     Qt${QT_VERSION_MAJOR}::Network
-    caqtdm::lib
-    caqtdm::qtcontrols
+    caqtdm_lib
+    qtcontrols
     caqtdm::qwt)
 if(QT_VERSION_MAJOR EQUAL 5)
     list(APPEND _viewer_links Qt5::OpenGL)
@@ -150,11 +163,11 @@ install(TARGETS caqtdm
     RUNTIME DESTINATION "${CAQTDM_INSTALL_BINDIR}")
 
 if(CAQTDM_ENABLE_ADL_EDL)
-    if(TARGET caqtdm::adlparser)
-        target_link_libraries(caqtdm PRIVATE caqtdm::adlparser)
+    if(TARGET adlParser_static)
+        target_link_libraries(caqtdm PRIVATE adlParser_static)
     endif()
-    if(TARGET caqtdm::edlparser)
-        target_link_libraries(caqtdm PRIVATE caqtdm::edlparser)
+    if(TARGET edlParser_static)
+        target_link_libraries(caqtdm PRIVATE edlParser_static)
     endif()
 endif()
 

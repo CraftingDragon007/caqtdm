@@ -8,9 +8,15 @@ In case of existing MEDM files, these can be translated to Qt xml files by using
 
 # Build / Install / Run
 ## Experimental CMake entry point
-The legacy qmake-based build system is being migrated to CMake. The new top-level `CMakeLists.txt` mirrors the dependency graph defined in `all.pro` and performs the same environment validation (`QTHOME`, `QWTHOME`, `EPICS_BASE`, `EPICS_HOST_ARCH`). While the individual subprojects are converted, the CMake run will simply skip directories that do not yet provide their own `CMakeLists.txt`.
+The legacy qmake-based build system is being migrated to CMake. The new top-level `CMakeLists.txt` mirrors the dependency graph defined in `all.pro` and performs the same environment validation (`QTHOME`, `QWTHOME`, `EPICS_BASE`, `EPICS_HOST_ARCH`).
 
-To experiment with the new entry point:
+**ðŸ“– For detailed Windows build instructions with CMake, see:**
+- **[CMAKE_BUILD_WINDOWS.md](CMAKE_BUILD_WINDOWS.md)** - Complete guide for Windows builds
+- **Quick start:** Run `caQtDM_CMakeBuild.bat` after configuring `caQtDM_Env.bat`
+
+### Linux / Unix
+
+To experiment with the new entry point on Linux:
 
 ```bash
 mkdir -p build
@@ -21,6 +27,73 @@ cmake .. \
   -DCAQTDM_EPICS_BASE=/path/to/epics \
   -DCAQTDM_EPICS_HOST_ARCH=linux-x86_64
 cmake --build .
+```
+
+### Windows
+
+To build with CMake on Windows using Visual Studio:
+
+**Prerequisites:**
+- Qt 5.15+ or Qt 6.x (recommended: Qt 6.10.0)
+- Qwt 6.1+ (recommended: Qwt 6.3.0)
+- EPICS Base 7.x
+- Visual Studio 2019 or later
+- CMake 3.21 or later
+
+**Configuration and Build:**
+
+1. Open a Visual Studio Developer Command Prompt (x64 Native Tools Command Prompt)
+
+2. Set environment variables (similar to caQtDM_Env.bat):
+```cmd
+set QTHOME=C:\Qt\Qt-6.10.0
+set QWTHOME=C:\Qwt-6.3.0
+set EPICS_BASE=C:\epics-base
+set EPICS_HOST_ARCH=windows-x64
+```
+
+3. Configure and build:
+```cmd
+mkdir build
+cd build
+cmake .. ^
+  -G "Visual Studio 17 2022" ^
+  -A x64 ^
+  -DCAQTDM_QT_PREFIX=%QTHOME% ^
+  -DCAQTDM_QWT_PREFIX=%QWTHOME% ^
+  -DCAQTDM_EPICS_BASE=%EPICS_BASE% ^
+  -DCAQTDM_EPICS_HOST_ARCH=%EPICS_HOST_ARCH%
+cmake --build . --config Release
+```
+
+Or use Ninja for faster builds:
+```cmd
+mkdir build
+cd build
+cmake .. ^
+  -G "Ninja" ^
+  -DCMAKE_BUILD_TYPE=Release ^
+  -DCAQTDM_QT_PREFIX=%QTHOME% ^
+  -DCAQTDM_QWT_PREFIX=%QWTHOME% ^
+  -DCAQTDM_EPICS_BASE=%EPICS_BASE% ^
+  -DCAQTDM_EPICS_HOST_ARCH=%EPICS_HOST_ARCH%
+cmake --build .
+```
+
+**Optional Configuration:**
+
+You can enable/disable specific features:
+```cmd
+-DCAQTDM_ENABLE_GPS_PLUGIN=ON
+-DCAQTDM_ENABLE_MODBUS_PLUGIN=ON
+-DCAQTDM_ENABLE_BSREAD_PLUGIN=ON
+-DCAQTDM_ENABLE_EPICS4_PLUGIN=ON
+```
+
+For ZeroMQ support (bsread plugin):
+```cmd
+-DCAQTDM_ZMQ_INCLUDE_DIR=C:\ZeroMQ\include
+-DCAQTDM_ZMQ_LIBRARY_DIR=C:\ZeroMQ\lib
 ```
 
 Once a subdirectory gains first-class CMake support it will automatically be added to the build without changing the top-level configuration.
@@ -119,10 +192,10 @@ Following environment variables can be used to configure caqtdm:
 
 - __CAQTDM_FINDRECORD_DIRECT__ - override all other find record settings (direct json http download)
 
-- __CAQTDM_DEFAULT_UNIT_REPLACEMENTS__ - if set to "false", default unit replacements (°/µ) are disabled.
+- __CAQTDM_DEFAULT_UNIT_REPLACEMENTS__ - if set to "false", default unit replacements (Â°/Âµ) are disabled.
 
 - __CAQTDM_CUSTOM_UNIT_REPLACEMENTS__ - define custom unit replacements. They are replaced after default replacements took place, if enabled. You can use unicode characters or hexadecimal / decimal utf-8 character codes, seperated by (,) , (=) and (;).
-Examples: "0xba,C=55,abc,0xb0;cd=23;0x43=0x44" , "°=0xba"
+Examples: "0xba,C=55,abc,0xb0;cd=23;0x43=0x44" , "Â°=0xba"
 
 - __CAQTDM_SUPPRESS_UPDATES_ONLOAD__ - Disables widgets from being updated while a file is being opened. This can reduce load times of big panels by more than 50. Values: "TRUE", "FALSE" , without quotes
 - __CAQTDM_CREATE_LOGFILE__ - If set to "TRUE", caQtDM will create a logfile containing all of the input from the message window. If caQtDM exits successfully, this file gets deleted after termination.

@@ -74,6 +74,8 @@ function(caqtdm_add_qtcontrols_plugin target)
     # Install designer plugins only when built as MODULE
     if(NOT ANDROID AND NOT IOS)
         install(TARGETS ${target}
-            LIBRARY DESTINATION "${CAQTDM_INSTALL_DESIGNER_PLUGINDIR}")
+            RUNTIME DESTINATION "${CAQTDM_INSTALL_DESIGNER_PLUGINDIR}"
+            LIBRARY DESTINATION "${CAQTDM_INSTALL_DESIGNER_PLUGINDIR}"
+            ARCHIVE DESTINATION "${CAQTDM_INSTALL_DESIGNER_PLUGINDIR}")
     endif()
 endfunction()

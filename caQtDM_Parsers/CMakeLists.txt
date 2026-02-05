@@ -19,7 +19,12 @@ function(_caqtdm_configure_parser_target target include_dir)
 endfunction()
 
 add_library(adlParser_static STATIC ${_adl_parser_sources})
-set_target_properties(adlParser_static PROPERTIES OUTPUT_NAME adlParser)
+# On Windows, differentiate static and shared library names to avoid .lib conflicts
+if(WIN32)
+    set_target_properties(adlParser_static PROPERTIES OUTPUT_NAME adlParser_static)
+else()
+    set_target_properties(adlParser_static PROPERTIES OUTPUT_NAME adlParser)
+endif()
 _caqtdm_configure_parser_target(adlParser_static "${CMAKE_CURRENT_SOURCE_DIR}/adlParserSrc")
 add_library(caqtdm::adlparser_static ALIAS adlParser_static)
 
@@ -39,7 +44,9 @@ if(NOT CAQTDM_ENABLE_MOBILE)
     add_library(caqtdm::adlparser_shared ALIAS adlParser_shared)
 
     install(TARGETS adlParser_shared
-        LIBRARY DESTINATION "${CAQTDM_INSTALL_LIBDIR}")
+        RUNTIME DESTINATION "${CAQTDM_INSTALL_BINDIR}"
+        LIBRARY DESTINATION "${CAQTDM_INSTALL_LIBDIR}"
+        ARCHIVE DESTINATION "${CAQTDM_INSTALL_LIBDIR}")
 endif()
 
 if(TARGET adlParser_shared)
@@ -83,7 +90,9 @@ if(UNIX)
         add_library(caqtdm::edlparser_shared ALIAS edlParser_shared)
 
         install(TARGETS edlParser_shared
-            LIBRARY DESTINATION "${CAQTDM_INSTALL_LIBDIR}")
+            RUNTIME DESTINATION "${CAQTDM_INSTALL_BINDIR}"
+            LIBRARY DESTINATION "${CAQTDM_INSTALL_LIBDIR}"
+            ARCHIVE DESTINATION "${CAQTDM_INSTALL_LIBDIR}")
     endif()
 
     if(TARGET edlParser_shared)

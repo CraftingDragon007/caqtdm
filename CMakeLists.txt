@@ -89,11 +89,19 @@ if(NOT DEFINED CAQTDM_EPICS_HOST_ARCH OR "${CAQTDM_EPICS_HOST_ARCH}" STREQUAL ""
     if(IS_DIRECTORY "${_caqtdm_epics_lib_root}")
         file(GLOB _caqtdm_epics_arch_dirs RELATIVE "${_caqtdm_epics_lib_root}" "${_caqtdm_epics_lib_root}/*")
         list(FILTER _caqtdm_epics_arch_dirs INCLUDE REGEX "^[^\.].*")
-        # Prefer linux-like host directories if multiple are present.
+        # Prefer platform-specific host directories based on current system
         set(_caqtdm_epics_arch_guess "")
         foreach(_arch IN LISTS _caqtdm_epics_arch_dirs)
             if(IS_DIRECTORY "${_caqtdm_epics_lib_root}/${_arch}")
-                if(_caqtdm_epics_arch_guess STREQUAL "" OR _arch MATCHES "linux")
+                if(_caqtdm_epics_arch_guess STREQUAL "")
+                    set(_caqtdm_epics_arch_guess "${_arch}")
+                endif()
+                # Prefer matching current platform
+                if(WIN32 AND _arch MATCHES "windows|win32")
+                    set(_caqtdm_epics_arch_guess "${_arch}")
+                elseif(UNIX AND NOT APPLE AND _arch MATCHES "linux")
+                    set(_caqtdm_epics_arch_guess "${_arch}")
+                elseif(APPLE AND _arch MATCHES "darwin")
                     set(_caqtdm_epics_arch_guess "${_arch}")
                 endif()
             endif()
@@ -404,7 +412,12 @@ if(_caqtdm_env_norpath)
 endif()
 option(CAQTDM_ENABLE_RPATH "Embed runtime search paths for third-party libraries" ${_default_rpath})
 
-option(CAQTDM_ENABLE_PYTHONCALC "Enable optional Python-assisted calculations" ON)
+set(_default_pythoncalc ON)
+if(WIN32)
+    # Python is not typically available by default on Windows
+    set(_default_pythoncalc OFF)
+endif()
+option(CAQTDM_ENABLE_PYTHONCALC "Enable optional Python-assisted calculations" ${_default_pythoncalc})
 option(CAQTDM_ENABLE_ARCHIVE_PLUGINS "Build archive plugins" ON)
 
 set(_default_bsread ${_caqtdm_env_bsread})
@@ -530,22 +543,68 @@ set(CAQTDM_EPICS_CORE_LIBRARIES "${CAQTDM_EPICS_LIB_CA};${CAQTDM_EPICS_LIB_COM};
 
 if(CAQTDM_ENABLE_BSREAD_PLUGIN)
     set(_caqtdm_zmq_names)
+    
+    # Allow explicit override via environment variable or CMake variable
     if(CAQTDM_ZMQ_LIBRARY_NAME AND NOT "${CAQTDM_ZMQ_LIBRARY_NAME}" STREQUAL "")
         list(APPEND _caqtdm_zmq_names "${CAQTDM_ZMQ_LIBRARY_NAME}")
     endif()
+    
+    # Construct Windows-specific ZeroMQ library name based on compiler and version
+    if(WIN32 AND MSVC)
+        # Get ZMQ version from environment or default to 4_3_5
+        if(DEFINED ENV{ZMQ_VERSION})
+            set(_zmq_version "$ENV{ZMQ_VERSION}")
+            # Convert dots to underscores (e.g., 4.3.5 -> 4_3_5)
+            string(REPLACE "." "_" _zmq_version "${_zmq_version}")
+        else()
+            set(_zmq_version "4_3_5")
+        endif()
+        
+        # Detect Visual Studio version
+        if(MSVC_VERSION GREATER_EQUAL 1930)
+            # Visual Studio 2022 (v143)
+            set(_zmq_toolset "v143")
+        elseif(MSVC_VERSION GREATER_EQUAL 1920)
+            # Visual Studio 2019 (v142)
+            set(_zmq_toolset "v142")
+        elseif(MSVC_VERSION GREATER_EQUAL 1910)
+            # Visual Studio 2017 (v141)
+            set(_zmq_toolset "v141")
+        else()
+            # Default to v142
+            set(_zmq_toolset "v142")
+        endif()
+        
+        # Allow override with ZMQ_LIB_SUFFIX environment variable
+        if(DEFINED ENV{ZMQ_LIB_SUFFIX})
+            set(_zmq_constructed_name "libzmq-$ENV{ZMQ_LIB_SUFFIX}-${_zmq_version}")
+        else()
+            set(_zmq_constructed_name "libzmq-${_zmq_toolset}-mt-${_zmq_version}")
+        endif()
+        
+        message(STATUS "Detected Visual Studio toolset: ${_zmq_toolset}")
+        message(STATUS "Looking for ZeroMQ library: ${_zmq_constructed_name}.lib")
+        
+        list(APPEND _caqtdm_zmq_names "${_zmq_constructed_name}")
+    endif()
+    
+    # Add generic fallback names
     list(APPEND _caqtdm_zmq_names zmq libzmq)
+    
     find_library(CAQTDM_ZMQ_LIBRARY
         NAMES ${_caqtdm_zmq_names}
         HINTS ${CAQTDM_ZMQ_LIBRARY_DIR})
     if(NOT CAQTDM_ZMQ_LIBRARY)
         message(WARNING "ZeroMQ library not found in ${CAQTDM_ZMQ_LIBRARY_DIR}; disabling bsread plugin")
         set(CAQTDM_ENABLE_BSREAD_PLUGIN OFF CACHE BOOL "Build the bsread control system plugin" FORCE)
+    else()
+        message(STATUS "Found ZeroMQ library: ${CAQTDM_ZMQ_LIBRARY}")
     endif()
 endif()
 
 # Mirror the qmake dependency graph from all.pro using lightweight registrations.
-caqtdm_register_subproject(NAME caQtDM_QtControls PATH caQtDM_QtControls)
 caqtdm_register_subproject(NAME caQtDM_Parsers PATH caQtDM_Parsers)
+caqtdm_register_subproject(NAME caQtDM_QtControls PATH caQtDM_QtControls DEPENDS caQtDM_Parsers)
 caqtdm_register_subproject(NAME qtcontrols_controllers PATH caQtDM_QtControls/plugins/qtcontrols_controllers DEPENDS caQtDM_QtControls caQtDM_Lib)
 caqtdm_register_subproject(NAME qtcontrols_graphics PATH caQtDM_QtControls/plugins/qtcontrols_graphics DEPENDS caQtDM_QtControls caQtDM_Lib)
 caqtdm_register_subproject(NAME qtcontrols_monitors PATH caQtDM_QtControls/plugins/qtcontrols_monitors DEPENDS caQtDM_QtControls caQtDM_Lib)

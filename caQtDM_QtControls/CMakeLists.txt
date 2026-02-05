@@ -78,6 +78,13 @@ elseif(QT_VERSION_MAJOR EQUAL 6)
     target_compile_definitions(qtcontrols PRIVATE QT_DISABLE_DEPRECATED_BEFORE=0x050000)
 endif()
 
+# Windows-specific compiler definitions
+if(MSVC)
+    target_compile_definitions(qtcontrols PRIVATE 
+        _CRT_SECURE_NO_WARNINGS
+        QTCON_MAKEDLL)
+endif()
+
 if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
     target_include_directories(qtcontrols PRIVATE /usr/local/include)
     target_link_libraries(qtcontrols PRIVATE z)
@@ -102,7 +109,9 @@ if(NOT TARGET caqtdm::qtcontrols)
 endif()
 
 install(TARGETS qtcontrols
-    LIBRARY DESTINATION "${CAQTDM_INSTALL_LIBDIR}")
+    RUNTIME DESTINATION "${CAQTDM_INSTALL_BINDIR}"
+    LIBRARY DESTINATION "${CAQTDM_INSTALL_LIBDIR}"
+    ARCHIVE DESTINATION "${CAQTDM_INSTALL_LIBDIR}")
 
 target_link_libraries(qtcontrols
     PUBLIC
@@ -130,10 +139,14 @@ if(NOT CAQTDM_ENABLE_MOBILE AND TARGET Qt${QT_VERSION_MAJOR}::Designer)
 endif()
 
 if(CAQTDM_ENABLE_ADL_EDL)
-    if(TARGET caqtdm::adlparser_static)
-        target_link_libraries(qtcontrols PRIVATE caqtdm::adlparser_static)
+    # On Windows, embed parser functionality using static libraries to avoid DLL dependencies
+    # On other platforms, prefer static libraries for embedding as well
+    if(TARGET adlParser_static)
+        target_link_libraries(qtcontrols PRIVATE adlParser_static)
+        add_dependencies(qtcontrols adlParser_static)
     endif()
-    if(TARGET caqtdm::edlparser_static)
-        target_link_libraries(qtcontrols PRIVATE caqtdm::edlparser_static)
+    if(TARGET edlParser_static)
+        target_link_libraries(qtcontrols PRIVATE edlParser_static)
+        add_dependencies(qtcontrols edlParser_static)
     endif()
 endif()

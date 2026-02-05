@@ -36,10 +36,30 @@ function(caqtdm_add_plugin target)
         ${PLUGIN_EXTRA_INCLUDES})
 
     if(CAQTDM_EPICS_INCLUDE_DIR)
-        list(APPEND _plugin_includes
-            ${CAQTDM_EPICS_INCLUDE_DIR}
-            ${CAQTDM_EPICS_INCLUDE_DIR}/os/Linux
-            ${CAQTDM_EPICS_INCLUDE_DIR}/compiler/gcc)
+        list(APPEND _plugin_includes ${CAQTDM_EPICS_INCLUDE_DIR})
+        
+        # Add platform-specific EPICS include directories
+        if(WIN32)
+            list(APPEND _plugin_includes ${CAQTDM_EPICS_INCLUDE_DIR}/os/win32)
+            if(MSVC)
+                list(APPEND _plugin_includes ${CAQTDM_EPICS_INCLUDE_DIR}/compiler/msvc)
+            elseif(MINGW)
+                list(APPEND _plugin_includes ${CAQTDM_EPICS_INCLUDE_DIR}/compiler/gcc)
+            endif()
+        elseif(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+            list(APPEND _plugin_includes
+                ${CAQTDM_EPICS_INCLUDE_DIR}/os/freebsd
+                ${CAQTDM_EPICS_INCLUDE_DIR}/compiler/clang)
+        elseif(APPLE)
+            list(APPEND _plugin_includes
+                ${CAQTDM_EPICS_INCLUDE_DIR}/os/Darwin
+                ${CAQTDM_EPICS_INCLUDE_DIR}/compiler/clang
+                ${CAQTDM_EPICS_INCLUDE_DIR}/compiler/gcc)
+        elseif(UNIX)
+            list(APPEND _plugin_includes
+                ${CAQTDM_EPICS_INCLUDE_DIR}/os/Linux
+                ${CAQTDM_EPICS_INCLUDE_DIR}/compiler/gcc)
+        endif()
     endif()
 
     if(CAQTDM_ANDROID_FUNCTIONS_INCLUDE)
@@ -60,7 +80,13 @@ function(caqtdm_add_plugin target)
         target_link_libraries(${target} PRIVATE Qt${QT_VERSION_MAJOR}::${component})
     endforeach()
 
-    target_link_libraries(${target} PRIVATE caqtdm::lib ${PLUGIN_EXTRA_LIBS})
+    target_link_libraries(${target} PRIVATE caqtdm_lib qtcontrols ${PLUGIN_EXTRA_LIBS})
+    
+    # On Windows, plugins need direct access to EPICS libraries for calc functions (postfix, calcPerform)
+    # Even though caQtDM_Lib links to EPICS, Windows DLL model doesn't support transitive symbol access
+    if(CAQTDM_EPICS_CORE_LIBRARIES)
+        target_link_libraries(${target} PRIVATE ${CAQTDM_EPICS_CORE_LIBRARIES})
+    endif()
 
     if(CAQTDM_QT_CORE5COMPAT_TARGET)
         target_link_libraries(${target} PRIVATE ${CAQTDM_QT_CORE5COMPAT_TARGET})
@@ -77,6 +103,8 @@ function(caqtdm_add_plugin target)
     # Install runtime plugins (shared libraries) when not building for mobile
     if(NOT ANDROID AND NOT IOS)
         install(TARGETS ${target}
-            LIBRARY DESTINATION "${CAQTDM_INSTALL_CONTROL_PLUGINDIR}")
+            RUNTIME DESTINATION "${CAQTDM_INSTALL_CONTROL_PLUGINDIR}"
+            LIBRARY DESTINATION "${CAQTDM_INSTALL_CONTROL_PLUGINDIR}"
+            ARCHIVE DESTINATION "${CAQTDM_INSTALL_CONTROL_PLUGINDIR}")
     endif()
 endfunction()
