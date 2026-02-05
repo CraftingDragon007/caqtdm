@@ -36,7 +36,6 @@ echo ===========================================================================
 
 set CMAKE_OPTIONS=-G "Visual Studio 17 2022" ^
   -A x64 ^
-  -DCMAKE_BUILD_TYPE=Release ^
   -DCAQTDM_QT_PREFIX="%QTHOME%" ^
   -DCAQTDM_QWT_PREFIX="%QWTHOME%" ^
   -DCAQTDM_EPICS_BASE="%EPICS_BASE%" ^
