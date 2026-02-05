@@ -37,7 +37,7 @@
 #include <QtOpcUa/QOpcUaProvider>
 #include <QtOpcUa/QOpcUaQualifiedName>
 #include <QtOpcUa/QOpcUaReferenceDescription>
-#include <CertificateDialog.h>
+#include "certificatedialog.h"
 
 #define VERBOSELOG(msg) qDebug().nospace() << "[" << __FUNCTION__ << "]: " << msg
 
