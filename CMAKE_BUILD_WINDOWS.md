@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Visual Studio 2019 or 2022
+- Visual Studio 2019, 2022, or 2026
 - CMake 3.21 or later
 - Qt 5.15+ or Qt 6.x
 - Qwt 6.1+
@@ -49,6 +49,9 @@ cmake .. ^
   -DCAQTDM_EPICS_BASE=%EPICS_BASE% ^
   -DCAQTDM_EPICS_HOST_ARCH=%EPICS_HOST_ARCH%
 
+REM Or use Visual Studio 18 2026:
+REM cmake .. -G "Visual Studio 18 2026" -A x64 ...
+
 cmake --build . --config Release
 cmake --install . --config Release
 ```
@@ -76,7 +79,8 @@ Or use CMake options:
 
 ## Important Notes
 
-- **Use Visual Studio 17 2022 generator** (required for EPICS4 plugin)
+- **Use Visual Studio generator** (Visual Studio 17 2022 or Visual Studio 18 2026)
+  - Do NOT use Ninja generator (has EPICS4 plugin compilation issues)
 - Paths with spaces must be quoted: `"C:\Program Files\ZeroMQ\include"`
 - Python calculations are disabled by default on Windows
 

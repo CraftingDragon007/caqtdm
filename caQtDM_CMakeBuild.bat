@@ -32,6 +32,8 @@ cd build_cmake
 
 echo =============================================================================================
 echo Configuring CMake with Visual Studio generator...
+echo NOTE: Using Visual Studio 17 2022 generator (Visual Studio 18 2026 also supported)
+echo       Do NOT use Ninja generator (EPICS4 plugin compilation issues)
 echo =============================================================================================
 
 set CMAKE_OPTIONS=-G "Visual Studio 17 2022" ^
