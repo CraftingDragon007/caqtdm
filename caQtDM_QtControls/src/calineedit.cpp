@@ -384,6 +384,7 @@ void caLineEdit::setFormat(int prec)
     if(thisPrecMode == User) {
         precision = getPrecision();
     }
+
     switch (thisFormatType) {
     case string:
     case decimal:
@@ -398,8 +399,11 @@ void caLineEdit::setFormat(int prec)
         sprintf(thisFormatC, "%s.%dlf", "%", qAbs(precision));
         break;
     case exponential:
-    case engr_notation:
         sprintf(thisFormat, "%s.%dle", "%", qAbs(precision));
+        break;
+    case engr_notation:
+        // this format is handled by a function
+        engr_notationPrecision = precision;
         break;
     case truncated:
     case enumeric:
@@ -428,6 +432,99 @@ void caLineEdit::setFormat(int prec)
         }
     }
 }
+/**
+ * Converts a double to engineering notation and writes to a char array
+ *
+ * @param buffer    Destination char array
+ * @param bufferLen Size of the buffer (including space for null terminator)
+ * @param value     The double value to convert
+ * @param precision Number of digits after the decimal point
+ * @return          Number of characters written (excluding null), or -1 on error
+ */
+int caLineEdit::toEngineeringNotation(char* buffer, size_t bufferLen, double value, int eng_precision) {
+    // Validate inputs
+    if (buffer == nullptr || bufferLen == 0) {
+        return -1;
+    }
+
+    // Clamp precision to reasonable bounds
+    if (eng_precision < 0) eng_precision = 0;
+    if (eng_precision > 15) eng_precision = 15;
+
+    // Handle special cases
+    if (std::isnan(value)) {
+        if (bufferLen < 4) { buffer[0] = '\0'; return -1; }
+        std::strncpy(buffer, "nan",bufferLen);
+        return 3;
+    }
+
+    if (std::isinf(value)) {
+        const char* result = (value > 0) ? "inf" : "-inf";
+        size_t len = std::strlen(result);
+        if (bufferLen <= len) { buffer[0] = '\0'; return -1; }
+        std::strncpy(buffer, result,bufferLen);
+        return static_cast<int>(len);
+    }
+
+    if (value == 0.0) {
+        int written = snprintf(buffer, bufferLen, " %.*fe+00", eng_precision, 0.0);
+        if (written < 0 || static_cast<size_t>(written) >= bufferLen) {
+            buffer[0] = '\0';
+            return -1;
+        }
+        return written;
+    }
+
+    // Handle negative numbers
+    bool negative = value < 0;
+    double absValue = std::fabs(value);
+
+    // Calculate the exponent (power of 10)
+    int exponent = static_cast<int>(std::floor(std::log10(absValue)));
+
+    // Adjust exponent to be a multiple of 3
+    int engExponent;
+    if (exponent >= 0) {
+        engExponent = exponent - (exponent % 3);
+    } else {
+        // Handle negative exponents correctly
+        int mod = exponent % 3;
+        engExponent = (mod == 0) ? exponent : exponent - (3 + mod);
+    }
+
+    // Calculate the mantissa
+    double mantissa = absValue / std::pow(10.0, engExponent);
+
+    // Handle floating point precision issues
+    // Mantissa should be in range [1, 1000)
+    if (mantissa >= 999.9999999999) {
+        mantissa /= 1000.0;
+        engExponent += 3;
+    } else if (mantissa < 1.0) {
+        mantissa *= 1000.0;
+        engExponent -= 3;
+    }
+    int written;
+
+    // Apply sign
+    // Format the output
+    // Format: [-]d.ddde±ee (sign + digits + decimal + precision + 'e' + sign + 2-3 digits)
+    if (negative) {
+        written = snprintf(buffer, bufferLen, "-%3.*fe%+03d",
+                           eng_precision - (exponent - engExponent), mantissa, engExponent);
+    }else{
+        written = snprintf(buffer, bufferLen, " %3.*fe%+03d",
+                           eng_precision - (exponent - engExponent), mantissa, engExponent);
+    }
+
+
+    if (written < 0 || static_cast<size_t>(written) >= bufferLen) {
+        buffer[0] = '\0';
+        return -1;
+    }
+
+    return written;
+}
 
 void caLineEdit::setValue(double value, const QString& units)
 {
@@ -440,6 +537,9 @@ void caLineEdit::setValue(double value, const QString& units)
       } else {
         snprintf(asc, MAX_STRING_LENGTH, thisFormat, value);
       }
+    } else if(thisFormatType == engr_notation and thisDatatype == caDOUBLE)  {
+        // proper handling of engineering notation!
+        toEngineeringNotation(asc, MAX_STRING_LENGTH, value, engr_notationPrecision);
     } else if (thisFormatType == user_defined_format) {
         QString pattern = QString("%[+\\- 0#]*[0-9]*([.][0-9]+)?[aefgAEFG]");
         bool isDouble=false;
