@@ -1,4 +1,4 @@
-// The following file is taken from https://github.com/qt/qtopcua/
+// The following file is taken from https://github.com/qt/qtopcua/ and modified in accordance with the BSD-3-Clause
 
 // Copyright (C) 2018 Unified Automation GmbH
 // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
@@ -37,7 +37,7 @@ int CertificateDialog::showCertificate(const QString &message, const QByteArray 
         ui->btnTrust->setEnabled(false);
     }
 
-    for (const QSslCertificate &cert : std::as_const(certs))
+    for (const QSslCertificate &cert : certs)
         ui->certificate->appendPlainText(cert.toText());
 
     ui->message->setText(message);
@@ -49,11 +49,12 @@ int CertificateDialog::showCertificate(const QString &message, const QByteArray 
 
 void CertificateDialog::saveCertificate()
 {
-    using namespace Qt::Literals::StringLiterals;
-
     const QByteArray digest = m_cert.digest();
-    const QString path = m_trustListDirectory + '/'_L1
-                         + QLatin1StringView(digest.toHex()) + ".der"_L1;
+    const QString path =
+        m_trustListDirectory
+        + QLatin1Char('/')
+        + QString::fromLatin1(digest.toHex())
+        + QLatin1String(".der");
 
     QFile file(path);
     if (file.open(QIODevice::WriteOnly)) {
