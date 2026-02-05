@@ -46,19 +46,19 @@ function(caqtdm_add_plugin target)
             elseif(MINGW)
                 list(APPEND _plugin_includes ${CAQTDM_EPICS_INCLUDE_DIR}/compiler/gcc)
             endif()
-        elseif(UNIX AND NOT APPLE)
+        elseif(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
             list(APPEND _plugin_includes
-                ${CAQTDM_EPICS_INCLUDE_DIR}/os/Linux
-                ${CAQTDM_EPICS_INCLUDE_DIR}/compiler/gcc)
+                ${CAQTDM_EPICS_INCLUDE_DIR}/os/freebsd
+                ${CAQTDM_EPICS_INCLUDE_DIR}/compiler/clang)
         elseif(APPLE)
             list(APPEND _plugin_includes
                 ${CAQTDM_EPICS_INCLUDE_DIR}/os/Darwin
                 ${CAQTDM_EPICS_INCLUDE_DIR}/compiler/clang
                 ${CAQTDM_EPICS_INCLUDE_DIR}/compiler/gcc)
-        elseif(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+        elseif(UNIX)
             list(APPEND _plugin_includes
-                ${CAQTDM_EPICS_INCLUDE_DIR}/os/freebsd
-                ${CAQTDM_EPICS_INCLUDE_DIR}/compiler/clang)
+                ${CAQTDM_EPICS_INCLUDE_DIR}/os/Linux
+                ${CAQTDM_EPICS_INCLUDE_DIR}/compiler/gcc)
         endif()
     endif()
 

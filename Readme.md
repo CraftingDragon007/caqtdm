@@ -192,10 +192,8 @@ Following environment variables can be used to configure caqtdm:
 
 - __CAQTDM_FINDRECORD_DIRECT__ - override all other find record settings (direct json http download)
 
-- __CAQTDM_DEFAULT_UNIT_REPLACEMENTS__ - if set to "false", default unit replacements (�/�) are disabled.
-
 - __CAQTDM_CUSTOM_UNIT_REPLACEMENTS__ - define custom unit replacements. They are replaced after default replacements took place, if enabled. You can use unicode characters or hexadecimal / decimal utf-8 character codes, seperated by (,) , (=) and (;).
-Examples: "0xba,C=55,abc,0xb0;cd=23;0x43=0x44" , "�=0xba"
+Examples: "0xba,C=55,abc,0xb0;cd=23;0x43=0x44" , "°=0xba"
 
 - __CAQTDM_SUPPRESS_UPDATES_ONLOAD__ - Disables widgets from being updated while a file is being opened. This can reduce load times of big panels by more than 50. Values: "TRUE", "FALSE" , without quotes
 - __CAQTDM_CREATE_LOGFILE__ - If set to "TRUE", caQtDM will create a logfile containing all of the input from the message window. If caQtDM exits successfully, this file gets deleted after termination.
