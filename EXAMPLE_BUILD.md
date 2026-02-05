@@ -1,239 +1,56 @@
-# Example: Building with Your Configuration
+# Example Build
 
-This example shows how to build caQtDM using the exact configuration you provided.
+## Using the Build Script
 
-## Your Environment Settings
-
-Based on your configuration:
-- Qt: `C:\Qt\Qt-6.10.0`
-- Qwt: `C:\Qwt-6.3.0`
-- EPICS: `C:\Users\houba_j\source\repos\epics-base`
-- EPICS Host Arch: `windows-x64`
-- Output: `C:\Users\houba_j\source\repos\caqtdm\caQtDM_Binaries`
-- Plugins: GPS and Modbus enabled
-- ZeroMQ: `C:\Program Files\ZeroMQ`
-
-## Quick Start (Using the Build Script)
-
-### Option 1: Edit caQtDM_Env.bat
-
-Update the SELECT2 section in `caQtDM_Env.bat` with your paths:
+Edit `caQtDM_Env.bat` with your paths:
 
 ```batch
-:SELECT2 
-  call "C:\Program Files\Microsoft Visual Studio\2022\Professional\VC\Auxiliary\Build\vcvarsall.bat" x64
-  
-  set QTHOME=C:\Qt\Qt-6.10.0
-  set QWTHOME=C:\Qwt-6.3.0
-  set QWTINCLUDE=%QWTHOME%/include
-  set QWTLIB=%QWTHOME%/lib
-  set QWTLIBNAME=qwt
-  set QWTVERSION=6.3
-  set CAQTDMQTVER=QT6
-  
-  set EPICS_BASE=C:\Users\houba_j\source\repos\epics-base
-  set EPICS_HOST_ARCH=windows-x64
-  set EPICSINCLUDE=%EPICS_BASE%/include
-  set EPICSLIB=%EPICS_BASE%/lib/%EPICS_HOST_ARCH%
-  
-  set QTCONTROLS_LIBS=C:\Users\houba_j\source\repos\caqtdm\caQtDM_Binaries
-  set CAQTDM_COLLECT=C:\Users\houba_j\source\repos\caqtdm\caQtDM_Binaries
-  
-  set ZMQ=C:\Program Files\ZeroMQ
-  set ZMQINC=%ZMQ%/include
-  set ZMQLIB=%ZMQ%/lib
-  
-  set CAQTDM_GPS=1
-  set CAQTDM_MODBUS=1
-  
-GOTO PRINTOUT
+set QTHOME=C:\Qt\Qt-6.10.0
+set QWTHOME=C:\Qwt-6.3.0
+set EPICS_BASE=C:\epics-base
+set EPICS_HOST_ARCH=windows-x64
+set CAQTDM_COLLECT=C:\caqtdm\caQtDM_Binaries
+
+REM Optional plugins
+set CAQTDM_GPS=1
+set CAQTDM_MODBUS=1
+set ZMQINC=C:\ZeroMQ\include
+set ZMQLIB=C:\ZeroMQ\lib
 ```
 
 Then run:
 ```cmd
-caQtDM_CMakeBuild.bat 2
+caQtDM_CMakeBuild.bat
 ```
 
-### Option 2: Direct Command Line
-
-Open "x64 Native Tools Command Prompt for VS 2022" and run:
+## Manual Build
 
 ```cmd
-cd C:\Users\houba_j\source\repos\caqtdm
-
-REM Set up Visual Studio environment
-call "C:\Program Files\Microsoft Visual Studio\2022\Professional\VC\Auxiliary\Build\vcvarsall.bat" x64
-
-REM Set environment variables
 set QTHOME=C:\Qt\Qt-6.10.0
 set QWTHOME=C:\Qwt-6.3.0
-set EPICS_BASE=C:\Users\houba_j\source\repos\epics-base
+set EPICS_BASE=C:\epics-base
 set EPICS_HOST_ARCH=windows-x64
-set PATH=%QTHOME%\bin;%PATH%
 
-REM Create and enter build directory
-mkdir build_cmake
-cd build_cmake
+mkdir build
+cd build
 
-REM Configure with CMake
 cmake .. ^
-  -G "Ninja" ^
-  -DCMAKE_BUILD_TYPE=Release ^
-  -DCAQTDM_QT_PREFIX=C:\Qt\Qt-6.10.0 ^
-  -DCAQTDM_QWT_PREFIX=C:\Qwt-6.3.0 ^
-  -DCAQTDM_QWT_INCLUDE_DIR=C:\Qwt-6.3.0\include ^
-  -DCAQTDM_QWT_LIBRARY_DIR=C:\Qwt-6.3.0\lib ^
-  -DCAQTDM_QWT_LIBRARY_NAME=qwt ^
-  -DCAQTDM_QWT_VERSION_STRING=6.3 ^
-  -DCAQTDM_EPICS_BASE=C:\Users\houba_j\source\repos\epics-base ^
-  -DCAQTDM_EPICS_HOST_ARCH=windows-x64 ^
-  -DCAQTDM_EPICS_INCLUDE_DIR=C:\Users\houba_j\source\repos\epics-base\include ^
-  -DCAQTDM_EPICS_LIBRARY_DIR=C:\Users\houba_j\source\repos\epics-base\lib\windows-x64 ^
-  -DCAQTDM_INSTALL_ROOT=C:\Users\houba_j\source\repos\caqtdm\caQtDM_Binaries ^
+  -G "Visual Studio 17 2022" ^
+  -A x64 ^
+  -DCAQTDM_QT_PREFIX=%QTHOME% ^
+  -DCAQTDM_QWT_PREFIX=%QWTHOME% ^
+  -DCAQTDM_EPICS_BASE=%EPICS_BASE% ^
+  -DCAQTDM_EPICS_HOST_ARCH=%EPICS_HOST_ARCH% ^
   -DCAQTDM_ENABLE_GPS_PLUGIN=ON ^
-  -DCAQTDM_ENABLE_MODBUS_PLUGIN=ON ^
-  -DCAQTDM_ENABLE_BSREAD_PLUGIN=ON ^
-  -DCAQTDM_ZMQ_INCLUDE_DIR="C:\Program Files\ZeroMQ\include" ^
-  -DCAQTDM_ZMQ_LIBRARY_DIR="C:\Program Files\ZeroMQ\lib"
+  -DCAQTDM_ENABLE_MODBUS_PLUGIN=ON
 
-REM Build
 cmake --build . --config Release
-
-REM Optional: Install to caQtDM_Binaries
-cmake --install . --config Release
 ```
 
-## Expected Output
-
-After successful build, check `C:\Users\houba_j\source\repos\caqtdm\caQtDM_Binaries`:
-
-```
-caQtDM_Binaries/
-├── caQtDM.exe                    (Main application)
-├── caQtDM_Lib.dll                (Core library)
-├── qtcontrols.dll                (Controls library)
-├── adlParser.dll                 (ADL parser)
-├── edlParser.dll                 (EDL parser, if on Unix)
-├── controlsystems/               (Control system plugins)
-│   ├── demo_plugin.dll
-│   ├── epics3_plugin.dll
-│   ├── environment_plugin.dll
-│   ├── modbus_plugin.dll        (if enabled)
-│   ├── gps_plugin.dll           (if enabled)
-│   └── bsread_Plugin.dll        (if enabled)
-└── designer/                     (Qt Designer plugins)
-    ├── qtcontrols_controllers_plugin.dll
-    ├── qtcontrols_graphics_plugin.dll
-    ├── qtcontrols_monitors_plugin.dll
-    └── qtcontrols_utilities_plugin.dll
-```
-
-## Testing the Build
-
-After building, test caQtDM:
+## Testing
 
 ```cmd
-cd C:\Users\houba_j\source\repos\caqtdm\caQtDM_Binaries
-
-REM Make sure Qt is in PATH
-set PATH=C:\Qt\Qt-6.10.0\bin;%PATH%
-
-REM Run caQtDM with a test file
-caQtDM.exe ..\caQtDM_Tests\test.ui
+cd %CAQTDM_COLLECT%
+set PATH=%QTHOME%\bin;%PATH%
+caQtDM.exe test.ui
 ```
-
-## Troubleshooting for Your Setup
-
-### If Qt is not found:
-```cmd
-set CMAKE_PREFIX_PATH=C:\Qt\Qt-6.10.0
-```
-
-### If Qwt is not found:
-```cmd
-REM Check that these files exist:
-dir C:\Qwt-6.3.0\include\qwt_plot.h
-dir C:\Qwt-6.3.0\lib\qwt.lib
-```
-
-### If EPICS libraries are not found:
-```cmd
-REM Check that the directory exists:
-dir C:\Users\houba_j\source\repos\epics-base\lib\windows-x64
-
-REM Check for required libraries:
-dir C:\Users\houba_j\source\repos\epics-base\lib\windows-x64\ca.lib
-dir C:\Users\houba_j\source\repos\epics-base\lib\windows-x64\Com.lib
-```
-
-### If ZeroMQ is not found:
-```cmd
-REM Check that these exist:
-dir "C:\Program Files\ZeroMQ\include\zmq.h"
-dir "C:\Program Files\ZeroMQ\lib\*.lib"
-```
-
-You should see library files like:
-- `libzmq-v143-mt-4_3_5.lib` (Visual Studio 2022, dynamic)
-- `libzmq-mt-s-4_3_5.lib` (static library)
-
-**Important:** ZeroMQ is typically installed in `C:\Program Files\ZeroMQ` which contains a space. When passing this path to CMake, you **must** use quotes:
-
-```cmd
-REM Wrong - CMake will fail with "ignoring extra path" warning
--DCAQTDM_ZMQ_INCLUDE_DIR=C:\Program Files\ZeroMQ\include
-
-REM Correct - quotes protect the space in the path
--DCAQTDM_ZMQ_INCLUDE_DIR="C:\Program Files\ZeroMQ\include"
-```
-
-The error will look like:
-```
-CMake Warning: Ignoring extra path from command line: "Files\ZeroMQ\include"
-ZeroMQ header not found in C:\Program; disabling bsread plugin
-```
-
-**ZeroMQ Library Names:** CMake automatically detects the correct library name based on your Visual Studio version and ZeroMQ version. It constructs names like:
-- `libzmq-v143-mt-4_3_5.lib` for VS2022 with ZMQ 4.3.5
-- `libzmq-v142-mt-4_3_5.lib` for VS2019 with ZMQ 4.3.5
-
-Set `ZMQ_VERSION` environment variable if you have a different version:
-```cmd
-set ZMQ_VERSION=4.3.4
-```
-
-For static libraries, use:
-```cmd
-set ZMQ_LIB_SUFFIX=mt-s
-```
-
-**Solution:** Use the `caQtDM_CMakeBuild.bat` script which automatically quotes paths, or manually add quotes around any path containing spaces.
-
-## Build Time
-
-Expected build time with Ninja on a modern system:
-- Clean build: 5-10 minutes
-- Incremental build: 30 seconds - 2 minutes
-
-## Next Steps
-
-After successfully building:
-
-1. **Test the application**: Run caQtDM with test files from `caQtDM_Tests`
-2. **Configure Qt Designer**: Add the designer plugin path to Qt Designer
-3. **Set up environment**: Create a startup script with proper PATH settings
-4. **Deploy**: Copy Qt/Qwt DLLs if needed for distribution
-
-## Comparison with QMake Build
-
-The CMake build should produce identical binaries to the qmake build. Both:
-- Support the same Qt/Qwt versions
-- Include the same plugins
-- Use the same EPICS libraries
-- Produce the same executables and DLLs
-
-Choose CMake if you prefer:
-- Modern build system
-- Better IDE integration
-- Faster builds with Ninja
-- Easier cross-platform development

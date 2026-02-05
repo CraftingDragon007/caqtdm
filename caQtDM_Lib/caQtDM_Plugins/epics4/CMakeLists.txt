@@ -2,8 +2,7 @@ if(NOT CAQTDM_ENABLE_EPICS4_PLUGIN)
     return()
 endif()
 
-# Remove /permissive- flag from CMAKE_CXX_FLAGS for EPICS4 compatibility with MSVC
-# EPICS pvData headers use legacy C++ templates that require relaxed conformance
+# EPICS4 requires relaxed C++ conformance on Windows
 if(MSVC)
     string(REPLACE "/permissive-" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 endif()
@@ -30,8 +29,6 @@ caqtdm_add_plugin(epics4_plugin
 
 target_compile_definitions(epics4_plugin PRIVATE QT_NO_WARNING_OUTPUT QT_NO_DEBUG_OUTPUT)
 
-# MSVC-specific compiler flags for EPICS4
 if(MSVC)
-    # Add /Zc:twoPhase- for two-phase template name lookup compatibility
     target_compile_options(epics4_plugin PRIVATE /Zc:twoPhase-)
 endif()
