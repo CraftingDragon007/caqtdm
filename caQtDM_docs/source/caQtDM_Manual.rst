@@ -3672,6 +3672,11 @@ caQtDM uses the following environment variables:
 +---------------------------------------+-----------------------------------------------------------+
 | ``CAQTDM_OPCUA_USERNAME_PLAIN``       | Username to use for all endpoints: MAYBE SENT UNENCRYPTED!|
 +---------------------------------------+-----------------------------------------------------------+
+| ``CAQTDM_OPCUA_IGNORE_UNTRUSTED_CERT``| If not empty, caQtDM auto-connects to untrusted servers   |
++---------------------------------------+-----------------------------------------------------------+
+| ``CAQTDM_OPCUA_REJECT_UNTRUSTED_CERT``| If not empty, caQtDM won't connect to untrusted servers,  |
+|                                       | but there will also be no prompt to trust the server cert |
++---------------------------------------+-----------------------------------------------------------+
 | ``CAQTDM_OPTIMIZE_EPICS3CONNECTIONS`` | Disable Epics3 connections when tabwidget is not active   |
 |                                       | Set to "TRUE" to activate                                 |
 +---------------------------------------+-----------------------------------------------------------+

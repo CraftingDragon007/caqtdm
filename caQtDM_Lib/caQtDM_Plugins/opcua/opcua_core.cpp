@@ -219,11 +219,11 @@ OpcUaCore::OpcUaCore(QObject *parent)
     });
 
     m_certificateTrustFailedAction = CertificateTrustFailedAction::Prompt;
-    bool ignoreCertificateErrors = !qgetenv("CAQTDM_OPCUA_IGNORE_CERTIFICATE_ERRORS").isEmpty();
-    bool dontShowCertificatePrompt = !qgetenv("CAQTDM_OPCUA_HIDE_CERTIFICATE_PROMPT").isEmpty();
-    if (ignoreCertificateErrors) {
+    bool ignoreUntrustedCertificates = !qgetenv("CAQTDM_OPCUA_IGNORE_UNTRUSTED_CERT").isEmpty();
+    bool rejectUntrustedCertificates = !qgetenv("CAQTDM_OPCUA_REJECT_UNTRUSTED_CERT").isEmpty();
+    if (ignoreUntrustedCertificates) {
         m_certificateTrustFailedAction = CertificateTrustFailedAction::Ignore;
-    } else if (dontShowCertificatePrompt) {
+    } else if (rejectUntrustedCertificates) {
         m_certificateTrustFailedAction = CertificateTrustFailedAction::Abort;
     }
     m_certificateDialog = new CertificateDialog(Q_NULLPTR);
