@@ -1,4 +1,9 @@
-import RFB from './noVNC/core/rfb.js';
+import { PopupWindow } from './modules/ui/PopupWindow.js';
+import { Dialog } from './modules/ui/Dialog.js';
+import { setupLauncherMenu, closeAllMenus } from './modules/ui/LauncherMenu.js';
+import { VNCClient } from './modules/vnc/VNCClient.js';
+import { ControlSocket } from './modules/network/ControlSocket.js';
+import { parseLogMarkup, formatDateTime } from './modules/utils/Logger.js';
 
 (function() {
   const params = new URLSearchParams(window.location.search);
@@ -11,24 +16,28 @@ import RFB from './noVNC/core/rfb.js';
   const reconnectOverlay = document.getElementById('reconnect-overlay');
   const dialogOverlay = document.getElementById('dialog-overlay');
   const dialogMessage = document.getElementById('dialog-message');
-  const dialogAccept = document.getElementById('dialog-accept');
-  const dialogCancel = document.getElementById('dialog-cancel');
-  let pendingOpenPath = null;
-  let pendingOpenMacros = null;
   const errorOverlay = document.getElementById('error-overlay');
   const errorMessage = document.getElementById('error-message');
-  const errorOk = document.getElementById('error-ok');
   const menuLogsButton = document.getElementById('menu-logs');
   const menuUrlBuilderButton = document.getElementById('menu-url-builder');
   const usersCount = document.getElementById('users-count');
   const logWindow = document.getElementById('log-window');
-  const logClose = document.getElementById('log-close');
   const logContent = document.getElementById('log-content');
-  const logHeader = document.getElementById('log-header');
-  const logResizeHandle = document.getElementById('log-resize-handle');
   const urlBuilderWindow = document.getElementById('url-builder-window');
-  const urlBuilderClose = document.getElementById('url-builder-close');
-  const urlBuilderOpenTab = document.getElementById('url-builder-open-tab');
+
+  // App State
+  let failedOnce = false;
+  let connectedOnce = false;
+  let isNonNumericControlPath = !/^[0-9]+$/.test(controlPath.trim());
+  let resolvedControlPath = null;
+  let resolvedNoVNCPath = null;
+  let newInstance = false;
+  let originalControlFile = null;
+  let pendingOpenPath = null;
+  let pendingOpenMacros = null;
+  let pendingUrl = null;
+  let pendingUrlType = 'url';
+  let pendingFilePath = null;
 
   if (displayMode) {
     const menuBar = document.getElementById('menu-bar');
@@ -43,332 +52,15 @@ import RFB from './noVNC/core/rfb.js';
     }
   }
 
-  let dialogTimeout = null;
-  const DEFAULT_MIN_PADDING = 12;
-  const DEFAULT_MIN_RESIZE_WIDTH = 240;
-  const DEFAULT_MIN_RESIZE_HEIGHT = 160;
-
-  class PopupWindow {
-    static zCounter = 1000;
-    static openStack = [];
-
-    constructor(opts) {
-      this.root = opts.root;
-      this.header = opts.header;
-      this.resizeHandle = opts.resizeHandle || null;
-      this.menuButton = opts.menuButton || null;
-      this.closeButton = opts.closeButton || null;
-      this.minPadding = opts.minPadding != null ? opts.minPadding : DEFAULT_MIN_PADDING;
-      this.minWidth = opts.minWidth != null ? opts.minWidth : DEFAULT_MIN_RESIZE_WIDTH;
-      this.minHeight = opts.minHeight != null ? opts.minHeight : DEFAULT_MIN_RESIZE_HEIGHT;
-      this.onOpen = opts.onOpen || null;
-      this.onClose = opts.onClose || null;
-
-      this.isDragging = false;
-      this.dragOffsetX = 0;
-      this.dragOffsetY = 0;
-      this.isResizing = false;
-      this.resizeStartWidth = 0;
-      this.resizeStartHeight = 0;
-      this.resizeStartX = 0;
-      this.resizeStartY = 0;
-      this.manuallyPositioned = false;
-
-      if (this.header) {
-        this.header.addEventListener('pointerdown', this.onDragStart.bind(this));
-        // Prevent touch scroll/gestures from canceling pointer events during drag
-        try { this.header.style.touchAction = 'none'; } catch (_e) {}
-        try { this.header.style.cursor = 'move'; } catch (_e) {}
-      }
-      if (this.resizeHandle) {
-        this.resizeHandle.addEventListener('pointerdown', this.onResizeStart.bind(this));
-        // Prevent touch scroll/gestures from canceling pointer events during resize
-        try { this.resizeHandle.style.touchAction = 'none'; } catch (_e) {}
-        try { this.resizeHandle.style.cursor = 'nwse-resize'; } catch (_e) {}
-      }
-      if (this.closeButton) {
-        this.closeButton.addEventListener('click', this.close.bind(this));
-      }
-      if (this.menuButton) {
-        this.menuButton.addEventListener('click', this.toggle.bind(this));
-      }
-      this.root.addEventListener('pointerdown', () => this.bringToFront());
-
-      window.addEventListener('resize', () => this.ensureInView());
-      document.addEventListener('pointercancel', () => this.onDragEnd());
-      document.addEventListener('pointercancel', () => this.onResizeEnd());
-    }
-
-    bringToFront() {
-      PopupWindow.zCounter += 1;
-      this.root.style.zIndex = String(PopupWindow.zCounter);
-    }
-
-    isShown() {
-      return this.root.classList.contains('show');
-    }
-
-    open() {
-      if (this.isShown()) return;
-      this.root.classList.add('show');
-      this.bringToFront();
-      if (this.menuButton) this.menuButton.setAttribute('aria-expanded', 'true');
-      if (typeof this.onOpen === 'function') this.onOpen();
-      // Focus the first focusable element, fallback to root
-      try { this.root.focus(); } catch (_e) {}
-      this.ensureInView();
-      PopupWindow.openStack.push(this);
-    }
-
-    close() {
-      if (!this.isShown()) return;
-      this.root.classList.remove('show');
-      if (this.menuButton) this.menuButton.setAttribute('aria-expanded', 'false');
-      if (typeof this.onClose === 'function') this.onClose();
-      // Remove from stack if present
-      const idx = PopupWindow.openStack.lastIndexOf(this);
-      if (idx !== -1) PopupWindow.openStack.splice(idx, 1);
-      // Return focus to menu button to keep keyboard flow
-      if (this.menuButton) this.menuButton.focus();
-    }
-
-    toggle() {
-      if (this.isShown()) this.close(); else this.open();
-    }
-
-    prepareManualPosition(rect) {
-      if (this.manuallyPositioned) return;
-      this.root.style.left = rect.left + 'px';
-      this.root.style.top = rect.top + 'px';
-      this.root.style.right = 'auto';
-      this.root.style.maxHeight = 'none';
-      this.manuallyPositioned = true;
-      this.ensureInView();
-    }
-
-    ensureInView() {
-      if (!this.manuallyPositioned || !this.isShown()) return;
-      const MIN_PADDING = this.minPadding;
-      const maxWidth = Math.max(0, window.innerWidth - (2 * MIN_PADDING));
-      const maxHeight = Math.max(0, window.innerHeight - (2 * MIN_PADDING));
-      let rect = this.root.getBoundingClientRect();
-      let width = rect.width;
-      let height = rect.height;
-      if (maxWidth > 0 && width > maxWidth) {
-        width = maxWidth;
-        this.root.style.width = width + 'px';
-      }
-      if (maxHeight > 0 && height > maxHeight) {
-        height = maxHeight;
-        this.root.style.height = height + 'px';
-      }
-      rect = this.root.getBoundingClientRect();
-      width = rect.width;
-      height = rect.height;
-      const maxLeft = Math.max(0, window.innerWidth - width - MIN_PADDING);
-      const maxTop = Math.max(0, window.innerHeight - height - MIN_PADDING);
-      const nextLeft = Math.min(Math.max(MIN_PADDING, rect.left), maxLeft);
-      const nextTop = Math.min(Math.max(MIN_PADDING, rect.top), maxTop);
-      this.root.style.left = nextLeft + 'px';
-      this.root.style.top = nextTop + 'px';
-      this.root.style.right = 'auto';
-    }
-
-    onDragStart(event) {
-      if (event.button !== 0 && event.pointerType !== 'touch') return;
-      if (event.target && event.target.closest('button')) return;
-      let rect = this.root.getBoundingClientRect();
-      this.prepareManualPosition(rect);
-      rect = this.root.getBoundingClientRect();
-      this.isDragging = true;
-      this.dragOffsetX = event.clientX - rect.left;
-      this.dragOffsetY = event.clientY - rect.top;
-      // Capture the pointer so we continue to receive events even
-      // if the cursor leaves the window or moves over an iframe
-      try { this.root.setPointerCapture(event.pointerId); } catch (_e) {}
-      this.root.addEventListener('pointermove', this.onDragMoveBound = this.onDragMove.bind(this));
-      this.root.addEventListener('pointerup', this.onDragEndBound = this.onDragEnd.bind(this));
-      event.preventDefault();
-    }
-
-    onDragMove(event) {
-      if (!this.isDragging) return;
-      const MIN_PADDING = this.minPadding;
-      const width = this.root.offsetWidth;
-      const height = this.root.offsetHeight;
-      let newLeft = event.clientX - this.dragOffsetX;
-      let newTop = event.clientY - this.dragOffsetY;
-      const maxLeft = Math.max(0, window.innerWidth - width - MIN_PADDING);
-      const maxTop = Math.max(0, window.innerHeight - height - MIN_PADDING);
-      newLeft = Math.min(Math.max(MIN_PADDING, newLeft), maxLeft);
-      newTop = Math.min(Math.max(MIN_PADDING, newTop), maxTop);
-      this.root.style.left = newLeft + 'px';
-      this.root.style.top = newTop + 'px';
-      this.root.style.right = 'auto';
-    }
-
-    onDragEnd() {
-      if (!this.isDragging) return;
-      this.isDragging = false;
-      try { this.root.releasePointerCapture && this.root.releasePointerCapture(this.dragCaptureId); } catch (_e) {}
-      this.root.removeEventListener('pointermove', this.onDragMoveBound);
-      this.root.removeEventListener('pointerup', this.onDragEndBound);
-    }
-
-    onResizeStart(event) {
-      if (event.button !== 0 && event.pointerType !== 'touch') return;
-      let rect = this.root.getBoundingClientRect();
-      this.prepareManualPosition(rect);
-      rect = this.root.getBoundingClientRect();
-      this.isResizing = true;
-      this.resizeStartWidth = rect.width;
-      this.resizeStartHeight = rect.height;
-      this.resizeStartX = event.clientX;
-      this.resizeStartY = event.clientY;
-      // Capture the pointer so resize continues even if cursor leaves
-      try { this.root.setPointerCapture(event.pointerId); } catch (_e) {}
-      this.root.addEventListener('pointermove', this.onResizeMoveBound = this.onResizeMove.bind(this));
-      this.root.addEventListener('pointerup', this.onResizeEndBound = this.onResizeEnd.bind(this));
-      event.preventDefault();
-    }
-
-    onResizeMove(event) {
-      if (!this.isResizing) return;
-      const MIN_PADDING = this.minPadding;
-      const deltaX = event.clientX - this.resizeStartX;
-      const deltaY = event.clientY - this.resizeStartY;
-      const maxWidth = Math.max(0, window.innerWidth - (2 * MIN_PADDING));
-      const maxHeight = Math.max(0, window.innerHeight - (2 * MIN_PADDING));
-      const minWidth = maxWidth > 0 ? Math.min(this.minWidth, maxWidth) : 0;
-      const minHeight = maxHeight > 0 ? Math.min(this.minHeight, maxHeight) : 0;
-      const targetWidth = this.resizeStartWidth + deltaX;
-      const targetHeight = this.resizeStartHeight + deltaY;
-      const newWidth = Math.max(minWidth, Math.min(targetWidth, maxWidth || targetWidth));
-      const newHeight = Math.max(minHeight, Math.min(targetHeight, maxHeight || targetHeight));
-      this.root.style.width = newWidth + 'px';
-      this.root.style.height = newHeight + 'px';
-      this.ensureInView();
-    }
-
-    onResizeEnd() {
-      if (!this.isResizing) return;
-      this.isResizing = false;
-      try { this.root.releasePointerCapture && this.root.releasePointerCapture(this.resizeCaptureId); } catch (_e) {}
-      this.root.removeEventListener('pointermove', this.onResizeMoveBound);
-      this.root.removeEventListener('pointerup', this.onResizeEndBound);
-    }
-
-    static closeTopMost() {
-      const top = PopupWindow.openStack[PopupWindow.openStack.length - 1];
-      if (top) top.close();
-    }
-  }
-
-  class Dialog {
-    constructor(opts) {
-      this.overlay = opts.overlay;
-      this.messageElement = opts.messageElement;
-      this.timeout = opts.timeout || null;
-      this.timeoutDuration = opts.timeoutDuration || 0;
-      this.buttons = opts.buttons || {}; // { buttonId: callback }
-      this.onBeforeOpen = opts.onBeforeOpen || null;
-      this.onAfterClose = opts.onAfterClose || null;
-
-      this.timeoutHandle = null;
-      this.setupButtonListeners();
-    }
-
-    setupButtonListeners() {
-      Object.entries(this.buttons).forEach(([buttonId, callback]) => {
-        const button = document.getElementById(buttonId);
-        if (button) {
-          button.addEventListener('click', () => {
-            if (typeof callback === 'function') {
-              callback();
-            }
-            this.close();
-          });
-        }
-      });
-    }
-
-    setMessage(message) {
-      if (this.messageElement) {
-        if (typeof message === 'string') {
-          this.messageElement.textContent = message;
-        } else {
-          this.messageElement.innerHTML = '';
-          this.messageElement.appendChild(message);
-        }
-      }
-    }
-
-    open(message) {
-      if (message) {
-        this.setMessage(message);
-      }
-      if (typeof this.onBeforeOpen === 'function') {
-        this.onBeforeOpen();
-      }
-      this.overlay.classList.add('show');
-      if (this.timeoutDuration > 0) {
-        this.startTimeout();
-      }
-    }
-
-    close() {
-      this.overlay.classList.remove('show');
-      this.clearTimeout();
-      if (typeof this.onAfterClose === 'function') {
-        this.onAfterClose();
-      }
-    }
-
-    isShown() {
-      return this.overlay.classList.contains('show');
-    }
-
-    startTimeout() {
-      this.clearTimeout();
-      this.timeoutHandle = setTimeout(() => {
-        this.close();
-      }, this.timeoutDuration);
-    }
-
-    clearTimeout() {
-      if (this.timeoutHandle) {
-        window.clearTimeout(this.timeoutHandle);
-        this.timeoutHandle = null;
-      }
-    }
-  }
-
-  let failedOnce = false;
-  let connectedOnce = false;
-  let isNonNumericControlPath = false;
-  let resolvedControlPath = null;
-  let resolvedNoVNCPath = null;
-  let newInstance = false;
-  let originalControlFile = null;
-
-  let heartbeat = null;
-
-  let launcherObject = null;
-
-  let rfb = null;
-  let rfbReconnectTimer = null;
-  let rfbReconnectDelay = 1000;
+  // --- UI Components ---
 
   const logPopup = new PopupWindow({
     root: logWindow,
-    header: logHeader,
-    resizeHandle: logResizeHandle,
+    header: document.getElementById('log-header'),
+    resizeHandle: document.getElementById('log-resize-handle'),
     menuButton: menuLogsButton,
-    closeButton: logClose,
-    minPadding: DEFAULT_MIN_PADDING,
-    minWidth: DEFAULT_MIN_RESIZE_WIDTH,
-    minHeight: DEFAULT_MIN_RESIZE_HEIGHT,
-    onOpen: function() { menuLogsButton.classList.remove('has-new'); },
+    closeButton: document.getElementById('log-close'),
+    onOpen: () => menuLogsButton.classList.remove('has-new'),
   });
 
   const urlBuilderPopup = new PopupWindow({
@@ -376,8 +68,7 @@ import RFB from './noVNC/core/rfb.js';
     header: urlBuilderWindow.querySelector('[data-popup-header]') || urlBuilderWindow,
     resizeHandle: urlBuilderWindow.querySelector('[data-popup-resize]') || null,
     menuButton: menuUrlBuilderButton,
-    closeButton: urlBuilderClose,
-    minPadding: DEFAULT_MIN_PADDING,
+    closeButton: document.getElementById('url-builder-close'),
     minWidth: 360,
     minHeight: 220,
   });
@@ -387,16 +78,12 @@ import RFB from './noVNC/core/rfb.js';
     messageElement: dialogMessage,
     timeoutDuration: 30000,
     buttons: {
-      'dialog-cancel': function() {
+      'dialog-cancel': () => {
         pendingOpenPath = null;
         pendingOpenMacros = null;
       },
-      'dialog-accept': function() {
-        if (!pendingOpenPath) {
-          pendingOpenPath = null;
-          pendingOpenMacros = null;
-          return;
-        }
+      'dialog-accept': () => {
+        if (!pendingOpenPath) return;
         const newUrl = new URL(window.location.href);
         newUrl.searchParams.set('path', pendingOpenPath);
         if (pendingOpenMacros && pendingOpenMacros.trim() !== '') {
@@ -410,36 +97,19 @@ import RFB from './noVNC/core/rfb.js';
     },
   });
 
-  const errorDialog = new Dialog({
-    overlay: errorOverlay,
-    messageElement: errorMessage,
-    timeoutDuration: 0,
-    buttons: {
-      'error-ok': function() {},
-    },
-  });
-
-  let pendingUrl = null;
-  let pendingUrlType = 'url'; // 'url' or 'file'
-  let pendingFilePath = null;
-
   const urlDialog = new Dialog({
     overlay: dialogOverlay,
     messageElement: dialogMessage,
     timeoutDuration: 30000,
     buttons: {
-      'dialog-cancel': function() {
+      'dialog-cancel': () => {
         pendingUrl = null;
         pendingFilePath = null;
         pendingUrlType = 'url';
       },
-      'dialog-accept': function() {
+      'dialog-accept': () => {
         if (pendingUrlType === 'file' && pendingFilePath) {
-          navigator.clipboard.writeText(pendingFilePath).then(function() {
-            console.log('Path copied to clipboard');
-          }).catch(function(err) {
-            console.error('Failed to copy path:', err);
-          });
+          navigator.clipboard.writeText(pendingFilePath).catch(err => console.error('Failed to copy path:', err));
           pendingFilePath = null;
           pendingUrlType = 'url';
         } else if (pendingUrl) {
@@ -450,101 +120,13 @@ import RFB from './noVNC/core/rfb.js';
     },
   });
 
-  function parseLogMarkup(raw) {
-    const fragment = document.createDocumentFragment();
-    const root = document.createElement('span');
-    fragment.appendChild(root);
+  const errorDialog = new Dialog({
+    overlay: errorOverlay,
+    messageElement: errorMessage,
+    buttons: { 'error-ok': () => {} },
+  });
 
-    const stack = [root];
-    const safeText = String(raw == null ? '' : raw);
-    const tagRegex = /<\s*\/?\s*[a-zA-Z][^>]*>/g;
-    let lastIndex = 0;
-
-    function appendText(text) {
-      if (!text) return;
-      stack[stack.length - 1].appendChild(document.createTextNode(text));
-    }
-
-    function normalizeColor(value) {
-      const trimmed = String(value || '').trim();
-      if (!trimmed) return null;
-      const hexMatch = trimmed.match(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/);
-      if (hexMatch) return trimmed;
-      if (/^[a-zA-Z]+$/.test(trimmed)) return trimmed;
-      return null;
-    }
-
-    function parseTag(tag) {
-      const isClosing = /^<\s*\//.test(tag);
-      const nameMatch = tag.match(/^<\s*\/?\s*([a-zA-Z]+)/);
-      const tagName = nameMatch ? nameMatch[1].toLowerCase() : null;
-      return { isClosing, tagName, raw: tag };
-    }
-
-    function parseFontColor(tag) {
-      const attrMatch = tag.match(/color\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/i);
-      if (!attrMatch) return null;
-      return normalizeColor(attrMatch[2] || attrMatch[3] || attrMatch[4]);
-    }
-
-    let match;
-    while ((match = tagRegex.exec(safeText)) !== null) {
-      const tag = match[0];
-      appendText(safeText.slice(lastIndex, match.index));
-      lastIndex = match.index + tag.length;
-
-      const parsed = parseTag(tag);
-      if (!parsed.tagName) {
-        appendText(tag);
-        continue;
-      }
-
-      if (parsed.isClosing) {
-        if (parsed.tagName === 'b' || parsed.tagName === 'font') {
-          if (stack.length > 1) {
-            const last = stack[stack.length - 1];
-            if (last.dataset && last.dataset.tagName === parsed.tagName) {
-              stack.pop();
-            }
-          }
-        } else {
-          appendText(tag);
-        }
-        continue;
-      }
-
-      if (parsed.tagName !== 'b' && parsed.tagName !== 'font') {
-        appendText(tag);
-        continue;
-      }
-
-      if (parsed.tagName === 'b') {
-        const strong = document.createElement('strong');
-        strong.dataset.tagName = 'b';
-        stack[stack.length - 1].appendChild(strong);
-        stack.push(strong);
-        continue;
-      }
-
-      if (parsed.tagName === 'font') {
-        const span = document.createElement('span');
-        const color = parseFontColor(tag);
-        if (color) span.style.color = color;
-        span.dataset.tagName = 'font';
-        stack[stack.length - 1].appendChild(span);
-        stack.push(span);
-        continue;
-      }
-    }
-
-    appendText(safeText.slice(lastIndex));
-
-    const output = document.createDocumentFragment();
-    while (root.firstChild) {
-      output.appendChild(root.firstChild);
-    }
-    return output;
-  }
+  // --- Utils ---
 
   function addLogMessage(html) {
     if (logContent.dataset.empty === 'true') {
@@ -561,368 +143,51 @@ import RFB from './noVNC/core/rfb.js';
     }
   }
 
-  if (urlBuilderOpenTab) {
-    urlBuilderOpenTab.addEventListener('click', function() {
-      window.open('/url-builder', '_blank', 'noopener');
-      urlBuilderPopup.close();
-    });
-  }
-
-  document.addEventListener('keydown', function(event) {
-    if (event.key !== 'Escape') return;
-    PopupWindow.closeTopMost();
-  });
-
-  function isNumericPath(value) {
-    const normalized = String(value).trim();
-    return /^[0-9]+$/.test(normalized);
-  }
-
-  function getControlPath() {
-    if (resolvedControlPath != null) {
-      return resolvedControlPath;
-    }
-    if (controlPath == null) return '30000';
+  function getActiveControlPath() {
+    if (resolvedControlPath != null) return resolvedControlPath;
     const value = String(controlPath).trim();
-    if (value === '') return '30000';
-    if (!isNumericPath(value)) {
-      isNonNumericControlPath = true;
-      return '30000';
-    }
+    if (value === '' || isNonNumericControlPath) return '30000';
     return value;
   }
 
-  function getNoVNCPath() {
-    if (resolvedNoVNCPath != null) {
-      return resolvedNoVNCPath;
-    }
-    if (noVNCPath == null) return '30001';
-    const value = String(noVNCPath).trim();
-    if (value === '') return '30001';
-    return value;
+  function getActiveNoVNCPath() {
+    return resolvedNoVNCPath || String(noVNCPath).trim() || '30001';
   }
 
-  function handleRFBDisconnect(e) {
-    if (isConnectedRFB) {
-      // console.log('RFB Disconnected', e ? e.detail : 'Manual');
-    }
-    isConnectedRFB = false;
-    rfb = null;
-    reconnectOverlay.classList.add('show');
-    scheduleRFBReconnect();
-  }
+  // --- Clients ---
 
-  function handleRFBConnect() {
-    isConnectedRFB = true;
-    rfbReconnectDelay = 1000;
-    reconnectOverlay.classList.remove('show');
-  }
+  const vnc = new VNCClient(vncContainer, reconnectOverlay);
 
-  let isConnectedRFB = false;
-
-  function connectRFB() {
-    if (rfbReconnectTimer) {
-      clearTimeout(rfbReconnectTimer);
-      rfbReconnectTimer = null;
-    }
-
-    if (rfb) {
-      rfb.removeEventListener('disconnect', handleRFBDisconnect);
-      try { rfb.disconnect(); } catch (e) {}
-      rfb = null;
-    }
-
-    isConnectedRFB = false;
-    // Ensure overlay is shown when we start connecting or reconnecting
-    reconnectOverlay.classList.add('show');
-
-    let wsUrl;
-    const path = getNoVNCPath();
-
-    try {
-      const tempUrl = new URL(path);
-      if (tempUrl.protocol === 'ws:' || tempUrl.protocol === 'wss:') {
-        wsUrl = path;
-      } else {
-        throw new Error("Not a WS URL");
-      }
-    } catch (e) {
+  const control = new ControlSocket({
+    urlProvider: () => {
       const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-      wsUrl = wsProtocol + window.location.host + '/websockify/' + encodeURIComponent(path);
-    }
-
-    try {
-      rfb = new RFB(vncContainer, wsUrl);
-      rfb.scaleViewport = true;
-      rfb.addEventListener('connect', handleRFBConnect);
-      rfb.addEventListener('disconnect', handleRFBDisconnect);
-    } catch (e) {
-      console.error('RFB Init Failed:', e);
-      reconnectOverlay.classList.add('show');
-      scheduleRFBReconnect();
-    }
-  }
-
-  function scheduleRFBReconnect() {
-    if (rfbReconnectDelay < 0) return;
-    if (rfbReconnectTimer) return;
-    rfbReconnectTimer = setTimeout(function() {
-      rfbReconnectTimer = null;
-      rfbReconnectDelay = Math.min(rfbReconnectDelay * 2, 10000);
-      connectRFB();
-    }, rfbReconnectDelay);
-  }
-
-  connectRFB();
-
-  let reconnectDelay = 1000;
-  let reconnectTimer = null;
-
-  function scheduleReconnect() {
-    if (reconnectDelay < 0) return; //disabled
-    failedOnce = true;
-    if (reconnectTimer) return;
-    reconnectTimer = setTimeout(function() {
-      reconnectTimer = null;
-      reconnectDelay = Math.min(reconnectDelay * 2, 10000);
-      connectWebSocket();
-    }, reconnectDelay);
-  }
-
-  function formatDateTime(date) {
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
-    const year = date.getFullYear();
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    const seconds = String(date.getSeconds()).padStart(2, '0');
-
-    return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
-  }
-
-  function connectWebSocket() {
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-    const wsUrl = wsProtocol + window.location.host + '/websockify/' + encodeURIComponent(getControlPath());
-    let socket;
-
-    try {
-      socket = new WebSocket(wsUrl);
-    } catch (err) {
-      console.error('WebSocket connection failed:', err);
-      scheduleReconnect();
-      return;
-    }
-
-    socket.onopen = function() {
+      return wsProtocol + window.location.host + '/websockify/' + encodeURIComponent(getActiveControlPath());
+    },
+    onOpen: () => {
       const dateTime = formatDateTime(new Date());
       if (failedOnce && !newInstance) {
-        reconnectDelay = 1000;
+        control.reconnectDelay = 1000;
         failedOnce = false;
-        setTimeout(function() {
-          if (connectedOnce)
-            addLogMessage('<font color="green">' + dateTime + ' Reconnected to server.</font>');
-          connectRFB();
+        setTimeout(() => {
+          if (connectedOnce) addLogMessage('<font color="green">' + dateTime + ' Reconnected to server.</font>');
+          vnc.connect();
         }, 1000);
       } else if ((resolvedControlPath != null || !isNonNumericControlPath) && !connectedOnce) {
         addLogMessage('<font color="green">' + dateTime + ' Connected to server.</font>');
       }
       newInstance = false;
-      try {
-        if (isNonNumericControlPath && resolvedControlPath == null) {
-          // Request instance number for non-numeric path
-          const message = 'RESOLVE|' + controlPath + '|' + macros;
-          socket.send(message);
-        } else {
-          connectedOnce = true;
-          failedOnce = false;
-          socket.send(getControlPath());
-          if (heartbeat != null) {
-            clearInterval(heartbeat);
-            heartbeat = null;
-          }
-          heartbeat = setInterval(function() {
-            if (socket.readyState === WebSocket.OPEN) {
-              socket.send('PING');
-            } else {
-              clearInterval(heartbeat);
-              heartbeat = null;
-            }
-          }, 50000); //send a ping every 50 seconds
-        }
-      } catch (sendErr) {
-        console.warn('WebSocket send failed:', sendErr);
-      }
-    };
 
-    socket.onmessage = function(event) {
-      const data = String(event.data || '');
-      if (data.startsWith('USERS|')) {
-        const userCount = parseInt(data.slice(6), 10);
-        if (!isNaN(userCount)) {
-          usersCount.textContent = String(userCount);
-        }
-        return;
+      if (isNonNumericControlPath && resolvedControlPath == null) {
+        control.send('RESOLVE|' + controlPath + '|' + macros);
+      } else {
+        connectedOnce = true;
+        failedOnce = false;
+        control.send(getActiveControlPath());
       }
-      if (data.startsWith('LOG|')) {
-        addLogMessage(data.slice(4));
-        return;
-      }
-      if (data.startsWith('ERROR|')) {
-        errorDialog.open(data.slice(6));
-        return;
-      }
-      if (data.startsWith('PROGRESS|')) {
-        const progressText = document.getElementById('progress-text');
-        const progressBar = document.getElementById('progress-bar');
-        const menuProgress = document.getElementById('menu-progress');
-        const progress = parseInt(data.slice(9), 10);
-        if (!isNaN(progress)) {
-          const percent = Math.round((progress / progressBar.max) * 100);
-          const digitSpace = percent < 10 ? '  ' : (percent < 100 ? ' ' : '');
-          progressText.textContent = digitSpace + percent + '%';
-          progressBar.value = progress;
-          if (progress >= progressBar.max) {
-            setTimeout(function() {
-              menuProgress.style.display = 'none';
-            }, 5000);
-          }
-        } else {
-          console.warn('Invalid PROGRESS value:', data.slice(9));
-        }
-        return;
-      }
-      if (data.startsWith('INIT_PROGRESS|')) {
-        const progressText = document.getElementById('progress-text');
-        const progressBar = document.getElementById('progress-bar');
-        const menuProgress = document.getElementById('menu-progress');
-        const [init, max] = data.slice(14).split('|').map(function(v) { return parseInt(v, 10); });
-        if (!isNaN(init) && !isNaN(max)) {
-          progressBar.max = max;
-          progressBar.value = init;
-          progressText.textContent = '  ' + Math.round((init / max) * 100) + '%';
-          menuProgress.style.display = 'flex';
-        } else {
-          console.warn('Invalid INIT_PROGRESS values:', data.slice(14));
-        }
-        return;
-      }
-      if (data.startsWith('TIMEOUT|')) {
-        errorDialog.open('Connection timed out: ' + data.slice(8));
-        reconnectDelay = -1; //disable further reconnects
-        const errorOkButton = document.getElementById('error-ok');
-        if (errorOkButton) {
-          errorOkButton.disabled = true;
-          errorOkButton.style.display = 'none';
-        }
-        socket.close();
-        if (rfb) {
-          rfb.removeEventListener('disconnect', handleRFBDisconnect);
-          try { rfb.disconnect(); } catch (e) {}
-          rfb = null;
-        }
-        vncContainer.innerHTML = '';
-        return;
-      }
-      if (data.startsWith('OPEN_URL|')) {
-        const urlToOpen = data.slice(9).trim();
-        if (urlToOpen) {
-          if (urlToOpen.startsWith('file://')) {
-            const filePath = urlToOpen.slice(7);
-            pendingFilePath = filePath;
-            pendingUrlType = 'file';
-            const message = document.createElement('p');
-            message.textContent = 'File path: ';
-            const pathSpan = document.createElement('span');
-            pathSpan.textContent = filePath;
-            pathSpan.style.fontFamily = 'monospace';
-            message.appendChild(pathSpan);
-            urlDialog.setMessage(message);
-            // Update button text to "Copy"
-            const acceptButton = document.getElementById('dialog-accept');
-            if (acceptButton) {
-              acceptButton.textContent = 'Copy';
-            }
-            urlDialog.open();
-          } else {
-            pendingUrl = urlToOpen;
-            pendingUrlType = 'url';
-            const message = document.createElement('p');
-            message.textContent = 'Open URL: ';
-            const link = document.createElement('a');
-            link.href = urlToOpen;
-            link.target = '_blank';
-            link.rel = 'noopener';
-            link.textContent = urlToOpen;
-            link.addEventListener('click', function() {
-              urlDialog.close();
-            });
-            message.appendChild(link);
-            message.appendChild(document.createTextNode('?'));
-            urlDialog.setMessage(message);
-            // Update button text back to "Open"
-            const acceptButton = document.getElementById('dialog-accept');
-            if (acceptButton) {
-              acceptButton.textContent = 'Open';
-            }
-            urlDialog.open();
-          }
-        }
-        return;
-      }
-      if (data.startsWith('INSTANCE|')) {
-        const payload = data.slice(9).split('|');
-        const nextNoVNCPath = (payload[0] || '').trim();
-        const nextControlPath = (payload[1] || '').trim();
-        if (isNonNumericControlPath && resolvedControlPath == null) {
-          resolvedControlPath = nextControlPath || '30000';
-          resolvedNoVNCPath = nextNoVNCPath || '30001';
-          originalControlFile = controlPath;
-          connectRFB();
-          socket.close();
-          newInstance = true;
-          // onclose will call scheduleReconnect, which will use the resolved control path
-        }
-        return;
-      }
-      if (data.startsWith('LAUNCHER|')) {
-        const launcherPayload = data.slice(9);
-        try {
-          launcherObject = JSON.parse(launcherPayload);
-        } catch (e) {
-          console.warn('Failed to parse LAUNCHER payload:', e);
-          launcherObject = null;
-          return;
-        }
-
-        setupLauncherMenu();
-        return;
-      }
-      const openMatchPipe = data.match(/^OPEN\|([^|]+)\|(.*)$/);
-      if (openMatchPipe) {
-        pendingOpenPath = openMatchPipe[1];
-        pendingOpenMacros = openMatchPipe[2];
-        let message = 'Open "' + pendingOpenPath + '"?';
-
-        if (pendingOpenMacros && pendingOpenMacros.trim() !== '') {
-          const macroList = pendingOpenMacros.split(';').filter(function(m) { return m.trim() !== ''; });
-          if (macroList.length > 0) {
-            message += '\n\nMacros:\n' + macroList.join('\n');
-          }
-        }
-
-        openFileDialog.open(message);
-        return;
-      }
-    };
-
-    socket.onerror = function(errorEvent) {
-      console.warn('WebSocket error:', errorEvent);
-      socket.close();
-    };
-
-    socket.onclose = function() {
+    },
+    onMessage: (data) => handleControlMessage(data),
+    onClose: () => {
       if (isNonNumericControlPath && !newInstance && originalControlFile != null) {
-        // ask for instance again, as the path could've changed
         resolvedControlPath = null;
         resolvedNoVNCPath = null;
         controlPath = originalControlFile;
@@ -931,405 +196,220 @@ import RFB from './noVNC/core/rfb.js';
         const dateTime = formatDateTime(new Date());
         addLogMessage('<font color="red">' + dateTime + ' Disconnected from server.</font>');
       }
-      scheduleReconnect();
-    };
+      failedOnce = true;
+    }
+  });
+
+  function handleControlMessage(data) {
+    if (data.startsWith('USERS|')) {
+      const count = parseInt(data.slice(6), 10);
+      if (!isNaN(count)) usersCount.textContent = String(count);
+      return;
+    }
+    if (data.startsWith('LOG|')) {
+      addLogMessage(data.slice(4));
+      return;
+    }
+    if (data.startsWith('ERROR|')) {
+      errorDialog.open(data.slice(6));
+      return;
+    }
+    if (data.startsWith('PROGRESS|')) {
+      updateProgress(parseInt(data.slice(9), 10));
+      return;
+    }
+    if (data.startsWith('INIT_PROGRESS|')) {
+      const [init, max] = data.slice(14).split('|').map(v => parseInt(v, 10));
+      initProgress(init, max);
+      return;
+    }
+    if (data.startsWith('TIMEOUT|')) {
+      handleTimeout(data.slice(8));
+      return;
+    }
+    if (data.startsWith('OPEN_URL|')) {
+      handleOpenUrl(data.slice(9).trim());
+      return;
+    }
+    if (data.startsWith('INSTANCE|')) {
+      handleInstance(data.slice(9));
+      return;
+    }
+    if (data.startsWith('LAUNCHER|')) {
+      try {
+        setupLauncherMenu(JSON.parse(data.slice(9)));
+      } catch (e) {
+        console.warn('Failed to parse LAUNCHER payload:', e);
+      }
+      return;
+    }
+    const openMatch = data.match(/^OPEN\|([^|]+)\|(.*)$/);
+    if (openMatch) {
+      handleOpenPath(openMatch[1], openMatch[2]);
+    }
   }
 
-  function setupLauncherMenu() {
-    if (!launcherObject) return;
-    const launcherButton = document.getElementById('launcher');
-    const titleColor = launcherObject['menu-title']?.style?.split(': ')[1] || '#000000';
-
-    try { launcherButton.style.color = titleColor; } catch (_e) {}
-
-    if (launcherButton.style.color === '#000000' || launcherButton.style.color === 'rgb(0, 0, 0)' || launcherButton.style.color.toLowerCase() === 'black') {
-      launcherButton.style.color = '#1e293b'; //dark slate instead of black
+  function updateProgress(progress) {
+    const progressBar = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
+    if (!isNaN(progress)) {
+      const percent = Math.round((progress / progressBar.max) * 100);
+      const space = percent < 10 ? '  ' : (percent < 100 ? ' ' : '');
+      progressText.textContent = space + percent + '%';
+      progressBar.value = progress;
+      if (progress >= progressBar.max) {
+        setTimeout(() => { document.getElementById('menu-progress').style.display = 'none'; }, 5000);
+      }
     }
+  }
 
-    launcherButton.textContent = launcherObject['menu-title'].text || 'Launcher';
+  function initProgress(init, max) {
+    const progressBar = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
+    if (!isNaN(init) && !isNaN(max)) {
+      progressBar.max = max;
+      progressBar.value = init;
+      progressText.textContent = '  ' + Math.round((init / max) * 100) + '%';
+      document.getElementById('menu-progress').style.display = 'flex';
+    }
+  }
 
-    if (launcherObject.menu && Array.isArray(launcherObject.menu) && launcherObject.menu.length > 0) {
-      launcherButton.style.display = 'inline-block';
-      createPopupPullDownMenu(launcherObject, launcherButton);
+  function handleTimeout(reason) {
+    errorDialog.open('Connection timed out: ' + reason);
+    control.disableReconnect();
+    const okBtn = document.getElementById('error-ok');
+    if (okBtn) { okBtn.disabled = true; okBtn.style.display = 'none'; }
+    control.socket.close();
+    vnc.disconnect();
+    vncContainer.innerHTML = '';
+  }
+
+  function handleOpenUrl(urlToOpen) {
+    if (!urlToOpen) return;
+    const acceptButton = document.getElementById('dialog-accept');
+    const message = document.createElement('p');
+
+    if (urlToOpen.startsWith('file://')) {
+      const filePath = urlToOpen.slice(7);
+      pendingFilePath = filePath;
+      pendingUrlType = 'file';
+      message.textContent = 'File path: ';
+      const span = document.createElement('span');
+      span.textContent = filePath;
+      span.style.fontFamily = 'monospace';
+      message.appendChild(span);
+      if (acceptButton) acceptButton.textContent = 'Copy';
     } else {
-      launcherButton.style.display = 'none';
+      pendingUrl = urlToOpen;
+      pendingUrlType = 'url';
+      message.textContent = 'Open URL: ';
+      const link = document.createElement('a');
+      link.href = urlToOpen;
+      link.target = '_blank';
+      link.rel = 'noopener';
+      link.textContent = urlToOpen;
+      link.onclick = () => urlDialog.close();
+      message.appendChild(link);
+      message.appendChild(document.createTextNode('?'));
+      if (acceptButton) acceptButton.textContent = 'Open';
+    }
+    urlDialog.setMessage(message);
+    urlDialog.open();
+  }
+
+  function handleInstance(payload) {
+    const [nextNoVNC, nextControl] = payload.split('|').map(v => (v || '').trim());
+    if (isNonNumericControlPath && resolvedControlPath == null) {
+      resolvedControlPath = nextControl || '30000';
+      resolvedNoVNCPath = nextNoVNC || '30001';
+      originalControlFile = controlPath;
+      vnc.setPath(resolvedNoVNCPath);
+      vnc.connect();
+      control.socket.close();
+      newInstance = true;
     }
   }
 
-  function createPopupPullDownMenu(object, parentElement) {
-    const menuElement = document.createElement('div');
-    menuElement.id = 'launcher-menu';
-    menuElement.className = 'popup-menu';
-    menuElement.setAttribute('role', 'menu');
-    menuElement.setAttribute('aria-hidden', 'true');
-
-    /*
-    available types: object.type = 'title' | 'menu' | 'caqtdm' | 'cmd' | 'separator'
-    */
-
-    if (object.menu && Array.isArray(object.menu)) {
-      buildMenuItems(object.menu, menuElement);
+  function handleOpenPath(path, macros) {
+    pendingOpenPath = path;
+    pendingOpenMacros = macros;
+    let msg = 'Open "' + path + '"?';
+    if (macros && macros.trim() !== '') {
+      const list = macros.split(';').filter(m => m.trim() !== '');
+      if (list.length > 0) msg += '\n\nMacros:\n' + list.join('\n');
     }
-
-    parentElement.appendChild(menuElement);
-
-    // Show/hide menu on button click
-    parentElement.addEventListener('click', function(e) {
-      e.stopPropagation();
-      const isShown = menuElement.classList.contains('show');
-      closeAllMenus();
-      if (!isShown) {
-        menuElement.classList.add('show');
-      }
-    });
+    openFileDialog.open(msg);
   }
 
-  function buildMenuItems(menuArray, containerElement) {
-    menuArray.forEach(function(item) {
-      const element = createMenuElement(item);
-      if (element) {
-        containerElement.appendChild(element);
-      }
-    });
-  }
+  // --- Global Event Handlers ---
 
-  function createMenuElement(item) {
-    if (!item || !item.type) return null;
-    if (item.type === 'separator') return createSeparator();
-    if (item.type === 'title') return createTitleItem(item);
-    if (item.type === 'menu') return createSubmenuItem(item);
-    if (item.type === 'cmd') return createCommandItem(item);
-    if (item.type === 'caqtdm' || item.type === 'medm' || item.type === 'pep') {
-      return createActionItem(item);
-    }
-    return null;
-  }
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') PopupWindow.closeTopMost();
+  });
 
-  function createSeparator() {
-    const separator = document.createElement('hr');
-    separator.className = 'menu-separator';
-    return separator;
-  }
-
-  function createTitleItem(item) {
-    const titleItem = document.createElement('div');
-    titleItem.className = 'menu-title';
-    titleItem.textContent = item.text || '';
-    applyMenuMeta(titleItem, item);
-    return titleItem;
-  }
-
-  function createSubmenuItem(item) {
-    const menuButton = document.createElement('button');
-    menuButton.className = 'menu-item menu-submenu';
-    menuButton.setAttribute('role', 'menuitem');
-    menuButton.setAttribute('aria-haspopup', 'true');
-    menuButton.textContent = item.text || '';
-    applyMenuMeta(menuButton, item);
-
-    const submenu = document.createElement('div');
-    submenu.className = 'popup-submenu';
-    submenu.setAttribute('role', 'menu');
-
-    if (item.menu && Array.isArray(item.menu)) {
-      buildMenuItems(item.menu, submenu);
-    }
-
-    menuButton.appendChild(submenu);
-    bindSubmenuEvents(menuButton, submenu);
-    return menuButton;
-  }
-
-  function bindSubmenuEvents(menuButton, submenu) {
-    menuButton.addEventListener('mouseenter', function() {
-      submenu.classList.add('show');
-    });
-
-    menuButton.addEventListener('mouseleave', function() {
-      submenu.classList.remove('show');
-    });
-
-    submenu.addEventListener('mouseenter', function() {
-      submenu.classList.add('show');
-    });
-
-    submenu.addEventListener('mouseleave', function() {
-      submenu.classList.remove('show');
-    });
-
-    menuButton.addEventListener('click', function(e) {
-      e.stopPropagation();
-      submenu.classList.toggle('show');
-    });
-  }
-
-  function createActionItem(item) {
-    const actionButton = document.createElement('button');
-    actionButton.className = 'menu-item menu-action';
-    actionButton.setAttribute('role', 'menuitem');
-    actionButton.textContent = item.text || '';
-    applyMenuMeta(actionButton, item);
-
-    actionButton.addEventListener('click', function(e) {
-      e.stopPropagation();
-      const filePath = item.path || item.panel;
-      if (filePath) {
-        const newUrl = new URL(window.location.href);
-        newUrl.searchParams.set('path', filePath);
-        if (item.macros && item.macros.trim() !== '') {
-          const convertedMacros = item.macros.replace(/=/g, ':').replace(/;/g, ',');
-          newUrl.searchParams.set('macros', convertedMacros);
-        }
-        window.open(newUrl.toString(), '_blank', 'noopener');
-      }
-      closeAllMenus();
-    });
-
-    return actionButton;
-  }
-
-  function createCommandItem(item) {
-    const cmdButton = document.createElement('button');
-    cmdButton.className = 'menu-item menu-action menu-cmd';
-    cmdButton.setAttribute('role', 'menuitem');
-    cmdButton.textContent = item.text || '';
-    applyMenuMeta(cmdButton, item);
-
-    cmdButton.addEventListener('click', function(e) {
-      e.stopPropagation();
-      if (item.command) {
-        const message = document.createElement('p');
-        message.textContent = 'Command: ';
-        const cmdSpan = document.createElement('span');
-        cmdSpan.textContent = item.command;
-        cmdSpan.style.fontFamily = 'monospace';
-        cmdSpan.style.wordBreak = 'break-all';
-        message.appendChild(cmdSpan);
-
-        pendingFilePath = item.command;
-        pendingUrlType = 'file';
-
-        const acceptButton = document.getElementById('dialog-accept');
-        if (acceptButton) {
-          acceptButton.textContent = 'Copy';
-        }
-        urlDialog.setMessage(message);
-        urlDialog.open();
-      }
-      closeAllMenus();
-    });
-
-    return cmdButton;
-  }
-
-  function applyMenuMeta(element, item) {
-    applyTooltip(element, item.tip);
-    if (item.style) {
-      applyStyleToElement(element, item.style);
-    }
-  }
-
-  const QSS_PROPERTIES = {
-    FONT: 'font'
-  };
-
-  const FONT_PATTERNS = {
-    WEIGHT: /^\d{3}$/,
-    SIZE: /^\d+(\.\d+)?(pt|px|em|rem|%)$/i,
-    STYLE_KEYWORDS: /^(bold|normal|italic|oblique)$/i
-  };
-
-  const FONT_WEIGHTS = ['bold', 'normal'];
-  const FONT_STYLES = ['italic', 'oblique'];
-
-  function applyStyleToElement(element, styleString) {
-    if (!styleString) return;
-
-    const styleDeclarations = parseStyleString(styleString);
-    styleDeclarations.forEach(function(declaration) {
-      applyStyleDeclaration(element, declaration);
-    });
-  }
-
-  function parseStyleString(styleString) {
-    return styleString
-      .split(';')
-      .map(function(style) { return style.trim(); })
-      .filter(function(style) { return style.length > 0; })
-      .map(function(style) {
-        const colonIndex = style.indexOf(':');
-        if (colonIndex === -1) return null;
-        
-        const property = style.substring(0, colonIndex).trim();
-        const value = style.substring(colonIndex + 1).trim();
-        
-        return property && value ? { property: property, value: value } : null;
-      })
-      .filter(function(declaration) { return declaration !== null; });
-  }
-
-  function applyStyleDeclaration(element, declaration) {
-    const property = declaration.property;
-    const value = declaration.value;
-
-    if (property === QSS_PROPERTIES.FONT) {
-      applyQSSFontProperty(element, value);
-      return;
-    }
-
-    const cssProperty = convertQSSPropertyToCSS(property);
-    const cssValue = convertQSSValueToCSS(value);
-    element.style[cssProperty] = cssValue;
-  }
-
-  function convertQSSPropertyToCSS(property) {
-    return property.replace(/([A-Z])/g, '-$1').toLowerCase();
-  }
-
-  function convertQSSValueToCSS(value) {
-    if (typeof value === 'string' && value.startsWith('#')) {
-      return convertToHTML5Hex(value);
-    }
-    return value;
-  }
-
-  function applyQSSFontProperty(element, fontValue) {
-    if (!fontValue) return;
-
-    const fontParts = fontValue.trim().split(/\s+/);
-    const fontProperties = parseFontParts(fontParts);
-    applyFontProperties(element, fontProperties);
-  }
-
-  function parseFontParts(parts) {
-    const properties = {
-      weight: null,
-      style: null,
-      size: null,
-      families: []
-    };
-
-    parts.forEach(function(part) {
-      const normalizedPart = part.toLowerCase();
-
-      if (isFontWeight(normalizedPart, part)) {
-        properties.weight = part;
-      } else if (isFontStyle(normalizedPart)) {
-        properties.style = part;
-      } else if (isFontSize(part)) {
-        properties.size = part;
-      } else if (!isStyleKeyword(normalizedPart)) {
-        properties.families.push(part);
-      }
-    });
-
-    return properties;
-  }
-
-  function isFontWeight(normalizedValue, originalValue) {
-    return FONT_WEIGHTS.indexOf(normalizedValue) !== -1 || 
-           FONT_PATTERNS.WEIGHT.test(originalValue);
-  }
-
-  function isFontStyle(normalizedValue) {
-    return FONT_STYLES.indexOf(normalizedValue) !== -1;
-  }
-
-  function isFontSize(value) {
-    return FONT_PATTERNS.SIZE.test(value);
-  }
-
-  function isStyleKeyword(normalizedValue) {
-    return FONT_PATTERNS.STYLE_KEYWORDS.test(normalizedValue);
-  }
-
-  function applyFontProperties(element, properties) {
-    if (properties.weight) {
-      element.style.fontWeight = properties.weight;
-    }
-    if (properties.style) {
-      element.style.fontStyle = properties.style;
-    }
-    if (properties.size) {
-      element.style.fontSize = properties.size;
-    }
-    if (properties.families.length > 0) {
-      element.style.fontFamily = properties.families.join(', ');
-    }
-  }
-
-  function convertToHTML5Hex(hex) {
-    const hex48bitRegex = /^#([0-9a-fA-F]{4})([0-9a-fA-F]{4})([0-9a-fA-F]{4})$/;
-    const match = hex.match(hex48bitRegex);
-
-    if (match) {
-      const r = match[1].substring(0, 2);
-      const g = match[2].substring(0, 2);
-      const b = match[3].substring(0, 2);
-      return `#${r}${g}${b}`.toLowerCase();
-    }
-
-    return hex;
-  }
-
-  function applyTooltip(element, tip) {
-    if (!element || !tip) return;
-    element.setAttribute('title', tip);
-  }
-
-  function closeAllMenus() {
-    const allMenus = document.querySelectorAll('.popup-menu, .popup-submenu');
-    allMenus.forEach(function(menu) {
-      menu.classList.remove('show');
-    });
-  }
-
-  // Close menus when clicking outside
-  document.addEventListener('click', function(e) {
-    const launcherButton = document.getElementById('launcher');
-    if (launcherButton && (e.target === launcherButton || launcherButton.contains(e.target))) {
-      return;
-    }
-    const viewButton = document.getElementById('menu-view');
-    if (viewButton && (e.target === viewButton || viewButton.contains(e.target))) {
-      return;
-    }
+  document.addEventListener('click', (e) => {
+    const launcherBtn = document.getElementById('launcher');
+    const viewBtn = document.getElementById('menu-view');
+    if ((launcherBtn && launcherBtn.contains(e.target)) || (viewBtn && viewBtn.contains(e.target))) return;
     closeAllMenus();
   });
 
-  // View Menu Logic
-  const viewButton = document.getElementById('menu-view');
-  const viewMenu = document.getElementById('view-menu');
-  const fullScreenItem = document.getElementById('view-fullscreen');
+  window.addEventListener('launcher-command', (e) => {
+    const cmd = e.detail;
+    const message = document.createElement('p');
+    message.textContent = 'Command: ';
+    const span = document.createElement('span');
+    span.textContent = cmd;
+    span.style.fontFamily = 'monospace';
+    span.style.wordBreak = 'break-all';
+    message.appendChild(span);
 
-  if (viewButton && viewMenu) {
-    viewButton.addEventListener('click', function(e) {
-      const isShown = viewMenu.classList.contains('show');
+    pendingFilePath = cmd;
+    pendingUrlType = 'file';
+    const acceptBtn = document.getElementById('dialog-accept');
+    if (acceptBtn) acceptBtn.textContent = 'Copy';
+    urlDialog.setMessage(message);
+    urlDialog.open();
+  });
+
+  const viewBtn = document.getElementById('menu-view');
+  if (viewBtn) {
+    viewBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const menu = document.getElementById('view-menu');
+      const isShown = menu.classList.contains('show');
       closeAllMenus();
       if (!isShown) {
-        viewMenu.classList.add('show');
-        viewButton.setAttribute('aria-expanded', 'true');
-      } else {
-        viewButton.setAttribute('aria-expanded', 'false');
+        menu.classList.add('show');
+        viewBtn.setAttribute('aria-expanded', 'true');
       }
     });
   }
 
+  const fullScreenItem = document.getElementById('view-fullscreen');
   if (fullScreenItem) {
-    fullScreenItem.addEventListener('click', function() {
-      const elem = document.getElementById('vnc-container');
+    fullScreenItem.addEventListener('click', () => {
       if (!document.fullscreenElement) {
-        elem.requestFullscreen().catch(err => {
-          console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
-        });
-      } else {
-        if (document.exitFullscreen) {
-            document.exitFullscreen();
-        }
+        vncContainer.requestFullscreen().catch(err => console.error('Fullscreen error:', err));
+      } else if (document.exitFullscreen) {
+        document.exitFullscreen();
       }
       closeAllMenus();
     });
   }
 
-  connectWebSocket();
+  const urlBuilderOpenTab = document.getElementById('url-builder-open-tab');
+  if (urlBuilderOpenTab) {
+    urlBuilderOpenTab.addEventListener('click', () => {
+      window.open('/url-builder', '_blank', 'noopener');
+      urlBuilderPopup.close();
+    });
+  }
+
+  // --- Initialization ---
+
+  vnc.setPath(getActiveNoVNCPath());
+  vnc.connect();
+  control.connect();
+
 })();
