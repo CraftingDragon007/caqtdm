@@ -3374,6 +3374,8 @@ It is possible to run caQtDM as a web server application using
 `qnovnc-platform-plugin <https://github.com/CraftingDragon007/qnovnc-platform-plugin>`__. This allows you to run caQtDM in a headless
 environment and access it through a web browser.
 
+Note: On windows the qnovnc-platform-plugin is currently only available in read-only mode, so user interactions are not possible.
+
 Docker setup (easiest)
 ~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -3462,6 +3464,12 @@ To set up caQtDM with qnovnc-platform-plugin, follow these steps:
 
 Reverse proxy setup for caQtDM Web (required)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+It is needed to set up a reverse proxy in front of the caQtDM Web server to handle routing between multiple instances and to serve the web client files.
+
+The cool thing about reverse proxies is that they can also handle SSL termination and basic authentication (Configuration included in the caqtdm version of the nginx docker image :ref:`prebuilt-images`), so you can also ensure a secure connection to your caQtDM Web server.
+
+And because we are using a reverse proxy we don't need to open caQtDM Web's ports to the public, only the reverse proxy's ports need to be accessible.
 
 You can find example configurations for setting up nginx or Caddy as a reverse proxy in the `caQtDM_Web` directory of the caQtDM repository.
 
