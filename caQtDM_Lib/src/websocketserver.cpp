@@ -102,7 +102,7 @@ void WebSocketServer::processTextMessage(const QString &message)
                 file = items[1];
             } else if (items.length() == 3) {
                 file = items[1];
-                macros = items[2].replace(':', '=').replace(',', ';');
+                macros = items[2].replace(':', '=');
             } else {
                 pSender->sendTextMessage("ERROR|Invalid amount of arguments received, should either be 2 or 3");
                 return;

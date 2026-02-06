@@ -7463,14 +7463,14 @@ void CaQtDM_Lib::addWebChildProcess(QString absoluteFilePath, QString macros, Vn
     webChildProcesses.insert(key, childProcess);
 }
 
-///
-/// \brief This function queries vncWebChildProcesses for an item,
-/// if the result is nullptr or the process is no longer running,
-/// then the item is also removed from the list.
-/// \param absoluteFilePath The absolute file path to the ui file that the child process has loaded
-/// \param macros The corresponding macros of the child process
-/// \return The resulting item or nullptr if nothing was found or the item itself is a nullptr
-///
+/**
+ * @brief This function queries vncWebChildProcesses for an item,
+ * if the result is nullptr or the process is no longer running,
+ * then the item is also removed from the list.
+ * @param absoluteFilePath The absolute file path to the ui file that the child process has loaded
+ * @param macros The corresponding macros of the child process
+ * @return The resulting item or nullptr if nothing was found or the item itself is a nullptr
+ */
 VncWebChildProcess* CaQtDM_Lib::getWebChildProcess(QString absoluteFilePath, QString macros) {
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
