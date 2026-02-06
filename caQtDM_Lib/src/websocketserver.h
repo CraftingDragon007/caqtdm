@@ -53,6 +53,8 @@ private:
     void tryScheduleTimeout(int count);
     QString getIPAddress(QWebSocket *client);
 
+    void sendLauncherInfo(QWebSocket *receiver, QJsonValue launcherInfo);
+
     WebSocketServer(const WebSocketServer&) = delete;
     WebSocketServer& operator=(const WebSocketServer&) = delete;
 

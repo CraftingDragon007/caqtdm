@@ -39,6 +39,7 @@
 #include "hmisharedconfiglistmanager.h"
 #include "websocketserver.h"
 #include "webportpool.h"
+#include "weblaunchermanager.h"
 #endif
 
 #ifndef MOBILE_ANDROID
@@ -7604,6 +7605,11 @@ VncWebChildProcess* CaQtDM_Lib::startVncChildProcess(quint16 vncPort, quint16 we
 
     process_args.append("-host");
     process_args.append(webHost);
+
+    if (WebLauncherManager::instance().isInitialized()) {
+        process_args.append("-web_launcher_root_file");
+        process_args.append(WebLauncherManager::instance().getRootFile());
+    }
 
     process_args.append(file);
 

@@ -94,7 +94,7 @@ void WebSocketServer::processTextMessage(const QString &message)
     if (pSender) {
         if (message.startsWith("PING")) {
             pSender->sendTextMessage("PONG");
-        }else if (message.startsWith("RESOLVE|") && !CaQtDM_Lib::slaveServer) {
+        } else if (message.startsWith("RESOLVE|") && !CaQtDM_Lib::slaveServer) {
             QStringList items = message.split('|');
             QString file;
             QString macros;
@@ -187,6 +187,23 @@ void WebSocketServer::processTextMessage(const QString &message)
                 CaQtDM_Lib::webChildProcesses.insert(key, process);
             }
             sendInstanceInfo(pSender, vncPort, webPort);
+        } else if (message.startsWith("SELECT_LAUNCHER|")) {
+            if (!WebLauncherManager::instance().isInitialized()) {
+                pSender->sendTextMessage("ERROR|Launcher selection is currently not available");
+                return;
+            }
+            QStringList items = message.split('|');
+            if (items.length() != 2) {
+                pSender->sendTextMessage("ERROR|Invalid amount of arguments received, only one is needed");
+                return;
+            }
+            QString choice = items[1];
+            QJsonValue result = WebLauncherManager::instance().getLauncherFromUserChoice(choice);
+            if (result.isNull()) {
+                pSender->sendTextMessage(QString("ERROR|Launcher file %1 could not be found or accessed").arg(choice));
+                return;
+            }
+            sendLauncherInfo(pSender, result);
         }
     }
 }
@@ -305,9 +322,12 @@ void WebSocketServer::sendUserCountUpdate(int count) {
 
 
 void WebSocketServer::sendLauncherInfo(QWebSocket *receiver) {
-    QJsonValue value = WebLauncherManager::instance().getExpandedLauncherJson();
-    if (!value.isNull() && receiver != nullptr && value.isObject()) {
-        QJsonDocument doc(value.toObject());
+    sendLauncherInfo(receiver, WebLauncherManager::instance().getExpandedLauncherJson());
+}
+
+void WebSocketServer::sendLauncherInfo(QWebSocket *receiver, QJsonValue launcherInfo) {
+    if (!launcherInfo.isNull() && receiver != nullptr && launcherInfo.isObject()) {
+        QJsonDocument doc(launcherInfo.toObject());
         receiver->sendTextMessage(QString("LAUNCHER|%1").arg(QString::fromUtf8(doc.toJson(QJsonDocument::Indented))));
     }
 }
