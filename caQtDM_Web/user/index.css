@@ -38,6 +38,10 @@ body, html {
   font-size: 14px;
   cursor: pointer;
 }
+#launcher,
+#launcher-selection {
+  position: relative;
+}
 #menu-bar button:hover,
 #menu-bar button:focus {
   background: rgba(37, 99, 235, 0.1);

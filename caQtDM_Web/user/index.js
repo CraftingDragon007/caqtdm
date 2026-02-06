@@ -1,6 +1,7 @@
 import { PopupWindow } from './modules/ui/PopupWindow.js';
 import { Dialog } from './modules/ui/Dialog.js';
 import { setupLauncherMenu, closeAllMenus } from './modules/ui/LauncherMenu.js';
+import { setupLauncherSelectionMenu } from './modules/ui/LauncherSelectionMenu.js';
 import { VNCClient } from './modules/vnc/VNCClient.js';
 import { ControlSocket } from './modules/network/ControlSocket.js';
 import { parseLogMarkup, formatDateTime } from './modules/utils/Logger.js';
@@ -24,6 +25,9 @@ import { parseLogMarkup, formatDateTime } from './modules/utils/Logger.js';
   const logWindow = document.getElementById('log-window');
   const logContent = document.getElementById('log-content');
   const urlBuilderWindow = document.getElementById('url-builder-window');
+  const launcherSelectionButton = document.getElementById('launcher-selection');
+
+  if (launcherSelectionButton) launcherSelectionButton.style.display = 'none';
 
   // App State
   let failedOnce = false;
@@ -237,7 +241,11 @@ import { parseLogMarkup, formatDateTime } from './modules/utils/Logger.js';
     }
     if (data.startsWith('LAUNCHER|')) {
       try {
-        setupLauncherMenu(JSON.parse(data.slice(9)));
+        const launcherPayload = JSON.parse(data.slice(9));
+        setupLauncherMenu(launcherPayload);
+        setupLauncherSelectionMenu(launcherPayload, (choice) => {
+          control.send('SELECT_LAUNCHER|' + choice);
+        });
       } catch (e) {
         console.warn('Failed to parse LAUNCHER payload:', e);
       }
@@ -349,8 +357,11 @@ import { parseLogMarkup, formatDateTime } from './modules/utils/Logger.js';
 
   document.addEventListener('click', (e) => {
     const launcherBtn = document.getElementById('launcher');
+    const launcherSelectionBtn = document.getElementById('launcher-selection');
     const viewBtn = document.getElementById('menu-view');
-    if ((launcherBtn && launcherBtn.contains(e.target)) || (viewBtn && viewBtn.contains(e.target))) return;
+    if ((launcherBtn && launcherBtn.contains(e.target))
+      || (launcherSelectionBtn && launcherSelectionBtn.contains(e.target))
+      || (viewBtn && viewBtn.contains(e.target))) return;
     closeAllMenus();
   });
 

@@ -172,4 +172,8 @@ export function closeAllMenus() {
   });
   const viewButton = document.getElementById('menu-view');
   if (viewButton) viewButton.setAttribute('aria-expanded', 'false');
+  const launcherButton = document.getElementById('launcher');
+  if (launcherButton) launcherButton.setAttribute('aria-expanded', 'false');
+  const launcherSelectionButton = document.getElementById('launcher-selection');
+  if (launcherSelectionButton) launcherSelectionButton.setAttribute('aria-expanded', 'false');
 }
