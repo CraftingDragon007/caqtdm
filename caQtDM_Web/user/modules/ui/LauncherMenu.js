@@ -3,7 +3,9 @@ import { applyStyleToElement } from '../utils/StyleConverter.js';
 export function setupLauncherMenu(launcherObject) {
   if (!launcherObject) return;
   const launcherButton = document.getElementById('launcher');
+  if (!launcherButton) return;
   const titleColor = launcherObject['menu-title']?.style?.split(': ')[1] || '#000000';
+  const titleText = launcherObject['menu-title']?.text || 'Launcher';
 
   try { launcherButton.style.color = titleColor; } catch (_e) {}
 
@@ -11,7 +13,7 @@ export function setupLauncherMenu(launcherObject) {
     launcherButton.style.color = '#1e293b'; // dark slate instead of black
   }
 
-  launcherButton.textContent = launcherObject['menu-title'].text || 'Launcher';
+  launcherButton.textContent = titleText;
 
   if (launcherObject.menu && Array.isArray(launcherObject.menu) && launcherObject.menu.length > 0) {
     launcherButton.style.display = 'inline-block';
