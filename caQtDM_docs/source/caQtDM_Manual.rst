@@ -2964,12 +2964,19 @@ You can also utilize this to have dynamic resolutions based on different transla
 This means you can use macros to construct the simple identifier which is then checked for in the translation table, but you cannot use macros in the resolution specified in the resolution table.
 All loaded OPC UA translations are displayed in the caQtDM message window upon startup. Those translations are **ONLY** loaded upon caQtDM launch. Reloads have no effect.
 
+Certificate Creation:
+	In Qt-6 the certificate (and other pki stuff) is generated when caQtDM is started without such a configuration already existing. In Qt-5 it is not possible to auto-generate a certificate, thus secure communication as described below is impossible.
+	You can, however, generate your own certificate using the bash script provided in ``caQtDM_Lib/caQtDM_Plugins/opcua/create_certificate.sh``. This requires openssl to be available on your system to run.
+	After generating the certificate (and key), simply place both files in the local appdata directory under ``/pki/own/[cert/private]``, respectively. caQtDM will automatically use this certificate next time.
+	CAUTION: Qt-5 does also not show very good errors, so if you see weird errors or simply a ``BadConnectionClosed``, it may be that your client certificate needs to be trusted first by the server. Qt-6 has dedicated error handling for that.
+
 Secure Communication using Signing / Encryption:
 	If your client was built with an encryption-enabled plugin, it will try to establish a secure connection first. If an endpoint or your client doesn't support a secure connection, a regular one will be used.
 	Generally speaking, the client will go through all available endpoints, choosing the one with the highest security to establish a connection.
 	Encryption & signing keys are generated the first time the plugin is loaded and stored in your local app data location. For signing, you may have to trust the client's certificate on the server first. For that, see the ``Certificate Authentication`` section below.
 	Due to a limitation in Qt-OpcUa, connections are currently only possible to endpoints supporting SecurityPolicy#None. This is because QtOpcUa always uses that SecurityPolicy for the initial connection, while discovering available endpoints. So even if it's required, the actual communication won't use that SecurityPolicy, if another is available.
 	It may be worth to implement a workaround in the future, allowing for a hardcoded endpoint description (skipping the discovery forcing SecurityPolicy#None).
+	CAUTION: While Qt-6 prompts you to accept / reject unknown server certificates (unless overwritten via envs), Qt-5 doesn't do that. So you have no guarantee that the server you are connecting to has a trusted certificate.
 
 Authentication:
 	If you need to connect to an endpoint that is secured with authentication, this is also possible.
@@ -3050,6 +3057,9 @@ Reconnect:
 	If the plugin cannot connect to a host, or an ongoing connection suddenly stops, it will try reconnecting with an increasing interval.
 	Reloading a panel unsubscribes from all variables in the panel (and disconnects from the hosts if no subscriptions are left) and reconnects them.
 	From Qt-6 onwards, reconnects apply a timeout of 2 * ``CAQTDM_OPCUA_MAX_LATENCY`` (ms).
+
+Configuration:
+	Look at the :ref:`environment variables <env.var>` for a look at possible configuration options.
 
 General Properties
 ----------------------
@@ -3662,6 +3672,8 @@ caQtDM uses the following environment variables:
 | ``CAQTDM_OPCUA_DATABASE``             | File with translations for opcua channels. To use e.g.    |
 |                                       | opcua://CHANNEL specify CHANNEL=opc.tcp://restofuri       |
 |                                       | Each line in the file is a translation.                   |
++---------------------------------------+-----------------------------------------------------------+
+| ``CAQTDM_OPCUA_DISABLE_CERTIFICATE``  | If set, endpoints with signing / encryption are ignored   |
 +---------------------------------------+-----------------------------------------------------------+
 | ``CAQTDM_OPCUA_MAX_LATENCY``          | Max latency (ms) endpoints may have when trying to connect|
 +---------------------------------------+-----------------------------------------------------------+

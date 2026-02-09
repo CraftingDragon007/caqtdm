@@ -348,6 +348,16 @@ void OpcUaCore::setupPkiConfig()
 
     const bool createCertificate = !QFile::exists(certFileName)
                                    || !QFile::exists(privateKeyFileName);
+
+#if QT_VERSION > QT_VERSION_CHECK(6, 0, 0)
+    // Qt 5 has an incorrect certificate generation, which at best fails completly
+    // and worst case generates a bad certificate which produces misterious runtime errors as it doesnt match the OPC UA specificiation.
+    if (createCertificate) {
+        VERBOSELOG("Certificate generation is not possible in Qt-5. If neccessary, create a certificate yourself using the script in caQtDM_Lib/caQtDM_Plugins/opcua/create_certificate.sh (see sourcecode)");
+        return;
+    }
+#endif
+
     if (createCertificate && !X509Certificate::createCertificate(pkiPath)) {
         VERBOSELOG("Could not set up directory" << pkiPath);
     }
@@ -468,14 +478,21 @@ QOpcUaEndpointDescription OpcUaCore::chooseEndpointDescription(
     QVector<QOpcUaEndpointDescription> anonymousEndpoints;
 
     bool isCertificateSupported = m_client->pkiConfiguration().isPkiValid();
+    if (!qgetenv("CAQTDM_OPCUA_DISABLE_CERTIFICATE").isEmpty()) {
+        isCertificateSupported = false;
+    }
     bool isUsernamePasswordSupported = m_client->authenticationInformation().authenticationType()
                                        == QOpcUaUserTokenPolicy::Username;
+
+    QStringList supportedSecurityPolicies = m_client->supportedSecurityPolicies();
 
     // Get all supported endpoints
     for (auto ep : endpointDescriptions) {
         if ((!isCertificateSupported
              && ep.securityMode() == QOpcUaEndpointDescription::MessageSecurityMode::None)
             || isCertificateSupported) {
+            if (!supportedSecurityPolicies.contains(ep.securityPolicy())) continue;
+
             if (ep.userIdentityTokensRef().isEmpty()) {
                 // No tokens specified -> no auth supported
                 anonymousEndpoints.push_back(ep);
@@ -575,16 +592,6 @@ bool OpcUaCore::connectOpc(const QString &url)
                 VERBOSELOG("No reachable endpoint hosts.");
                 return;
             }
-
-            // Qt 5 sends a cert even with no security policy, leading to some servers denying the connection because they thing an authentication is tried (with untrusted cert)
-            // To workaround this issue, we reset the pki config when no security policy is requested.
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-            if (chosenEndpoint.securityMode()
-                == QOpcUaEndpointDescription::MessageSecurityMode::None) {
-                QOpcUaPkiConfiguration pkiConfig;
-                m_client->setPkiConfiguration(pkiConfig);
-            }
-#endif
 
         // QOpcUaConnectionSettings not available in Qt 5
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
