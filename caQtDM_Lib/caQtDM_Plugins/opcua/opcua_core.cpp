@@ -383,7 +383,6 @@ void OpcUaCore::setupPkiConfig()
 
     m_client->setPkiConfiguration(pkiConfig);
     m_client->setApplicationIdentity(pkiConfig.applicationIdentity());
-    qDebug() << "set up pki config";
 }
 
 int OpcUaCore::getValueForEndpoint(const QOpcUaEndpointDescription &description)
