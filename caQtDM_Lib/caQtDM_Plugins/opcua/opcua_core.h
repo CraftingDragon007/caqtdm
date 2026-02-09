@@ -37,7 +37,10 @@
 #include <QtOpcUa/QOpcUaProvider>
 #include <QtOpcUa/QOpcUaQualifiedName>
 #include <QtOpcUa/QOpcUaReferenceDescription>
+
+#ifdef QT_OPCUA_X509
 #include "certificatedialog.h"
+#endif
 
 #define VERBOSELOG(msg) qDebug().nospace() << "[" << __FUNCTION__ << "]: " << msg
 
@@ -219,13 +222,16 @@ private:
     PasswordCredentials m_passwordCredentials;
     std::chrono::milliseconds m_sessionTimeout;
     std::chrono::milliseconds m_maxLatency;
-    CertificateDialog *m_certificateDialog;
     CertificateTrustFailedAction m_certificateTrustFailedAction;
     int m_reconnectionAttempt;
     int m_reconnectionTimeoutMs;
     bool m_reconnecting;
     bool m_ignoreNextDisconnect;
     bool m_isCertificateDialogOpen;
+
+#ifdef QT_OPCUA_X509
+    CertificateDialog *m_certificateDialog;
+#endif
 
     /**
      * @brief Gets the Qt standard path for AppLocalDataLocation and uses that to form a path for PKI configurations

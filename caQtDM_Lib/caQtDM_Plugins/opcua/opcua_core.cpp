@@ -227,11 +227,15 @@ OpcUaCore::OpcUaCore(QObject *parent)
     } else if (rejectUntrustedCertificates) {
         m_certificateTrustFailedAction = CertificateTrustFailedAction::Abort;
     }
+
+#ifdef QT_OPCUA_X509
     m_certificateDialog = new CertificateDialog(Q_NULLPTR);
     QObject::connect(qApp,
                      &QCoreApplication::aboutToQuit,
                      m_certificateDialog,
                      &CertificateDialog::reject);
+#endif
+
     QObject::connect(m_client, &QOpcUaClient::connectError, this, [&](QOpcUaErrorState *state) {
         QString statusCodeString = QMetaEnum::fromType<QOpcUa::UaStatusCode>().valueToKey(
             state->errorCode());
@@ -251,6 +255,7 @@ OpcUaCore::OpcUaCore(QObject *parent)
             VERBOSELOG(errorMessage);
         }
 
+#ifdef QT_OPCUA_X509
         if (state->errorCode() == QOpcUa::UaStatusCode::BadCertificateUntrusted
             && m_certificateTrustFailedAction == CertificateTrustFailedAction::Prompt
             && !m_certificateDialog->isVisible()) {
@@ -266,6 +271,7 @@ OpcUaCore::OpcUaCore(QObject *parent)
             state->setIgnoreError(result == CertificateTrustFailedAction::Ignore);
             m_certificateTrustFailedAction = static_cast<CertificateTrustFailedAction>(result);
         }
+#endif
     });
 
     QObject::connect(
@@ -310,7 +316,9 @@ OpcUaCore::OpcUaCore(QObject *parent)
 
 OpcUaCore::~OpcUaCore()
 {
+#ifdef QT_OPCUA_X509
     m_certificateDialog->deleteLater();
+#endif
     clearAllSubscriptions();
     QObject::disconnect(this);
 

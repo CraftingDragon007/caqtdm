@@ -24,17 +24,19 @@ INCLUDEPATH    += ../../src
 INCLUDEPATH    += ../../../caQtDM_QtControls/src
 
 HEADERS         = ../controlsinterface.h \
-    certificatedialog.h \
-    opcua_plugin.h opcua_core.h \
-    x509certificate.h
+    opcua_plugin.h opcua_core.h
 SOURCES         = \
-    certificatedialog.cpp \
-    opcua_plugin.cpp opcua_core.cpp \
-    x509certificate.cpp
+    opcua_plugin.cpp opcua_core.cpp
 TARGET          = opcua_plugin
 android {
    INCLUDEPATH += $(ANDROIDFUNCTIONSINCLUDE)
 }
 
-FORMS += \
-    certificatedialog.ui
+contains(DEFINES, QT_OPCUA_X509) {
+    HEADERS += certificatedialog.h \
+	x509certificate.h
+	SOURCES += certificatedialog.cpp \
+	x509certificate.cpp
+	FORMS += \
+	    certificatedialog.ui
+}

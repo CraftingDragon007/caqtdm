@@ -174,9 +174,18 @@ else {
     message( "caQtDM will be build without RPATH" )
 }
 
+qtHaveModule(opcua) {
+    message("Configuring build to include opcua plugin")
+	CONFIG += opcua
 
-
-
+    QT_OPCUA_ENCRYPTION_HEADER = $$quote(QtOpcUa/QOpcUaX509CertificateSigningRequest)
+	exists($$[QT_INSTALL_HEADERS]/$$QT_OPCUA_ENCRYPTION_HEADER) {
+	    DEFINES += QT_OPCUA_X509
+		message("Building opcua plugin with encryption.")
+	} else {
+	    message("No QOpcUaX509 headers available, skipping opcua encryption.")
+	}
+}
 
 # undefine CONFIG epics4 for epics4 plugin support with epics version 4 (only preliminary version as example)
 # one can specify channel access with ca:// and pv access with pva:// (both use the epics4 plugin)
