@@ -562,7 +562,7 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
 
     setContextMenuPolicy(Qt::CustomContextMenu);
     connect(this, SIGNAL(customContextMenuRequested(const QPoint&)), this, SLOT(ShowContextMenu(const QPoint&)));
-
+    connect(this, SIGNAL(themeChanged), this, SLOT(themeChanged));
 #ifndef MOBILE
     this->globalEventFilter = new HMIApplicationEventFilter(this);
 
@@ -10686,6 +10686,18 @@ QStringList CaQtDM_Lib::treat_read_MacroCommand(QStringList args){
 
     return args;
 }
+
+void CaQtDM_Lib::themeChanged() {
+    QApplication* guiApp = qobject_cast<QApplication*>(qApp);
+    QPalette palette = guiApp->palette();
+    QString oldColorNormalHex = m_normalTextColorHex;
+    QString oldColorDebugHex = m_debugTextColorHex;
+    m_normalTextColorHex = palette.color(QPalette::Active, QPalette::Text).name();
+    m_debugTextColorHex = palette.color(QPalette::Active, QPalette::Link).name();
+
+ }
+
+
 #include "loadPlugins.h"
 #include "ui_main.h"
 

@@ -432,6 +432,9 @@ private:
     QString savedMacro[CAQTDM_MAX_INCLUDE_LEVEL];
     QString savedFile[CAQTDM_MAX_INCLUDE_LEVEL];
 
+    QString m_normalTextColorHex;
+    QString m_debugTextColorHex;
+
 #ifndef MOBILE
     myQProcess *proc;
 #endif
@@ -583,6 +586,8 @@ private slots:
     }
 
     void updateResize();
+    void themeChanged();
+
 #ifndef MOBILE
     void send_delayed_popup_signal();
 #endif

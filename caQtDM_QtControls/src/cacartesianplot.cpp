@@ -1364,6 +1364,6 @@ void caCartesianPlot::setMaxYResize(double value){
     }
 
 }
-#ifndef MOBILE
+//#ifndef MOBILE
 #include "moc_cacartesianplot.cpp"
-#endif
+//#endif
