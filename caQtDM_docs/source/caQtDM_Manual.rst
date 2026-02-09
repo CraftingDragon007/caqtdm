@@ -2966,14 +2966,17 @@ All loaded OPC UA translations are displayed in the caQtDM message window upon s
 
 Secure Communication using Signing / Encryption:
 	If your client was built with an encryption-enabled plugin, it will try to establish a secure connection first. If an endpoint or your client doesn't support a secure connection, a regular one will be used.
-	Encryption & signing keys are generated the first time the plugin is loaded and stored in your local app data location. 
+	Generally speaking, the client will go through all available endpoints, choosing the one with the highest security to establish a connection.
+	Encryption & signing keys are generated the first time the plugin is loaded and stored in your local app data location. For signing, you may have to trust the client's certificate on the server first. For that, see the ``Certificate Authentication`` section below.
+	Due to a limitation in Qt-OpcUa, connections are currently only possible to endpoints supporting SecurityPolicy#None. This is because QtOpcUa always uses that SecurityPolicy for the initial connection, while discovering available endpoints. So even if it's required, the actual communication won't use that SecurityPolicy, if another is available.
+	It may be worth to implement a workaround in the future, allowing for a hardcoded endpoint description (skipping the discovery forcing SecurityPolicy#None).
 
 Authentication:
 	If you need to connect to an endpoint that is secured with authentication, this is also possible.
 	
 	- Username / Password | May be insecure, not recommended.
 		This can be useful, but depending on your configuration it can be insecure, as the password may be sent in plain text, so everyone sniffing the network could read it.
-		If you want to test it, use Wireshark, it has an OPC filter which will correctly decode it if its not encrypted.
+		If you want to test it, use Wireshark, it has an OPCUA filter which will correctly decode it if its not encrypted.
 		To use a username and password, you can use the environment variables: ``CAQTDM_OPCUA_USERNAME_PLAIN`` and ``CAQTDM_OPCUA_PASSWORD_PLAIN``. Careful: This will be sent to every host you connect to, which might also lead to a compromise.
 		You can also specify the username and password using caQtDM widgets, to have it runtime-only. For this, you can use the channels ``opcua://username`` and ``opcua://password``.
 		These are writeable like regular channels, and the username is readable. The password channel won't show it's value in the UI. The written value will be saved, but a placeholder displayed on the UI. These channels are only accessible to the local caQtDM process.
@@ -2987,7 +2990,7 @@ Authentication:
 		The private key is encrypted by default using a placeholder password (You can find it in the source code). If you want added security, you can use the environment variable ``CAQTDM_OPCUA_PEM_PASSWORD`` to specify a password to use for encrypting your private key.
 		You can also set the PEM password at runtime, using the channel ``opcua://pem_password``. Updating the value does not automatically re-decrypt the certificate, reloading the window should trigger such a re-decrypt though.
 		In case you forgot the PEM password you once set, you can always reset your PKI configuration (careful, this means caQtDM creates a new key & certificate, so you'll have to reauthenticate those everywhere) by setting the environment variable: ``CAQTDM_OPCUA_RESET_PKI_CONFIG`` to something non-empty.
-		**IMPORTANT** Resetting the PKI-config is done for each host, and potentiall yon reach reload. This is bad, so if you use this reset option, you should close it again after the first connection has been established, then unset the environment variable and continue without it. Using caQtDM while ``CAQTDM_OPCUA_RESET_PKI_CONFIG`` is set is not advised.
+		**IMPORTANT** Resetting the PKI-config is done for each host, and potentially on reach reload. This is bad, so if you use this reset option, you should close it again after the first connection has been established, then unset the environment variable and continue without it. Using caQtDM while ``CAQTDM_OPCUA_RESET_PKI_CONFIG`` is set is not advised.
 		The certificate will be self-signed. Certificate and key are generated using QtOpcUa Classes and functions. Take a look at the source code if your concerned about it's security.
 		You can of course also generate a certificate yourself (manually) and place it in the correct folder. This might prove quite challenging though, as you have to fullfill the OPC UA Standard. Take a look at the source code (specifically: caQtDM_Lib/caQtDM_Plugins/opcua/x509certificate.cpp) if you really want to do this (Not recommended or supported).
 

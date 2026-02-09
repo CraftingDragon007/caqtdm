@@ -330,11 +330,12 @@ int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
                                  auto range = m_channelCache.equal_range(URI);
                                  for (auto it = range.first; it != range.second; ++it) {
                                      int idx = it.value();
+                                     m_mutexKnobDataP->SetMutexKnobDataConnected(idx, true);
+
                                      knobData kData = m_mutexKnobDataP->GetMutexKnobData(idx);
 
                                      updateKnobDataWithAccessLevel(kData, readAccess, writeAccess);
                                      updateEpicsWaveformAttributePVs(rawPV, kData);
-                                     m_mutexKnobDataP->SetMutexKnobDataConnected(idx, true);
 
                                      m_mutexKnobDataP->SetMutexKnobDataReceived(&kData);
                                  }
@@ -343,9 +344,9 @@ int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
             QObject::connect(core, &OpcUaCore::disconnected, this, [=]() {
                 m_connectionState[endpoint] = ConnectionState::NotConnected;
                 for (int idx : m_knobDataIndicesForEndpoint[endpoint]) {
-                    knobData kData = m_mutexKnobDataP->GetMutexKnobData(idx);
-
                     m_mutexKnobDataP->SetMutexKnobDataConnected(idx, false);
+
+                    knobData kData = m_mutexKnobDataP->GetMutexKnobData(idx);
 
                     updateEpicsWaveformAttributePVs(rawPV, kData);
                 }
