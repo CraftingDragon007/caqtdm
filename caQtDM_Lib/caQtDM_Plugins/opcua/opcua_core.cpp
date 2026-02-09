@@ -37,7 +37,7 @@
 
 #include <QMutex>
 
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
 #include <QOpcUaConnectionSettings>
 #endif
 
@@ -198,8 +198,8 @@ OpcUaCore::OpcUaCore(QObject *parent)
                 return;
             }
 
-            // QOpcUaConnectionSettings not available in qt 5
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+            // QOpcUaConnectionSettings not available before qt 6.6
+#if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
             QOpcUaConnectionSettings settings = m_client->connectionSettings();
             settings.setSessionTimeout(m_sessionTimeout);
             settings.setConnectTimeout(
@@ -600,8 +600,8 @@ bool OpcUaCore::connectOpc(const QString &url)
                 return;
             }
 
-        // QOpcUaConnectionSettings not available in Qt 5
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        // QOpcUaConnectionSettings not available before qt 6.6
+#if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
             QOpcUaConnectionSettings settings = m_client->connectionSettings();
             settings.setSessionTimeout(m_sessionTimeout);
             m_client->setConnectionSettings(settings);
