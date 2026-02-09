@@ -904,17 +904,17 @@ int caLineDraw::toEngineeringNotation(char* buffer, size_t bufferLen, double val
     if (eng_precision > 15) eng_precision = 15;
 
     // Handle special cases
-    if (std::isnan(value)) {
+    if (qIsNaN(value)) {
         if (bufferLen < 4) { buffer[0] = '\0'; return -1; }
-        std::strncpy(buffer, "nan",bufferLen);
+        strncpy(buffer, "nan",bufferLen);
         return 3;
     }
 
-    if (std::isinf(value)) {
+    if (qIsInf(value)) {
         const char* result = (value > 0) ? "inf" : "-inf";
-        size_t len = std::strlen(result);
+        size_t len = strlen(result);
         if (bufferLen <= len) { buffer[0] = '\0'; return -1; }
-        std::strncpy(buffer, result,bufferLen);
+        strncpy(buffer, result,bufferLen);
         return static_cast<int>(len);
     }
 
@@ -929,10 +929,10 @@ int caLineDraw::toEngineeringNotation(char* buffer, size_t bufferLen, double val
 
     // Handle negative numbers
     bool negative = value < 0;
-    double absValue = std::fabs(value);
+    double absValue = qAbs(value);
 
     // Calculate the exponent (power of 10)
-    int exponent = static_cast<int>(std::floor(std::log10(absValue)));
+    int exponent = static_cast<int>(qFloor(log10(absValue)));
 
     // Adjust exponent to be a multiple of 3
     int engExponent;
@@ -945,7 +945,7 @@ int caLineDraw::toEngineeringNotation(char* buffer, size_t bufferLen, double val
     }
 
     // Calculate the mantissa
-    double mantissa = absValue / std::pow(10.0, engExponent);
+    double mantissa = absValue / qPow(10.0, engExponent);
 
     // Handle floating point precision issues
     // Mantissa should be in range [1, 1000)
