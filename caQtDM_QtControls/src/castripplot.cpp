@@ -1568,6 +1568,6 @@ bool caStripPlot::eventFilter(QObject *obj, QEvent *event)
     }
     return QObject::eventFilter(obj, event);
 }
-#ifndef MOBILE
+//#ifndef MOBILE
 #include "moc_castripplot.cpp"
-#endif
+//#endif

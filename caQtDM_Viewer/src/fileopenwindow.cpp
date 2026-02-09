@@ -138,6 +138,9 @@ Q_IMPORT_PLUGIN(Epics4Plugin);
 #ifdef ARCHIVESF
 Q_IMPORT_PLUGIN(ArchiveSF_Plugin);
 #endif
+#ifdef ARCHIVEHTTP
+Q_IMPORT_PLUGIN(ArchiveHTTP_Plugin);
+#endif
 #ifdef ARCHIVEHIPA
 Q_IMPORT_PLUGIN(ArchiveHIPA_Plugin);
 #endif

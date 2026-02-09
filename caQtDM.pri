@@ -847,7 +847,7 @@ caQtDM_Viewer {
                     QMAKE_IOS_LAUNCH_SCREEN += $$PWD/caQtDM_Viewer/src/IOS/LaunchScreen.storyboard
 #actually, I have a problem with ios, it seems that iphonesimulator is defined too and wants than the library of simlator
 # I comment it out now
-                    iphonesimulator {
+                    CONFIG(iphonesimulator,iphoneos|iphonesimulator): {
                          message("caQtDM_viewer configuration : iphonesimulator")
                          # when .dylib and .a in same directory, macos takes .dylib, so separate the libraries
                          LIBS += $$(EPICS_BASE)/lib/ios-x86/libca.a
@@ -858,7 +858,7 @@ caQtDM_Viewer {
                          INCLUDEPATH += $$(QWTHOME)/src
                          QMAKE_LFLAGS += -all_load
                     }
-                    iphoneos {
+                    CONFIG(iphoneos,iphoneos|iphonesimulator): {
                         message("caQtDM_viewer configuration : iphoneos")
                          LIBS += $$(EPICS_BASE)/lib/ios-arm/libca.a
                          LIBS += $$(EPICS_BASE)/lib/ios-arm/libCom.a
@@ -876,18 +876,19 @@ caQtDM_Viewer {
                          #bitcode_generator.value = bitcode
                          #QMAKE_MAC_XCODE_SETTINGS += bitcode_generator
 
-                         provisioning_profile_spec.name=PROVISIONING_PROFILE_SPECIFIER
-                         provisioning_profile_spec.value = caQtDM Distribution
-                         #provisioning_profile_spec.value = caQtDM Development
-                         QMAKE_MAC_XCODE_SETTINGS += provisioning_profile_spec
+                         #provisioning_profile_spec.name=PROVISIONING_PROFILE_SPECIFIER
+                         #provisioning_profile_spec.value = caQtDM Distribution
+                         #provisioning_profile_spec.value = caQtDM Provisioning Profile Development
+                         #QMAKE_MAC_XCODE_SETTINGS += provisioning_profile_spec
 
                          #signing_identity.name = CODE_SIGN_IDENTITY
                          #signing_identity.value = $$(CODE_SIGN_IDENTITY)
                          #QMAKE_MAC_XCODE_SETTINGS += signing_identity
 
-                         signing_identity.name = CODE_SIGN_IDENTITY
-                         signing_identity.value = Apple Distribution: Helge Brands (Q6CFPW364S)
-                         QMAKE_MAC_XCODE_SETTINGS += signing_identity
+                         #signing_identity.name = CODE_SIGN_IDENTITY
+                         #signing_identity.value = Apple Distribution: Helge Brands (Q6CFPW364S)
+                         #signing_identity.value = Apple Development: Helge Brands (8G5FY9T8QT)
+                         #QMAKE_MAC_XCODE_SETTINGS += signing_identity
 
 
 
@@ -910,6 +911,10 @@ caQtDM_Viewer {
                     archiveSF:{
                                     LIBS += $$OUT_PWD/../caQtDM_Lib/caQtDM_Plugins/archive/archiveSF/libarchiveSF_plugin.a
                     }
+                    archiveHTTP: {
+                            LIBS += $$OUT_PWD/../caQtDM_Lib/caQtDM_Plugins/archive/archiveHTTP/libarchiveHTTP_plugin.a
+                    }
+
         }
         android {
                         message("caQtDM_viewer configuration : android")
@@ -924,11 +929,14 @@ caQtDM_Viewer {
                         LIBS += $(CAQTDM_COLLECT)/controlsystems/libdemo_plugin.a
                         LIBS += $(CAQTDM_COLLECT)/controlsystems/libepics3_plugin.a
                         LIBS += $(CAQTDM_COLLECT)/libAndroidFunctions.a
-                epics4: {
+                        epics4: {
                                 LIBS += $(CAQTDM_COLLECT)/controlsystems/libepics4_plugin.a
                                 }
-                archiveSF: {
+                        archiveSF: {
                                 LIBS += $(CAQTDM_COLLECT)/controlsystems/libarchiveSF_plugin.a
+                        }
+                        archiveHTTP: {
+                                LIBS += $(CAQTDM_COLLECT)/controlsystems/libarchiveHTTP_plugin.a
                         }
 
                         LIBS += $(CAQTDM_COLLECT)/controlsystems/libenvironment_plugin.a
