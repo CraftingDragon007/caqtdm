@@ -142,6 +142,17 @@ if(Qwt_FOUND)
             elseif(EXISTS "${_caqtdm_qwt_pkg_lib}" AND NOT IS_DIRECTORY "${_caqtdm_qwt_pkg_lib}")
                 set(CAQTDM_QWT_LIBRARY "${_caqtdm_qwt_pkg_lib}" CACHE FILEPATH "Path to the Qwt library to link against" FORCE)
                 break()
+            elseif(IS_DIRECTORY "${_caqtdm_qwt_pkg_lib}")
+                # On some systems (like FreeBSD), Qwt_LIBRARIES might contain the directory.
+                # Look for the library file within that directory.
+                find_library(_caqtdm_qwt_lib_in_dir
+                    NAMES qwt qwt6 qwt-qt5 qwt-qt6
+                    PATHS "${_caqtdm_qwt_pkg_lib}"
+                    NO_DEFAULT_PATH)
+                if(_caqtdm_qwt_lib_in_dir)
+                    set(CAQTDM_QWT_LIBRARY "${_caqtdm_qwt_lib_in_dir}" CACHE FILEPATH "Path to the Qwt library to link against" FORCE)
+                    break()
+                endif()
             endif()
         endforeach()
     endif()
