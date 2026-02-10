@@ -1,12 +1,15 @@
 #!/bin/bash -e
-rm -f base-7.0.9.* || true
-rm -rf epics-base-7.0.9 || true
-rm -f epics-base_7.0.9* || true
+rm -f base-7.0.10.* || true
+rm -rf epics-base-7.0.10 || true
+rm -f epics-base_7.0.10* || true
 rm -f epics-base-dbgsym* || true
-wget https://epics-controls.org/download/base/base-7.0.9.tar.gz
-tar xf base-7.0.9.tar.gz
-mv base-7.0.9 epics-base-7.0.9
-cd epics-base-7.0.9
+git clone https://github.com/epics-base/epics-base.git --branch R7.0.10 --depth 1 base-7.0.10
+cd base-7.0.10
+git submodule update --init --recursive --jobs $(nproc)
+cd ..
+tar -czf base-7.0.10.tar.gz base-7.0.10
+mv base-7.0.10 epics-base-7.0.10
+cd epics-base-7.0.10
 dh_make --createorig -s -y
 cp -rf ../debian/* debian/
 rm -rf debian/*.ex

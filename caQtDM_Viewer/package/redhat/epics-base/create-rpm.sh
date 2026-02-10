@@ -24,17 +24,22 @@ done
 
 CURRENT_DIR=$(pwd)
 
-# Remove any existing source tarball and signature
-rm -f base-7.0.9* || true
+# Remove any existing source tarball (and signature)
+rm -f base-7.0.10* || true
 
 # Create the RPM build environment
 rpmdev-setuptree
 
 # Get the source
-wget https://epics-controls.org/download/base/base-7.0.9.tar.gz
+git clone https://github.com/epics-base/epics-base.git --branch R7.0.10 --depth 1 base-7.0.10
+cd base-7.0.10
+git submodule update --init --recursive --jobs $(nproc)
+cd ..
+tar -czf base-7.0.10.tar.gz base-7.0.10
+rm -rf base-7.0.10
 
 # Copy the source tarball and signature to the SOURCES directory
-cp base-7.0.9* ~/rpmbuild/SOURCES/
+cp base-7.0.10* ~/rpmbuild/SOURCES/
 
 cp *.patch ~/rpmbuild/SOURCES/
 
