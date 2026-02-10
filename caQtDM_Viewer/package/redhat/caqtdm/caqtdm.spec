@@ -210,7 +210,9 @@ mkdir -p %{_builddir}/%{name}-%{version}/build/opt/caqtdm/lib/qt5
 export CAQTDM_MODBUS=1
 export CAQTDM_GPS=1
 export CAQTDM_COLLECT=%{_builddir}/%{name}-%{version}/build/opt/caqtdm/lib/qt5
+%if %{no_rpath} != 1
 export QTDM_RPATH=/opt/caqtdm/lib/qt5
+%endif
 export QTCONTROLS_LIBS=%{_builddir}/%{name}-%{version}/build/opt/caqtdm/lib/qt5
 export QTBASE=%{_builddir}/%{name}-%{version}/build/opt/caqtdm/lib/qt5
 export QTHOME=/usr
@@ -295,7 +297,9 @@ mkdir -p %{_builddir}/%{name}-%{version}/build/opt/caqtdm/lib/qt6
 export CAQTDM_MODBUS=1
 export CAQTDM_GPS=1
 export CAQTDM_COLLECT=%{_builddir}/%{name}-%{version}/build/opt/caqtdm/lib/qt6
+%if %{no_rpath} != 1
 export QTDM_RPATH=/opt/caqtdm/lib/qt6
+%endif
 export QTCONTROLS_LIBS=%{_builddir}/%{name}-%{version}/build/opt/caqtdm/lib/qt6
 export QTBASE=%{_builddir}/%{name}-%{version}/build/opt/caqtdm/lib/qt6
 export QTHOME=/usr
