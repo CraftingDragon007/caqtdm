@@ -58,6 +58,7 @@ BuildRequires: qt6-qtsvg-devel
 BuildRequires: qt6-qtserialbus-devel
 BuildRequires: qt6-qt5compat-devel
 BuildRequires: qt6-qtlocation-devel
+BuildRequires: qt6-qtopcua-devel
 BuildRequires: qwt-qt6-devel
 BuildRequires: libXext-devel cppzmq-devel
 BuildRequires: python3-devel
@@ -182,6 +183,7 @@ Requires: epics-base%{EPICS_TARGET_VERSION}
 Requires: qt6-qt5compat
 Requires: qt6-qtlocation
 Requires: qt6-qtimageformats
+Requires: qt6-qtopcua
 Requires: python3
 %endif
 

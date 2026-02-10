@@ -135,7 +135,7 @@ jobs:
           pkgconfig jansson-devel libuuid-devel cppzmq-devel libXext-devel \
           zlib-devel python3-devel tar curl \
           qt6-assistant qt6-qtimageformats \
-          qt6-qtopcua
+          qt6-qtopcua-devel qt6-qtopcua
 
     - name: Install caQtDM build dependencies (RHEL >=10 — minimal Qt6 set)
       if: ${{ matrix.rhel_major >= 10 }}
@@ -150,7 +150,7 @@ jobs:
           zlib-devel libXext-devel python3-devel \
           tar curl \
           qt6-assistant qt6-qtimageformats \
-          qt6-qtopcua
+          qt6-qtopcua-devel qt6-qtopcua
 
     - name: Build caQtDM RPM
       run: |

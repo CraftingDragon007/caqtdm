@@ -185,6 +185,8 @@ qtHaveModule(opcua) {
 	} else {
 	    message("No QOpcUaX509 headers available, skipping opcua encryption.")
 	}
+} else {
+    message("Qt module opcua was not found, opcua plugin will not be built.")
 }
 
 # undefine CONFIG epics4 for epics4 plugin support with epics version 4 (only preliminary version as example)
