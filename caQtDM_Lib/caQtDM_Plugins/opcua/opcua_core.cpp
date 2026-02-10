@@ -351,29 +351,8 @@ void OpcUaCore::clearPkiConfig()
 void OpcUaCore::setupPkiConfig()
 {
     const QString pkiPath = defaultPkiPath();
-    const QString certFileName(pkiPath + "/own/certs/caQtDM.der");
-    const QString privateKeyFileName(pkiPath + "/own/private/caQtDM.pem");
-
-    const bool createCertificate = !QFile::exists(certFileName)
-                                   || !QFile::exists(privateKeyFileName);
-
-#if QT_VERSION > QT_VERSION_CHECK(6, 0, 0)
-    // Qt 5 has an incorrect certificate generation, which at best fails completly
-    // and worst case generates a bad certificate which produces misterious runtime errors as it doesnt match the OPC UA specificiation.
-    if (createCertificate) {
-        VERBOSELOG("Certificate generation is not possible in Qt-5. If neccessary, create a certificate yourself using the script in caQtDM_Lib/caQtDM_Plugins/opcua/create_certificate.sh (see sourcecode)");
-        return;
-    }
-#endif
-
-    if (createCertificate && !X509Certificate::createCertificate(pkiPath)) {
-        VERBOSELOG("Could not set up directory" << pkiPath);
-    }
 
     QOpcUaPkiConfiguration pkiConfig;
-
-    pkiConfig.setClientCertificateFile(certFileName);
-    pkiConfig.setPrivateKeyFile(privateKeyFileName);
     pkiConfig.setTrustListDirectory(pkiPath + "/trusted/certs");
     pkiConfig.setRevocationListDirectory(pkiPath + "/trusted/crl");
     pkiConfig.setIssuerListDirectory(pkiPath + "/issuers/certs");
@@ -388,6 +367,28 @@ void OpcUaCore::setupPkiConfig()
             VERBOSELOG("Could not create directory" << dir);
         }
     }
+
+    const QString certFileName(pkiPath + "/own/certs/caQtDM.der");
+    const QString privateKeyFileName(pkiPath + "/own/private/caQtDM.pem");
+
+    const bool createCertificate = !QFile::exists(certFileName)
+                                   || !QFile::exists(privateKeyFileName);
+
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    // Qt 5 has an incorrect certificate generation, which at best fails completly
+    // and worst case generates a bad certificate which produces misterious runtime errors as it doesnt match the OPC UA specificiation.
+    if (createCertificate) {
+        VERBOSELOG("Certificate generation is not possible in Qt-5. If neccessary, create a certificate yourself using the script in caQtDM_Lib/caQtDM_Plugins/opcua/create_certificate.sh (see sourcecode)");
+        return;
+    }
+#endif
+
+    if (createCertificate && !X509Certificate::createCertificate(pkiPath)) {
+        VERBOSELOG("Could not create certificate at: " << pkiPath);
+    }
+
+    pkiConfig.setClientCertificateFile(certFileName);
+    pkiConfig.setPrivateKeyFile(privateKeyFileName);
 
     m_client->setPkiConfiguration(pkiConfig);
     m_client->setApplicationIdentity(pkiConfig.applicationIdentity());
