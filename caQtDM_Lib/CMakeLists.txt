@@ -10,13 +10,13 @@ endif()
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS ${_caqtdm_lib_qt_components})
 
 file(GLOB LIB_SOURCES CONFIGURE_DEPENDS
-    "*.cpp"
-    "*.c"
     "src/*.cpp"
     "src/*.c")
 
-if(NOT CAQTDM_ENABLE_MOBILE)
-    list(APPEND LIB_SOURCES src/myQProcess.cpp src/processWindow.cpp)
+if(CAQTDM_ENABLE_MOBILE)
+    list(REMOVE_ITEM LIB_SOURCES
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/myQProcess.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/processWindow.cpp")
 endif()
 
 set(UI_FILES "${PROJECT_SOURCE_DIR}/caQtDM_Viewer/src/main.ui")
@@ -58,7 +58,6 @@ endif()
 
 set(_caqtdm_lib_includes
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/caQtDM_Plugins
     ${PROJECT_SOURCE_DIR}/caQtDM_QtControls/src
     ${PROJECT_SOURCE_DIR}/caQtDM_Parsers/adlParserSrc

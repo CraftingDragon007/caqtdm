@@ -25,6 +25,9 @@ function(caqtdm_add_qtcontrols_plugin target)
 
     add_library(${target} ${_plugin_type} ${_plugin_sources})
 
+    set_target_properties(${target} PROPERTIES
+        LIBRARY_OUTPUT_DIRECTORY "${CAQTDM_BUILD_BINDIR}/designer")
+
     if(PLUGIN_RESOURCE_ON_MOBILE OR NOT CAQTDM_ENABLE_MOBILE)
         target_sources(${target} PRIVATE "${_plugin_root}/qtcontrolsplugin.qrc")
     endif()

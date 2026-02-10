@@ -20,6 +20,9 @@ function(caqtdm_add_plugin target)
 
     add_library(${target} ${_library_type} ${PLUGIN_SOURCES})
 
+    set_target_properties(${target} PROPERTIES
+        LIBRARY_OUTPUT_DIRECTORY "${CAQTDM_BUILD_BINDIR}/controlsystems")
+
     if(PLUGIN_OUTPUT_NAME)
         set_target_properties(${target} PROPERTIES OUTPUT_NAME ${PLUGIN_OUTPUT_NAME})
     endif()
@@ -80,7 +83,7 @@ function(caqtdm_add_plugin target)
         target_link_libraries(${target} PRIVATE Qt${QT_VERSION_MAJOR}::${component})
     endforeach()
 
-    target_link_libraries(${target} PRIVATE caqtdm_lib qtcontrols ${PLUGIN_EXTRA_LIBS})
+    target_link_libraries(${target} PRIVATE caqtdm::lib caqtdm::qtcontrols ${PLUGIN_EXTRA_LIBS})
     
     # On Windows, plugins need direct access to EPICS libraries for calc functions (postfix, calcPerform)
     # Even though caQtDM_Lib links to EPICS, Windows DLL model doesn't support transitive symbol access

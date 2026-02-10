@@ -130,8 +130,8 @@ set(_viewer_links
     Qt${QT_VERSION_MAJOR}::Svg
     Qt${QT_VERSION_MAJOR}::UiTools
     Qt${QT_VERSION_MAJOR}::Network
-    caqtdm_lib
-    qtcontrols
+    caqtdm::lib
+    caqtdm::qtcontrols
     caqtdm::qwt)
 if(QT_VERSION_MAJOR EQUAL 5)
     list(APPEND _viewer_links Qt5::OpenGL)

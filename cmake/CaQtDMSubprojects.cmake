@@ -3,8 +3,6 @@
 
 include_guard(GLOBAL)
 
-include(CMakeParseArguments)
-
 set_property(GLOBAL PROPERTY CAQTDM_SUBPROJECTS "")
 
 function(caqtdm_register_subproject)

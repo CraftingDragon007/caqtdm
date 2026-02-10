@@ -7,13 +7,14 @@ docs/build
 *.qtc_*
 build/
 
-# Qmake
+# Qmake / CMake
 .qmake.stash
 Makefile
 Makefile.*
 moc/
 obj/
 moc_*
+.cache/
 
 # Generated files
 ui_main.h
@@ -33,5 +34,6 @@ qrc_caQtDM.cpp
 
 
 #Tools
+.idea
 .vs
 .qtc_clangd
