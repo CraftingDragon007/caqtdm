@@ -38,66 +38,10 @@ jobs:
     - name: Build and install Qt OPC UA DEB
       run: |
         set -e
-
-        QTOPCUA_SRC="$GITHUB_WORKSPACE/qtopcua-src"
-        rm -rf "$QTOPCUA_SRC"
-
-        git clone https://code.qt.io/qt/qtopcua.git "$QTOPCUA_SRC"
-        cd "$QTOPCUA_SRC"
-        git checkout v5.15.2
-
-        # Workaround for conflicting compiler flags created with qmake from qtbase5-dev
-        sed -i 's/-Wno-format//g' src/3rdparty/open62541.pri
-
-        mkdir build
-        cd build
-
-        qmake ..
-        cat config.summary 
-
-        make -j$(nproc)
-
-        # Now create a deb package
-        
-        STAGING_DIR="$QTOPCUA_SRC/deb"
-        make install INSTALL_ROOT="$STAGING_DIR"
-
-        mkdir -p "$STAGING_DIR/DEBIAN"
-        
-        DEB_NAME="libqt5opcua5-dev"
-        DEB_VERSION="5.15.2"
-
-        # Control File
-        cat > "$STAGING_DIR/DEBIAN/control" <<EOF
-        Package: $DEB_NAME
-        Version: $DEB_VERSION
-        Section: libs
-        Priority: optional
-        Architecture: amd64
-        Depends: libc6, libqt5core5a, libqt5network5, libmbedtls-dev
-        Maintainer: Helge Brands <helge.brands@psi.ch>
-        Description: Qt OPC UA library and headers (Custom Build)
-        EOF
-
-        # Shlibs File
-        echo "libQt5OpcUa 5 $DEB_NAME" > "$STAGING_DIR/DEBIAN/shlibs"
-
-        # Post-install script (ldconfig)
-        cat > "$STAGING_DIR/DEBIAN/postinst" <<EOF
-        #!/bin/sh
-        set -e
-        if [ "\$1" = "configure" ]; then
-            ldconfig
-        fi
-        EOF
-        chmod 0755 "$STAGING_DIR/DEBIAN/postinst"
-
-        # build & install
-        dpkg-deb --build "$STAGING_DIR" "$QTOPCUA_SRC/${DEB_NAME}_${DEB_VERSION}_amd64.deb"
-        sudo dpkg -i "$QTOPCUA_SRC/${DEB_NAME}_${DEB_VERSION}_amd64.deb"
-
-        # For it to be found when building caQtDM
-        echo "LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH" >> $GITHUB_ENV
+        cd caQtDM_Viewer/package/debian/qtopcua
+        chmod +x ./create-deb.sh
+        ./create-deb.sh
+        sudo dpkg -i *.deb
 
     - name: Build and install epics-base
       run: |
@@ -122,7 +66,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: qtopcua_deb-package-${{ matrix.ubuntu-version }}
-        path: qtopcua-src/*.deb
+        path: caQtDM_Viewer/package/debian/qtopcua/*.deb
 
     - name: Upload epics-base package as artifact
       uses: actions/upload-artifact@v4
