@@ -361,7 +361,9 @@ void OpcUaCore::setupPkiConfig()
     const QStringList toCreate = {pkiConfig.trustListDirectory(),
                                   pkiConfig.revocationListDirectory(),
                                   pkiConfig.issuerListDirectory(),
-                                  pkiConfig.issuerRevocationListDirectory()};
+                                  pkiConfig.issuerRevocationListDirectory(),
+                                  pkiPath + "/own/certs",
+                                  pkiPath + "/own/private"};
     for (const QString &dir : toCreate) {
         if (!QDir().mkpath(dir)) {
             VERBOSELOG("Could not create directory" << dir);
