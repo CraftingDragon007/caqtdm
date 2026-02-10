@@ -32,6 +32,7 @@
 #include <QDebug>
 #include <QApplication>
 #include <QClipboard>
+#include <QtMath>
 #if defined(_MSC_VER)
     #ifndef snprintf
      #define snprintf _snprintf
