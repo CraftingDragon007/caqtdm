@@ -138,7 +138,7 @@ void caScriptButton::changeEvent(QEvent *e) {
 void caScriptButton::setScriptDisplay(defaultDisplay m)
 {
     thisDefaultDisplay = m;
-    if(m == Visible) {
+    if((m == Visible)||(m==CloseOnExit0)) {
        displayScript->setCheckState(Qt::Checked);
     } else {
        displayScript->setCheckState(Qt::Unchecked);

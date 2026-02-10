@@ -165,6 +165,19 @@ else {
     }
 }
 
+_CAQTDM_NORPATH = $$(CAQTDM_NORPATH)
+isEmpty(_CAQTDM_NORPATH) {
+    message("caQtDM will be build with RPATH")
+    CONFIG += caqtdm_rpath
+}
+else {
+    message( "caQtDM will be build without RPATH" )
+}
+
+
+
+
+
 # undefine CONFIG epics4 for epics4 plugin support with epics version 4 (only preliminary version as example)
 # one can specify channel access with ca:// and pv access with pva:// (both use the epics4 plugin)
 # the main work for this plugin was done by Marty Kraimer
@@ -294,8 +307,27 @@ DEFINES += TARGET_DESCRIPTION=\"\\\"$${TARGET_DESCRIPTION}\\\"\"
 DEFINES += TARGET_COPYRIGHT=\"\\\"$${TARGET_COPYRIGHT}\\\"\"
 DEFINES += TARGET_INTERNALNAME=\"\\\"$${TARGET_INTERNALNAME}\\\"\"
 DEFINES += TARGET_VERSION_STR=\"\\\"$${CAQTDM_VERSION}\\\"\"
+
+# 4.6.0
+# update fix for unconnected Channels
+# %read command for cainclude and caRelatedDisplay
+# old files cleanup
+# implement pipelines for various target systems (github actions)
+# added various packing mechanissmen
+# caWavetable got some signals and slots for generating for vertical and horizontal sync
+# caWavetable added header manipulation functions
+# fix in RPM dependencies
+# cainfo Panel corrections and remove EPICS data requests (avoid unesseary channel searchs)
+# recoloring caDoubleTabWidget via Stylesheets
+# added a CloseOnExit0 for the caScriptbutton
+# added the localisation for characters to caMenu and caMessageButton
+# added selecting/copy/paste mechanisem at various parts of the caqtdm
+# caMessageButton can now set strings
+# changed the build system that for linux systems to build without RPATH
+
+
 # 4.5.0
-# special character feature handling by CAQTDM_CUSTOM_UNIT_REPLACMETS
+# special character feature handling by CAQTDM_CUSTOM_UNIT_REPLACEMETS
 # caStripplot improved data handling
 # optimized UI loading by reducing the load of incoming data (CAQTDM_SUPPRESS_UPDATES_ONLOAD)
 # improved colors in caQtDM status window

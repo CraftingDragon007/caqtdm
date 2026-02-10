@@ -325,7 +325,7 @@ void bsreadPlugin::closeEvent(){
     emit closeSignal();
     if (Dispatcher){
         //qDebug() << "start Dispatcher->setTerminate(); ";
-        Dispatcher->setTerminate();
+        Dispatcher->initiateShutdown();
         //qDebug() << "END Dispatcher->setTerminate(); ";
     }
     if (DispatcherThread){
@@ -347,7 +347,7 @@ void bsreadPlugin::closeEvent(){
         delete(DispatcherThread);
     }
     if (Dispatcher){
-        delete(Dispatcher);
+        Dispatcher->deleteLater();
     }
 #if ZMQ_VERSION<ZMQ_MAKE_VERSION(4,2,0)
     if (zmqcontex) zmq_ctx_destroy(zmqcontex);

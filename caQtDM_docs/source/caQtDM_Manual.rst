@@ -1,6 +1,6 @@
-=============
+==============
 caQtDM Manual
-=============
+==============
 
 | **Anton Mezger/Helge Brands**
 | **May 2025**
@@ -142,7 +142,7 @@ locally without installing.
    the test directory.
 #. in case you have qwt 6.1 or greater you will have to use the file qwt_thermo_marker_61
    in caQtDM_QtControls/src. (*instead of qwt_thermo_marker*)
-#. in case you are already using Qt5 or Qt6 with qwt6.2 the build process should also be
+#. in case you are already using Qt5 or Qt6 with qwt6.3 the build process should also be
    straight forward.
 #. Instructions for compiling caQtDM on Windows/Linux/Mac Requirements:
 
@@ -154,7 +154,7 @@ Min:
    -  Wix 3.0
 
 Max:
-   -  Qt 6.9.0
+   -  Qt 6.10.0
    -  Qwt 6.3.0
    -  EPICS 7.0.9
    -  MS Visual Studio 2022
@@ -389,6 +389,26 @@ Development history
 The following list describe the new features and bug fixes for every
 release. You can follow the development history and detect if a bug in
 the used version has been solved.
+
+.. container::
+
+   4.6.0
+   
+- update fix for unconnected Channels
+- ``%read`` command for cainclude and caRelatedDisplay
+- old files cleanup
+- implement pipelines for various target systems (github actions)
+- added various packing mechanissmen
+- caWavetable got some signals and slots for generating for vertical and horizontal sync
+- caWavetable added header manipulation functions
+- fix in RPM dependencies
+- cainfo Panel corrections and remove EPICS data requests (avoid unesseary channel searchs)
+- recoloring caDoubleTabWidget via Stylesheets
+- added a CloseOnExit0 for the caScriptbutton
+- added the localisation for characters to caMenu and caMessageButton
+- added selecting/copy/paste mechanisem at various parts of the caqtdm
+- caMessageButton can now set strings
+- changed the build system that for linux systems to build without RPATH
 
 .. container::
 
@@ -2263,6 +2283,76 @@ is the equivalent of the Composite in MEDM
    placing a semicolon after the file name and entering them like on the
    command line.
 
+   **Properties:**
+   The following properties are available:
+
+   ``macroList``
+      List of strings to define macros. As in the commandline multiple macros have to be seperated by commas. If it is needed 
+      you can load a macrolist from a text file with the command %(read <path>/<filename>)
+      Type: name/identifier (string)
+
+   ``xPositionsOrChannels``
+      in case stacking is position the x position inside the caInclude Widget can be defined here. This can be a constant or a channel
+      Type: name/identifier (string)	
+
+   ``yPositionsOrChannels``
+      in case stacking is position the y position inside the caInclude Widget can be defined here. This can be a constant or a channel
+      Type: name/identifier (string)
+
+   ``xCorrectionFactor``
+      linear conversion factor for the x position (channel value -> display coordinates)
+      Type: number (float)
+
+   ``yCorrectionFactor``
+      linear conversion factor for the x position (channel value -> display coordinates)
+      Type: number (float)
+
+   ``filename``
+      UI file name that is loaded and displayed inside the area of the caInclude Widget. 
+      Type: name/identifier (string)
+   ``stacking``
+      
+
+      Type: options (enum)
+
+   ``maximumLines``
+   ``maximumColumns``
+   ``adjustSizeToContents``
+   ``verticalSpacing``
+   ``horizontalSpacing``
+   ``frameShape``
+   ``frameShadow``
+   ``frameLineWidth``
+   ``frameColor``
+   ``visibility + Calc + channels``
+
+
+   ``lable``
+      String to define a lable in the menue-Mode. The icon that is display can be removed with adding a "-" in the beginning of the string
+      Type: name/identifier (string)
+
+   ``lablesList``
+      List of strings to name the buttons/menu entries.
+      Type: name/identifier (string)
+
+   ``filesList``
+      List of strings of UI files to be loaded.
+      Type: name/identifier (string)
+
+
+
+
+
+   ``fontScaleMode``
+      Menue to define the behavior of the lables during rescaling.
+      Type: options (enum)
+
+   ``stackingMode``
+      To define the stacking generated buttons on the display (Menue/Row/Column/RowColumn/Hidden.  
+      The hidden option can be used when the loading gets triggered by signal.
+      Type: options (enum)
+
+
 --------------
 
 .. _caDoubleTabWidget:
@@ -2414,6 +2504,35 @@ is the equivalent of the Related Display in MEDM
    |                     | in case the user cannot find them.            |
    +---------------------+-----------------------------------------------+
 
+   **Properties:**
+   The following properties are available:
+
+   ``lable``
+      String to define a lable in the menue-Mode. The icon that is display can be removed with adding a "-" in the beginning of the string
+      Type: name/identifier (string)
+
+   ``lablesList``
+      List of strings to name the buttons/menu entries.
+      Type: name/identifier (string)
+
+   ``filesList``
+      List of strings of UI files to be loaded.
+      Type: name/identifier (string)
+
+   ``argsList``
+      List of strings to define macros. As in the commandline multiple macros have to be seperated by commas. If it is needed 
+      you can load a macrolist from a text file with the command %(read <path>/<filename>)
+      Type: name/identifier (string)
+
+   ``fontScaleMode``
+      Menue to define the behavior of the lables during rescaling.
+      Type: options (enum)
+
+   ``stackingMode``
+      To define the stacking generated buttons on the display (Menue/Row/Column/RowColumn/Hidden.  
+      The hidden option can be used when the loading gets triggered by signal.
+      Type: options (enum)
+
 --------------
 
 .. _caTextEntry:
@@ -2476,6 +2595,180 @@ represents a simplified Wheelswitch
 
 --------------
 
+.. _caHMIConfig:
+
+``caHMIConfig``
+~~~~~~~~~~~~~~~
+has no equivalent in MEDM
+
+   **Description:**
+   The caHMIConfig object is used to configure what to do with certain
+   Human Machine Interface (HMI) events. This means it supports
+   capturing mouse events and keyboard shortcuts. The object itself is
+   invisible at runtime and does not interact with the user. It
+   can be configured just like any other object in Qt Designer.
+
+
+   **Properties:**
+   The following properties are available:
+
+   ``outputA``
+      1st Output, primary output route.
+      Type: channel name/identifier (string)
+
+   ``outputB``
+      2nd Output, secondary/alternative output route.
+      Type: channel name/identifier (string)
+
+   ``channel``
+      Primary input channel/PV name.
+      Type: channel name/identifier (string)
+
+   ``channelB``
+      Secondary input channel.
+      Type: channel name/identifier (string)
+
+   ``channelC``
+      Tertiary input channel.
+      Type: channel name/identifier (string)
+
+   ``channelD``
+      Quaternary input channel.
+      Type: channel name/identifier (string)
+
+   ``shortcut``
+      Keyboard shortcut to trigger an action. Can be multiple different shortcuts (e.g. "Ctrl+H", "Ctrl+Shift+H") \
+      Type: Qt key sequence string (e.g. "Ctrl+H" or "Ctrl+H", "Ctrl+Shift+H").
+
+   ``valueOrCalc``
+      Specify either a literal value or a calculated epics calc expression. Channels A-D can be used in the epics calc expression.
+      Wheter to handle it as a static value or as an epics calc string can be configured by setting ``calculationType``.
+      This only applies if ``captureType`` is set to ``KeyboardSet``.
+
+      Type: QVariant (string or numeric).
+
+   ``calculationType``
+      Calculation mode for determining the output value.
+      This only applies if ``captureType`` is set to ``KeyboardSet``.
+
+      Type: enum. Valid values:
+
+      - ``SetValue`` — use a literal/static value.
+      - ``Calc`` — compute the value from an epics calc expression.
+
+   ``captureType``
+      Capture event type (e.g., what to capture/respond to).
+
+      Type: enum. Valid values:
+
+      - ``KeyboardValue`` — capture keyboard input and emit the entered value. (Will write the key into ``outputA`` and potential modifiers into ``outputB``.) (Both values are hex numbers, the mapping for the keys can be found `here <https://doc.qt.io/qt-6/qt.html#Key-enum>`_ and the mapping for the modifiers `here <https://doc.qt.io/qt-6/qt.html#KeyboardModifier-enum>`_)
+      - ``KeyboardSet`` — capture keyboard input and apply/set the value if the received shortcut equals the ``shortcut`` property. (Can be a literal value or a calculated epics calc expression that is defined in the ``valueOrCalc`` property.)
+      - ``MouseMove`` — capture mouse movement events.
+      - ``MousePress`` — capture mouse press/click events.
+
+   ``captureRange``
+      Capture range/scope for the selected capture type.
+
+      Type: enum. Valid values:
+
+      - ``Local`` — capture within the local widget/window context. (When capturing mouse events, this means within the parent container of the caHMIConfig widget (e.g. ``caFrame``, ``MainWindow``, etc.) ``0,0`` will be the top-left corner of the parent container). When capturing keyboard events, this means when the parent window has focus. )
+      - ``Global`` — capture caQtDM application-wide and beyond (including other instances of caQtDM, useful for setting global keyboard shortcuts. This is limited to the current user session and only to caQtDM processes). (When capturing mouse events this will capture the mouse events of all open caQtDM windows, ``0,0`` will be the cursors position inside the interacted window.)
+
+   ``mouseSignalRectSize``
+      Size of the mouse signal interaction rectangle in pixels. This allows you to pass a custom size with the ``caHMIConfigMouse(QRect rect)`` signal.
+      This only applies if ``captureType`` is set to ``MouseMove`` or ``MousePress`` and the before mentioned signal is used.
+
+      Type: ``QSize`` (width × height).
+
+
+   **Signals:**
+   The following signals are emitted by the caHMIConfig widget:
+
+   ``caHMIConfigKeyPressReceived(QKeySequence data)``
+      Emitted when a key press matching the configured shortcut is received. The ``QKeySequence`` carries the key combination.
+
+   ``caHMIConfigMouseX(int x)``
+      Emitted on mouse capture to report the X coordinate in pixels.
+
+   ``caHMIConfigMouseY(int y)``
+      Emitted on mouse capture to report the Y coordinate in pixels.
+
+   ``caHMIConfigMouse(QRect rect)``
+      Emitted on mouse capture to report a selected rectangle region. The ``QRect`` carries the rectangle (x, y, width, height). The width and height are determined by the ``mouseSignalRectSize`` property.
+
+   ``caHMIConfigMouse(QPoint point)``
+      Emitted on mouse capture to report a single point position. The ``QPoint`` carries the point (x, y).
+
+   ``caHMIConfigValueSet(QVariant value)``
+      Emitted when a value is determined by the widget (either a literal SetValue or a calculated result). The ``QVariant`` carries the value, can be numeric or a string.
+
+   **Type of Output Channel Data**
+   The type of output varies depending on the configuration, here is a table depicting different output scenarios:
+
+   .. csv-table:: Output scenarios
+      :header: "outputA", "outputB", "captureType", "calculationType"
+
+      "pressed Key (`Mapping <https://doc.qt.io/qt-6/qt.html#Key-enum>`_)", "keyboard Modifiers (`Mapping <https://doc.qt.io/qt-6/qt.html#KeyboardModifier-enum>`_)", "KeyboardValue", "n/a"
+      "the literal value of valueOrCalc", "n/a", "KeyboardSet", "SetValue"
+      "result of the epics calc expression", "n/a", "KeyboardSet", "Calc"
+      "x coordinate of the mouse position", "y coordinate of the mouse position", "MouseMove", "n/a",
+      "x coordinate of the mouse position", "y coordinate of the mouse position", "MousePress", "n/a"
+
+--------------
+
+.. _wmSignalRescale:
+
+``wmSignalRescale``
+~~~~~~~~~~~~~~~~~~~
+has no equivalent in MEDM
+
+   **Description:**
+   The wmSignalRescale object is used to capture rescale events of its parent widget. This allows you to respond to rescale events by receiving the new size of the parent widget.
+   The object itself is invisible at runtime and does not interact with the user. It can be configured just like any other object in Qt Designer. You typically place it inside a ``caFrame`` or the main window to capture rescale events of that container.
+   The result of the rescale event can be sent to caCalc soft channels (``softChannelA`` and ``softChannelB``) or emitted via signals. This allows you to use the new size information in other parts of your panel.
+
+
+   **Properties:**
+   The following properties are available:
+
+   ``softChannelA``
+      1st Output, primary output route. Provides you with the width of the parent widget after a rescale event.
+      Type: caCalc soft channel name/identifier (string)
+
+   ``softChannelB``
+      2nd Output, secondary/alternative output route. Provides you with the height of the parent widget after a rescale event.
+      Type: caCalc soft channel name/identifier (string)
+
+   ``rectSignalPosition``
+      Defines the position and size information sent with the ``emitSignal(QRect rect)`` signal. The ``QRect`` carries the rectangle (x, y, width, height).
+      Type: QPoint (x, y)
+
+
+   **Signals:**
+   The following signals are emitted by the wmSignalRescale widget:
+
+   ``emitSignal(QRect rect)``
+      Emitted on rescale events to report the current size and the position defined in the ``rectSignalPosition`` property. The ``QRect`` carries the rectangle (x, y, width, height).
+
+   ``emitSignal(QSize size)``
+      Emitted on rescale events to report the current size. The ``QSize`` carries the size (width, height).
+
+   ``emitSignal(int width, int height)``
+      Emitted on rescale events to report the current width and height in pixels.
+
+   ``emitWidth(int width)``
+      Emitted on rescale events to report the current width in pixels.
+
+   ``emitHeight(int height)``
+      Emitted on rescale events to report the current height in pixels.
+
+   ``internalResizeEvent(...);``
+      Internal signal used to trigger the rescale event handling. This signal is not meant to be used directly.
+
+
+
+
+--------------
 
 Requirements
 -------------------------------
@@ -2985,28 +3278,41 @@ scanned for the given source characters ( or -sequences) and every occurrence wi
 given replacement characters ( or -sequence). Unit replacements do not affect the UI file or EPICS data
 and are purely visible and around for the caQtDM process that was started with them.
 To start a caQtDM process with custom unit replacements, the following environment variable has to be set with the wanted replacements:
-CAQTDM_CUSTOM_UNIT_REPLACEMENTS
+
+**CAQTDM_CUSTOM_UNIT_REPLACEMENTS**
+
 The syntax for the custom unit replacements is as follows:
 The characters are written either in utf-8 coded characters or as a hexadecimal or decimal code for the character in utf-8 coding.
-Hexadeciaml codes need to start with "0x", caQtDM will try to parse all other characters first as a decimal code, if they are not purely numerical it will
+Hexadecimal codes need to start with "0x", caQtDM will try to parse all other characters first as a decimal code, if they are not purely numerical it will
 interpret them as utf-8 coded characters. Multiple characters that should be treated as one string have to be seperated by comma (,). If you use utf-8 coded characters,
 you can also just write them as a string without the need for commas. so "hi" would be written as "0x48,0x69", or simply just "hi".
 Double quotes are possible but removed by caQtDM when parsing the environment variable, single quotes are treated literally as characters to replace, so don't use them to encapsulate.
 You have to first write the source characters you want to replace, then an equal sign (=) and finally the replacement characters that should be drawn instead. To set multiple
 character replacements, seperate them by semicolon (;). Parts that dont contain an equal sign but are seperated from other parts with semicolon are ignored. All put together this would be the structure:
-CAQTDM_CUSTOM_UNIT_REPLACEMENTS={sourceCharacters}={replacementCharacters};{anotherReplacement}
+
+``CAQTDM_CUSTOM_UNIT_REPLACEMENTS={sourceCharacters}={replacementCharacters};{anotherReplacement}``
+
 An example (that doesnt make much sense but displays many possibilities) would be:
-CAQTDM_CUSTOM_UNIT_REPLACEMENTS=charsToReplace=charsToUse;0x48,0x68=bye;charsWithHex,0x4f=something;
+
+``CAQTDM_CUSTOM_UNIT_REPLACEMENTS=charsToReplace=charsToUse;0x48,0x68=bye;charsWithHex,0x4f=something;``
+
 It can be seen that all combinations of strings, hex- and deciaml character codes are possible to form a source or replacement string.
 All replacements will be done sequentially, with the leftmost replacements being done first. Therefore, it can also be possible, that later replacements replace characters in a string
 that has already been replaced before by another replacements.
 When doing custom unit replacements, always consider that your replacements might not be done to the original string from EPICS, but on the already
-processed string with the default unit replacements. To see how they are implemented, you might want to check out teh first few lines in caQtDM_Lib/src/mutexKnobData.cpp
+processed string with the default unit replacements. To see how they are implemented, you might want to check out the first few lines in 
+
+``caQtDM_Lib/src/mutexKnobData.cpp``
+
 There are already some default unit replacements that were introduced because common systems had difficulties displaying widely-used characters.
 Those unit replacements always take place before custom unit replacements, you can disable them by setting the following environment variable to "false":
-CAQTDM_DEFAULT_UNIT_REPLACEMENTS
+
+**CAQTDM_DEFAULT_UNIT_REPLACEMENTS**
+
 It is not recommended to disable them, as they are tested on all common systems and should be working with most clients, however disabling might help
 in some edge cases.
+
+.. _copy.past:
 
 Copying and selecting Text
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -3015,6 +3321,7 @@ Multiple widgets support some kind of selection of their displayed values. All o
 They do not behave exactly the same, but their differences are relatively minor and mostly in how they are implemented: 
 
 **Comparison**
+
 +------------------------+--------+--------+--------------------------+-----------------------------+-----------------------+
 | Widget                 | Ctrl+C | Ctrl+A | Behaviour on Single Click| Behaviour on Double-Click   |  Selection on Change  |
 +========================+========+========+==========================+=============================+=======================+
@@ -3032,6 +3339,7 @@ They do not behave exactly the same, but their differences are relatively minor 
 +------------------------+--------------------------------------------+-----------------------------+-----------------------+
 
 **Shortcuts**
+
 Although the widgets might work differently, the shortcuts are the same across all of them. The shortcuts use, if any exists, the industry standard that most people are familiar with.
 When no industry standard is available, caQtDM uses the Combination ``Ctrl+Alt``, in combination with the first letter of the action performed (Ex. **R** for **R**eload in ``Ctrl+Alt+R``).
 
@@ -3156,6 +3464,8 @@ caQtDM uses the following environment variables:
 +---------------------------------------+-----------------------------------------------------------+
 | ``CAQTDM_ARCHIVEHTTP_APIPATH_LIST``   | Overwrite the default path to fetch the list of available |
 |                                       | backends. Needs to be in the format: /path/to/backend/list|
++---------------------------------------+-----------------------------------------------------------+
+| ``CAQTDM_ARCHIVEHTTP_NO_TIMEOUT``     | If this is set, errors will not create a timeout.         |
 +---------------------------------------+-----------------------------------------------------------+
 | ``CAQTDM_OPTIMIZE_EPICS3CONNECTIONS`` | Disable Epics3 connections when tabwidget is not active   |
 |                                       | Set to "TRUE" to activate                                 |

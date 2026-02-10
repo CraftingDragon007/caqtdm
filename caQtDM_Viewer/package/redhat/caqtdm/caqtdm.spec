@@ -3,8 +3,10 @@
 
 #############################################################################
 # special EPICS things
-%define EPICS_TARGET_VERSION -7.0.9
+%define EPICS_TARGET_VERSION -7.0.10
 #############################################################################
+
+%global no_rpath %{getenv:CAQTDM_NORPATH}
 
 # build qt4 support (or not)
 %if (0%{?rhel} && 0%{?rhel} < 8) || (0%{?fedora} && 0%{?fedora} < 24)
@@ -13,13 +15,13 @@
 %global qt4 0
 %endif
 # build qt5 support (or not)
-%if 0%{?fedora} > 39
+%if (0%{?fedora} > 39 || (0%{?rhel} > 9))
 %global qt5 0
 %else
 %global qt5 1
 %endif
 # build qt6 support (or not)
-%if 0%{?fedora} > 39 
+%if (0%{?fedora} > 39 || (0%{?rhel} > 9))
 %global qt6 1
 %else
 %global qt6 0
@@ -35,9 +37,9 @@ License: GPLv3
 URL:     https://github.com/caqtdm/caqtdm
 Source:  https://github.com/caqtdm/caqtdm/%{name}/%{name}-%{version}.tar.gz
 
-%if 0%{?qt6}
-Patch0: no_rpath.patch
-%endif
+#%if 0%{?qt6}
+#Patch0: no_rpath.patch
+#%endif
 
 %if 0%{?qt5}
 # Requires: caqtdm_archiver
@@ -46,7 +48,7 @@ BuildRequires: qt5-devel
 %else
 BuildRequires: qt5-qtbase-devel
 %endif
-BuildRequires: qt5-qtserialbus-devel qt5-qtsvg-devel qt5-qttools-devel qwt-qt5-devel libXext-devel czmq-devel cppzmq-devel 
+BuildRequires: qt5-qtserialbus-devel qt5-qtsvg-devel qt5-qttools-devel qwt-qt5-devel libXext-devel cppzmq-devel python3-devel
 %endif
 
 %if 0%{?qt6}
@@ -57,7 +59,7 @@ BuildRequires: qt6-qtserialbus-devel
 BuildRequires: qt6-qt5compat-devel
 BuildRequires: qt6-qtlocation-devel
 BuildRequires: qwt-qt6-devel
-BuildRequires: libXext-devel czmq-devel cppzmq-devel
+BuildRequires: libXext-devel cppzmq-devel
 BuildRequires: python3-devel
 %endif
 
@@ -82,7 +84,15 @@ caQtDM makes panel development faster and easier. It's made for folks of all ski
 Summary:  Development files for %{name}
 Provides: caqtdm-devel = %{version}-%{release}
 Provides: caqtdm-devel%{_isa} = %{version}-%{release}
-Requires: %{name}%{?_isa} = %{version}-%{release}
+%if 0%{?qt5}
+Requires: %{name}-bin-qt5 = %{version}-%{release}
+%endif
+%if 0%{?qt4}
+Requires: %{name}-bin-qt4 = %{version}-%{release}
+%endif
+%if 0%{?qt6}
+Requires: %{name}-bin-qt6 = %{version}-%{release}
+%endif
 %description devel
 %{summary}.
 
@@ -107,7 +117,7 @@ Summary: Make %{name}-bin-qt4 default
 Requires: %{name}-bin-qt4 = %{version}-%{release} 
 Requires: %{name}-doc = %{version}-%{release}
 Conflicts: %{name}-qt5
-Provides: %{name}%{?_isa}
+Provides: %{name}%{?_isa} = %{version}-%{release}
 %description qt4
 %define qt_vers qt4
 %{summary}
@@ -123,7 +133,7 @@ Summary: Qt5 Widgets for Technical Applications
 %description qt5
 Provides: caqtdm-qt5 = %{version}-%{release}
 Provides: caqtdm-qt5%{_isa} = %{version}-%{release}
-Provides: %{name}%{?_isa}
+Provides: %{name}%{?_isa} = %{version}-%{release}
 Requires: %{name}-bin-qt5 = %{version}-%{release}
 Requires: %{name}-doc = %{version}-%{release}
 Conflicts: %{name}-qt4
@@ -154,7 +164,7 @@ Summary: Qt6 Widgets for Technical Applications
 %description qt6
 Provides: caqtdm-qt6 = %{version}-%{release}
 Provides: caqtdm-qt6%{_isa} = %{version}-%{release}
-Provides: %{name}%{?_isa}
+Provides: %{name}%{?_isa} = %{version}-%{release}
 Requires: %{name}-bin-qt6 = %{version}-%{release}
 Requires: %{name}-doc = %{version}-%{release}
 Requires: qt6-assistant
@@ -185,9 +195,9 @@ Requires: python3
 #%patch52 -p1 -b .qt5
 #%patch53 -p1 -b .no_rpath
 
-%if 0%{?qt6}
-%patch 0 -p1
-%endif
+#%if 0%{?qt6}
+#%patch 0 -p1
+#%endif
 
 %build
 mkdir -p %{buildroot}/opt/caqtdm/lib
@@ -214,11 +224,13 @@ export EPICS_HOST_ARCH=${EPICS_HOST_ARCH:-linux-x86_64}
 export EPICSINCLUDE=${EPICS_BASE}/include
 export EPICSLIB=${EPICS_BASE}/lib/$EPICS_HOST_ARCH
 %if 0%{?rhel} >  7
-export PYTHONVERSION=$(python3 --version 2>&1 | cut -d ' ' -f 2 | cut -d '.' -f 1-2)
+%define pythonversion $(python3 --version 2>&1 | cut -d ' ' -f 2 | cut -d '.' -f 1-2)
+export PYTHONVERSION=%{pythonversion}
 %else
 export PYTHONVERSION=2.7
+%define pythonversion 2.7
 %endif
-export PYTHONINCLUDE=/usr/include/python$PYTHONVERSION
+export PYTHONINCLUDE=/usr/include/python%{pythonversion}
 export PYTHONLIB=/usr/lib/
 export ZMQINC=/usr/include
 export ZMQLIB=/usr/lib64
@@ -256,7 +268,8 @@ export EPICS_HOST_ARCH=${EPICS_HOST_ARCH:-linux-x86_64}
 export EPICSINCLUDE=${EPICS_BASE}/include
 export EPICSLIB=${EPICS_BASE}/lib/$EPICS_HOST_ARCH
 export PYTHONVERSION=2.7
-export PYTHONINCLUDE=/usr/include/python$PYTHONVERSION
+%define pythonversion 2.7
+export PYTHONINCLUDE=/usr/include/python%{pythonversion}
 export PYTHONLIB=/usr/lib/
 export ZMQINC=/usr/include
 export ZMQLIB=/usr/lib64
@@ -303,8 +316,9 @@ export EPICS_HOST_ARCH=${EPICS_HOST_ARCH:-linux-aarch64}
 %endif
 export EPICSINCLUDE=${EPICS_BASE}/include
 export EPICSLIB=${EPICS_BASE}/lib/$EPICS_HOST_ARCH
-export PYTHONVERSION=$(python --version 2>&1 | cut -d ' ' -f 2 | cut -d '.' -f 1-2)
-export PYTHONINCLUDE=/usr/include/python$PYTHONVERSION
+%define pythonversion $(python3 --version 2>&1 | cut -d ' ' -f 2 | cut -d '.' -f 1-2)
+export PYTHONVERSION=%{pythonversion}
+export PYTHONINCLUDE=/usr/include/python%{pythonversion}
 export PYTHONLIB=/usr/lib/
 export ZMQINC=/usr/include
 export ZMQLIB=/usr/lib64
@@ -393,6 +407,24 @@ popd
 	cp %{_builddir}/%{name}-%{version}/caQtDM_QtControls/doc/*.css     %{buildroot}/opt/caqtdm/doc
 
 	cp -R %{_builddir}/%{name}-%{version}/build/* %{buildroot}
+                
+        # Create ld.so.conf.d/caqtdm.conf file because there is no rpath in the binaries
+        # Only create the file when CAQTDM_NORPATH=1 (build option) is set
+%if %{no_rpath} == 1
+                mkdir -p %{buildroot}/etc/ld.so.conf.d
+                echo "/opt/caqtdm/lib" > %{buildroot}/etc/ld.so.conf.d/caqtdm.conf
+        %if 0%{?qt6}
+                echo "/opt/caqtdm/lib/qt6" >> %{buildroot}/etc/ld.so.conf.d/caqtdm.conf
+                echo "/opt/caqtdm/lib/qt6/designer" >> %{buildroot}/etc/ld.so.conf.d/caqtdm.conf
+                echo "/opt/caqtdm/lib/qt6/controlsystems" >> %{buildroot}/etc/ld.so.conf.d/caqtdm.conf
+        %endif
+        %if 0%{?qt5}
+                echo "/opt/caqtdm/lib/qt5" >> %{buildroot}/etc/ld.so.conf.d/caqtdm.conf
+                echo "/opt/caqtdm/lib/qt5/designer" >> %{buildroot}/etc/ld.so.conf.d/caqtdm.conf
+                echo "/opt/caqtdm/lib/qt5/controlsystems" >> %{buildroot}/etc/ld.so.conf.d/caqtdm.conf
+        %endif
+%endif
+
 %if 0%{?qt4}
         echo "#!/bin/bash" >>  %{buildroot}/opt/caqtdm/lib/qt4/caqtdm_designer
         echo "SOURCE=\"\${BASH_SOURCE[0]}\"" >>  %{buildroot}/opt/caqtdm/lib/qt4/caqtdm_designer
@@ -464,11 +496,7 @@ popd
         echo "fi" >>  %{buildroot}/opt/caqtdm/lib/qt6/caqtdm
         echo " " >>  %{buildroot}/opt/caqtdm/lib/qt6/caqtdm
 
-        # Create ld.so.conf.d/caqtdm.conf file because there is no rpath in the binaries
-        mkdir -p %{buildroot}/etc/ld.so.conf.d
-        echo "/opt/caqtdm/lib/qt6" > %{buildroot}/etc/ld.so.conf.d/caqtdm.conf
-        echo "/opt/caqtdm/lib/qt6/designer" >> %{buildroot}/etc/ld.so.conf.d/caqtdm.conf
-        echo "/opt/caqtdm/lib/qt6/controlsystems" >> %{buildroot}/etc/ld.so.conf.d/caqtdm.conf
+                
 
 %endif
 
@@ -538,6 +566,9 @@ fi
 
 %files bin-qt5
 /opt/caqtdm/lib/qt5
+%if 0%{?no_rpath}
+/etc/ld.so.conf.d/caqtdm.conf
+%endif
 %defattr(755,root,root)
 /opt/caqtdm/lib/qt5/caqtdm_designer
 /opt/caqtdm/lib/qt5/caqtdm
@@ -569,12 +600,14 @@ fi
 	
 
 %preun qt5
-%endif
+%endif   
 
 %if 0%{?qt6}
 %files bin-qt6
 /opt/caqtdm/lib/qt6
+%if 0%{?no_rpath}
 /etc/ld.so.conf.d/caqtdm.conf
+%endif
 %defattr(755,root,root)
 /opt/caqtdm/lib/qt6/caqtdm_designer
 /opt/caqtdm/lib/qt6/caqtdm

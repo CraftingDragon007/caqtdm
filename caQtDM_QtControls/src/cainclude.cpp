@@ -37,7 +37,7 @@
 #else
     #include <QRegularExpression>
 #endif
-
+#define MACROCLEANUP "(?<!\\%\\(read)\\s";
 caInclude::caInclude(QWidget *parent) : QWidget(parent)
 {
     thisLoadedWidgets.clear();
@@ -651,8 +651,18 @@ void caInclude::paintEvent( QPaintEvent *event)
 }
 
 void caInclude::setMacro(QString const &newMacro) {
+
+    const QString read_command=QString("%(read");
     QString Macro = newMacro.simplified();
-    Macro.replace(" ", "");
+
+    QString pattern=MACROCLEANUP;
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    QRegExp re(pattern);
+#else
+    QRegularExpression re(pattern);
+#endif
+
+    Macro.remove(re);
     QStringList splitted = Macro.split(";");
     setMacroAndPositionsFromMacroStringList(splitted);
 /*
@@ -673,9 +683,15 @@ void caInclude::setMacroAndPositionsFromMacroStringList(QStringList macroList) {
     for(int i=0; i<macroList.count(); i++) {
 
         QString Macro = macroList[i].simplified();
-        Macro.replace(" ", "");
+        QString pattern=MACROCLEANUP;
+    #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+        QRegExp re(pattern);
+    #else
+        QRegularExpression re(pattern);
+    #endif
+        Macro.remove(re);
         //printf(" MacroOrg: %s\n",qasc(Macro));
-        QString pattern = QString("(?:,+|^)\\[([^,]*[^\\]]*)\\]");
+        pattern = QString("(?:,+|\\s*|^)\\[([^,]*[^\\]]*)\\]");
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
         QRegExp rx(pattern);

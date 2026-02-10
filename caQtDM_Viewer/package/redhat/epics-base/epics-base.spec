@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-Name:           epics-base-7.0.9
+Name:           epics-base-7.0.10
 Version:        1.0.0
 Release:        1%{?dist}
 Summary:        Experimental Physics and Industrial Control System base
@@ -9,12 +9,9 @@ URL:            https://epics-controls.org
 # binaries and libraries built by the EPICS build system.
 # BuildArch: noarch
 
-Source0:        https://epics-controls.org/download/base/base-7.0.9.tar.gz
-# Source1 is the GPG signature, handled by build system infrastructure if configured.
-Source1:        https://epics-controls.org/download/base/base-7.0.9.tar.gz.asc
+Source0:        https://epics-controls.org/download/base/base-7.0.10.tar.gz
 Patch0:         01_install_permissions.patch
 Patch1:         02_no_rpath.patch
-Patch2:         03_new_gcc_version_fix.patch
 # Source6 is the LICENSE file installed
 # from the extracted source tree. We reference it here explicitly for clarity.
 Source6:        LICENSE
@@ -30,9 +27,11 @@ Requires:       readline
 Requires:       ncurses
 Requires:       perl
 
-Provides:       epics-base-7.0.9 = %{version}-%{release}
+Provides:       epics-base-7.0.10 = %{version}-%{release}
 
-%define EPICS_BASE /usr/local/epics/base-7.0.9
+%define EPICS_BASE /usr/local/epics/base-7.0.10
+%global epics_docdir %{_docdir}/epics-base-7.0.10
+%global epics_licensedir %{_licensedir}/epics-base-7.0.10
 
 %description
 The Experimental Physics and Industrial Control System (EPICS) is a set of
@@ -58,20 +57,19 @@ This package is intended for developers who want to build applications
 that use EPICS.
 
 %prep
-# Setup macro extracts Source0 into a directory named 'base-7.0.9'
-%setup -q -n base-7.0.9
+# Setup macro extracts Source0 into a directory named 'base-7.0.10'
+%setup -q -n base-7.0.10
 
 # Apply patches
 %patch 0 -p1
 %patch 1 -p1
-%patch 2 -p1
 
 # Create the staging directory *within* the build directory
 # The EPICS build system installs here during the `%build` phase.
-mkdir -p %{_builddir}/base-7.0.9/staging%{EPICS_BASE}
+mkdir -p %{_builddir}/base-7.0.10/staging%{EPICS_BASE}
 
 # Configure INSTALL_LOCATION to point to this staging area
-echo "INSTALL_LOCATION=%{_builddir}/base-7.0.9/staging%{EPICS_BASE}" > configure/CONFIG_SITE.local
+echo "INSTALL_LOCATION=%{_builddir}/base-7.0.10/staging%{EPICS_BASE}" > configure/CONFIG_SITE.local
 # Configure FINAL_LOCATION to the final install path in the RPM
 echo "FINAL_LOCATION=%{EPICS_BASE}" >> configure/CONFIG_SITE.local
 
@@ -83,37 +81,37 @@ perl -CSD src/tools/EpicsHostArch.pl > %{_builddir}/EPICS_HOST_ARCH
 export EPICS_HOST_ARCH=$(cat %{_builddir}/EPICS_HOST_ARCH)
 
 # Export the library path for the linker at build time, pointing to the staging area
-export LD_LIBRARY_PATH="%{_builddir}/base-7.0.9/staging%{EPICS_BASE}/lib/${EPICS_HOST_ARCH}"
+export LD_LIBRARY_PATH="%{_builddir}/base-7.0.10/staging%{EPICS_BASE}/lib/${EPICS_HOST_ARCH}"
 
-# export PERL5LIB="%{_builddir}/base-7.0.9/staging%{_libdir}/epics/lib/perl"
+# export PERL5LIB="%{_builddir}/base-7.0.10/staging%{_libdir}/epics/lib/perl"
 
 # Build and install to the staging area defined in CONFIG_SITE.local
 make -s -j8
 
 %install
 # Set buildroot
-# The %setup macro changed directory to %{_builddir}/base-7.0.9
+# The %setup macro changed directory to %{_builddir}/base-7.0.10
 # We need to change to the build-time staging directory for installation
-cd %{_builddir}/base-7.0.9/staging%{EPICS_BASE}
+cd %{_builddir}/base-7.0.10/staging%{EPICS_BASE}
 
 # Get the EPICS_HOST_ARCH again for installation
 EPICS_HOST_ARCH=$(cat %{_builddir}/EPICS_HOST_ARCH)
 
 # Define the final EPICS_BASE location within the file system for symlinks
 EPICS_BASE="%{EPICS_BASE}"
-EPICS_STAGING=%{_builddir}/base-7.0.9/staging${EPICS_BASE}
+EPICS_STAGING=%{_builddir}/base-7.0.10/staging${EPICS_BASE}
 
 EPICS_INSTALL=%{buildroot}${EPICS_BASE}
 # Create the final install directory
 mkdir -p ${EPICS_INSTALL}
 
 EPICS_INCLUDE="${EPICS_INSTALL}/include"
-EPICS_LICENSES=%{buildroot}/usr/share/licenses/epics-base-7.0.9
-EPICS_DOC=%{buildroot}/usr/share/doc/epics-base-7.0.9
+EPICS_LICENSES=%{buildroot}%{epics_licensedir}
+EPICS_DOC=%{buildroot}%{epics_docdir}
 SYS_BIN=%{buildroot}/usr/bin
 SYS_LIB=%{buildroot}/usr/%{_lib}
 SYS_INCLUDE=%{buildroot}/usr/include
-SHARE_EPICS=%{buildroot}/usr/share/epics-base-7.0.9
+SHARE_EPICS=%{buildroot}/usr/share/epics-base-7.0.10
 
 mkdir -p ${EPICS_INCLUDE}
 mkdir -p ${EPICS_LICENSES}
@@ -130,10 +128,12 @@ cp -a ${EPICS_STAGING}/cfg ${EPICS_STAGING}/configure ${EPICS_STAGING}/db ${EPIC
 # Patch makeRPath.py to have a python3 shebang
 sed -i '1s|^.*$|#!/usr/bin/env python3|' ${EPICS_INSTALL}/bin/${EPICS_HOST_ARCH}/makeRPath.py
 
+# Copy the documentation to the appropriate location
+cp -a ${EPICS_STAGING}/html ${EPICS_DOC}/
 # Copy the license file to the appropriate location
-cp -a %{_builddir}/base-7.0.9/LICENSE ${EPICS_LICENSES}/LICENSE
+cp -a %{_builddir}/base-7.0.10/LICENSE ${EPICS_LICENSES}/LICENSE
 # Copy the license file into the source directory
-cp -a %{_builddir}/base-7.0.9/LICENSE %{_builddir}/../../SOURCES/
+cp -a %{_builddir}/base-7.0.10/LICENSE %{_sourcedir}/
 # Copy the documentation to the appropriate location
 cp -a ${EPICS_STAGING}/html ${EPICS_DOC}
 
@@ -143,7 +143,7 @@ for bin in caget caput cainfo camonitor caRepeater casw pvget pvinfo pvlist pvpu
 done
 
 # Create symlink for include files
-ln -s %{EPICS_BASE}/include ${SYS_INCLUDE}/epics-base-7.0.9
+ln -s %{EPICS_BASE}/include ${SYS_INCLUDE}/epics-base-7.0.10
 
 # Create symlink for db dbd and templates in /usr/share/epics
 mkdir -p ${SHARE_EPICS}
@@ -181,8 +181,8 @@ FINAL_LOCATION=${EPICS_BASE}
 EOF
 
 %files
-%license LICENSE
-%doc %{EPICS_DOC}/html
+%license %{epics_licensedir}/LICENSE
+%doc %{epics_docdir}/html
 
 # The core EPICS_BASE directory and contents (excluding devel stuff)
 %dir %{EPICS_BASE}
@@ -208,10 +208,10 @@ EOF
 %{_libdir}/*.so*
 
 # Share files
-%dir %{_datadir}/epics-base-7.0.9
-%{_datadir}/epics-base-7.0.9/db
-%{_datadir}/epics-base-7.0.9/dbd
-%{_datadir}/epics-base-7.0.9/templates
+%dir %{_datadir}/epics-base-7.0.10
+%{_datadir}/epics-base-7.0.10/db
+%{_datadir}/epics-base-7.0.10/dbd
+%{_datadir}/epics-base-7.0.10/templates
 
 # Environment file
 %{_prefix}/lib/environment.d/10-epics-base.conf
@@ -219,10 +219,12 @@ EOF
 %files devel
 # Header files and devel symlinks
 %{EPICS_BASE}/include
-%{_includedir}/epics-base-7.0.9
+%{_includedir}/epics-base-7.0.10
 %{_libdir}/pkgconfig/*.pc
 
 %changelog
+* Tue Feb 03 2026 Julian Houba <julian.houba@psi.ch> - 7.0.10-1
+- Upgraded to epics R7.0.10
 * Thu May 22 2025 Julian Houba <julian.houba@psi.ch> - 7.0.9-1
 - Convert from Arch Linux PKGBUILD.
 - Replicate staging build and manual install/linking logic.

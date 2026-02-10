@@ -71,10 +71,10 @@ REM ============================================================================
   call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
   d:	
  
-  set QTHOME=D:/qt/build/Qt-6.7.1_VS19_64bit
+  set QTHOME=D:\qt\build\Qt-6.9.0_VS22_64bit
   
-  set QWTHOME=D:/qt/qwt-6.2.0_Qt6.7.1_64bit
-  set QWTINCLUDE=D:/qt/qwt-6.2.0_Qt6.7.1_64bit/src
+  set QWTHOME=D:/qt/qwt-6.3.0_Qt6.9.0_64bit
+  set QWTINCLUDE=:/qt/qwt-6.3.0_Qt6.9.0_64bit/src
   set QWTLIB=%QWTHOME%/lib
   set QWTLIBNAME=qwt
   set QWTVERSION=6.2
@@ -94,15 +94,16 @@ REM ============================================================================
  
   set QTBASE=%QTCONTROLS_LIBS%
   
-  set WIXHOME=C:\Program Files (x86)\WiX Toolset v3.11\bin
+  set WIXHOME=C:\Program Files (x86)\WiX Toolset v3.14\bin
   set QMAKESPEC=%QTHOME%\mkspecs\win32-msvc
   set TIMESTAPER="http://timestamp.digicert.com"
   set CAQTDM_SIGNER="Paul Scherrer Institut"
 
   
-  set ZMQ=D:\qt\zeromq-4.2.3
-  set ZMQINC=%ZMQ%/include
-  set ZMQLIB=%ZMQ%/lib/%EPICS_HOST_ARCH%
+  set ZMQ=D:\epics\softioc\common\external\zeromq-4.3.5_windows-x64\bin\Release
+  set ZMQINC=D:\epics\softioc\common\external\zeromq-4.3.5\include
+  set ZMQLIB=D:\epics\softioc\common\external\zeromq-4.3.5_windows-x64\lib\Release
+  set ZMQLIBRARY=libzmq-v142-mt-4_3_5.dll
   
   set SSL=D:\qt\openssl-1.0.2n_VS16_64bit
   set SSLINC=%SSL%\inc32
@@ -146,7 +147,7 @@ REM ============================================================================
  
   set QTBASE=%QTCONTROLS_LIBS%
   
-  set WIXHOME=C:\Program Files (x86)\WiX Toolset v3.11\bin
+  set WIXHOME=C:\Program Files (x86)\WiX Toolset v3.14\bin
   set QMAKESPEC=%QTHOME%\mkspecs\win32-msvc
   set TIMESTAPER="http://timestamp.digicert.com"
   set CAQTDM_SIGNER="Paul Scherrer Institut"

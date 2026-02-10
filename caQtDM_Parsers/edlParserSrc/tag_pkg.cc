@@ -557,31 +557,31 @@ char *tagClass::getValue (
 
         tk = &buf[firstNonWS];
 
-        //fprintf( stderr, "string is [%s]\n", tk );
+            //fprintf( stderr, "string is [%s]\n", tk );
 
-        firstChar = 0;
-        if ( tk[0] == '\"' ) firstChar = 1;
+            firstChar = 0;
+            if ( tk[0] == '\"' ) firstChar = 1;
 
-        lastChar = strlen(tk) - 1;
-        if ( lastChar > 0 ) {
+            lastChar = strlen(tk) - 1;
+            if ( lastChar > 0 ) {
 
-            if ( tk[lastChar] == '\"' ) {
-                lastChar = lastChar - 1;
-            }
-            else if ( tk[lastChar] == '\n' ) {
-                if ( tk[lastChar-1] == '\"' ) {
-                    tk[lastChar-1] = '\n';
-                    tk[lastChar] = 0;
+                if ( tk[lastChar] == '\"' ) {
+                    lastChar = lastChar - 1;
                 }
+                else if ( tk[lastChar] == '\n' ) {
+                    if ( tk[lastChar-1] == '\"' ) {
+                        tk[lastChar-1] = '\n';
+                        tk[lastChar] = 0;
+                    }
+                }
+
             }
 
-        }
+            // copy string to tag
 
-        // copy string to tag
+            escape = 0;
 
-        escape = 0;
 
-        if ( tk ) {
 
             for ( i=firstChar, ii=0; (i<=(int)lastChar) && (ii<maxLen); i++ ) {
 
@@ -605,14 +605,6 @@ char *tagClass::getValue (
             }
 
             val[ii++] = 0;
-
-        }
-
-        else {
-
-            return NULL;
-
-        }
 
     }
 
@@ -719,7 +711,7 @@ char *tagClass::getValue (
 
         escape = 0;
 
-        if ( tk ) {
+
 
             for ( i=firstChar, ii=0; (i<=(int)lastChar) && (ii<*maxLen); i++ ) {
 
@@ -744,13 +736,7 @@ char *tagClass::getValue (
 
             val[ii++] = 0;
 
-        }
 
-        else {
-
-            return NULL;
-
-        }
 
     }
 

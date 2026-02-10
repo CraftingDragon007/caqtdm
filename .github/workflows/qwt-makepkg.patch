@@ -1,0 +1,36 @@
+diff --git a/PKGBUILD b/PKGBUILD
+index b9583cd..cd7f3b9 100644
+--- a/PKGBUILD
++++ b/PKGBUILD
+@@ -7,11 +7,11 @@ license=('custom:qwt')
+ url="https://qwt.sourceforge.io/"
+ depends=('qt6-svg')
+ makedepends=('qt6-base' 'qt6-tools')
+-source=("http://downloads.sourceforge.net/qwt/qwt-${pkgver}.tar.bz2")
+-sha256sums=('dcb085896c28aaec5518cbc08c0ee2b4e60ada7ac929d82639f6189851a6129a')
++source=("git+https://git.code.sf.net/p/qwt/git#tag=v${pkgver}")
++sha256sums=('SKIP')
+ 
+ prepare() {
+-  cd qwt-${pkgver}
++  cd git
+   sed -e '/^\s*QWT_INSTALL_PREFIX/ s|=.*|= /usr|' \
+       -e '/^QWT_INSTALL_DOCS/ s|/doc|/share/doc/qwt-qt6|' \
+       -e '/^QWT_INSTALL_HEADERS/ s|include|&/qwt-qt6|' \
+@@ -27,13 +27,13 @@ prepare() {
+ }
+ 
+ build() {
+-  cd qwt-${pkgver}
++  cd git
+   qmake6 qwt.pro
+   make 
+ }
+ 
+ package() {
+-  cd qwt-${pkgver}
++  cd git
+   make install INSTALL_ROOT="${pkgdir}"
+-  rm -r "${pkgdir}"/usr/share/doc
++  rm -r "${pkgdir}"/usr/share/doc || true
+ }
