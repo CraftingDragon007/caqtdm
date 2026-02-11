@@ -500,6 +500,12 @@ int main(int argc, char *argv[])
     QApplication::setOrganizationName("Paul Scherrer Institut");
     QApplication::setApplicationName("caQtDM");
 
+#ifndef MOBILE
+    if (server) {
+        app.setQuitOnLastWindowClosed(false);
+    }
+#endif
+
 #ifdef MOBILE_ANDROID
     //qDebug() << QStyleFactory::keys();
     app.setStyle(QStyleFactory::create("Fusion"));
