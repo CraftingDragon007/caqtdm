@@ -10459,6 +10459,13 @@ void CaQtDM_Lib::Callback_WriteDetectedValues(QWidget* child)
         return;
     }
 
+    if (thisString.count() != count) {
+        QString message="not the correct amount of PVs defined for writing ROI values: ";
+        message.append(child->objectName());
+        messageWindowP->postMsgEvent(QtInfoMsg,  (char*)qasc(message));
+        return;
+    }
+
     for(int i=0; i<count; i++) {
         int32_t idata = (int32_t) values[i];
         double rdata = (double) values[i];
