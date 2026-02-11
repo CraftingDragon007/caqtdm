@@ -76,28 +76,32 @@ SplashScreen::SplashScreen(QWidget *parent) : QSplashScreen(), m_progress(0)
         pixmap.load(":caQtDM-logos.png");
     }
 
+    pixmap = pixmap.scaledToHeight(225);
+
 #endif
 
-    this->resize(pixmap.size().width()+200, pixmap.size().height()+100);
+    const int bottomAreaHeight = 50;
 
-    QPixmap desktopBackground(width(), height());
-    desktopBackground.fill(Qt::transparent);
-    // and merge the two pixmaps
-    QPainter p;
-    p.begin(&desktopBackground);
-    QPixmap scaledPixmap = pixmap.scaled(pixmap.size().width()+200,  pixmap.size().height()+200);
-    p.drawPixmap(0, 0, scaledPixmap);
+    int splashWidth = pixmap.width();
+    int splashHeight = pixmap.height() + bottomAreaHeight;
 
-    p.setPen(QPen(QColor(200,200,200), 2));
-    p.drawRect(2,2, width()-4,height()-4);
+    QPixmap splashPixmap(splashWidth, splashHeight);
+    splashPixmap.fill(Qt::transparent);
 
-    QBrush brush(QColor(200,200,200,255), Qt::SolidPattern);
-    p.setBrush(brush);
-    p.drawRect(2, height()-70, width()-4, 68);
+    QPainter painter(&splashPixmap);
 
-    p.end();
+    int imageX = (splashWidth - pixmap.width()) / 2;
+    painter.drawPixmap(imageX, 0, pixmap);
 
-    this->setPixmap(desktopBackground);
+    // bottom box where text and progress bar are
+    painter.setBrush(QColor(200, 200, 200, 255));
+    painter.setPen(Qt::NoPen);
+    painter.drawRect(0, pixmap.height(), splashWidth, bottomAreaHeight);
+
+    painter.end();
+
+
+    this->setPixmap(splashPixmap);
     this->setCursor(Qt::BusyCursor);
     this->showMessage("loading include ui files", Qt::AlignBottom, QColor(Qt::black));
 }
@@ -201,7 +205,7 @@ void SplashScreen::drawContents(QPainter *painter)
       pbstyle.invertedAppearance = false;
       pbstyle.text = "loading";
       pbstyle.textVisible = true;
-      pbstyle.rect = QRect(0, pixmap.size().height()+50, pixmap.size().width()+200, 25);
+      pbstyle.rect = QRect(0, pixmap.height() + 5, pixmap.width() + 50, 25);
       style()->drawControl(QStyle::CE_ProgressBar, &pbstyle, painter, this);
 
 }
