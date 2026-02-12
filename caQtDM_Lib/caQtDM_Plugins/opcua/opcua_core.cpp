@@ -481,11 +481,6 @@ QOpcUaEndpointDescription OpcUaCore::getEndpointWithHighestSecurity(
                   return getValueForEndpoint(a) > getValueForEndpoint(b);
               });
 
-    QEventLoop loop;
-    QTimer timer;
-    timer.setSingleShot(true);
-    QObject::connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
-
     QVector<QString> triedEndpoints;
     for (auto &description : endpointDescriptions) {
         QUrl url = description.endpointUrl();
@@ -496,16 +491,11 @@ QOpcUaEndpointDescription OpcUaCore::getEndpointWithHighestSecurity(
         triedEndpoints.push_back(endpoint);
 
         QTcpSocket *sock = new QTcpSocket(Q_NULLPTR);
-        QObject::connect(sock, &QTcpSocket::connected, sock, [&, description]() {
-            chosenEndpoint = description;
-            timer.stop();
-            loop.quit();
-        });
 
         sock->connectToHost(url.host(), url.port());
-        timer.start(m_maxLatency);
-        loop.exec();
-        sock->abort();
+        if (sock->waitForConnected(m_maxLatency.count())) {
+            chosenEndpoint = description;
+        }
         delete sock;
 
         if (!chosenEndpoint.endpointUrl().isEmpty()) {
