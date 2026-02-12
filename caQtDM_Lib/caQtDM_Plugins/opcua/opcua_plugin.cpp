@@ -337,7 +337,7 @@ int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
                                      knobData kData = m_mutexKnobDataP->GetMutexKnobData(idx);
 
                                      updateKnobDataWithAccessLevel(kData, readAccess, writeAccess);
-                                     updateEpicsWaveformAttributePVs(rawPV, kData);
+                                     updateEpicsWaveformAttributePVs(kData.pv, kData);
 
                                      m_mutexKnobDataP->SetMutexKnobDataReceived(&kData);
                                  }
@@ -350,7 +350,7 @@ int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
 
                     knobData kData = m_mutexKnobDataP->GetMutexKnobData(idx);
 
-                    updateEpicsWaveformAttributePVs(rawPV, kData);
+                    updateEpicsWaveformAttributePVs(kData.pv, kData);
                 }
 
                 if (m_knobDataIndicesForEndpoint[endpoint].length() > 0) {
