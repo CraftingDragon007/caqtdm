@@ -3713,7 +3713,7 @@ caQtDM uses the following environment variables:
 +---------------------------------------+-----------------------------------------------------------+
 | ``CAQTDM_OPCUA_PEM_PASSWORD``         | Password to use to unlock PEM for certificate auth.       |
 +---------------------------------------+-----------------------------------------------------------+
-| ``CAQTDM_OPCUA_RESET_PKI_CONFIG``     | If set, caQtDM recreats entire PEM config, incl. PEM pwd  |
+| ``CAQTDM_OPCUA_RESET_PKI_CONFIG``     | If set, caQtDM recreates entire PEM config, incl. PEM pwd |
 +---------------------------------------+-----------------------------------------------------------+
 | ``CAQTDM_OPCUA_SESSION_TIMEOUT``      | Session timeout  (ms) for opcua connections.              |
 +---------------------------------------+-----------------------------------------------------------+
