@@ -26,6 +26,7 @@
 #ifndef OPCUA_CORE_H
 #define OPCUA_CORE_H
 
+#include <QMutexLocker>
 #include <QObject>
 #include <QUrl>
 #include <QtOpcUa/QOpcUaAddReferenceItem>
@@ -219,6 +220,7 @@ private:
     std::chrono::milliseconds m_sessionTimeout;
     std::chrono::milliseconds m_maxLatency;
     CertificateTrustFailedAction m_certificateTrustFailedAction;
+    QMutex m_mutex;
     int m_reconnectionAttempt;
     int m_reconnectionTimeoutMs;
     bool m_reconnecting;

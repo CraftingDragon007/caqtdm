@@ -124,6 +124,7 @@ OpcUaCore::OpcUaCore(QObject *parent)
                      this,
                      [this](QString keyFilePath, QString *password, bool previousTryWasInvalid) {
                          Q_UNUSED(keyFilePath);
+                         QMutexLocker locker(&m_mutex);
                          // Skipped the first time
                          if (previousTryWasInvalid) {
                              if (*password != NOPASS_PLACEHOLDER) {
@@ -160,6 +161,7 @@ OpcUaCore::OpcUaCore(QObject *parent)
 
     // Make sure that reconnects also re-monitor all previously monitored nodes
     QObject::connect(m_client, &QOpcUaClient::connected, this, [this]() {
+        QMutexLocker locker(&m_mutex);
         emit connected();
         m_reconnecting = false; // stop ongoing reconnect attempts
         m_reconnectionAttempt = 0;
@@ -177,6 +179,7 @@ OpcUaCore::OpcUaCore(QObject *parent)
 
     // Immediately reconnect upon getting disconnected, with increasing interval
     QObject::connect(m_client, &QOpcUaClient::disconnected, this, [this]() {
+        QMutexLocker locker(&m_mutex);
         emit disconnected();
 
         if (m_ignoreNextDisconnect) {
@@ -198,6 +201,7 @@ OpcUaCore::OpcUaCore(QObject *parent)
         reconnectTimer->setSingleShot(true);
 
         QObject::connect(reconnectTimer, &QTimer::timeout, this, [this, reconnectTimer]() {
+            QMutexLocker locker(&m_mutex);
             if (this->isClientConnected()) {
                 m_reconnecting = false;
                 reconnectTimer->deleteLater();
@@ -251,6 +255,7 @@ OpcUaCore::OpcUaCore(QObject *parent)
 
     // Debug all connectErrors and handle specific ones, e.g. for failed certificate trust
     QObject::connect(m_client, &QOpcUaClient::connectError, this, [&](QOpcUaErrorState *state) {
+        QMutexLocker locker(&m_mutex);
         QString statusCodeString = QMetaEnum::fromType<QOpcUa::UaStatusCode>().valueToKey(
             state->errorCode());
         QString errorMessage = "connectError: 0x" + QString::number(state->errorCode(), 16) + " ["
@@ -292,6 +297,7 @@ OpcUaCore::OpcUaCore(QObject *parent)
     // Debug all other errors with a somewhat useful description
     QObject::connect(
         m_client, &QOpcUaClient::errorChanged, this, [this](QOpcUaClient::ClientError error) {
+            QMutexLocker locker(&m_mutex);
             QString errorMessage = "Client error: ";
 
             if (error == QOpcUaClient::ClientError::InvalidUrl) {
@@ -333,6 +339,7 @@ OpcUaCore::OpcUaCore(QObject *parent)
 
 OpcUaCore::~OpcUaCore()
 {
+    QMutexLocker locker(&m_mutex);
 #ifdef QT_OPCUA_X509
     m_certificateDialog->deleteLater();
 #endif
@@ -611,6 +618,8 @@ bool OpcUaCore::connectOpc(const QString &url)
         [this, conn](const QVector<QOpcUaEndpointDescription> &returnedEndpoints,
                      QOpcUa::UaStatusCode status,
                      const QUrl &url) {
+            QMutexLocker locker(&m_mutex);
+
             QObject::disconnect(*conn);
             delete conn;
 
@@ -653,6 +662,7 @@ bool OpcUaCore::connectOpc(const QString &url)
 
 void OpcUaCore::disconnectOpc()
 {
+    QMutexLocker locker(&m_mutex);
     if (m_client && m_client->state() != QOpcUaClient::ClientState::Disconnected) {
         VERBOSELOG("Disconnecting from OPC UA Server....");
         // This next disconnect should not be reconnnected
@@ -704,6 +714,8 @@ void OpcUaCore::startMonitoringOfNode(QOpcUaNode *node)
     auto conn = new QMetaObject::Connection;
     *conn
         = QObject::connect(node, &QOpcUaNode::attributeRead, this, [=](QOpcUa::NodeAttributes attrs) {
+              QMutexLocker locker(&m_mutex);
+
               QObject::disconnect(*conn);
               delete conn;
 
@@ -894,6 +906,7 @@ bool OpcUaCore::writeDataDynamically(QOpcUaNode *node,
                              &QOpcUaNode::attributeRead,
                              this,
                              [=](QOpcUa::NodeAttributes attrs) {
+                                 QMutexLocker locker(&m_mutex);
                                  QObject::disconnect(*conn);
                                  delete conn;
                                  if (!attrs.testFlag(QOpcUa::NodeAttribute::Value)) {
