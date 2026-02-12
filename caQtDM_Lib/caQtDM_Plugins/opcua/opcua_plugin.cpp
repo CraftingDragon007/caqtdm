@@ -150,15 +150,16 @@ int OPCUAPlugin::initCommunicationLayer(MutexKnobData *data,
 
 void OPCUAPlugin::copyStringToDataB(knobData &kData, const QString &newValue) const
 {
-    if (kData.edata.dataB && kData.edata.dataSize != (newValue.length() + 1)) {
+    QByteArray newValueBytes = newValue.toUtf8();
+    if (kData.edata.dataB && kData.edata.dataSize != (newValueBytes.size() + 1)) {
         free(kData.edata.dataB);
         kData.edata.dataB = Q_NULLPTR;
     }
     if (!kData.edata.dataB) {
-        kData.edata.dataSize = newValue.length() + 1;
+        kData.edata.dataSize = newValueBytes.size() + 1;
         kData.edata.dataB = malloc(static_cast<size_t>(kData.edata.dataSize));
     }
-    memcpy(kData.edata.dataB, newValue.toUtf8().data(), static_cast<size_t>(kData.edata.dataSize));
+    memcpy(kData.edata.dataB, newValueBytes.constData(), static_cast<size_t>(kData.edata.dataSize));
 }
 
 bool OPCUAPlugin::isGeneralUsernamePassword(const QString &pv) const

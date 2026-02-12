@@ -554,7 +554,7 @@ QOpcUaEndpointDescription OpcUaCore::chooseEndpointDescription(
     for (QVector<QOpcUaEndpointDescription> *endpointList :
          {&certificateEndpoints, &usernamePasswordEndpoints, &anonymousEndpoints}) {
         if (!endpointList->isEmpty()
-            && std::any_of(endpointList->constBegin(),
+            && !std::any_of(endpointList->constBegin(),
                            endpointList->constEnd(),
                            [&fallbackUrl](const QOpcUaEndpointDescription &ep) {
                                return ep.endpointUrl() == fallbackUrl.toString();
@@ -645,9 +645,13 @@ void OpcUaCore::disconnectOpc()
         VERBOSELOG("Disconnecting from OPC UA Server....");
         QEventLoop loop;
         QObject::connect(m_client, &QOpcUaClient::disconnected, &loop, &QEventLoop::quit);
+        QTimer timer(this);
+        timer.setSingleShot(true);
+        QObject::connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
         // This next disconnect should not be reconnnected
         m_ignoreNextDisconnect = true;
         m_client->disconnectFromEndpoint();
+        timer.start(m_maxLatency * 2);
         loop.exec();
     } else {
         VERBOSELOG("Client not connected or already disconnected.");
@@ -668,7 +672,7 @@ void OpcUaCore::subscribeToNode(const SubscriptionSettings &subscriptionSettings
     if (m_subscriptionNodes.contains(nodeId)) {
         // In case we already have it and there is a value available, emit it in case the old subscription was lost
         if (m_subscriptionNodes[nodeId]->valueAttribute().isValid()) {
-            QString URI = nodeId + "/" + m_latestEndpoint;
+            QString URI = m_latestEndpoint + "/" + nodeId;
             emit valueRead(URI, m_subscriptionNodes[nodeId]->valueAttribute());
         }
         return;

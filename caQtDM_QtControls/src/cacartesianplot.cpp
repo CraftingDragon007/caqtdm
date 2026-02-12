@@ -23,9 +23,9 @@
  *    erik.schwarz@psi.ch
  */
 
-#include "qclipboard.h"
 #if defined(_MSC_VER)
 #define NOMINMAX
+#include <QClipboard>
 #include <windows.h>
 #define QWT_DLL
 #endif

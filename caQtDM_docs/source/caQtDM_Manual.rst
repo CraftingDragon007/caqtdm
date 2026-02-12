@@ -1,4 +1,4 @@
-﻿==============
+==============
 caQtDM Manual
 ==============
 
@@ -2945,7 +2945,7 @@ Then caQtDM will get the environment variable after "environment://", in this ca
 Epics 3 Plugin
 ~~~~~~~~~~~~~~~~~~~~~
 
-Ussage: ``epics3://CHANNEL``
+Usage: ``epics3://CHANNEL``
 
 TBD
 
@@ -3019,7 +3019,7 @@ Authentication:
 		You can also specify the username and password using caQtDM widgets, to have it runtime-only. For this, you can use the channels ``opcua://username`` and ``opcua://password``.
 		These are writeable like regular channels, and the username is readable. The password channel won't show it's value in the UI. The written value will be saved, but a placeholder displayed on the UI. These channels are only accessible to the local caQtDM process.
 		If those channels are updated, all hosts that don't have host-specific credentials will have all their connections refreshed. This also means that every host you connect to will be given those credentials.
-		To specify credentials only for one specific host, add it (including protocol & port) before ``/username`` or ``/password``. so e.g. ``opcua://opc.tcp://localhost:4840/username`` and ``opcua://opc.tcp://localhost:4840/password``.
+		To specify credentials only for one specific host, add it (EXCLUDING protocol &  INCLUDING port) before ``/username`` or ``/password``. so e.g. ``opcua://localhost:4840/username`` and ``opcua://localhost:4840/password``.
 		This way, you can input credentials at runtime, which will only be used for a specific host, others won't see it. But again, it may be transmitted in plain text.
 	- Certificate Authentication | The recommended way.
 		DISCLAIMER: Certificate authentication in the sense of OPC UA isn't officially supported, as none of the test systems supported it, so it wasn't tested. It might not work due to QtOpcUa appearing to lack some functionality required, but feel free to try it. If you can test it, please send us the results!
@@ -3580,7 +3580,7 @@ When no industry standard is available, caQtDM uses the Combination ``Ctrl+Alt``
 **CSV Copy and Paste**
 
 In caWaveTable, it is possible to copy and paste the contained data as CSV, using the context menu.
-Paste is only available if read-access is available. Pasting works with the same format as returned by copying.
+Paste is only available if write-access is available. Pasting works with the same format as returned by copying.
 Pasting internally does the same as if you manually updated each cell and input the new value.
 
 By default, the column separator is a comma (,) and the row separator is a newline (\n).
