@@ -378,7 +378,7 @@ void caWaveTable::pasteDataCSV()
         }
     }
 
-    if (!text.contains(csvSeparator)) {
+    if (!text.contains(csvSeparator) && colcount + rowcount > 1) {
         emit messageWindowOutput(QtCriticalMsg, "caWaveTable: When pasting user input, no CSV separators were found, aborting. CSV separator is: <" + QString(csvSeparator) + "> and can be defined via: CAQTDM_CSV_SEPARATOR env");
         return;
     }
