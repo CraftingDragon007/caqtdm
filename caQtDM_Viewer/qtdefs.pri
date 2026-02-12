@@ -178,8 +178,8 @@ qtHaveModule(opcua) {
     message("Configuring build to include opcua plugin")
 	CONFIG += opcua
 
-    QT_OPCUA_ENCRYPTION_HEADER = $$quote(QtOpcUa/QOpcUaX509CertificateSigningRequest)
-	exists($$[QT_INSTALL_HEADERS]/$$QT_OPCUA_ENCRYPTION_HEADER) {
+    QT_OPCUA_ENCRYPTION_HEADER = QtOpcUa/QOpcUaX509CertificateSigningRequest
+	exists($$quote($$[QT_INSTALL_HEADERS]/$$QT_OPCUA_ENCRYPTION_HEADER)) {
 	    DEFINES += QT_OPCUA_X509
 		message("Building opcua plugin with encryption.")
 	} else {

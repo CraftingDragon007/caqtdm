@@ -1,6 +1,6 @@
 /*
  *  This file is part of the caQtDM Framework, it was developed in collaboration with
- *  the University of Lucerene (HSLU) as an Economy Project and the Paul Scherrer Institut.
+ *  the University of Lucerne (HSLU) as an Economy Project and the Paul Scherrer Institut.
  *
  *  The caQtDM Framework is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
