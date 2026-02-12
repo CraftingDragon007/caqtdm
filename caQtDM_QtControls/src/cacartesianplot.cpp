@@ -25,13 +25,13 @@
 
 #if defined(_MSC_VER)
 #define NOMINMAX
-#include <QClipboard>
 #include <windows.h>
 #define QWT_DLL
 #endif
 
 #include "cacartesianplot.h"
 #include "plotHelperClasses.h"
+#include <QClipboard>
 #include <QtCore>
 #include <QGuiApplication>
 
