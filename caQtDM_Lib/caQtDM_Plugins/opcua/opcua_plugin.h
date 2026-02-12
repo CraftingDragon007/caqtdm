@@ -172,7 +172,7 @@ public:
     /**
      * @brief Disconnects the endpoint associated to a variable (not just the variable itself)
      * @param kData: knobData containing the pv with the endpoint encoded in it
-     * @return false if the pv is a valid connection string, else true
+     * @return false if the endpoint is not a valid connection string, else true
      */
     int pvDisconnect(knobData *kData);
     /**
