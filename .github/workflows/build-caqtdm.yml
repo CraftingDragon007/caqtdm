@@ -163,9 +163,8 @@ jobs:
         rm -rf "$SRC"
         git clone https://code.qt.io/qt/qtopcua.git "$SRC"
         cd "$SRC"
-        git fetch --tags
-        LATEST_TAG=$(git tag -l | sort -V | tail -n1)
-        git checkout "$LATEST_TAG"
+        QT_VERSION=$(qmake6 -query QT_VERSION)
+        git checkout "v$QT_VERSION"
 
         mkdir build
         cd build
