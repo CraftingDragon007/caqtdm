@@ -30,6 +30,8 @@
 #include <QSplashScreen>
 #include <QApplication>
 #include <QScreen>
+#include <QDate>
+#include <QTime>
 
 #include "caQtDM_Lib_global.h"
 
