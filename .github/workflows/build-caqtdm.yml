@@ -163,7 +163,9 @@ jobs:
         rm -rf "$SRC"
         git clone https://code.qt.io/qt/qtopcua.git "$SRC"
         cd "$SRC"
-        git checkout v6.10.1
+        git fetch --tags
+        LATEST_TAG=$(git tag -l | sort -V | tail -n1)
+        git checkout "$LATEST_TAG"
 
         mkdir build
         cd build
