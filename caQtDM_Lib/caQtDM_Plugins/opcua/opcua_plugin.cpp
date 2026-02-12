@@ -798,8 +798,7 @@ int OPCUAPlugin::pvClearEvent(void *ptr)
 
     QMutexLocker locker(&m_mutex);
     if (m_cores.contains(endpoint)) {
-        m_cores[endpoint]->disableMonitoringForNode(nodeId);
-        VERBOSELOG("Paused monitoring for" << nodeId);
+        m_cores[endpoint]->unsubscribeFromNode(nodeId);
     }
 
     return true;
@@ -827,7 +826,6 @@ int OPCUAPlugin::pvAddEvent(void *ptr)
     QMutexLocker locker(&m_mutex);
     if (m_cores.contains(endpoint)) {
         m_cores[endpoint]->subscribeToNode(pendingSubscription);
-        VERBOSELOG("Resumed monitoring for" << nodeId);
     }
 
     return true;

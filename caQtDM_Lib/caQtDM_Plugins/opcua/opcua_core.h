@@ -106,11 +106,6 @@ public:
      */
     void unsubscribeFromNode(const QString &nodeId);
     /**
-     * @brief disables monitoring for a node
-     * @param nodeId: the nodeId to disable monitoring for
-     */
-    void disableMonitoringForNode(const QString &nodeId);
-    /**
      * @brief Tries to write a simple value via OpcUa, based on previously received value from the node
      * @param nodeId: nodeId to write the value to
      * @param rdata: double data (8 bytes)
@@ -277,16 +272,25 @@ private:
      */
     QOpcUaEndpointDescription chooseEndpointDescription(
         const QVector<QOpcUaEndpointDescription> &endpointDescriptions, const QUrl &fallbackUrl);
-    /**
-     * @brief Checks if the clients state is connected
-     * @return true if the client is initialized and its state() is Connected, else false
-     */
-    bool isClientConnected() const;
+
     /**
      * @brief Starts monitoring an already configured node
      * @param node: Node to monitor
      */
     void startMonitoringOfNode(QOpcUaNode *node);
+
+    /**
+     * @brief disables monitoring for a node
+     * @param nodeId: the nodeId to disable monitoring for
+     */
+    void disableMonitoringForNode(const QString &nodeId);
+
+    /**
+     * @brief Checks if the clients state is connected
+     * @return true if the client is initialized and its state() is Connected, else false
+     */
+    bool isClientConnected() const;
+
     /**
      * @brief Checks the previously read value from a node and updates it using the provided function
      * @param node: Node to read/update the value for

@@ -669,7 +669,7 @@ void OpcUaCore::subscribeToNode(const SubscriptionSettings &subscriptionSettings
         return;
     }
 
-    if (m_subscriptionNodes.contains(nodeId)) {
+    if (m_subscriptionNodes.contains(nodeId) && m_activelyMonitoredNodes.contains(nodeId)) {
         // In case we already have it and there is a value available, emit it in case the old subscription was lost
         if (m_subscriptionNodes[nodeId]->valueAttribute().isValid()) {
             QString URI = m_latestEndpoint + "/" + nodeId;
@@ -780,6 +780,17 @@ void OpcUaCore::startMonitoringOfNode(QOpcUaNode *node)
                          | QOpcUa::NodeAttribute::Value | QOpcUa::NodeAttribute::Description);
 }
 
+void OpcUaCore::disableMonitoringForNode(const QString &nodeId)
+{
+    m_activelyMonitoredNodes.remove(nodeId);
+    if (!m_subscriptionNodes.contains(nodeId))
+        return;
+    QOpcUaNode *node = m_subscriptionNodes[nodeId];
+    if (node) {
+        node->disableMonitoring(QOpcUa::NodeAttribute::Value);
+    }
+}
+
 void OpcUaCore::clearAllSubscriptions()
 {
     for (auto it = m_subscriptionNodes.begin(); it != m_subscriptionNodes.end(); ++it) {
@@ -826,17 +837,6 @@ void OpcUaCore::unsubscribeFromNode(const QString &nodeId)
 
     if (node) {
         node->deleteLater();
-    }
-}
-
-void OpcUaCore::disableMonitoringForNode(const QString &nodeId)
-{
-    m_activelyMonitoredNodes.remove(nodeId);
-    if (!m_subscriptionNodes.contains(nodeId))
-        return;
-    QOpcUaNode *node = m_subscriptionNodes[nodeId];
-    if (node) {
-        node->disableMonitoring(QOpcUa::NodeAttribute::Value);
     }
 }
 
