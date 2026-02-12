@@ -34,7 +34,10 @@
 #include "qmetaobject.h"
 #include "qopcuaauthenticationinformation.h"
 #include "qtcpsocket.h"
+
+#ifdef QT_OPCUA_X509
 #include "x509certificate.h"
+#endif
 
 #include <QMutex>
 
@@ -403,9 +406,16 @@ void OpcUaCore::setupPkiConfig()
     }
 #endif
 
+#ifdef QT_OPCUA_X509
     if (createCertificate && !X509Certificate::createCertificate(pkiPath)) {
         VERBOSELOG("Could not create certificate at: " << pkiPath);
     }
+#else
+    if (createCertificate) {
+        VERBOSELOG("Could not create certificate, not X509 capabilities");
+        return;
+    }
+#endif
 
     pkiConfig.setClientCertificateFile(certFileName);
     pkiConfig.setPrivateKeyFile(privateKeyFileName);
