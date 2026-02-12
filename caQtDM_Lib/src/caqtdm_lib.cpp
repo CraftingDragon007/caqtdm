@@ -9067,7 +9067,7 @@ long CaQtDM_Lib::getLongValueFromString(char *textValue, FormatType fType, char 
         } else if(strlen(textValue) > (size_t) 1 && textValue[0] == 'O') {
             // Same as for regular octal conversion
             textValue[0] = '0';
-            return strtoul(textValue, end, 16);
+            return strtoul(textValue, end, 8);
         } else {
             return strtol(textValue, end, 10);
         }
