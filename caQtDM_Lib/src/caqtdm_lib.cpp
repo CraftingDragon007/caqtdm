@@ -7673,6 +7673,13 @@ void CaQtDM_Lib::closeEvent(QCloseEvent* ce)
 {
     Q_UNUSED(ce);
 
+    QString thisFileName =  property("fileString").toString().section('/',-1);
+    QString launchFile = (QString) qgetenv("CAQTDM_LAUNCHFILE");
+    bool doIosExit = false;
+    if(thisFileName.contains(launchFile)) {
+        doIosExit = true;
+    }
+
     killTimer(loopTimerID);
 
     AllowsUpdate = false;
@@ -7721,9 +7728,7 @@ void CaQtDM_Lib::closeEvent(QCloseEvent* ce)
     mutexKnobDataP->initHighestCountPV();
 
     // in case of network launcher, close the application when launcher window is closed
-    QString thisFileName =  property("fileString").toString().section('/',-1);
-    QString launchFile = (QString)  qgetenv("CAQTDM_LAUNCHFILE");
-    if(thisFileName.contains(launchFile)) {
+    if(doIosExit) {
         emit Signal_IosExit();
     }
 }
