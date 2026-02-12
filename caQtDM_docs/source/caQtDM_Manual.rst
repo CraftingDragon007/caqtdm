@@ -2975,7 +2975,7 @@ Secure Communication using Signing / Encryption:
 	Generally speaking, the client will go through all available endpoints, choosing the one with the highest security to establish a connection.
 	Encryption & signing keys are generated the first time the plugin is loaded and stored in your local app data location. For signing, you may have to trust the client's certificate on the server first. For that, see the ``Certificate Authentication`` section below.
 	Due to a limitation in Qt-OpcUa, connections are currently only possible to endpoints supporting SecurityPolicy#None. This is because QtOpcUa always uses that SecurityPolicy for the initial connection, while discovering available endpoints. So even if it's required, the actual communication won't use that SecurityPolicy, if another is available.
-	It may be worth to implement a workaround in the future, allowing for a hardcoded endpoint description (skipping the discovery forcing SecurityPolicy#None).
+	It may be worth to implement a workaround in the future, allowing for a hardcoded endpoint description (skipping the discovery forcing SecurityPolicy#None). Feel free to open an issue if that is the case.
 	CAUTION: While Qt-6 prompts you to accept / reject unknown server certificates (unless overwritten via envs), Qt-5 doesn't do that. So you have no guarantee that the server you are connecting to has a trusted certificate.
 
 Authentication:
@@ -2991,6 +2991,8 @@ Authentication:
 		To specify credentials only for one specific host, add it (including protocol & port) before ``/username`` or ``/password``. so e.g. ``opcua://opc.tcp://localhost:4840/username`` and ``opcua://opc.tcp://localhost:4840/password``.
 		This way, you can input credentials at runtime, which will only be used for a specific host, others won't see it. But again, it may be transmitted in plain text.
 	- Certificate Authentication | The recommended way.
+		DISCLAIMER: Certificate authentication in the sense of OPC UA isn't officially supported, as none of the test systems supported it, so it wasn't tested. It might not work due to QtOpcUa appearing to lack some functionality required, but feel free to try it. If you can test it, please send us the results!
+		DISCLAIMER: The section below is how it should work, and how it does work for regular secure communication (but anonymous / username/password access).
 		To be safe, prefer certificate authentication, if possible. 
 		If encryption is available for your plugin version, it will automatically create a PKI configuration. So if you are connecting to a host that supports certificate authentication, it will try to connect using your config.
 		You can either find the certificate in your local app data directory (``QStandardPaths::AppLocalDataLocation``) or in most OPC UA servers it will show attempted certificates in the settings, so you can simply try to connect once, then add the certificate to the server allow-list and retry the connection.
