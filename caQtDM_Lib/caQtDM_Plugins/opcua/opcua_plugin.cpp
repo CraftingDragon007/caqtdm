@@ -68,7 +68,7 @@ int OPCUAPlugin::initCommunicationLayer(MutexKnobData *data,
 
     QStringList opcua_database_files;
 
-    QString url = (QString) qgetenv("CAQTM_URL_DISPLAY_PATH");
+    QString url = (QString) qgetenv("CAQTDM_URL_DISPLAY_PATH");
     QString database_file = (QString) qgetenv("CAQTDM_OPCUA_DATABASE");
 
     opcua_database_files.append(database_file.split(","));

@@ -2906,7 +2906,7 @@ Channel Handling:
 	- .maxY: ``archiveHTTP://CHANNEL.maxY`` - in case of binned data: the maximum values for each bin
 
 Usage in caCartesianPlot:
-	The plugin is primarely meant to be used in combination with the caCartesianPlot widget.
+	The plugin is primarily meant to be used in combination with the caCartesianPlot widget.
 	To use it there, simply specify both virtual channels (as described above) in the channelList, first .X, then .Y/.minY/.maxY.
 	An example would be: archiveHTTP://SGE-CCOL-01787:VALVEPOSITION.X;archiveHTTP://SGE-CCOL-01787:VALVEPOSITION.Y
 	If you want to map Y-values not to time, but to their increasing indices, you can leave the first channel empty. In the designer, this is simply an empty entry in the channelList.
@@ -2915,9 +2915,9 @@ Configuration:
 	The plugin is mainly configured using dynamic properties, as listed below. All dynamic properties, no matter the content, are default string values.
 	
 	- backend: The backend name given to the data api when fetching the channel. Has to correspond to one of these: <https://data-api.psi.ch/api/4/backend/list>
-	- nrOfBins: The desired number of bins. The actual number might be different, but data api tries to get as close as possible, while keeping some constraints for optimization/alignment purposes. To request raw data, dont specify this or set it to -1.
+	- nrOfBins: The desired number of bins. The actual number might be different, but data api tries to get as close as possible, while keeping some constraints for optimization/alignment purposes. To request raw data, don't specify this or set it to -1.
 	- secondsPast: The time interval that should be requested, in seconds. So if you want to display 10 minutes of data, set this to 600
-	- secondsUpdate: The interval, in which new data should be requested, so the fetch interval. If you want to request new data all 2 mintues, set this to 120. Cannot be lower than 10 seconds.
+	- secondsUpdate: The interval, in which new data should be requested, so the fetch interval. If you want to request new data all 2 minutes, set this to 120. Cannot be lower than 10 seconds.
 	- archiverIndex: Allows for overriding the hostname to use for data-api. Should generally not be changed unless you know exactly what you are doing.
 	
 	Also have a look at the :ref:`environment variables <env.var>` for additional options.
