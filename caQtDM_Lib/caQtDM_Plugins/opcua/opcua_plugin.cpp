@@ -1,6 +1,6 @@
 /*
- *  This file is part of the caQtDM Framework, it was developed in colaboration with
- *  the University of Lucerene (HSLU) as a Economy Project and the Paul Scherrer Institut.
+ *  This file is part of the caQtDM Framework, it was developed in collaboration with
+ *  the University of Lucerene (HSLU) as an Economy Project and the Paul Scherrer Institut.
  *
  *  The caQtDM Framework is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -15,12 +15,14 @@
  *  You should have received a copy of the GNU General Public License
  *  along with the caQtDM Framework.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  Copyright (c) 2025
+ *  Copyright (c) 2026
  *
  *  Authors:
- *    Hrvat Leo
- *    Joel Müller
+ *    Erik Schwarz - PSI
+ *    Hrvat Leo - HSLU
+ *    Joel Müller - HSLU
  */
+
 #include "opcua_plugin.h"
 #include <QDebug>
 #include <QOpcUaMultiDimensionalArray>
@@ -89,7 +91,6 @@ int OPCUAPlugin::initCommunicationLayer(MutexKnobData *data,
         }
         searchFile *s = new searchFile(opcua_database_file);
         QString fileNameFound = s->findFile();
-
         delete s;
 
         if (fileNameFound.isEmpty()) {
@@ -125,7 +126,7 @@ int OPCUAPlugin::initCommunicationLayer(MutexKnobData *data,
             file.close();
 
             if (m_messageWindowP) {
-                QString msg = "OPCUA: Loaded database file: " + opcua_database_file;
+                msg = "OPCUA: Loaded database file: " + opcua_database_file;
                 m_messageWindowP->postMsgEvent(QtDebugMsg, msg.toUtf8().data());
             }
         }
@@ -147,7 +148,7 @@ int OPCUAPlugin::initCommunicationLayer(MutexKnobData *data,
     return true;
 }
 
-void OPCUAPlugin::copyStringToDataB(knobData &kData, const QString &newValue)
+void OPCUAPlugin::copyStringToDataB(knobData &kData, const QString &newValue) const
 {
     if (kData.edata.dataB && kData.edata.dataSize != (newValue.length() + 1)) {
         free(kData.edata.dataB);
@@ -160,12 +161,12 @@ void OPCUAPlugin::copyStringToDataB(knobData &kData, const QString &newValue)
     memcpy(kData.edata.dataB, newValue.toUtf8().data(), static_cast<size_t>(kData.edata.dataSize));
 }
 
-bool OPCUAPlugin::isGeneralUsernamePassword(const QString &pv)
+bool OPCUAPlugin::isGeneralUsernamePassword(const QString &pv) const
 {
     return (pv == "username" || pv == "password");
 }
 
-bool OPCUAPlugin::isSpecificUsernamePassword(const QString &pv)
+bool OPCUAPlugin::isSpecificUsernamePassword(const QString &pv) const
 {
     if (!pv.endsWith("/username") && !pv.endsWith("/password")) {
         return false;
@@ -178,7 +179,7 @@ bool OPCUAPlugin::isSpecificUsernamePassword(const QString &pv)
     return true;
 }
 
-bool OPCUAPlugin::isPemPassword(const QString &pv)
+bool OPCUAPlugin::isPemPassword(const QString &pv) const
 {
     return pv == "pem_password";
 }
@@ -243,7 +244,7 @@ int OPCUAPlugin::initializeCredentialsPV(int index)
     return true;
 }
 
-bool OPCUAPlugin::isPasswordCredentialsValid(const PasswordCredentials &credentialsToCheck)
+bool OPCUAPlugin::isPasswordCredentialsValid(const PasswordCredentials &credentialsToCheck) const
 {
     return (!credentialsToCheck.username.isEmpty() && !credentialsToCheck.password.isEmpty());
 }
@@ -517,7 +518,7 @@ int OPCUAPlugin::pvFreeAllocatedData(knobData *kData)
     return true;
 }
 
-QString OPCUAPlugin::getHostFromSpecificUsernamePassword(const QString &pv)
+QString OPCUAPlugin::getHostFromSpecificUsernamePassword(const QString &pv) const
 {
     QString host = pv;
     host.remove(pv.length() - 9, 9);
@@ -914,7 +915,7 @@ int OPCUAPlugin::TerminateIO()
     return true;
 }
 
-bool OPCUAPlugin::resolveConnectionString(char *pv, QString &endpoint, QString &nodeId)
+bool OPCUAPlugin::resolveConnectionString(char *pv, QString &endpoint, QString &nodeId) const
 {
     QString plainKey = QString::fromUtf8(pv);
 
@@ -960,7 +961,9 @@ bool OPCUAPlugin::resolveConnectionString(char *pv, QString &endpoint, QString &
 #define QT_VARIANT_TYPE(value) value.type()
 #endif
 
-caType OPCUAPlugin::generateCaTypeFromVariant(const QVariant &value, bool &isArray, bool &isMatrix)
+caType OPCUAPlugin::generateCaTypeFromVariant(const QVariant &value,
+                                              bool &isArray,
+                                              bool &isMatrix) const
 {
     isArray = false;
     QVariant valueToCheck = value;
@@ -1198,7 +1201,7 @@ void OPCUAPlugin::updateKnobDataWithAccessLevel(knobData &kData,
     kData.edata.accessW = accessW;
 }
 
-int OPCUAPlugin::getUpdateIntervalFromKnobData(knobData *kData)
+int OPCUAPlugin::getUpdateIntervalFromKnobData(knobData *kData) const
 {
     if (!kData) {
         if (m_messageWindowP) {

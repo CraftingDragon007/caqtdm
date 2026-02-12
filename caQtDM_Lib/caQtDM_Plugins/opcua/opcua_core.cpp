@@ -1,6 +1,6 @@
 /*
- *  This file is part of the caQtDM Framework, it was developed in colaboration with
- *  the University of Lucerene (HSLU) as a Economy Project and the Paul Scherrer Institut.
+ *  This file is part of the caQtDM Framework, it was developed in collaboration with
+ *  the University of Lucerene (HSLU) as an Economy Project and the Paul Scherrer Institut.
  *
  *  The caQtDM Framework is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -15,11 +15,12 @@
  *  You should have received a copy of the GNU General Public License
  *  along with the caQtDM Framework.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  Copyright (c) 2025
+ *  Copyright (c) 2026
  *
  *  Authors:
- *    Hrvat Leo
- *    Joel Müller
+ *    Erik Schwarz - PSI
+ *    Hrvat Leo - HSLU
+ *    Joel Müller - HSLU
  */
 
 #include "opcua_core.h"
@@ -110,14 +111,17 @@ OpcUaCore::OpcUaCore(QObject *parent)
             clearPkiConfig();
         }
 
+        // Won't overwrite any existing, valid PKI config
         setupPkiConfig();
     }
 
+    // Handle encrypted private keys having to be decrypted
     QObject::connect(m_client,
                      &QOpcUaClient::passwordForPrivateKeyRequired,
                      this,
                      [this](QString keyFilePath, QString *password, bool previousTryWasInvalid) {
                          Q_UNUSED(keyFilePath);
+                         // Skipped the first time
                          if (previousTryWasInvalid) {
                              if (*password != NOPASS_PLACEHOLDER) {
                                  // Maybe the user specified a password but this pki config was created without one
@@ -134,6 +138,7 @@ OpcUaCore::OpcUaCore(QObject *parent)
                              return;
                          }
 
+                         // Try runtime-provided PEM password
                          if (!m_pemPassword.isEmpty()) {
                              *password = m_pemPassword;
                              VERBOSELOG("Using explicitely provided password via "
@@ -141,13 +146,16 @@ OpcUaCore::OpcUaCore(QObject *parent)
                              return;
                          }
 
+                         // Try environment-variable-provided PEM password
                          QString pemPassword = qgetenv("CAQTDM_OPCUA_PEM_PASSWORD");
                          if (pemPassword.isEmpty()) {
+                             // or fallback to default PEM password (the case if the user doesn't specify anything else)
                              pemPassword = NOPASS_PLACEHOLDER;
                          }
                          *password = pemPassword;
                      });
 
+    // Make sure that reconnects also re-monitor all previously monitored nodes
     QObject::connect(m_client, &QOpcUaClient::connected, this, [this]() {
         emit connected();
         m_reconnecting = false; // stop ongoing reconnect attempts
@@ -164,7 +172,7 @@ OpcUaCore::OpcUaCore(QObject *parent)
 
     m_ignoreNextDisconnect = false;
 
-    // Handler to reconnect upon disconnections
+    // Immediately reconnect upon getting disconnected, with increasing interval
     QObject::connect(m_client, &QOpcUaClient::disconnected, this, [this]() {
         emit disconnected();
 
@@ -219,6 +227,7 @@ OpcUaCore::OpcUaCore(QObject *parent)
         reconnectTimer->start(0);
     });
 
+    // Figure out what to do when server certificate is untrusted
     m_certificateTrustFailedAction = CertificateTrustFailedAction::Prompt;
     bool ignoreUntrustedCertificates = !qgetenv("CAQTDM_OPCUA_IGNORE_UNTRUSTED_CERT").isEmpty();
     bool rejectUntrustedCertificates = !qgetenv("CAQTDM_OPCUA_REJECT_UNTRUSTED_CERT").isEmpty();
@@ -228,6 +237,7 @@ OpcUaCore::OpcUaCore(QObject *parent)
         m_certificateTrustFailedAction = CertificateTrustFailedAction::Abort;
     }
 
+    // Make sure shutdowns reject ongoing certificate validations
 #ifdef QT_OPCUA_X509
     m_certificateDialog = new CertificateDialog(Q_NULLPTR);
     QObject::connect(qApp,
@@ -236,6 +246,7 @@ OpcUaCore::OpcUaCore(QObject *parent)
                      &CertificateDialog::reject);
 #endif
 
+    // Debug all connectErrors and handle specific ones, e.g. for failed certificate trust
     QObject::connect(m_client, &QOpcUaClient::connectError, this, [&](QOpcUaErrorState *state) {
         QString statusCodeString = QMetaEnum::fromType<QOpcUa::UaStatusCode>().valueToKey(
             state->errorCode());
@@ -259,6 +270,7 @@ OpcUaCore::OpcUaCore(QObject *parent)
         if (state->errorCode() == QOpcUa::UaStatusCode::BadCertificateUntrusted
             && m_certificateTrustFailedAction == CertificateTrustFailedAction::Prompt
             && !m_certificateDialog->isVisible()) {
+            // Prompt user to ignore / reject / trust unknown server certificate
             errorMessage = tr("Server certificate validation failed with error 0x%1 (%2).\nClick "
                               "'Abort' to abort the connect, or 'Ignore' to continue connecting. "
                               "Click 'Trust' to connect and remember this certificate.")
@@ -274,6 +286,7 @@ OpcUaCore::OpcUaCore(QObject *parent)
 #endif
     });
 
+    // Debug all other errors with a somewhat useful description
     QObject::connect(
         m_client, &QOpcUaClient::errorChanged, this, [this](QOpcUaClient::ClientError error) {
             QString errorMessage = "Client error: ";
@@ -311,6 +324,7 @@ OpcUaCore::OpcUaCore(QObject *parent)
             VERBOSELOG(errorMessage);
         });
 
+    // This prevents 'lost' connections leading to sessions staying open on the server, which can lead to denial of service if the server limits the amount of concurrent sessions.
     QObject::connect(qApp, &QCoreApplication::aboutToQuit, this, &OpcUaCore::disconnectOpc);
 }
 
@@ -358,6 +372,7 @@ void OpcUaCore::setupPkiConfig()
     pkiConfig.setIssuerListDirectory(pkiPath + "/issuers/certs");
     pkiConfig.setIssuerRevocationListDirectory(pkiPath + "/issuers/crl");
 
+    // Set up all directories, including those for private key / certificate, even if no such key can be generated, in case the user wants to copy a custom one there.
     const QStringList toCreate = {pkiConfig.trustListDirectory(),
                                   pkiConfig.revocationListDirectory(),
                                   pkiConfig.issuerListDirectory(),
@@ -370,6 +385,7 @@ void OpcUaCore::setupPkiConfig()
         }
     }
 
+    // Now try to create certificate and private key
     const QString certFileName(pkiPath + "/own/certs/caQtDM.der");
     const QString privateKeyFileName(pkiPath + "/own/private/caQtDM.pem");
 
@@ -380,7 +396,9 @@ void OpcUaCore::setupPkiConfig()
     // Qt 5 has an incorrect certificate generation, which at best fails completly
     // and worst case generates a bad certificate which produces misterious runtime errors as it doesnt match the OPC UA specificiation.
     if (createCertificate) {
-        VERBOSELOG("Certificate generation is not possible in Qt-5. If neccessary, create a certificate yourself using the script in caQtDM_Lib/caQtDM_Plugins/opcua/create_certificate.sh (see sourcecode)");
+        VERBOSELOG("Certificate generation is not possible in Qt-5. If neccessary, create a "
+                   "certificate yourself using the script in "
+                   "caQtDM_Lib/caQtDM_Plugins/opcua/create_certificate.sh (see sourcecode)");
         return;
     }
 #endif
@@ -450,7 +468,6 @@ QOpcUaEndpointDescription OpcUaCore::getEndpointWithHighestSecurity(
     QTimer timer;
     timer.setSingleShot(true);
     QObject::connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
-    QObject::connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
 
     QVector<QString> triedEndpoints;
     for (auto &description : endpointDescriptions) {
@@ -471,6 +488,8 @@ QOpcUaEndpointDescription OpcUaCore::getEndpointWithHighestSecurity(
         sock->connectToHost(url.host(), url.port());
         timer.start(m_maxLatency);
         loop.exec();
+        sock->abort();
+        sock->deleteLater();
 
         if (!chosenEndpoint.endpointUrl().isEmpty()) {
             break;
@@ -496,12 +515,13 @@ QOpcUaEndpointDescription OpcUaCore::chooseEndpointDescription(
 
     QStringList supportedSecurityPolicies = m_client->supportedSecurityPolicies();
 
-    // Get all supported endpoints
+    // Get all supported endpoints and sort them into different authentication methods (web token not supported)
     for (auto ep : endpointDescriptions) {
         if ((!isCertificateSupported
              && ep.securityMode() == QOpcUaEndpointDescription::MessageSecurityMode::None)
             || isCertificateSupported) {
-            if (!supportedSecurityPolicies.contains(ep.securityPolicy())) continue;
+            if (!supportedSecurityPolicies.contains(ep.securityPolicy()))
+                continue;
 
             if (ep.userIdentityTokensRef().isEmpty()) {
                 // No tokens specified -> no auth supported
@@ -522,6 +542,7 @@ QOpcUaEndpointDescription OpcUaCore::chooseEndpointDescription(
         }
     }
 
+    // Return early if no endpoints left after sorting
     QOpcUaEndpointDescription chosenEndpoint;
     chosenEndpoint.setEndpointUrl("");
     if (certificateEndpoints.isEmpty() && usernamePasswordEndpoints.isEmpty()
@@ -529,7 +550,7 @@ QOpcUaEndpointDescription OpcUaCore::chooseEndpointDescription(
         return chosenEndpoint;
     }
 
-    // in case any of the groups don't include the fallback url, clone the first of them with it as the endpointUrl
+    // In case any of the groups don't include the fallback url, clone the first of them with it as the endpointUrl
     for (QVector<QOpcUaEndpointDescription> *endpointList :
          {&certificateEndpoints, &usernamePasswordEndpoints, &anonymousEndpoints}) {
         if (!endpointList->isEmpty()
@@ -770,7 +791,7 @@ void OpcUaCore::clearAllSubscriptions()
     VERBOSELOG("All OPC UA subscriptions have been cleared.");
 }
 
-bool OpcUaCore::isClientConnected()
+bool OpcUaCore::isClientConnected() const
 {
     if (!m_client || m_client->state() != QOpcUaClient::Connected) {
         return false;
@@ -824,6 +845,8 @@ void OpcUaCore::disableMonitoringForNode(const QString &nodeId)
 bool OpcUaCore::writeDataDynamically(QOpcUaNode *node,
                                      std::function<QVariant(const QVariant &)> makeValue)
 {
+    // Anonymous helper to execute the write operation, taking a reference value for the correct type to cast to
+    // Uses the provided makeValue lambda which returns the effective value to write, casted to the type matching the reference type
     auto doWrite = [&](const QVariant &ref) {
         QVariant valueToWrite = makeValue(ref);
         if (!valueToWrite.isValid()) {
@@ -831,6 +854,7 @@ bool OpcUaCore::writeDataDynamically(QOpcUaNode *node,
             return;
         }
 
+        // Callback to report status
         auto conn = new QMetaObject::Connection;
         *conn = QObject::connect(node,
                                  &QOpcUaNode::attributeWritten,
@@ -848,12 +872,14 @@ bool OpcUaCore::writeDataDynamically(QOpcUaNode *node,
         node->writeValueAttribute(valueToWrite);
     };
 
+    // If any existing value has already been read, take that for reference and do write
     QVariant existingValue = node->attribute(QOpcUa::NodeAttribute::Value);
     if (existingValue.isValid()) {
         doWrite(existingValue);
         return true;
     }
 
+    // Else issue a read to get a reference attribute
     auto conn = new QMetaObject::Connection;
     *conn = QObject::connect(node,
                              &QOpcUaNode::attributeRead,
@@ -895,6 +921,7 @@ bool OpcUaCore::writeValue(
         return false;
     }
 
+    // Anonymous helper that stores the value to write, and can be invoked to return it casted to the type specified by the reference type
     auto makeValue = [=](const QVariant &ref) -> QVariant {
         switch (QT_VARIANT_TYPE(ref)) {
         case QMetaType::Double:
@@ -946,6 +973,7 @@ bool OpcUaCore::writeValues(const QString &nodeId,
         return false;
     }
 
+    // Anonymous helper that stores the value to write, and can be invoked to return it casted to the type specified by the reference type
     auto makeValue = [=](const QVariant &ref) -> QList<QVariant> {
         QList<QVariant> values;
 
@@ -1004,7 +1032,7 @@ bool OpcUaCore::writeValues(const QString &nodeId,
     return writeDataDynamically(node, makeValue);
 }
 
-QString OpcUaCore::getDescription(const QString &nodeId)
+QString OpcUaCore::getDescription(const QString &nodeId) const
 {
     QOpcUaNode *node = m_subscriptionNodes[nodeId];
     if (!node) {
@@ -1014,7 +1042,7 @@ QString OpcUaCore::getDescription(const QString &nodeId)
     return node->attribute(QOpcUa::NodeAttribute::Description).value<QOpcUaLocalizedText>().text();
 }
 
-QString OpcUaCore::getTimestamp(const QString &nodeId)
+QString OpcUaCore::getTimestamp(const QString &nodeId) const
 {
     QOpcUaNode *node = m_subscriptionNodes[nodeId];
     if (!node) {
@@ -1031,6 +1059,8 @@ void OpcUaCore::updatePasswordCredentials(const PasswordCredentials &newPassword
     authInfo.setUsernameAuthentication(newPasswordCredentials.username,
                                        newPasswordCredentials.password);
     m_client->setAuthenticationInformation(authInfo);
+
+    // Reconnect to work with updated password credentials
     if (!m_currentEndpointDescription.endpointUrl().isEmpty()) {
         m_client->connectToEndpoint(m_currentEndpointDescription);
     } else {
@@ -1041,5 +1071,6 @@ void OpcUaCore::updatePasswordCredentials(const PasswordCredentials &newPassword
 
 void OpcUaCore::setPemPassword(const QString &newPassword)
 {
+    // This is only accessed in callback with reference to m_pemPassword, so no need to trigger anything
     m_pemPassword = newPassword;
 }

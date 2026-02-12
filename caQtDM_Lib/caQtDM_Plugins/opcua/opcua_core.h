@@ -1,6 +1,6 @@
 /*
- *  This file is part of the caQtDM Framework, it was developed in colaboration with
- *  the University of Lucerene (HSLU) as a Economy Project and the Paul Scherrer Institut.
+ *  This file is part of the caQtDM Framework, it was developed in collaboration with
+ *  the University of Lucerene (HSLU) as an Economy Project and the Paul Scherrer Institut.
  *
  *  The caQtDM Framework is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -15,11 +15,12 @@
  *  You should have received a copy of the GNU General Public License
  *  along with the caQtDM Framework.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  Copyright (c) 2025
+ *  Copyright (c) 2026
  *
  *  Authors:
- *    Hrvat Leo
- *    Joel Müller
+ *    Erik Schwarz - PSI
+ *    Hrvat Leo - HSLU
+ *    Joel Müller - HSLU
  */
 
 #ifndef OPCUA_CORE_H
@@ -145,13 +146,13 @@ public:
      * @param nodeId: nodeId to get the description for
      * @return Description
      */
-    QString getDescription(const QString &nodeId);
+    QString getDescription(const QString &nodeId) const;
     /**
      * @brief Returns the timestamp for the last value received via OpcUa
      * @param nodeId: nodeId to get the timestamp for
      * @return Timestamp with date and time, millisecond-precision
      */
-    QString getTimestamp(const QString &nodeId);
+    QString getTimestamp(const QString &nodeId) const;
 
     /**
      * @brief Updates the given credentials and restarts the connection for all nodes handled by this core
@@ -280,7 +281,7 @@ private:
      * @brief Checks if the clients state is connected
      * @return true if the client is initialized and its state() is Connected, else false
      */
-    bool isClientConnected();
+    bool isClientConnected() const;
     /**
      * @brief Starts monitoring an already configured node
      * @param node: Node to monitor

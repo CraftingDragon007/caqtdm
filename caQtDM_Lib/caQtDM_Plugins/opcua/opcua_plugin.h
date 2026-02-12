@@ -1,6 +1,6 @@
 /*
- *  This file is part of the caQtDM Framework, it was developed in colaboration with
- *  the University of Lucerene (HSLU) as a Economy Project and the Paul Scherrer Institut.
+ *  This file is part of the caQtDM Framework, it was developed in collaboration with
+ *  the University of Lucerene (HSLU) as an Economy Project and the Paul Scherrer Institut.
  *
  *  The caQtDM Framework is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -15,12 +15,14 @@
  *  You should have received a copy of the GNU General Public License
  *  along with the caQtDM Framework.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  Copyright (c) 2025
+ *  Copyright (c) 2026
  *
  *  Authors:
- *    Hrvat Leo
- *    Joel Müller
+ *    Erik Schwarz - PSI
+ *    Hrvat Leo - HSLU
+ *    Joel Müller - HSLU
  */
+
 #ifndef OPCUA_PLUGIN_H
 #define OPCUA_PLUGIN_H
 
@@ -224,28 +226,28 @@ private:
      * @param knobData: knobData to copy into
      * @param value: value to copy
      */
-    void copyStringToDataB(knobData &kData, const QString &value);
+    void copyStringToDataB(knobData &kData, const QString &value) const;
 
     /**
      * @brief Checks if a pv is for a general username or password for all hosts
      * @param pv: string to check
      * @return true if it is, else false
      */
-    bool isGeneralUsernamePassword(const QString &pv);
+    bool isGeneralUsernamePassword(const QString &pv) const;
 
     /**
      * @brief Checks if a pv is a specific username or password for some host
      * @param pv: string to check
      * @return true if it is, else false
      */
-    bool isSpecificUsernamePassword(const QString &pv);
+    bool isSpecificUsernamePassword(const QString &pv) const;
 
     /**
      * @brief Checks if a pv is for the password of the pem key
      * @param pv: string ot check
      * @return true if it is, else false
      */
-    bool isPemPassword(const QString &pv);
+    bool isPemPassword(const QString &pv) const;
 
     /**
      * @brief Initialized either a general or a specific username or password pv or a pv containing the password to the pem, updating its value if anything is already stored
@@ -260,14 +262,14 @@ private:
      * @param credentialsToCheck: credentials to check
      * @return true if credentials are valid, else false
      */
-    bool isPasswordCredentialsValid(const PasswordCredentials &credentialsToCheck);
+    bool isPasswordCredentialsValid(const PasswordCredentials &credentialsToCheck) const;
 
     /**
      * @brief Extracts the host from a pv for a host-specific username or password
      * @param pv: the pv to extract the host from
      * @return The extracted host
      */
-    QString getHostFromSpecificUsernamePassword(const QString &pv);
+    QString getHostFromSpecificUsernamePassword(const QString &pv) const;
 
     /**
      * @brief Sets either the username or the password for general or endpoint-specific credentials or for the pem key
@@ -284,13 +286,13 @@ private:
      * @param isMatrix: output boolean that will be set to true if value is a matrix, else false
      * @return caType corresponding to the QVariant value
      */
-    caType generateCaTypeFromVariant(const QVariant &value, bool &isArray, bool &isMatrix);
+    caType generateCaTypeFromVariant(const QVariant &value, bool &isArray, bool &isMatrix) const;
     /**
      * @brief Converts the update interval specified in a knobData (in Hz) and returns the milliseconds)
      * @param kData: knobData pointer to check
      * @return Update interval calculated in milliseconds, or 1000 milliseconds if invalid Hz specified (e.g. 0)
      */
-    int getUpdateIntervalFromKnobData(knobData *kData);
+    int getUpdateIntervalFromKnobData(knobData *kData) const;
     /**
      * @brief Resolves a connection string to an endpoint and a nodeId
      * @param pv: pv string to resolve
@@ -298,7 +300,7 @@ private:
      * @param nodeId: output where the resolved nodeId will be copied to
      * @return true if the outputs were both successfully extracted, else false
      */
-    bool resolveConnectionString(char *pv, QString &endpoint, QString &nodeId);
+    bool resolveConnectionString(char *pv, QString &endpoint, QString &nodeId) const;
     /**
      * @brief Updates knobData with a single value
      * @param kData: knobData to update
