@@ -341,7 +341,7 @@ OpcUaCore::~OpcUaCore()
 
     if (m_client) {
         QObject::disconnect(m_client);
-        if (m_client->state() != QOpcUaClient::ClientState::Disconnected) {
+        if (m_client->state() == QOpcUaClient::ClientState::Connected) {
             disconnectOpc();
         }
         m_client->deleteLater();
@@ -488,8 +488,8 @@ QOpcUaEndpointDescription OpcUaCore::getEndpointWithHighestSecurity(
         }
         triedEndpoints.push_back(endpoint);
 
-        QTcpSocket *sock = new QTcpSocket(this);
-        QObject::connect(sock, &QTcpSocket::connected, this, [&, description]() {
+        QTcpSocket *sock = new QTcpSocket(Q_NULLPTR);
+        QObject::connect(sock, &QTcpSocket::connected, sock, [&, description]() {
             chosenEndpoint = description;
             timer.stop();
             loop.quit();
@@ -499,7 +499,7 @@ QOpcUaEndpointDescription OpcUaCore::getEndpointWithHighestSecurity(
         timer.start(m_maxLatency);
         loop.exec();
         sock->abort();
-        sock->deleteLater();
+        delete sock;
 
         if (!chosenEndpoint.endpointUrl().isEmpty()) {
             break;
@@ -638,6 +638,8 @@ bool OpcUaCore::connectOpc(const QString &url)
 #if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
             QOpcUaConnectionSettings settings = m_client->connectionSettings();
             settings.setSessionTimeout(m_sessionTimeout);
+            settings.setConnectTimeout(
+                2 * m_maxLatency); // Give it some more time, since it might be experiencing issues
             m_client->setConnectionSettings(settings);
 #endif
 
@@ -653,16 +655,9 @@ void OpcUaCore::disconnectOpc()
 {
     if (m_client && m_client->state() != QOpcUaClient::ClientState::Disconnected) {
         VERBOSELOG("Disconnecting from OPC UA Server....");
-        QEventLoop loop;
-        QObject::connect(m_client, &QOpcUaClient::disconnected, &loop, &QEventLoop::quit);
-        QTimer timer(this);
-        timer.setSingleShot(true);
-        QObject::connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
         // This next disconnect should not be reconnnected
         m_ignoreNextDisconnect = true;
         m_client->disconnectFromEndpoint();
-        timer.start(m_maxLatency * 2);
-        loop.exec();
     } else {
         VERBOSELOG("Client not connected or already disconnected.");
     }
