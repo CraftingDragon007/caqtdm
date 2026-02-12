@@ -40,6 +40,12 @@
 #include <QStyleOptionProgressBar>
 #endif
 #include <QApplication>
+#include <QFile>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QRandomGenerator>
+#include <QImageReader>
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 SplashScreen::SplashScreen(QWidget *parent) : QSplashScreen(parent), m_progress(0)
