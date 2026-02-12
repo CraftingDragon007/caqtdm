@@ -803,8 +803,8 @@ void OpcUaCore::disableMonitoringForNode(const QString &nodeId)
 
 void OpcUaCore::clearAllSubscriptions()
 {
-    for (auto it = m_subscriptionNodes.begin(); it != m_subscriptionNodes.end(); ++it) {
-        QOpcUaNode *node = it.value();
+    const QList<QOpcUaNode*> toUnsubscribe = m_subscriptionNodes.values();
+    for (auto node : toUnsubscribe) {
         if (node) {
             node->disableMonitoring(QOpcUa::NodeAttribute::Value);
             node->disconnect();
