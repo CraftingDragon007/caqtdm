@@ -92,7 +92,7 @@ jobs:
           push: true
           tags: ${{ steps.meta-nginx.outputs.tags }}
           labels: ${{ steps.meta-nginx.outputs.labels }}
-      
+
       - name: Generate NGINX artifact attestation
         uses: actions/attest-build-provenance@v3
         with:
