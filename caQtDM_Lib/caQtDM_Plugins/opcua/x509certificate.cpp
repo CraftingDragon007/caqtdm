@@ -69,7 +69,7 @@ bool X509Certificate::createCertificate(const QString &pkiDir)
     QOpcUaX509ExtensionSubjectAlternativeName *san = new QOpcUaX509ExtensionSubjectAlternativeName;
     san->addEntry(QOpcUaX509ExtensionSubjectAlternativeName::Type::DNS, "psi.ch");
     san->addEntry(QOpcUaX509ExtensionSubjectAlternativeName::Type::URI,
-                  "urn:psi.ch:Paul%20Scherrer%20Insitut%20PSI:caQtDM");
+                  "urn:psi.ch:Paul%20Scherrer%20Institut%20PSI:caQtDM");
     san->setCritical(true);
     csr.addExtension(san);
 

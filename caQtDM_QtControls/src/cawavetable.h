@@ -159,11 +159,11 @@ public slots:
 
     /**
      * @brief copies the displayed tabular data to the clipboard in csv format, without headers. String values are ignored / don't work.
-     * Uses american format with commans as separators and \n as newlines
+     * Uses american format with <csvSeparator> as separators and \n as newlines
      */
     void copyDataCSV();
     /**
-     * @brief pastes data from the clipboard (in CSV format) into the table. Format should be exactly as the output from copyDataCSV, so comma as separators and \n as newlines.
+     * @brief pastes data from the clipboard (in CSV format) into the table. Format should be exactly as the output from copyDataCSV, so <csvSeparator> as separators and \n as newlines.
      */
     void pasteDataCSV();
 
