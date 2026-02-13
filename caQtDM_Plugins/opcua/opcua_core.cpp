@@ -407,7 +407,7 @@ void OpcUaCore::setupPkiConfig()
     if (createCertificate) {
         VERBOSELOG("Certificate generation is not possible in Qt-5. If neccessary, create a "
                    "certificate yourself using the script in "
-                   "caQtDM_Lib/caQtDM_Plugins/opcua/create_certificate.sh (see sourcecode)");
+                   "caQtDM_Plugins/opcua/create_certificate.sh (see sourcecode)");
         return;
     }
 #endif
@@ -598,6 +598,7 @@ bool OpcUaCore::connectOpc(const QString &url)
         return false;
     }
     m_latestEndpoint = url;
+    qDebug() << "available sec pol.: " << m_client->supportedSecurityPolicies();
 
     auto conn = new QMetaObject::Connection;
     *conn = QObject::connect(
@@ -608,7 +609,17 @@ bool OpcUaCore::connectOpc(const QString &url)
                      QOpcUa::UaStatusCode status,
                      const QUrl &url) {
             QMutexLocker locker(&m_mutex);
-
+            qDebug() << "returnedEndpoints: " << returnedEndpoints.size();
+            for (auto &ep: returnedEndpoints) {
+                qDebug() << "got ep: ";
+                qDebug() << ep.endpointUrl();
+                qDebug() << ep.securityLevel();
+                qDebug() << ep.securityMode();
+                qDebug() << ep.securityPolicy();
+                for (auto &token: ep.userIdentityTokens()) {
+                    qDebug() << token.tokenType();
+                }
+            }
             QObject::disconnect(*conn);
             delete conn;
 
@@ -627,6 +638,13 @@ bool OpcUaCore::connectOpc(const QString &url)
             QOpcUaEndpointDescription chosenEndpoint = chooseEndpointDescription(returnedEndpoints,
                                                                                  url);
 
+            qDebug() << "chose endpoint: " << chosenEndpoint.endpointUrl();
+            qDebug() << chosenEndpoint.securityLevel();
+            qDebug() << chosenEndpoint.securityMode();
+            qDebug() << chosenEndpoint.securityPolicy();
+            for (auto &token: chosenEndpoint.userIdentityTokens()) {
+                qDebug() << token.tokenType();
+            }
             if (chosenEndpoint.endpointUrl().isEmpty()) {
                 VERBOSELOG("No reachable endpoint hosts.");
                 return;

@@ -1,4 +1,4 @@
-include (../../../caQtDM_Viewer/qtdefs.pri)
+include (../../caQtDM_Viewer/qtdefs.pri)
 contains(QT_VER_MAJ, 5) {
     QT     +=  core gui widgets positioning
 }
@@ -9,7 +9,7 @@ contains(QT_VER_MAJ, 6) {
 CONFIG += warn_on
 CONFIG += release
 CONFIG += gps_plugin
-include (../../../caQtDM.pri)
+include (../../caQtDM.pri)
 
 MOC_DIR = ./moc
 VPATH += ./src
@@ -18,7 +18,7 @@ TEMPLATE        = lib
 CONFIG         += plugin
 INCLUDEPATH    += .
 INCLUDEPATH    += ../
-INCLUDEPATH    += ../../src
+INCLUDEPATH    += ../../caQtDM_Lib/src
 HEADERS         = gps_plugin.h ../controlsinterface.h
 SOURCES         = gps_plugin.cpp
 TARGET          = gps_plugin

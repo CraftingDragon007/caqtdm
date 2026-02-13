@@ -43,7 +43,8 @@ OPCUAPlugin::OPCUAPlugin()
     : m_generalPasswordCredentials({"", ""})
 {
     VERBOSELOG("Create");
-    QLoggingCategory::setFilterRules("qt.opcua.plugins.open62541*=false");
+    //QLoggingCategory::setFilterRules("qt.opcua.plugins.open62541*=false");
+    QLoggingCategory::setFilterRules("qt.opcua.plugins.open62541*=true");
     m_mutexKnobDataP = Q_NULLPTR;
     m_messageWindowP = Q_NULLPTR;
     m_usernameIndex = -1;

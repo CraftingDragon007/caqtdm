@@ -1,4 +1,4 @@
-include (../../../../caQtDM_Viewer/qtdefs.pri)
+include (../../../caQtDM_Viewer/qtdefs.pri)
 
 QT += core gui network
 
@@ -14,7 +14,7 @@ contains(QT_VER_MAJ, 6) {
 
 CONFIG += archive_plugin
 
-include (../../../../caQtDM.pri)
+include (../../../caQtDM.pri)
 
 MOC_DIR = ./moc
 VPATH += ./src
@@ -24,8 +24,8 @@ CONFIG         += plugin
 INCLUDEPATH    += .
 INCLUDEPATH    += ../
 INCLUDEPATH    += ../../
-INCLUDEPATH    += ../../../src
-INCLUDEPATH    += ../../../../caQtDM_QtControls/src/
+INCLUDEPATH    += ../../../caQtDM_Lib/src
+INCLUDEPATH    += ../../../caQtDM_QtControls/src/
 INCLUDEPATH    += $(QWTINCLUDE)
 
 android {

@@ -141,10 +141,10 @@ index c281141d..02cae259 100644
  	    }
  	    unix:macx {
  	       DEFINES += PYTHON
-diff --git a/caQtDM_Lib/caQtDM_Plugins/archive/archiveCA/archiveCA.pro b/caQtDM_Lib/caQtDM_Plugins/archive/archiveCA/archiveCA.pro
+diff --git a/caQtDM_Plugins/archive/archiveCA/archiveCA.pro b/caQtDM_Plugins/archive/archiveCA/archiveCA.pro
 index 24b3a861..938b1d8b 100644
---- a/caQtDM_Lib/caQtDM_Plugins/archive/archiveCA/archiveCA.pro
-+++ b/caQtDM_Lib/caQtDM_Plugins/archive/archiveCA/archiveCA.pro
+--- a/caQtDM_Plugins/archive/archiveCA/archiveCA.pro
++++ b/caQtDM_Plugins/archive/archiveCA/archiveCA.pro
 @@ -33,7 +33,7 @@ HEADERS         = ../../controlsinterface.h archiveCA_plugin.h ../archiverCommon
  SOURCES         =  archiveCA_plugin.cpp ../archiverCommon.cpp
  TARGET          = archiveCA_plugin

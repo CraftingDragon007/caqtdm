@@ -41,7 +41,7 @@ fi
 find ./caqtdm/caQtDM_Viewer/src -type f | xargs chmod 644
 find ./caqtdm/caQtDM_QtControls/src -type f | xargs chmod 644
 find ./caqtdm/caQtDM_Lib/src -type f | xargs chmod 644
-find ./caqtdm/caQtDM_Lib/caQtDM_Plugins -type f | xargs chmod 644
+find ./caqtdm/caQtDM_Plugins -type f | xargs chmod 644
 
 mv caqtdm caqtdm-${PACKAGE_VERSION}
 tar -czf caqtdm-${PACKAGE_VERSION}.tar.gz ./caqtdm-${PACKAGE_VERSION}

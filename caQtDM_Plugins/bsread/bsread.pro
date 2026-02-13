@@ -1,4 +1,4 @@
-include (../../../caQtDM_Viewer/qtdefs.pri)
+include (../../caQtDM_Viewer/qtdefs.pri)
 QT += core gui network
 contains(QT_VER_MAJ, 5) {
     QT     += widgets concurrent
@@ -9,14 +9,14 @@ contains(QT_VER_MAJ, 6) {
 
 CONFIG += warn_on
 CONFIG += bsread_Plugin
-include (../../../caQtDM.pri)
+include (../../caQtDM.pri)
 
 TEMPLATE        = lib
 CONFIG         += plugin
 INCLUDEPATH    += .
 INCLUDEPATH    += ../
-INCLUDEPATH    += ../../src
-INCLUDEPATH    += ../../../caQtDM_QtControls/src
+INCLUDEPATH    += ../../caQtDM_Lib/src
+INCLUDEPATH    += ../../caQtDM_QtControls/src
 HEADERS         = bsread_Plugin.h ../controlsinterface.h \
     bsread_decode.h \
     bsread_channeldata.h \
