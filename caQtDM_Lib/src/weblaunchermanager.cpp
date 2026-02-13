@@ -30,116 +30,111 @@ QString WebLauncherManager::getRootFile() const {
 
 bool WebLauncherManager::setup(const QString fileName) {
     m_rootFile = fileName;
+
     QWriteLocker locker(&m_visitedFilesLock);
     m_visitedFiles.clear();
-    QJsonObject result = loadAndExpand(fileName, true).toObject();
-    if (result.isEmpty()) {
-        qWarning() << "caQtDM_Web_Launcher -- Something went wrong whilst parsing or file is empty:" << fileName << ", web launcher is now disabled";
+
+    QJsonValue result = loadAndExpand(fileName, true);
+    if (result.isNull() || result.toObject().isEmpty()) {
+        qWarning() << "caQtDM_Web_Launcher -- Error parsing or empty file:" << fileName;
         return false;
     }
-    m_expandedLauncherJson = result;
+
+    m_expandedLauncherJson = result.toObject();
     m_isInitialized = true;
     return true;
 }
 
 QJsonValue WebLauncherManager::loadAndExpand(QString fileName, bool loadFileChoices) {
-    fileFunctions filefunction;
-    filefunction.checkFileAndDownload(fileName);
-
-    searchFile *filecheck = new searchFile(fileName);
-    fileName = filecheck->findFile();
-    filecheck->deleteLater();
-
-    if (m_visitedFiles.contains(fileName)) {
-        qWarning() << "caQtDM_Web_Launcher -- Circular dependent included launcher file" << fileName << ", skipping it";
+    fileName = resolveFilePath(fileName);
+    if (fileName.isEmpty() || m_visitedFiles.contains(fileName)) {
+        if (!fileName.isEmpty()) qWarning() << "caQtDM_Web_Launcher -- Circular dependency:" << fileName;
         return QJsonValue();
     }
 
-    QFile file(fileName);
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        qWarning() << "caQtDM_Web_Launcher -- File could not be opened:" << fileName << "Error:" << file.errorString();
-        return QJsonValue();
-    }
+    QJsonDocument doc = parseJsonFile(fileName);
+    if (doc.isNull()) return QJsonValue();
 
     m_visitedFiles.insert(fileName);
 
+    if (doc.isObject()) {
+        QJsonObject obj = doc.object();
+        if (loadFileChoices && obj.contains("file-choice")) {
+            processFileChoices(obj);
+        } else {
+            obj.remove("file-choice");
+        }
+        return expandObject(obj);
+    }
+
+    return doc.isArray() ? expandArray(doc.array()) : QJsonValue();
+}
+
+QString WebLauncherManager::resolveFilePath(const QString& inputPath) {
+    fileFunctions fileFunc;
+    fileFunc.checkFileAndDownload(inputPath);
+
+    searchFile searcher(inputPath);
+    QString foundPath = searcher.findFile();
+
+    if (foundPath.isEmpty()) {
+        QString fallback = getLastElementFromAnywhere(inputPath);
+        if (!fallback.isEmpty()) {
+            fileFunc.checkFileAndDownload(fallback);
+            searchFile fallbackSearcher(fallback);
+            foundPath = fallbackSearcher.findFile();
+        }
+    }
+    return foundPath;
+}
+
+QJsonDocument WebLauncherManager::parseJsonFile(const QString& fileName) {
+    QFile file(fileName);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        qWarning() << "caQtDM_Web_Launcher -- Cannot open:" << fileName;
+        return QJsonDocument();
+    }
+
     QJsonParseError error;
     QJsonDocument doc = QJsonDocument::fromJson(file.readAll(), &error);
-
     if (error.error != QJsonParseError::NoError) {
         qWarning() << "JSON Parse Error in" << fileName << ":" << error.errorString();
     }
+    return doc;
+}
 
-    if (doc.isObject()) {
-        QJsonObject obj = doc.object();
-        if (loadFileChoices) {
-            if (obj.contains("file-choice") && obj["file-choice"].isArray()) {
-                QJsonArray fileChoices = obj["file-choice"].toArray();
-                QWriteLocker locker(&m_fileChoiceLock);
-                foreach (const QJsonValue &choice, fileChoices) {
-                    if (choice.isObject()) {
-                        QJsonObject choiceObject = choice.toObject();
-                        if (choiceObject.contains("text") && choiceObject["text"].isString() && choiceObject.contains("file")
-                            && choiceObject["file"].isString()) {
+void WebLauncherManager::processFileChoices(QJsonObject& obj) {
+    QJsonArray fileChoicesArr = obj["file-choice"].toArray();
+    QWriteLocker locker(&m_fileChoiceLock);
 
-                            QString file = choiceObject["file"].toString();
+    for (const QJsonValue &value : std::as_const(fileChoicesArr)) {
+        QJsonObject choiceObj = value.toObject();
+        QString rawPath = choiceObj["file"].toString();
 
-                            fileFunctions filefunction;
-                            filefunction.checkFileAndDownload(file);
+        if (rawPath.isEmpty()) continue;
 
-                            searchFile *filecheck = new searchFile(file);
-                            file = filecheck->findFile();
-                            filecheck->deleteLater();
+        QString resolvedPath = resolveFilePath(rawPath);
+        if (resolvedPath.isEmpty()) {
+            qWarning() << "caQtDM_Web_Launcher -- Launcher file not found:" << rawPath;
+            continue;
+        }
 
-                            if (file.isNull()) {
-                                file = getLastElementFromAnywhere(choiceObject["file"].toString());
-                                if (!file.isNull()) {
-                                    filefunction.checkFileAndDownload(file);
+        QString baseName = QFileInfo(resolvedPath).fileName();
+        if (m_fileChoices.contains(baseName)) continue;
 
-                                    filecheck = new searchFile(file);
-                                    file = filecheck->findFile();
-                                    filecheck->deleteLater();
-                                }
-
-                                if (file.isNull()) {
-                                    qWarning() << "caQtDM_Web -- Warning: Launcher file" << choiceObject["file"].toString() << "not found, it won't be available inside the web launcher.";
-                                    continue;
-                                }
-                            }
-
-                            QFileInfo info(file);
-
-                            QString name = info.fileName();
-                            qDebug() << "caQtDM_Web -- Adding launcher file" << name;
-
-                            if (m_fileChoices.contains(name)) {
-                                qWarning() << "caQtDM_Web -- Warning: Launcher file" << choiceObject["file"].toString() << "was skipped because another file with the same name was already added.";
-                                continue;
-                            }
-
-                            FileChoice choice = FileChoice::fromJson(choiceObject);
-                            choice.fileName = file;
-
-                            m_fileChoices.insert(name, choice);
-                        }
-                    }
-                }
-
-                obj.remove("file-choice");
-                QJsonArray newFileChoices;
-                for (auto it = m_fileChoices.begin(); it != m_fileChoices.end(); ++it) {
-                    QJsonObject value = {{"text", it.value().text}, {"file", it.key()}};
-                    newFileChoices.append(value);
-                }
-                obj.insert("file-choice", newFileChoices);
-            }
-        } else obj.remove("file-choice");
-        return expandObject(obj);
-    } else if (doc.isArray()) {
-        return expandArray(doc.array());
+        FileChoice choice = FileChoice::fromJson(choiceObj);
+        choice.fileName = resolvedPath;
+        m_fileChoices.insert(baseName, choice);
+        qDebug() << "caQtDM_Web -- Added launcher file:" << baseName;
     }
 
-    return QJsonValue();
+    // Update the JSON object to reflect the internal map
+    obj.remove("file-choice");
+    QJsonArray newChoices;
+    for (auto it = m_fileChoices.begin(); it != m_fileChoices.end(); ++it) {
+        newChoices.append(QJsonObject{{"text", it.value().text}, {"file", it.key()}});
+    }
+    obj.insert("file-choice", newChoices);
 }
 
 QJsonValue WebLauncherManager::getLauncherFromUserChoice(QString choice) {

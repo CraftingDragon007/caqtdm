@@ -46,6 +46,9 @@ private:
 
     QSet<QString> m_visitedFiles;
     QJsonValue loadAndExpand(QString fileName, bool loadFileChoices);
+    QString resolveFilePath(const QString& inputPath);
+    void processFileChoices(QJsonObject& obj);
+    QJsonDocument parseJsonFile(const QString& fileName);
     QJsonValue expandObject(QJsonObject obj);
     QJsonArray expandArray(const QJsonArray &arr);
 
