@@ -331,7 +331,11 @@ void caWaveTable::pasteDataCSV()
             removeHeader = true;
         } else {
             // Analyze the first possible header value to figure out if it can be converted into a value, if not it is a header
-            QString possibleHeaderValue = lines[0].split(csvSeparator, Qt::SkipEmptyParts)[0];
+            QStringList headerParts = lines[0].split(csvSeparator, Qt::SkipEmptyParts);
+            QString possibleHeaderValue;
+            if (!headerParts.isEmpty()) {
+                possibleHeaderValue = headerParts.first();
+            }
             bool canConvert;
             switch (keepDatatype) {
             case doubles:

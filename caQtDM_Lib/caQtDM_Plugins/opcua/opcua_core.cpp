@@ -30,7 +30,6 @@
 #include <QStandardPaths>
 #include <QTimer>
 #include "qdir.h"
-#include "qeventloop.h"
 #include "qmetaobject.h"
 #include "qopcuaauthenticationinformation.h"
 #include "qtcpsocket.h"
@@ -492,7 +491,7 @@ QOpcUaEndpointDescription OpcUaCore::getEndpointWithHighestSecurity(
 
         QTcpSocket *sock = new QTcpSocket(Q_NULLPTR);
 
-        sock->connectToHost(url.host(), url.port());
+        sock->connectToHost(url.host(), url.port(4840));
         if (sock->waitForConnected(m_maxLatency.count())) {
             chosenEndpoint = description;
         }
