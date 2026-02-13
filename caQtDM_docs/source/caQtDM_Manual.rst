@@ -3367,6 +3367,26 @@ caQtDM uses the following environment variables:
 | ``CAQTDM_MODBUS_DATABASE``            | Database to use for the modbus plugin                     |
 +---------------------------------------+-----------------------------------------------------------+
 
+.. _signal-handling:
+
+Signal / Ctrl+C handling
+-------------------------
+
+Windows
+~~~~~~~~
+
+On Windows, you can gracefully stop caQtDM by pressing Ctrl+C in the console where it is running. This will trigger a shutdown sequence that allows caQtDM to clean up resources and exit properly.
+
+Note: This only works if caQtDM is either started from cmd or a bash script, if you start it from a double-clickable executable, there is no console attached and thus Ctrl+C will not work.
+In PowerShell, Ctrl+C doesn't work because PowerShell provides you with a new prompt instead of blocking whilst caQtDM is running, so Ctrl+C will not be sent to the caQtDM process.
+
+Unix (Linux, MacOs, FreeBSD, etc.)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+On Unix-like systems, you can gracefully stop caQtDM by pressing Ctrl+C in the terminal where it is running. This will send a SIGINT signal to the caQtDM process, which will trigger a shutdown sequence that allows caQtDM to clean up resources and exit properly.
+
+Alternatively, you can also send a SIGTERM signal to the caQtDM process using the ``kill -SIGTERM <PID>`` command or similair methods. This will trigger the same shutdown sequence as pressing Ctrl+C.
+
 caQtDM Web
 ----------
 
@@ -3426,7 +3446,13 @@ To start the services, run:
 Building your own Docker image
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-To build your own Docker image for caQtDM Web, you can cd into the `caQtDM_Web/docker` directory and run the following command:
+NOTE: Ensure that you have cloned the novnc client submodule in the caQtDM repository, as it is required for the web client functionality. You can do this by running the following command in the root of the caQtDM repository:
+
+.. code:: bash
+
+   git submodule update --init --recursive
+
+To build your own Docker image for caQtDM Web, you can cd into the ``caQtDM_Web/docker`` directory and run the following command:
 
 .. code:: bash
 
@@ -3439,6 +3465,22 @@ Make sure to adjust the compose.yaml file as needed for your setup, similar to t
 
 Normal Setup
 ~~~~~~~~~~~~~~~~~~~~~~~
+
+Prerequisites
+^^^^^^^^^^^^^^
+
+To set up caQtDM Web, you need to have the following prerequisites:
+
+- A working and up-to-date installation of caQtDM
+- CMake and a C++ compiler to build the qnovnc-platform-plugin
+- Zlib (or zlib-ng) development files (for building the qnovnc-platform-plugin, usually already included in most linux distributions, included in qt for windows)
+- If you haven't built caQtDM from source, you also need to install the following Qt module development files, as they are required for building the qnovnc-platform-plugin:
+   - Qt Core
+   - Qt Gui
+   - Qt Network
+   - Qt WebSockets
+- A web server/reverse proxy (e.g., nginx, Caddy) to serve the web client files and to route requests, see :ref:`reverse-proxy`
+- Optional: SSL certificates for secure connections (can be handled by the reverse proxy)
 
 Setup caQtDM with qnovnc-platform-plugin
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -3459,6 +3501,10 @@ To set up caQtDM with qnovnc-platform-plugin, follow these steps:
 
 4. Setup a reverse proxy by following the steps in :ref:`reverse-proxy`
 
+Shutting down caQtDM Web
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+You can shut down caQtDM Web by sending a signal to the process, see the :ref:`signal-handling` section for more details.
 
 .. _reverse-proxy:
 
@@ -3471,16 +3517,16 @@ The cool thing about reverse proxies is that they can also handle SSL terminatio
 
 And because we are using a reverse proxy we don't need to open caQtDM Web's ports to the public, only the reverse proxy's ports need to be accessible.
 
-You can find example configurations for setting up nginx or Caddy as a reverse proxy in the `caQtDM_Web` directory of the caQtDM repository.
+You can find example configurations for setting up nginx or Caddy as a reverse proxy in the ``caQtDM_Web`` directory of the caQtDM repository.
 
 Nginx
 >>>>>>
 
-The nginx template file is named `caqtdm_web.conf.template`. You can copy this file to your nginx configuration directory and rename it to `caqtdm_web.conf`.
+The nginx template file is named ``caqtdm_web.conf.template``. You can copy this file to your nginx configuration directory and rename it to ``caqtdm_web.conf``.
 Please make sure to at least replace the following placeholders:
 
-- `_INSTALL_HOSTNAME_` with the hostname or IP address where caQtDM Web will be accessible.
-- `_INSTALL_CERT_BASENAME_` with the base name of your SSL certificate files (without the .crt or .key extension).
+- ``_INSTALL_HOSTNAME_`` with the hostname or IP address where caQtDM Web will be accessible.
+- ``_INSTALL_CERT_BASENAME_`` with the base name of your SSL certificate files (without the .crt or .key extension).
 
 You can also adjust other settings as needed, such as enabling basic authentication or switching to HTTP if SSL is not required.
 After configuring nginx, make sure to enable the configuration and restart nginx to apply the changes.
@@ -3488,27 +3534,28 @@ After configuring nginx, make sure to enable the configuration and restart nginx
 .. code:: bash
 
    # Debian/Ubuntu example
+   sudo cp caqtdm_web.conf.template /etc/nginx/sites-available/caqtdm_web.conf
    sudo ln -s /etc/nginx/sites-available/caqtdm_web.conf /etc/nginx/sites-enabled/caqtdm_web.conf
    sudo systemctl restart nginx
 
    # Red Hat/CentOS example
    # There is no sites-available/sites-enabled structure by default, just copy the file to conf.d
-   sudo cp /etc/nginx/conf.d/caqtdm_web.conf.template /etc/nginx/conf.d/caqtdm_web.conf
+   sudo cp caqtdm_web.conf.template /etc/nginx/conf.d/caqtdm_web.conf
    sudo systemctl restart nginx
 
-   # Alpine Linux example
+   # Alpine / Gentoo (non systemd) example
    # Also no sites-available/sites-enabled structure by default, just copy the file to conf.d
-   sudo cp /etc/nginx/conf.d/caqtdm_web.conf.template /etc/nginx/conf.d/caqtdm_web.conf
+   sudo cp caqtdm_web.conf.template /etc/nginx/conf.d/caqtdm_web.conf
    sudo rc-service nginx restart
 
 
 Caddy
 >>>>>>
 
-The Caddy config is named `Caddyfile`.
+The Caddy config is named ``Caddyfile``.
 
 You can change it as needed, there are no required changes, but you might want to adjust the domain name.
-After configuring Caddy, make sure to copy the Caddyfile to the appropriate location (e.g., `/etc/caddy/Caddyfile`) and restart Caddy to apply the changes.
+After configuring Caddy, make sure to copy the ``Caddyfile`` to the appropriate location (e.g., ``/etc/caddy/Caddyfile``) and restart Caddy to apply the changes.
 For example, if you are using systemd:
 
 .. code:: bash
@@ -3528,7 +3575,26 @@ Others
 You can also use other reverse proxies like Apache HTTP Server or Traefik.
 Please refer to their respective documentation for setting up a reverse proxy to forward requests to the caQtDM Web server.
 
-You can look at the `caqtdm_web.conf.template` and `Caddyfile` files for guidance on the necessary settings.
+You can look at the ``caqtdm_web.conf.template`` and ``Caddyfile`` files for guidance on the necessary settings.
+
+Adjusted behaviour in web mode
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When running in web mode, caQtDM will adjust some of its behaviour to better suit the web environment:
+
+.. csv-table::
+   :header: "Feature", "Adjusted Behaviour in Web Mode"
+
+   "Message Window", "Messages are also sent to the web client and can be viewed in the web interface by clicking on the message button in the top right corner. You can only see messages that were generated after you opened the web interface, there is no message history for the web client, tip: reload your panel to see log output from panel initialization"
+   "Printing", "Panel printing is not supported in web mode (we don't want to print from a server or service user), so any actions that would normally trigger a print dialog is disabled/hidden."
+   "Tooltips", "Tooltips are disabled in web mode to prevent one user's tooltip from being shown to all users, which could lead to confusion."
+   "Window Size", "By default, caQtDM Web will use a virtual display the same size as the panel being served (dynamically parsed at start time), but you can also specify a custom size using the ``VIRTUAL_WIDTH`` and ``VIRTUAL_HEIGHT`` environment variables (This will force scale the widget to that size, this may not look ideal if your panel isn't configured to be resized). The virtual display is used to render the panel, which is then streamed to the web client. This allows caQtDM Web to work even in headless environments without a physical display."
+   "Starting panels", "The panel specified with a caQtDM Web server will be served by default, but you can also start other panels by using caRelatedDisplays, the web launcher or by building your own url with the url builder (in the web interface) to start a panel of your choice. When starting new panels, they will be started as new instances of caQtDM Web in a new tab (except if you directly adjust the url to open in the same tab)."
+   "Splash screen", "The splash screen is disabled in web mode, instead the loading process is shown as a progress bar in the menu bar."
+   "``caRelatedDisplay``", "When clicking a related display from the web interface, a new instance of caQtDM Web will be started to serve the related display, instead of opening it in the same instance. You and other users will then be asked if you want to open the related display in a new tab"
+   "``caScriptButton`` / ``caShellCommand``", "When clicked, these buttons will just show an error message, because executing scripts or commands from a web interface can be a security / availability (undefined behavior) risk, so this functionality is disabled in web mode. (Another Reason: It is not possible to display other graphical applications besides caQtDM panels.) You can still use these buttons in web mode if you enable the ``-web_allow_insecure_cashell_commands`` option, but make sure you understand the implications and only use it if you are sure about the commands being executed and the users using your web interface."
+   "``caMimeDisplay``", "Clicking on a caMimeDisplay will over you to open urls in new tabs and to copy file names to the clipboard, but it will not be able to open files on the server or show previews of files."
+   
 
 caQtDM Web specific configuration options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -3542,18 +3608,18 @@ When running caQtDM as a server, you can use the following command line options 
 .. csv-table::
    :header: "Option", "Description", "Notes", "Default"
 
-   "-server", "Run caQtDM as a web server", "Required for web mode", ""
-   "-novnc", "Enable qnovnc-platform-plugin for web access", "Required for web mode using qnovnc", ""
-   "-novnc_readonly", "Run caQtDM Web in read-only mode, disabling user interactions", "Useful for public displays", "none = Disabled"
-   "-slave_server", "Runs caQtDM Web like without management features (doesn't start new instances by itself)", "This is used internally when starting new instances from the main process, for example via caRelatedDisplay", "none = Disabled"
-   "-server_port", "The port on which the graphical server will listen", "For the main process this should be the start of a large port range + 1, for slave processes it will be assigned automatically", "30001"
-   "-web_server_port", "The port on which the management web socket server will listen", "For the main process this should be the start of a large port range, for slave processes it will be assigned automatically", "30000"
-   "-web_timeout", "Timeout in seconds for shutdown after inactivity (min. 76)", "Applies only to child processes. If no clients are connected for this amount of time, the server will shut down", "none = Disabled"
-   "-web_instance_limit", "Maximum number of caQtDM Web instances that can be started by the main process", "Limits resource usage, available port range has to be 2x this value", "1000"
-   "-web_interaction_timeout", "Change -web_timeout behaviour to trigger only when no user interactions happened for the given time", "Can only be used in combination with -web_timeout", "none = Disabled"
-   "-host", "Hostname or IP address to bind the web server to", "Useful if you have multiple network interfaces, has to be a valid IP address or hostname", "127.0.0.1"
-   "-web_launcher_root_file", "Path to a `pylauncher <https://github.com/paulscherrerinstitute/pylauncher>`__ json file that will be parsed and shown in the web ui", "Allows launching predefined panels from the web interface", "none = Disabled"
-   "-web_allow_insecure_cashell_commands", "Allows arbitrary :ref:`caShellCommand` and :ref:`caShellScript` execution from the web interface", "This can be a security risk, only enable if you are sure about the implications. If you enable this also make sure that your commands only invoke simple command line actions, it is not possible to display other graphical applications besides caQtDM panels", "none = Disabled"
+   "``-server``", "Run caQtDM as a web server", "Required for web mode", ""
+   "``-novnc``", "Enable qnovnc-platform-plugin for web access", "Required for web mode using qnovnc", ""
+   "``-novnc_readonly``", "Run caQtDM Web in read-only mode, disabling user interactions", "Useful for public displays", "none = Disabled"
+   "``-slave_server``", "Runs caQtDM Web like without management features (doesn't start new instances by itself)", "This is used internally when starting new instances from the main process, for example via caRelatedDisplay", "none = Disabled"
+   "``-server_port``", "The port on which the graphical server will listen", "For the main process this should be the start of a large port range + 1, for slave processes it will be assigned automatically", "30001"
+   "``-web_server_port``", "The port on which the management web socket server will listen", "For the main process this should be the start of a large port range, for slave processes it will be assigned automatically", "30000"
+   "``-web_timeout``", "Timeout in seconds for shutdown after inactivity (min. 76)", "Applies only to child processes. If no clients are connected for this amount of time, the server will shut down", "none = Disabled"
+   "``-web_instance_limit``", "Maximum number of caQtDM Web instances that can be started by the main process", "Limits resource usage, available port range has to be 2x this value", "1000"
+   "``-web_interaction_timeout``", "Change -web_timeout behaviour to trigger only when no user interactions happened for the given time", "Can only be used in combination with -web_timeout", "none = Disabled"
+   "``-host``", "Hostname or IP address to bind the web server to", "Useful if you have multiple network interfaces, has to be a valid IP address or hostname", "127.0.0.1"
+   "``-web_launcher_root_file``", "Path to a `pylauncher <https://github.com/paulscherrerinstitute/pylauncher>`__ json file that will be parsed and shown in the web ui", "Allows launching predefined panels from the web interface. If your file includes other launcher files, please ensure that those files can all be found directly or via ``CAQTDM_DISPLAY_PATH``", "none = Disabled"
+   "``-web_allow_insecure_cashell_commands``", "Allows :ref:`caShellCommand` and :ref:`caShellScript` execution from the web interface", "This can be a security risk, only enable if you are sure about the implications. If you enable this also make sure that your commands only invoke simple command line actions, it is not possible to display other graphical applications besides caQtDM panels", "none = Disabled"
 
 
 Enviroment variables
@@ -3567,8 +3633,8 @@ You can use the following environment variables in addition to the regular caQtD
 .. csv-table::
    :header: "Environment Variable", "Description", "Notes"
 
-   "VIRTUAL_WIDTH", "Width of the virtual display used by caQtDM Web", "Default is determined automatically based on the panel size"
-   "VIRTUAL_HEIGHT", "Height of the virtual display used by caQtDM Web", "Default is determined automatically based on the panel size"
+   "``VIRTUAL_WIDTH``", "Width of the virtual display used by caQtDM Web", "Default is determined automatically based on the panel size"
+   "``VIRTUAL_HEIGHT``", "Height of the virtual display used by caQtDM Web", "Default is determined automatically based on the panel size"
 
 Docker specific
 >>>>>>>>>>>>>>>>
@@ -3578,6 +3644,6 @@ When running caQtDM Web in a Docker container, you can use the following additio
 .. csv-table::
    :header: "Environment Variable", "Description", "Notes"
 
-   "ENTRY_PANEL", "Path to the main caQtDM UI file that should be served by default", "Required, default is the test panel if not specified"
-   "EXTRA_ARGS", "Additional command line arguments to pass to caQtDM, as docker would not allow passing them directly", "Optional, default is empty"
+   "``ENTRY_PANEL``", "Path to the main caQtDM UI file that should be served by default", "Required, default is the test panel if not specified"
+   "``EXTRA_ARGS``", "Additional command line arguments to pass to caQtDM, as docker would not allow passing them directly", "Optional, default is empty"
 
