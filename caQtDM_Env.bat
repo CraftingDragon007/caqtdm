@@ -111,6 +111,7 @@ REM ============================================================================
   
   set CAQTDM_GPS=1
   set CAQTDM_MODBUS=1
+  set CAQTDM_OPCUA=1
 
 GOTO PRINTOUT
 
@@ -160,6 +161,7 @@ REM ============================================================================
 
   set CAQTDM_GPS=1
   set CAQTDM_MODBUS=1
+  set CAQTDM_OPCUA=1
 
 
 GOTO PRINTOUT

@@ -174,19 +174,24 @@ else {
     message( "caQtDM will be build without RPATH" )
 }
 
-qtHaveModule(opcua) {
-    message("Configuring build to include opcua plugin")
-	CONFIG += opcua
-
-    QT_OPCUA_ENCRYPTION_HEADER = QtOpcUa/QOpcUaX509CertificateSigningRequest
-	exists($$quote($$[QT_INSTALL_HEADERS]/$$QT_OPCUA_ENCRYPTION_HEADER)) {
-	    DEFINES += QT_OPCUA_X509
-		message("Building opcua plugin with encryption.")
-	} else {
-	    message("No QOpcUaX509 headers available, skipping opcua encryption.")
-	}
+_CAQTDM_OPCUA = $$(CAQTDM_OPCUA)
+isEmpty(_CAQTDM_OPCUA) {
+    message("OPCUA Plugin not selected, will not be built.")
 } else {
-    message("Qt module opcua was not found, opcua plugin will not be built.")
+    qtHaveModule(opcua) {
+	    message("Configuring build to include opcua plugin")
+		CONFIG += opcua
+
+        QT_OPCUA_ENCRYPTION_HEADER = QtOpcUa/QOpcUaX509CertificateSigningRequest
+		exists($$quote($$[QT_INSTALL_HEADERS]/$$QT_OPCUA_ENCRYPTION_HEADER)) {
+		    DEFINES += QT_OPCUA_X509
+			message("Building OPCUA plugin with encryption.")
+		} else {
+		    message("No QOpcUaX509 headers available, skipping OPCUA encryption.")
+		}
+	} else {
+	    message("Qt module opcua was not found, OPCUA plugin will not be built.")
+	}
 }
 
 # undefine CONFIG epics4 for epics4 plugin support with epics version 4 (only preliminary version as example)

@@ -18,6 +18,8 @@ env:
 
   OPENSSL_ROOT: C:\Program Files\OpenSSL
 
+  CAQTDM_OPCUA: 1
+
 jobs:
   build:
     name: Build windows package
