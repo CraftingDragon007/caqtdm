@@ -69,8 +69,9 @@
                                 <IniFile Id="qt_conf_file3" Action="createLine" Key="Binaries" Name="qt.conf" Section="Paths" Value="bin/windows-x64/" Directory="INSTALLDIR_BIN" />
                                 <CreateFolder />
                             </Component>
-                            <Component Id="libcrypto" Guid="914403E8-EE23-4A59-8835-104D31D55BD2" Win64="yes">
-                                <File Id="LIBCRYPTO_3_X64.DLL" Name="libcrypto-3-x64.dll" Source="$(env.LIBCRYPTO)" />
+                            <Component Id="ssl" Guid="5FB57937-E4B0-4FEE-A498-22C6BECAD8A9" Win64="yes">
+                                <File Id="LIBSSL" Name="$(env.LIBSSL)" Source="$(env.SSLBIN)\$(env.LIBSSL)" />
+                                <File Id="LIBCRYPTO" Name="$(env.LIBCRYPTO)" Source="$(env.SSLBIN)\$(env.LIBCRYPTO)" />
                             </Component>
                         </Directory>
                     </Directory>
@@ -103,6 +104,7 @@
                                 <!---File Id="QOPENSSLBACKEND.DLL" Name="qopensslbackend.dll" Source="$(env.QTHOME)\plugins\tls\qopensslbackend.dll" /-->
                                 <File Id="QSCHANNELBACKEND.DLL" Name="qschannelbackend.dll" Source="$(env.QTHOME)\plugins\tls\qschannelbackend.dll" />
                                 <File Id="QCERTONLYBACKEND.DLL" Name="qcertonlybackend.dll" Source="$(env.QTHOME)\plugins\tls\qcertonlybackend.dll" />
+                                <File Id="QOPENSSLBACKEND.DLL" Name="qopensslbackend.dll" Source="$(env.QTHOME)\plugins\tls\qopensslbackend.dll" />
                             </Component>
                         </Directory>
                         <?endif?>
@@ -191,8 +193,8 @@
             <ComponentRef Id="qt_conf" />
             <ComponentRef Id="controlsystems" />
             <ComponentRef Id="ZMQ" />
-            <ComponentRef Id="libcrypto" />
             <ComponentRef Id="open62541_backend" />
+            <ComponentRef Id="ssl" />
         </Feature>
     </Product>
 </Wix>
