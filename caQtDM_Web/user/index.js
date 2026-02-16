@@ -349,6 +349,15 @@ import { parseLogMarkup, formatDateTime } from './modules/utils/Logger.js';
     openFileDialog.open(msg);
   }
 
+  function registerServiceWorker() {
+    if (!('serviceWorker' in navigator)) return;
+    window.addEventListener('load', () => {
+      navigator.serviceWorker
+        .register('./service-worker.js', { scope: './' })
+        .catch(err => console.warn('Service worker registration failed:', err));
+    });
+  }
+
   // --- Global Event Handlers ---
 
   document.addEventListener('keydown', (e) => {
@@ -422,5 +431,6 @@ import { parseLogMarkup, formatDateTime } from './modules/utils/Logger.js';
   vnc.setPath(getActiveNoVNCPath());
   vnc.connect();
   control.connect();
+  registerServiceWorker();
 
 })();
