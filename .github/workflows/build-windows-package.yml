@@ -343,7 +343,9 @@ jobs:
       - name: Set packaging environment variables
         run: |
           echo ZMQ=${{ env.ZEROMQ_INSTALL_DIR }}\lib>> %GITHUB_ENV%
-          echo LIBCRYPTO=${{ env.OPENSSL_ROOT }}\bin\libcrypto-3-x64.dll>> %GITHUB_ENV%
+          echo SSLBIN=${{ env.OPENSSL_ROOT }}\bin>> %GITHUB_ENV%
+          echo LIBSSL=libssl-3-x64.dll>> %GITHUB_ENV%
+          echo LIBCRYPTO=libcrypto-3-x64.dll>> %GITHUB_ENV%
 
       - name: Create caQtDM Windows package
         working-directory: ${{ env.CAQTDM_DIR }}\caQtDM_Viewer\package\windows
