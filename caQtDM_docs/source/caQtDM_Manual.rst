@@ -3002,7 +3002,7 @@ Certificate Creation:
 	CAUTION: Qt-5 does also not show very good errors, so if you see weird errors or simply a ``BadConnectionClosed``, it may be that your client certificate needs to be trusted first by the server. Qt-6 has dedicated error handling for that.
 
 Secure Communication using Signing / Encryption:
-	If your client was built with an encryption-enabled plugin, it will try to establish a secure connection first. If an endpoint or your client doesn't support a secure connection, a regular one will be used.
+	If your client was built with an encryption-enabled plugin, and the environment variable ``CAQTDM_OPCUA_ENABLE_CERTIFICATE`` is not empty, it will try to establish a secure connection first. If an endpoint or your client doesn't support a secure connection, a regular one will be used.
 	Generally speaking, the client will go through all available endpoints, choosing the one with the highest security to establish a connection.
 	Encryption & signing keys are generated the first time the plugin is loaded and stored in your local app data location. For signing, you may have to trust the client's certificate on the server first. For that, see the ``Certificate Authentication`` section below.
 	Due to a limitation in Qt-OpcUa, connections are currently only possible to endpoints supporting SecurityPolicy#None. This is because QtOpcUa always uses that SecurityPolicy for the initial connection, while discovering available endpoints. So even if it's required, the actual communication won't use that SecurityPolicy, if another is available.
@@ -3092,6 +3092,8 @@ Reconnect:
 
 Configuration:
 	Look at the :ref:`environment variables <env.var>` for a look at possible configuration options.
+	Important: To use certificate operations, such as encryption via SSL, you need to explicitely set ``CAQTDM_OPCUA_ENABLE_CERTIFICATE`` to not be empty.
+	This is because then you will have to (for most OPCUA servers) add your certificate to the trusted list before being able to open a connection.
 
 General Properties
 ----------------------
@@ -3705,7 +3707,7 @@ caQtDM uses the following environment variables:
 |                                       | opcua://CHANNEL specify CHANNEL=opc.tcp://restofuri       |
 |                                       | Each line in the file is a translation.                   |
 +---------------------------------------+-----------------------------------------------------------+
-| ``CAQTDM_OPCUA_DISABLE_CERTIFICATE``  | If set, endpoints with signing / encryption are ignored   |
+| ``CAQTDM_OPCUA_ENABLE_CERTIFICATE``   | If empty, endpoints with signing / encryption are ignored |
 +---------------------------------------+-----------------------------------------------------------+
 | ``CAQTDM_OPCUA_MAX_LATENCY``          | Max latency (ms) endpoints may have when trying to connect|
 +---------------------------------------+-----------------------------------------------------------+

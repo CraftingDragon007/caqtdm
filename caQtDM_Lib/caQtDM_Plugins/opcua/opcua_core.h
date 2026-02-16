@@ -194,6 +194,8 @@ signals:
      */
     void attributeGotError(const QString &nodeId, const QString &errorMsg);
 
+    void userMessage(QtMsgType type, const QString &message);
+
 private:
     /**
      * @brief What to do when a server's certificate is not yet trusted

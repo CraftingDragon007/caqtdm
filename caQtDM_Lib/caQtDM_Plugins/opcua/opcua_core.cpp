@@ -67,13 +67,13 @@ OpcUaCore::OpcUaCore(QObject *parent)
 
     QStringList backends = provider.availableBackends();
     if (!backends.contains("open62541")) {
-        VERBOSELOG("Open62541 not found.");
+        emit userMessage(QtCriticalMsg, "Open62541 not found.");
         return;
     }
 
     m_client = provider.createClient("open62541");
     if (!m_client) {
-        VERBOSELOG("Failed to create OPC UA client instance.");
+        emit userMessage(QtCriticalMsg, "Failed to create OPC UA client instance.");
         return;
     }
 
@@ -270,7 +270,7 @@ OpcUaCore::OpcUaCore(QObject *parent)
                   "that's the case, add it to the servers trusted certificates. The client "
                   "certificate is stored under: "
                   + m_client->pkiConfiguration().clientCertificateFile();
-            VERBOSELOG(errorMessage);
+            emit userMessage(QtCriticalMsg, errorMessage);
         }
 
 #ifdef QT_OPCUA_X509
@@ -364,9 +364,9 @@ void OpcUaCore::clearPkiConfig()
     const QString pkiPath = defaultPkiPath();
     if (QDir().exists(pkiPath)) {
         if (!QDir(pkiPath).removeRecursively()) {
-            VERBOSELOG(
+            emit userMessage(QtCriticalMsg,
                 "Failed to delete files for resetting PKI config, please check and unlock/delete "
-                << pkiPath << ". After that, restart caQtDM.");
+                + pkiPath + ". After that, restart caQtDM.");
         }
     }
 }
@@ -512,9 +512,9 @@ QOpcUaEndpointDescription OpcUaCore::chooseEndpointDescription(
     QVector<QOpcUaEndpointDescription> usernamePasswordEndpoints;
     QVector<QOpcUaEndpointDescription> anonymousEndpoints;
 
-    bool isCertificateSupported = m_client->pkiConfiguration().isPkiValid();
-    if (!qgetenv("CAQTDM_OPCUA_DISABLE_CERTIFICATE").isEmpty()) {
-        isCertificateSupported = false;
+    bool isCertificateSupported = false;
+    if (!qgetenv("CAQTDM_OPCUA_ENABLE_CERTIFICATE").isEmpty() && m_client->pkiConfiguration().isPkiValid()) {
+        isCertificateSupported = true;
     }
     bool isUsernamePasswordSupported = m_client->authenticationInformation().authenticationType()
                                        == QOpcUaUserTokenPolicy::Username;

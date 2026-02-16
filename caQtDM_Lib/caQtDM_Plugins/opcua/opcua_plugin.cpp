@@ -392,6 +392,12 @@ int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
                                      m_mutexKnobDataP->SetMutexKnobDataReceived(&kData);
                                  }
                              });
+
+            QObject::connect(core, &OpcUaCore::userMessage, this, [&](QtMsgType type, const QString &message){
+                if (m_messageWindowP) {
+                    m_messageWindowP->postMsgEvent(type, message.toUtf8().data());
+                }
+            });
         } else {
             core = m_cores[endpoint];
         }
