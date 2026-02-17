@@ -2,21 +2,24 @@ opcua_plugin {
         CONFIG += Define_ControlsysTargetDir Define_Build_objDirs
 
         unix:!macx:!ios:!android {
-                message("demo_plugin configuration unix:!macx:!ios:!android")
+		        message("opcua_plugin configuration unix:!macx:!ios:!android")
                 INCLUDEPATH   += $(EPICSINCLUDE)/os/Linux
-                LIBS += -L$(CAQTDM_COLLECT) -Wl,-rpath,$(QTDM_RPATH) -lcaQtDM_Lib
+				LIBS += -L$(CAQTDM_COLLECT) -lcaQtDM_Lib
+				caqtdm_rpath {
+				    LIBS += -Wl,-rpath,$(QTDM_RPATH)
+				}
                 CONFIG += release
         }
 
         macx {
-                message("demo_plugin configuration macx")
+		        message("opcua_plugin configuration macx")
                 INCLUDEPATH   += $(EPICSINCLUDE)/os/Linux
                 LIBS += $$(CAQTDM_COLLECT)/libcaQtDM_Lib.dylib
                 CONFIG += release
         }
 
         ios | android {
-                message("demo_plugin configuration : ios or android")
+		        message("opcua_plugin configuration : ios or android")
                 message( $$OUT_PWD )
                 CONFIG += staticlib
                 LIBS += $$OUT_PWD/../../libcaQtDM_Lib.a
@@ -26,7 +29,7 @@ opcua_plugin {
         }
 
         win32 {
-                message("demo_plugin configuration win32")
+		        message("opcua_plugin configuration win32")
                 INCLUDEPATH  += $$(EPICS_BASE)/include/os/win32
 
                 win32-msvc* || msvc{

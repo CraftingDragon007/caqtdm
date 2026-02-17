@@ -32,7 +32,7 @@
         <UI />
         <Directory Id="TARGETDIR" Name="SourceDir">
             <Directory Id="ProgramFiles64Folder" Name="PFiles">
-                <Directory Id="INSTALLDIR" Name="caQTDM">
+                <Directory Id="INSTALLDIR" Name="caQtDM">
                     <Directory Name="bin" Id="BIN">
                         <Directory Name="windows-x64" Id="WINDOWS_X64">
                             <?if $(env.CAQTDMQTVER) = QT6 ?>
@@ -53,7 +53,7 @@
                             <Component Id="ZMQ" Guid="6F1967A1-84CA-4BE4-85DC-8D1B75338BB7" Win64="yes">
                                 <File Id="LIBZMQ.DLL" Name="libzmq.dll" Source="$(env.ZMQ)\$(env.ZMQLIBRARY)" />
                             </Component>
-                            <Component Id="qwt_6.2.0" Guid="80321EF0-DC70-4D0A-8E0C-269502A0EACB" Win64="yes">
+                            <Component Id="qwt_6.3.0" Guid="80321EF0-DC70-4D0A-8E0C-269502A0EACB" Win64="yes">
                                 <File Id="QWT.DLL" Name="qwt.dll" Source="$(env.QWTHOME)\lib\qwt.dll" />
                             </Component>
                             <Component Id="CaQtDM" Guid="ECDE0227-4100-43B8-B817-88D6BCD7FF49" Win64="yes">
@@ -69,6 +69,10 @@
                                 <IniFile Id="qt_conf_file3" Action="createLine" Key="Binaries" Name="qt.conf" Section="Paths" Value="bin/windows-x64/" Directory="INSTALLDIR_BIN" />
                                 <CreateFolder />
                             </Component>
+                            <Component Id="ssl" Guid="5FB57937-E4B0-4FEE-A498-22C6BECAD8A9" Win64="yes">
+                                <File Id="LIBSSL" Name="$(env.LIBSSL)" Source="$(env.SSLBIN)\$(env.LIBSSL)" />
+                                <File Id="LIBCRYPTO" Name="$(env.LIBCRYPTO)" Source="$(env.SSLBIN)\$(env.LIBCRYPTO)" />
+                            </Component>
                         </Directory>
                     </Directory>
                     <Directory Id="PLUGINS" Name="plugins">
@@ -79,9 +83,10 @@
                                 <File Id="EPICS4_PLUGIN.DLL" Name="epics4_plugin.dll" Source="$(env.CAQTDM_COLLECT)\controlsystems\epics4_plugin.dll" />
                                 <File Id="BSREAD_PLUGIN.DLL" Name="bsread_plugin.dll" Source="$(env.CAQTDM_COLLECT)\controlsystems\bsread_plugin.dll" />
                                 <File Id="MODBUS_PLUGIN.DLL" Name="modbus_plugin.dll" Source="$(env.CAQTDM_COLLECT)\controlsystems\modbus_plugin.dll" />
-                                <File Id="ARCHIVESF_PLUGIN.DLL" Name="archiveSF_plugin.dll" Source="$(env.CAQTDM_COLLECT)\controlsystems\archiveSF_plugin.dll" ShortName="aSF.dll"/>
-                                <File Id="ARCHIVEHTTP_PLUGIN.DLL" Name="archiveHTTP_plugin.dll" Source="$(env.CAQTDM_COLLECT)\controlsystems\archiveHTTP_plugin.dll" ShortName="aHTTP.dll"/>
+                                <File Id="ARCHIVESF_PLUGIN.DLL" Name="archiveSF_plugin.dll" Source="$(env.CAQTDM_COLLECT)\controlsystems\archiveSF_plugin.dll" ShortName="aSF.dll" />
+                                <File Id="ARCHIVEHTTP_PLUGIN.DLL" Name="archiveHTTP_plugin.dll" Source="$(env.CAQTDM_COLLECT)\controlsystems\archiveHTTP_plugin.dll" ShortName="aHTTP.dll" />
                                 <File Id="ENVIRONMENT_PLUGIN.DLL" Name="environment_plugin.dll" Source="$(env.CAQTDM_COLLECT)\controlsystems\environment_plugin.dll" />
+                                <File Id="OPCUA_PLUGIN.DLL" Name="opcua_plugin.dll" Source="$(env.CAQTDM_COLLECT)\controlsystems\opcua_plugin.dll" />
                                 <!---File Id="GPS_PLUGIN.DLL" Name="gps_plugin.dll" Source="$(env.CAQTDM_COLLECT)\controlsystems\gps_plugin.dll" -->
                             </Component>
                         </Directory>
@@ -98,7 +103,8 @@
                             <Component Id="tls" Guid="3A184FF7-4600-4A6A-9464-485E8C837D8B" Win64="yes">
                                 <!---File Id="QOPENSSLBACKEND.DLL" Name="qopensslbackend.dll" Source="$(env.QTHOME)\plugins\tls\qopensslbackend.dll" /-->
                                 <File Id="QSCHANNELBACKEND.DLL" Name="qschannelbackend.dll" Source="$(env.QTHOME)\plugins\tls\qschannelbackend.dll" />
-				<File Id="QCERTONLYBACKEND.DLL" Name="qcertonlybackend.dll" Source="$(env.QTHOME)\plugins\tls\qcertonlybackend.dll" />
+                                <File Id="QCERTONLYBACKEND.DLL" Name="qcertonlybackend.dll" Source="$(env.QTHOME)\plugins\tls\qcertonlybackend.dll" />
+                                <File Id="QOPENSSLBACKEND.DLL" Name="qopensslbackend.dll" Source="$(env.QTHOME)\plugins\tls\qopensslbackend.dll" />
                             </Component>
                         </Directory>
                         <?endif?>
@@ -125,6 +131,11 @@
                         <Directory Id="SQLDRIVERS" Name="sqldrivers">
                             <Component Id="sqldrivers_c" Win64="yes" Guid="E0DEA650-A9CF-4B93-A537-D6C67D31609E">
                                 <File Id="QSQLITE.DLL" Name="qsqlite.dll" Source="$(env.QTHOME)\plugins\sqldrivers\qsqlite.dll" />
+                            </Component>
+                        </Directory>
+                        <Directory Id="OPCUA" Name="opcua">
+                            <Component Id="open62541_backend" Guid="974E003C-EB46-4971-8E22-3944ECFABF6C" Win64="yes">
+                                <File Id="OPEN62541_BACKEND.DLL" Name="open62541_backend.dll" Source="$(env.QTHOME)\plugins\opcua\open62541_backend.dll" />
                             </Component>
                         </Directory>
                     </Directory>
@@ -163,13 +174,13 @@
             <?if $(env.CAQTDMQTVER) = QT4 ?>
             <?include .\caQtDM_Qt4_x64.wxi ?>
             <?elseif $(env.CAQTDMQTVER) = QT6 ?>
-            <ComponentRef Id="Qt_6.5.1" />
+            <ComponentRef Id="Qt_6.10.0" />
             <ComponentRef Id="tls" />
             <?else?>
             <ComponentRef Id="Qt_5.15.0" />
             <?endif?>
             <ComponentRef Id="Epics_7.0.7.1" />
-            <ComponentRef Id="qwt_6.2.0" />
+            <ComponentRef Id="qwt_6.3.0" />
             <ComponentRef Id="CaQtDM" />
             <ComponentRef Id="designer" />
             <ComponentRef Id="Stylesheet" />
@@ -182,6 +193,8 @@
             <ComponentRef Id="qt_conf" />
             <ComponentRef Id="controlsystems" />
             <ComponentRef Id="ZMQ" />
+            <ComponentRef Id="open62541_backend" />
+            <ComponentRef Id="ssl" />
         </Feature>
     </Product>
 </Wix>

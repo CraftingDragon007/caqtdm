@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Include>
-<Component Id="Qt_6.5.1" Guid="F3DFC6F4-9D32-47EF-9200-E4625F071E90" Win64="yes">
+<Component Id="Qt_6.10.0" Guid="F3DFC6F4-9D32-47EF-9200-E4625F071E90" Win64="yes">
 	<File Id="DESIGNER.EXE" Name="designer.exe" Source="$(env.QTHOME)\bin\designer.exe" />
 	<File Id="ASSISTANT.EXE" Name="assistant.exe" Source="$(env.QTHOME)\bin\assistant.exe" />
 	<File Id="QT6QUICKPARTICLES.DLL" Name="Qt6QuickParticles.dll" Source="$(env.QTHOME)\bin\Qt6QuickParticles.dll" />
@@ -26,6 +26,7 @@
 	<File Id="QT6MULTIMEDIA.DLL" Name="Qt6Multimedia.dll" Source="$(env.QTHOME)\bin\Qt6Multimedia.dll" />
 	<File Id="QT6MULTIMEDIAWIDGETS.DLL" Name="Qt6MultimediaWidgets.dll" Source="$(env.QTHOME)\bin\Qt6MultimediaWidgets.dll" />
 	<File Id="QT6NETWORK.DLL" Name="Qt6Network.dll" Source="$(env.QTHOME)\bin\Qt6Network.dll" />
+	<File Id="QT6OPCUA.DLL" Name="Qt6OpcUa.dll" Source="$(env.QTHOME)\bin\Qt6OpcUa.dll" />
 	<File Id="QT6OPENGL.DLL" Name="Qt6OpenGL.dll" Source="$(env.QTHOME)\bin\Qt6OpenGL.dll" />
 	<File Id="QT6POSITIONING.DLL" Name="Qt6Positioning.dll" Source="$(env.QTHOME)\bin\Qt6Positioning.dll" />
 	<File Id="QT6PRINTSUPPORT.DLL" Name="Qt6PrintSupport.dll" Source="$(env.QTHOME)\bin\Qt6PrintSupport.dll" />

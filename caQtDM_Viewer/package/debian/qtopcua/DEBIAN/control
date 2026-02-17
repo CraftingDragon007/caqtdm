@@ -1,0 +1,8 @@
+Package: libqt5opcua5-dev
+Version: 5.15.2
+Section: libs
+Priority: optional
+Architecture: amd64
+Depends: libc6, libqt5core5a, libqt5network5, libmbedtls-dev
+Maintainer: Helge Brands <helge.brands@psi.ch>
+Description: Qt OPC UA library and headers (Custom Build)

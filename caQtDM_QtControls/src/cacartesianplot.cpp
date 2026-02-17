@@ -31,7 +31,9 @@
 
 #include "cacartesianplot.h"
 #include "plotHelperClasses.h"
+#include <QClipboard>
 #include <QtCore>
+#include <QGuiApplication>
 
 caCartesianPlot::caCartesianPlot(QWidget *parent) : QwtPlot(parent)
 {
@@ -234,6 +236,12 @@ void caCartesianPlot::resetZoom() {
     }
     // In this case the bounds have changed so emit the reset zoom signal.
     emit zoomHasReset();
+}
+
+void caCartesianPlot::copyImage() {
+    QImage image = this->grab().toImage();
+    QClipboard *clipboard = QGuiApplication::clipboard();
+    clipboard->setImage(image);
 }
 
 void caCartesianPlot::setZoom(const QRectF &newZoomRect)
