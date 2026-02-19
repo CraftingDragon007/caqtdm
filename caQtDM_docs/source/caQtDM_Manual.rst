@@ -2895,6 +2895,8 @@ Using this plugin you can access archived data from archivers available through 
 The plugin fetches data for a certain interval, trying to fetch all of it at once. If that fails, it refetches the missing data.
 It always refetches in a certain interval, and if any previously fetched data is still in the current timeframe, it is kept, as to reduce duplication.
 
+Building:
+	This plugin is always built. It has no additional dependencies. SSL is activated if Qt supports it and the ``CAQTDM_SSL_IGNORE`` environment variable is not defined.
 Channel Handling:
 	The plugin is meant to serve data that is a mapping between time and values. Thus, the returned data can be retrieved using virtual channels.
 	So instead of simply using ``archiveHTTP://CHANNEL`` you can do e.g. ``archiveHTTP://CHANNEL.X`` to get a one-dimensional array of the x-values. 
@@ -2980,6 +2982,7 @@ OPC UA Plugin
 Usage: ``opcua://CHANNEL``
 
 This plugin allows for direct access to OPC UA endpoints from your client.
+
 For a channel, you may use any OPC UA connection string (for the node you want to access), it should include the protocol (This must be ``opc.tcp://``),  hostname and port.
 The first part after the port needs to be either ``/ns=`` or ``/i=``.
 So including the plugin prefix, this is e.g. ``opcua://opc.tcp://localhost:4840/ns=10;i=12345``
@@ -2994,6 +2997,11 @@ Now, in your UI-file you simply write: ``opcua://someOpcUaVariable``.
 You can also utilize this to have dynamic resolutions based on different translation tables, or using macros. Macros are resolved before the UI-identifier reaches the OPC UA Plugin.
 This means you can use macros to construct the simple identifier, which is then checked for in the translation table, but you cannot use macros in the resolution specified in the resolution table.
 All loaded OPC UA translations are displayed in the caQtDM message window upon startup. Those translations are **ONLY** loaded upon caQtDM launch. Reloads have no effect.
+
+Building:
+	This plugin is NOT built by default. It is built only if the ``CAQTDM_OPCUA`` environment variable is set to be not empty. When building, make sure Qt has the QtOpcUa module available.
+	For it to build with encryption, it is neccessary that the QtOpcUa module was built with encryption. You can check this by searching for X509* headers (They exist = QtOpcUa was built with encryption). This is also how caQtDM detects at build-time whether or not to include the encryption stuff.
+	Since by default QtOpcUa with encryption has a dependency on the dynamic loading of openssl libraries, make sure these are also available at runtime. In the GitHub pipelines, as well as the packaging scripts, you can see what needs to be available. For this, especially qopensslbackend needs to be active in the TLS module, as well as libcrypto and libssl from openssl v3+.
 
 Certificate Creation:
 	In Qt-6 the certificate (and other pki stuff) is generated when caQtDM is started without such a configuration already existing. In Qt-5 it is not possible to auto-generate a certificate, thus secure communication as described below is impossible.
