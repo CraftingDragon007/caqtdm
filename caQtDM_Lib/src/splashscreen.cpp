@@ -74,14 +74,14 @@ SplashScreen::SplashScreen(QWidget *parent) : QSplashScreen(), m_progress(0)
 #if defined(MOBILE_IOS)
     QSize size = qApp->primaryScreen()->size();
     if(size.height() < 500) {
-       pixmap = pixmapLoad.scaledToHeight(110);
+       pixmap = pixmapLoad.scaledToWidth(130);
     } else {
-       pixmap = pixmapLoad.scaledToHeight(225);
+       pixmap = pixmapLoad.scaledToWidth(225);
     }
 #elif defined(MOBILE_ANDROID)
-    pixmap = pixmapLoad.scaledToHeight(330);
+    pixmap = pixmapLoad.scaledToWidth(330);
 #else
-    pixmap = pixmapLoad.scaledToHeight(225);
+    pixmap = pixmapLoad.scaledToWidth(225);
 #endif
     const int splashWidth = pixmap.width();
     const int splashHeight = pixmap.height() + PROGRESS_BAR_AREA_HEIGHT;
@@ -207,7 +207,7 @@ void SplashScreen::drawContents(QPainter *painter)
       pbstyle.invertedAppearance = false;
       pbstyle.text = "loading";
       pbstyle.textVisible = true;
-      pbstyle.rect = QRect(0, pixmap.height() + 2, pixmap.width(), PROGRESS_BAR_AREA_HEIGHT  / 2);
+      pbstyle.rect = QRect(5, pixmap.height() + 3, pixmap.width() - 10, PROGRESS_BAR_AREA_HEIGHT  / 2 - 5);
 
       style()->drawControl(QStyle::CE_ProgressBar, &pbstyle, painter, this);
 
