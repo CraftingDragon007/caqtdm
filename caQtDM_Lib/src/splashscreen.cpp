@@ -71,18 +71,24 @@ SplashScreen::SplashScreen(QWidget *parent) : QSplashScreen(), m_progress(0)
         pixmapLoad.load(":caQtDM-logos.png");
     }
 
+    int scaledWidth = 425;
 #if defined(MOBILE_IOS)
     QSize size = qApp->primaryScreen()->size();
     if(size.height() < 500) {
-       pixmap = pixmapLoad.scaledToWidth(130);
+       scaledWidth = 212;
     } else {
-       pixmap = pixmapLoad.scaledToWidth(225);
+       scaledWidth = 425;
     }
 #elif defined(MOBILE_ANDROID)
-    pixmap = pixmapLoad.scaledToWidth(330);
-#else
-    pixmap = pixmapLoad.scaledToWidth(225);
+    scaledWidth = 635;
 #endif
+    pixmap = pixmapLoad.scaledToWidth(scaledWidth, Qt::SmoothTransformation);
+
+    if (mappedSplashScreen.isEmpty()) {
+       // For the known and established portrait effect, resize the default logo
+       pixmap = pixmap.scaled(pixmap.width(), pixmap.height() * .6, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+    }
+
     const int splashWidth = pixmap.width();
     const int splashHeight = pixmap.height() + PROGRESS_BAR_AREA_HEIGHT;
 
