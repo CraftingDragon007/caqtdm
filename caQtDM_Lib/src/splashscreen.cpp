@@ -47,6 +47,8 @@
 #include <QRandomGenerator>
 #include <QImageReader>
 
+#define PROGRESS_BAR_AREA_HEIGHT 50
+
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 SplashScreen::SplashScreen(QWidget *parent) : QSplashScreen(parent), m_progress(0)
 #else
@@ -61,48 +63,42 @@ SplashScreen::SplashScreen(QWidget *parent) : QSplashScreen(), m_progress(0)
 
     m_maximum = 100;
 
-#if defined(MOBILE_IOS)
-    pixmapLoad.load(":caQtDM-logos.png");
-    QSize size = qApp->primaryScreen()->size();
-    if(size.height() < 500) {
-       pixmap = pixmapLoad.scaled(pixmapLoad.size().width()/2, pixmapLoad.size().height()/2);
-    } else {
-       pixmap = pixmapLoad.scaled(pixmapLoad.size().width(), pixmapLoad.size().height());
-    }
-#elif defined(MOBILE_ANDROID)
-    pixmapLoad.load(":caQtDM-logos.png");
-    pixmap = pixmapLoad.scaled(pixmapLoad.size().width()*1.5, pixmapLoad.size().height()*1.5); // probably wrong
-#else
-
     QDate currentDate = QDate::currentDate();
     QString mappedSplashScreen = getMappedSplashScreenImage(currentDate);
     if (!mappedSplashScreen.isEmpty()) {
-        pixmap.load(mappedSplashScreen);
+        pixmapLoad.load(mappedSplashScreen);
     } else {
-        pixmap.load(":caQtDM-logos.png");
+        pixmapLoad.load(":caQtDM-logos.png");
     }
 
-    pixmap = pixmap.scaledToHeight(225);
-
+#if defined(MOBILE_IOS)
+    QSize size = qApp->primaryScreen()->size();
+    if(size.height() < 500) {
+       pixmap = pixmapLoad.scaledToHeight(110);
+    } else {
+       pixmap = pixmapLoad.scaledToHeight(225);
+    }
+#elif defined(MOBILE_ANDROID)
+    pixmap = pixmapLoad.scaledToHeight(330);
+#else
+    pixmap = pixmapLoad.scaledToHeight(225);
 #endif
+    const int splashWidth = pixmap.width();
+    const int splashHeight = pixmap.height() + PROGRESS_BAR_AREA_HEIGHT;
 
-    const int bottomAreaHeight = 50;
-
-    int splashWidth = pixmap.width();
-    int splashHeight = pixmap.height() + bottomAreaHeight;
-
+    // Whole image
     QPixmap splashPixmap(splashWidth, splashHeight);
     splashPixmap.fill(Qt::transparent);
 
     QPainter painter(&splashPixmap);
 
-    int imageX = (splashWidth - pixmap.width()) / 2;
-    painter.drawPixmap(imageX, 0, pixmap);
+    // Icon / Logo
+    painter.drawPixmap(0, 0, pixmap);
 
-    // bottom box where text and progress bar are
+    // Bottom box where text and progress bar are
     painter.setBrush(QColor(200, 200, 200, 255));
     painter.setPen(Qt::NoPen);
-    painter.drawRect(0, pixmap.height(), splashWidth, bottomAreaHeight);
+    painter.drawRect(0, pixmap.height(), splashWidth, PROGRESS_BAR_AREA_HEIGHT);
 
     painter.end();
 
@@ -211,7 +207,8 @@ void SplashScreen::drawContents(QPainter *painter)
       pbstyle.invertedAppearance = false;
       pbstyle.text = "loading";
       pbstyle.textVisible = true;
-      pbstyle.rect = QRect(0, pixmap.height() + 5, pixmap.width() + 50, 25);
+      pbstyle.rect = QRect(0, pixmap.height() + 2, pixmap.width(), PROGRESS_BAR_AREA_HEIGHT  / 2);
+
       style()->drawControl(QStyle::CE_ProgressBar, &pbstyle, painter, this);
 
 }
