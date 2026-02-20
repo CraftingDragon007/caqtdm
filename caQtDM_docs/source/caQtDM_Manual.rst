@@ -3414,8 +3414,8 @@ To use those you can configure a docker-compose.yml file like this:
       nginx:
          image: ghcr.io/craftingdragon007/caqtdm_nginx:feature-web_control
          ports:
-            - "8443:443"
-            - "8080:80"
+            - "127.0.0.1:8443:443" # Remove 127.0.0.1: if you want to expose caQtDM Web to all network interfaces, and change the ports as needed
+            - "127.0.0.1:8080:80"
          networks:
             - caqtdm-web
          environment:

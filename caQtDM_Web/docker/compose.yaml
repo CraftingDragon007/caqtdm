@@ -5,8 +5,8 @@ services:
       context: ../
       dockerfile: docker/nginx/Dockerfile
     ports:
-      - "8443:443"
-      - "8080:80"
+      - "127.0.0.1:8443:443"
+      - "127.0.0.1:8080:80"
     networks:
       - caqtdm-web
     environment:
