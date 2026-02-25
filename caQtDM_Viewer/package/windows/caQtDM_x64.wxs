@@ -40,7 +40,7 @@
                             <?else?>
                             <?include $(sys.SOURCEFILEPATH)\..\caQtDM_Qt5_x64.wxi ?>
                             <?endif?>
-                            <Component Id="Epics_7.0.7.1" Guid="B7D7E8AE-F448-43F8-A68A-A35895605B8C" Win64="yes">
+                            <Component Id="Epics_7.0.10.1" Guid="B7D7E8AE-F448-43F8-A68A-A35895605B8C" Win64="yes">
                                 <File Id="CAREPEATER.EXE" Name="caRepeater.exe" Source="$(env.EPICS_BASE)\bin\$(env.EPICS_HOST_ARCH)\caRepeater.exe" />
                                 <File Id="CA.DLL" Name="ca.dll" Source="$(env.EPICS_BASE)\bin\$(env.EPICS_HOST_ARCH)\ca.dll" />
                                 <File Id="COM.DLL" Name="Com.dll" Source="$(env.EPICS_BASE)\bin\$(env.EPICS_HOST_ARCH)\Com.dll" />
@@ -51,9 +51,9 @@
                                 <File Id="NT.DLL" Name="nt.dll" Source="$(env.EPICS_BASE)\bin\$(env.EPICS_HOST_ARCH)\nt.dll" />
                             </Component>
                             <Component Id="ZMQ" Guid="6F1967A1-84CA-4BE4-85DC-8D1B75338BB7" Win64="yes">
-                                <File Id="LIBZMQ.DLL" Name="libzmq.dll" Source="$(env.ZMQ)\$(env.ZMQLIBRARY)" />
+                                <File Id="libzmq.dll" Name="$(env.ZMQLIBRARY)" Source="$(env.ZMQBIN)\$(env.ZMQLIBRARY)" />
                             </Component>
-                            <Component Id="qwt_6.2.0" Guid="80321EF0-DC70-4D0A-8E0C-269502A0EACB" Win64="yes">
+                            <Component Id="qwt_6.3.0" Guid="80321EF0-DC70-4D0A-8E0C-269502A0EACB" Win64="yes">
                                 <File Id="QWT.DLL" Name="qwt.dll" Source="$(env.QWTHOME)\lib\qwt.dll" />
                             </Component>
                             <Component Id="CaQtDM" Guid="ECDE0227-4100-43B8-B817-88D6BCD7FF49" Win64="yes">
@@ -163,13 +163,13 @@
             <?if $(env.CAQTDMQTVER) = QT4 ?>
             <?include .\caQtDM_Qt4_x64.wxi ?>
             <?elseif $(env.CAQTDMQTVER) = QT6 ?>
-            <ComponentRef Id="Qt_6.5.1" />
+            <ComponentRef Id="Qt_6.10.0" />
             <ComponentRef Id="tls" />
             <?else?>
             <ComponentRef Id="Qt_5.15.0" />
             <?endif?>
-            <ComponentRef Id="Epics_7.0.7.1" />
-            <ComponentRef Id="qwt_6.2.0" />
+            <ComponentRef Id="Epics_7.0.10.1" />
+            <ComponentRef Id="qwt_6.3.0" />
             <ComponentRef Id="CaQtDM" />
             <ComponentRef Id="designer" />
             <ComponentRef Id="Stylesheet" />

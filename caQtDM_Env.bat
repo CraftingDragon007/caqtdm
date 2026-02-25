@@ -11,7 +11,7 @@ echo ===========================================================================
 echo Select Build Environment
 echo 1) QT 4.8.5  QWT6.1.3 32 Bit VS2010  
 echo 2) QT 6.7.1  QWT6.2.0 64 Bit VS2019  
-echo 3) QT 5.15.0 QWT6.1.5 64 Bit VS2019
+echo 3) QT 5.15.0 QWT6.3.0 64 Bit VS2019
 set /P SELCTION=Select: 
 echo =============================================================================================
  
@@ -100,9 +100,10 @@ REM ============================================================================
   set CAQTDM_SIGNER="Paul Scherrer Institut"
 
   
-  set ZMQ=D:\epics\softioc\common\external\zeromq-4.3.5_windows-x64\bin\Release
+  set ZMQ=D:\epics\softioc\common\external\zeromq-4.3.5_windows-x64
   set ZMQINC=D:\epics\softioc\common\external\zeromq-4.3.5\include
   set ZMQLIB=D:\epics\softioc\common\external\zeromq-4.3.5_windows-x64\lib\Release
+  set ZMQ=D:\epics\softioc\common\external\zeromq-4.3.5_windows-x64\bin\Release
   set ZMQLIBRARY=libzmq-v142-mt-4_3_5.dll
   
   set SSL=D:\qt\openssl-1.0.2n_VS16_64bit
@@ -127,9 +128,9 @@ REM ============================================================================
  
   set QTHOME=D:/qt/build/Qt-5.15.0_VS19_64bit
   
-  set QWTHOME=D:/qt/build/qwt-Qt_5_15_0-Release
-  set QWTINCLUDE=%QWTHOME%/include
-  set QWTLIB=%QWTHOME%/lib
+  set QWTHOME=D:/qt/qwt-6.3.0_Qt5.15.0_64bit
+  set QWTINCLUDE=D:/qt/qwt-6.3.0_Qt5.15.0_64bit/src
+  set QWTLIB=D:/qt/qwt-6.3.0_Qt5.15.0_64bit/lib
   set QWTVERSION=6.1
   set QWTLIBNAME=qwt
   set CAQTDMQTVER=QT5
@@ -147,20 +148,22 @@ REM ============================================================================
  
   set QTBASE=%QTCONTROLS_LIBS%
   
-  set WIXHOME=C:\Program Files (x86)\WiX Toolset v3.14\bin
+  set WIXHOME=C:\Program Files (x86)\WiX Toolset v3.11\bin
   set QMAKESPEC=%QTHOME%\mkspecs\win32-msvc
   set TIMESTAPER="http://timestamp.digicert.com"
   set CAQTDM_SIGNER="Paul Scherrer Institut"
 
-  set ZMQ=D:\qt\zeromq-4.2.3
+  set ZMQ=D:\qt\zeromq-4.3.5_windows-x64
   set ZMQINC=%ZMQ%/include
-  set ZMQLIB=%ZMQ%/lib/%EPICS_HOST_ARCH%
+  set ZMQLIB=%ZMQ%/lib
+  set ZMQBIN=%ZMQ%/bin
+  set ZMQLIBRARY=libzmq-v142-mt-4_3_5.dll
 
   set SSL=D:\qt\openssl-1.0.2n_VS16_64bit
   set SSLINC=%SSL%\inc32
   set SSLLIB=%SSL%\out32dll
 
-  set CAQTDM_GPS=1
+  set CAQTDM_GPS=0
   set CAQTDM_MODBUS=1
 
 
