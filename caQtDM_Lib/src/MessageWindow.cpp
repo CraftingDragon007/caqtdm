@@ -73,19 +73,6 @@ MessageWindow::MessageWindow(QWidget* parent) : QDockWidget(parent)
     setContextMenuPolicy(Qt::CustomContextMenu);
     show();
 
-    QString createLogFile = qgetenv("CAQTDM_CREATE_LOGFILE");
-    if (createLogFile.toLower() == "true") {
-        QDateTime currentTime = QDateTime::currentDateTime();
-        QString logFileName = QString("caQtDM_Logfile_%1.txt").arg(currentTime.toLocalTime().toString("yyyy-dd-M--HH-mm-ss-zzz"));
-        QString logFilePath = qgetenv("CAQTDM_LOGFILE_PATH");
-        if (!logFilePath.isEmpty()) {
-            logFilePath += "/" + logFileName;
-            m_logFilePath = logFilePath;
-        } else {
-            m_logFilePath = logFileName;
-        }
-    }
-
     move(x(), 0);
 }
 
@@ -157,11 +144,6 @@ QString MessageWindow::getMessageBoxContents() {
     return msgTextEdit.toPlainText();
 }
 
-QString MessageWindow::getLogFilePath()
-{
-    return m_logFilePath;
-}
-
 void MessageWindow::themeChanged() {
     QApplication* guiApp = qobject_cast<QApplication*>(qApp);
     QPalette palette = guiApp->palette();
@@ -189,17 +171,6 @@ void MessageWindow::postMsgEvent(QtMsgType type, char* msg)
 {
     QString qmsg = MessageWindow::QtMsgToQString(type, msg);
 
-    // Also write the message to a temporary logfile that gets permanent if the progam crashes.
-    if (!m_logFilePath.isEmpty()) {
-            QFile logFile(m_logFilePath);
-        if (logFile.open(QIODevice::Append | QIODevice::Text)) {
-            QTextStream textStream(&logFile);
-            textStream << qmsg.append("\n");
-            logFile.close();
-        } else {
-            qWarning() << "Failed to write to logfile";
-        }
-    }
     switch (type) {
 #if QT_VERSION > QT_VERSION_CHECK(5, 0, 0)
     case QtInfoMsg:

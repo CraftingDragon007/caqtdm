@@ -1701,16 +1701,6 @@ QString FileOpenWindow::getStatusBarContents()
     return statusBarContents;
 }
 
-QString FileOpenWindow::getLogFilePath()
-{
-    QString logFilePath;
-    if (messageWindow != Q_NULLPTR) {
-        logFilePath = messageWindow->getLogFilePath();
-    }
-
-    return logFilePath;
-}
-
 /**
  * slot for unconnected channels button
  */

@@ -429,33 +429,6 @@ int main(int argc, char *argv[])
         errorMessage = e.what();
     }
 
-    // If it was successful, delete the temporary logfile, if it exists.
-    // If it was not successful but the logfile is still writable, try to add some more information post-mortem
-    QString logFilePath = fileOpenWindow.getLogFilePath();
-    if (!logFilePath.isEmpty()) {
-        if (exitCode != 0) { // Append the current content of the statusbar to the logFile.
-            // Create the file
-            QFile crashLogFile(logFilePath);
-            if (crashLogFile.open(QIODevice::Append | QIODevice::Text)) {
-                QTextStream textStream(&crashLogFile);
-                // Write information to the file that might help identify the cause of the crash
-                textStream << "\nThis logfile was not deleted automatically because caQtDM encountered a fatal error and exited with:\n"
-                           << "    Exit Code: " << exitCode << "\n"
-                           << "    Error Message: " << errorMessage << "\n"
-                           << "Crash occured on (local time): " << QDateTime::currentDateTime().toLocalTime().toString() << "\n"
-                           << "Content of the statusbar when the crash occurred:\n\n"
-                           << fileOpenWindow.getStatusBarContents();
-
-                // Close the file
-                crashLogFile.close();
-            }
-        } else {
-            // Delete the logfile, as the reason for the exit is not an error
-            QFile logFile(logFilePath);
-            logFile.remove();
-        }
-    }
-
 
     return exitCode;
 }
