@@ -7480,11 +7480,11 @@ VncWebChildProcess* CaQtDM_Lib::getWebChildProcess(QString absoluteFilePath, QSt
 #endif
 
     QString key;
-    QStringList incomingMacros = macros.split(';', skip_empty_parts);
+    QStringList incomingMacros = macros.split(QChar(';'), (Qt::SplitBehavior)skip_empty_parts);
     incomingMacros.sort();
 
     foreach (QString item, webChildProcesses.keys()) {
-        QStringList itemParts = item.split('\0');
+        QStringList itemParts = item.split(QChar('\0'));
 
         if (itemParts.isEmpty() || itemParts[0] != absoluteFilePath) {
             continue;
@@ -7550,7 +7550,7 @@ VncWebChildProcess* CaQtDM_Lib::startVncChildProcess(quint16 vncPort, quint16 we
             if (parent) QMessageBox::critical(parent, "Error", WEB_CARELATED_DISPLAY_ERROR_MSG);
             return nullptr;
         }
-        QFile runScript = QFile(websockify_path + "/run");
+        QFile runScript(websockify_path + "/run");
 
         if (!runScript.exists()) {
             qCritical() << "caQtDM_Web -- websockify run script, please check if you provided the right CAQTDM_WEB_PATH and if websockify was correctly cloned inside it";

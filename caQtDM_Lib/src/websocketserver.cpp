@@ -147,7 +147,7 @@ void WebSocketServer::processTextMessage(const QString &message)
                 key += macros;
             }
 
-            QStringList keyParts = key.split('\0');
+            QStringList keyParts = key.split(QChar('\0'));
             QString macrosString;
             if (keyParts.length() > 1) {
                 macrosString = keyParts[1];
