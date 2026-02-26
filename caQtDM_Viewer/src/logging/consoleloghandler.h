@@ -10,6 +10,9 @@ public:
     ~ConsoleLogHandler() override;
 
     void handleLog(const Log &log) override;
+
+private:
+    bool m_flushEachLog;
 };
 
 #endif // CONSOLELOGHANDLER_H

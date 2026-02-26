@@ -422,6 +422,7 @@ int main(int argc, char *argv[])
     int exitCode = 0;
 
     GeneralLogHandler::initialize();
+    qInfo() << "initialized logger";
 
     // Put this into a try catch statement to catch all errors
     // Note: This won't work always, as some exeptions, such as segfaults, cannot be caught.
