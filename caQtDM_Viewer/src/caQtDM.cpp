@@ -44,6 +44,8 @@
 
 #if QT_VERSION > QT_VERSION_CHECK(5, 0, 0)
 #include <QApplication>
+
+#include <logging/generalloghandler.h>
 #else
 #include <QtGui/QApplication>
 #endif
@@ -418,7 +420,8 @@ int main(int argc, char *argv[])
     QObject::connect(&app, SIGNAL(aboutToQuit()), &fileOpenWindow, SLOT(doSomething()));
 
     int exitCode = 0;
-    QString errorMessage;
+
+    GeneralLogHandler::initialize();
 
     // Put this into a try catch statement to catch all errors
     // Note: This won't work always, as some exeptions, such as segfaults, cannot be caught.
@@ -426,9 +429,8 @@ int main(int argc, char *argv[])
         exitCode = app.exec();
     } catch (const std::exception& e) {
         exitCode = EXIT_FAILURE;
-        errorMessage = e.what();
+        qCritical() << e.what();
     }
-
 
     return exitCode;
 }

@@ -80,13 +80,18 @@ SOURCES +=\
     fileopenwindow.cpp \
     messagebox.cpp \
     configDialog.cpp \
-    pipereader.cpp
+    pipereader.cpp \
+    src/logging/consoleloghandler.cpp \
+    src/logging/generalloghandler.cpp
 
 HEADERS  +=  \
     messagebox.h \
     fileopenwindow.h \
     configDialog.h \
-    pipereader.h
+    pipereader.h \
+    src/logging/abstractloghandler.h \
+    src/logging/consoleloghandler.h \
+    src/logging/generalloghandler.h
 
 FORMS += main.ui
 
