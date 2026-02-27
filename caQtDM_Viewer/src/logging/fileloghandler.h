@@ -27,7 +27,7 @@ private:
     QList<Log> m_logBuffer;
     QMutex m_logFileMutex;
     QMutex m_logBufferMutex;
-    QTimer* m_logBufferTimer;
+    QTimer *m_logBufferTimer;
     int m_logBufferTimeoutMs;
     int m_logBufferMaxSize;
     int m_logFileMaxSizeB;

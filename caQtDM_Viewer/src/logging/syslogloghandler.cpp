@@ -2,14 +2,17 @@
 
 #include <syslog.h>
 
-SyslogLogHandler::SyslogLogHandler() {
+SyslogLogHandler::SyslogLogHandler()
+{
     openlog("caQtDM", LOG_PID | LOG_NDELAY, LOG_USER);
 }
-SyslogLogHandler::~SyslogLogHandler() {
+SyslogLogHandler::~SyslogLogHandler()
+{
     closelog();
 }
 
-void SyslogLogHandler::handleLog(const Log &log) {
+void SyslogLogHandler::handleLog(const Log &log)
+{
     int priority;
     switch (log.loglevel) {
     case QtDebugMsg:
@@ -30,5 +33,8 @@ void SyslogLogHandler::handleLog(const Log &log) {
         break;
     }
 
-    syslog(priority, "%s", qUtf8Printable("[" + log.timestampUtc + "] " + log.loglevelString + " | " + log.locationString + "> " + log.message));
+    syslog(priority,
+           "%s",
+           qUtf8Printable("[" + log.timestampUtc + "] " + log.loglevelString + " | "
+                          + log.locationString + "> " + log.message));
 }

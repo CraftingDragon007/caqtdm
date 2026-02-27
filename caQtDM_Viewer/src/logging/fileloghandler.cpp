@@ -1,13 +1,14 @@
 #include "fileloghandler.h"
 
-#include <iostream>
-
 #include <QDateTime>
 #include <QDebug>
 #include <QStandardPaths>
 
-FileLogHandler::FileLogHandler() : QObject(Q_NULLPTR) {
-    const QString localAppDataDirectory = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+FileLogHandler::FileLogHandler()
+    : QObject(Q_NULLPTR)
+{
+    const QString localAppDataDirectory = QStandardPaths::writableLocation(
+        QStandardPaths::AppLocalDataLocation);
     const QDir logDirectory = QDir(localAppDataDirectory).filePath("Logs");
 
     if (!logDirectory.exists()) {
@@ -29,17 +30,23 @@ FileLogHandler::FileLogHandler() : QObject(Q_NULLPTR) {
     m_logBufferTimeoutMs = 10000;
     m_logBufferMaxSize = 5;
     m_logBufferTimer = new QTimer(this);
-    QObject::connect(m_logBufferTimer, &QTimer::timeout, this, &FileLogHandler::clearLogBuffer, Qt::QueuedConnection);
+    QObject::connect(m_logBufferTimer,
+                     &QTimer::timeout,
+                     this,
+                     &FileLogHandler::clearLogBuffer,
+                     Qt::QueuedConnection);
     m_logBufferTimer->setInterval(m_logBufferTimeoutMs);
     m_logBufferTimer->start();
 }
 
-FileLogHandler::~FileLogHandler() {
+FileLogHandler::~FileLogHandler()
+{
     QMutexLocker locker(&m_logFileMutex);
     QMetaObject::invokeMethod(m_logBufferTimer, &QTimer::stop, Qt::BlockingQueuedConnection);
 }
 
-void FileLogHandler::cleanupOldLogs(const QDir &logDir, int maxFiles) {
+void FileLogHandler::cleanupOldLogs(const QDir &logDir, int maxFiles)
+{
     QDir dir(logDir);
     dir.setFilter(QDir::Files);
     dir.setSorting(QDir::Time | QDir::Reversed); // Oldest first
@@ -64,18 +71,17 @@ void FileLogHandler::handleLog(const Log &log)
     }
 }
 
-void FileLogHandler::clearLogBuffer() {
+void FileLogHandler::clearLogBuffer()
+{
     QList<Log> logs;
     {
         QMutexLocker locker(&m_logBufferMutex);
-        // This is done because const-ness othewise breaks compilation
         logs = m_logBuffer;
         m_logBuffer.clear();
     }
 
-
     QString logString;
-    for (const auto &log: logs) {
+    for (const auto &log : logs) {
         logString.append("[" + log.timestampUtc + "] " + log.loglevelString + " | "
                          + log.locationString + "> " + log.message + "\n");
     }
@@ -88,7 +94,6 @@ void FileLogHandler::clearLogBuffer() {
         return;
     }
 
-    qDebug() << "\"" << qUtf8Printable(logString) << "\"";
     logFile.write(qUtf8Printable(logString));
     logFile.flush();
 
@@ -99,7 +104,8 @@ void FileLogHandler::clearLogBuffer() {
     logFile.close();
 }
 
-void FileLogHandler::truncateLogFile(QFile &logFile) {
+void FileLogHandler::truncateLogFile(QFile &logFile)
+{
     qint64 fileSize = logFile.size();
     qint64 halfSize = fileSize / 2;
 

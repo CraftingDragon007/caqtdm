@@ -7,13 +7,13 @@
 #endif
 
 #include <chrono>
-#include <ctime>
 #include <cstdio>
+#include <ctime>
 
 #include <QCoreApplication>
 
 QMutex GeneralLogHandler::s_mutex;
-QList<AbstractLogHandler*> GeneralLogHandler::s_logHandlers;
+QList<AbstractLogHandler *> GeneralLogHandler::s_logHandlers;
 
 QtMessageHandler GeneralLogHandler::initialize()
 {
@@ -74,14 +74,15 @@ void GeneralLogHandler::messageHandler(QtMsgType type,
     }
 
     long long msSinceEpoch = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                   std::chrono::system_clock::now().time_since_epoch())
-                                   .count();
+                                 std::chrono::system_clock::now().time_since_epoch())
+                                 .count();
 
     std::time_t seconds = msSinceEpoch / 1000;
     int milliseconds = msSinceEpoch % 1000;
     std::tm tm = *std::gmtime(&seconds);
     char timestampUtc[32];
-    std::snprintf(timestampUtc, sizeof(timestampUtc),
+    std::snprintf(timestampUtc,
+                  sizeof(timestampUtc),
                   "%04d-%02d-%02dT%02d:%02d:%02d.%03dZ",
                   tm.tm_year + 1900,
                   tm.tm_mon + 1,

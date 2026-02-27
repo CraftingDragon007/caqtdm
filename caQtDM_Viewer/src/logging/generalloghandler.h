@@ -10,10 +10,13 @@ class GeneralLogHandler
 public:
     GeneralLogHandler() = delete;
     static QtMessageHandler initialize();
-    static void messageHandler(QtMsgType type, const QMessageLogContext &context, const QString &message);
+    static void messageHandler(QtMsgType type,
+                               const QMessageLogContext &context,
+                               const QString &message);
+
 private:
     static QMutex s_mutex;
-    static QList<AbstractLogHandler*> s_logHandlers;
+    static QList<AbstractLogHandler *> s_logHandlers;
 };
 
 #endif // GENERALLOGHANDLER_H
