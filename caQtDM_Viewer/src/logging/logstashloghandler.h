@@ -12,12 +12,13 @@ class LogstashLogHandler : public QObject, public AbstractLogHandler
 {
     Q_OBJECT
 public:
-    LogstashLogHandler();
+    explicit LogstashLogHandler(QObject *parent = Q_NULLPTR);
     ~LogstashLogHandler() override;
 
     void handleLog(const Log &log) override;
 
 public slots:
+    void flush();
     void clearLogBuffer();
 
 private:

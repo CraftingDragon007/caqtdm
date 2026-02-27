@@ -3,9 +3,10 @@
 #include <QDateTime>
 #include <QDebug>
 #include <QStandardPaths>
+#include <QThread>
 
-FileLogHandler::FileLogHandler()
-    : QObject(Q_NULLPTR)
+FileLogHandler::FileLogHandler(QObject *parent)
+    : QObject(parent)
 {
     const QString localAppDataDirectory = QStandardPaths::writableLocation(
         QStandardPaths::AppLocalDataLocation);
@@ -28,7 +29,7 @@ FileLogHandler::FileLogHandler()
 
     m_logFileMaxSizeB = 1000000; // 1MB
     m_logBufferTimeoutMs = 10000;
-    m_logBufferMaxSize = 5;
+    m_logBufferMaxSize = 20;
     m_logBufferTimer = new QTimer(this);
     QObject::connect(m_logBufferTimer,
                      &QTimer::timeout,
@@ -42,7 +43,6 @@ FileLogHandler::FileLogHandler()
 FileLogHandler::~FileLogHandler()
 {
     QMutexLocker locker(&m_logFileMutex);
-    QMetaObject::invokeMethod(m_logBufferTimer, &QTimer::stop, Qt::BlockingQueuedConnection);
 }
 
 void FileLogHandler::cleanupOldLogs(const QDir &logDir, int maxFiles)
@@ -71,6 +71,15 @@ void FileLogHandler::handleLog(const Log &log)
     }
 }
 
+void FileLogHandler::flush()
+{
+    if (QThread::currentThread() == this->thread()) {
+        clearLogBuffer();
+    } else {
+        QMetaObject::invokeMethod(this, "clearLogBuffer", Qt::BlockingQueuedConnection);
+    }
+}
+
 void FileLogHandler::clearLogBuffer()
 {
     QList<Log> logs;
@@ -78,6 +87,10 @@ void FileLogHandler::clearLogBuffer()
         QMutexLocker locker(&m_logBufferMutex);
         logs = m_logBuffer;
         m_logBuffer.clear();
+    }
+
+    if (logs.empty()) {
+        return;
     }
 
     QString logString;

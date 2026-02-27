@@ -4,6 +4,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QNetworkReply>
+#include <QThread>
 
 #ifdef QT_NO_SSL
 #define DEFAULT_LOGSTASH_URL "http://logstash03.psi.ch/loki/api/v1/push"
@@ -11,11 +12,11 @@
 #define DEFAULT_LOGSTASH_URL "https://logstash03.psi.ch/loki/api/v1/push"
 #endif
 
-LogstashLogHandler::LogstashLogHandler()
-    : QObject(Q_NULLPTR)
+LogstashLogHandler::LogstashLogHandler(QObject *parent)
+    : QObject(parent)
 {
-    m_logBufferTimeoutMs = 10000;
-    m_logBufferMaxSize = 5;
+    m_logBufferTimeoutMs = 60000;
+    m_logBufferMaxSize = 20;
     m_backendUrl = DEFAULT_LOGSTASH_URL;
     m_networkManager = new QNetworkAccessManager(this);
     m_logBufferTimer = new QTimer(this);
@@ -28,10 +29,7 @@ LogstashLogHandler::LogstashLogHandler()
     m_logBufferTimer->start();
 }
 
-LogstashLogHandler::~LogstashLogHandler()
-{
-    QMetaObject::invokeMethod(m_logBufferTimer, &QTimer::stop, Qt::BlockingQueuedConnection);
-}
+LogstashLogHandler::~LogstashLogHandler() {}
 
 void LogstashLogHandler::handleLog(const Log &log)
 {
@@ -45,6 +43,15 @@ void LogstashLogHandler::handleLog(const Log &log)
     }
 }
 
+void LogstashLogHandler::flush()
+{
+    if (QThread::currentThread() == this->thread()) {
+        clearLogBuffer();
+    } else {
+        QMetaObject::invokeMethod(this, "clearLogBuffer", Qt::BlockingQueuedConnection);
+    }
+}
+
 void LogstashLogHandler::clearLogBuffer()
 {
     QList<Log> logs;
@@ -52,6 +59,10 @@ void LogstashLogHandler::clearLogBuffer()
         QMutexLocker locker(&m_logBufferMutex);
         logs = m_logBuffer;
         m_logBuffer.clear();
+    }
+
+    if (logs.empty()) {
+        return;
     }
 
     QJsonArray logsJsonArray;

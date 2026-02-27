@@ -32,18 +32,32 @@ QtMessageHandler GeneralLogHandler::initialize()
     }
     s_logHandlers.clear();
 
-    // Add console handler
-    AbstractLogHandler *consoleLogHandler = new ConsoleLogHandler();
+    ConsoleLogHandler *consoleLogHandler = new ConsoleLogHandler();
     s_logHandlers.append(consoleLogHandler);
+    QObject::connect(QCoreApplication::instance(),
+                     &QCoreApplication::aboutToQuit,
+                     consoleLogHandler,
+                     &ConsoleLogHandler::flush,
+                     Qt::QueuedConnection);
 
-    AbstractLogHandler *fileLogHandler = new FileLogHandler();
+    FileLogHandler *fileLogHandler = new FileLogHandler();
     s_logHandlers.append(fileLogHandler);
+    QObject::connect(QCoreApplication::instance(),
+                     &QCoreApplication::aboutToQuit,
+                     fileLogHandler,
+                     &FileLogHandler::flush,
+                     Qt::QueuedConnection);
 
-    AbstractLogHandler *logstashLogHandler = new LogstashLogHandler();
+    LogstashLogHandler *logstashLogHandler = new LogstashLogHandler();
     s_logHandlers.append(logstashLogHandler);
+    QObject::connect(QCoreApplication::instance(),
+                     &QCoreApplication::aboutToQuit,
+                     logstashLogHandler,
+                     &LogstashLogHandler::flush,
+                     Qt::QueuedConnection);
 
 #ifdef Q_OS_UNIX
-    AbstractLogHandler *syslogLogHandler = new SyslogLogHandler();
+    SyslogLogHandler *syslogLogHandler = new SyslogLogHandler();
     s_logHandlers.append(syslogLogHandler);
 #endif
 

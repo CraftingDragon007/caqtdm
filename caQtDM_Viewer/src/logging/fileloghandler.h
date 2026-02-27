@@ -11,12 +11,13 @@ class FileLogHandler : public QObject, public AbstractLogHandler
 {
     Q_OBJECT
 public:
-    FileLogHandler();
+    explicit FileLogHandler(QObject *parent = Q_NULLPTR);
     ~FileLogHandler() override;
 
     void handleLog(const Log &log) override;
 
 public slots:
+    void flush();
     void clearLogBuffer();
 
 private:

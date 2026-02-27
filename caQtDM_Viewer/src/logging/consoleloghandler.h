@@ -3,13 +3,19 @@
 
 #include "abstractloghandler.h"
 
-class ConsoleLogHandler : public AbstractLogHandler
+#include <QObject>
+
+class ConsoleLogHandler : public QObject, public AbstractLogHandler
 {
+    Q_OBJECT
 public:
-    ConsoleLogHandler();
+    explicit ConsoleLogHandler(QObject *parent = Q_NULLPTR);
     ~ConsoleLogHandler() override;
 
     void handleLog(const Log &log) override;
+
+public slots:
+    void flush();
 
 private:
     bool m_flushEachLog;
