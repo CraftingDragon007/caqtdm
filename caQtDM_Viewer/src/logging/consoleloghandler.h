@@ -13,6 +13,7 @@ public:
 
 private:
     bool m_flushEachLog;
+    bool m_verboseOutput;
 };
 
 #endif // CONSOLELOGHANDLER_H
