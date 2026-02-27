@@ -2,7 +2,7 @@
 #define ABSTRACTLOGHANDLER_H
 
 #include <QString>
-#include <QtLogging>
+#include <qlogging.h>
 
 typedef struct
 {

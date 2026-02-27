@@ -1,7 +1,10 @@
 #include "fileloghandler.h"
 
-#include <QStandardPaths>
 #include <iostream>
+
+#include <QDateTime>
+#include <QDebug>
+#include <QStandardPaths>
 
 FileLogHandler::FileLogHandler() : QObject(Q_NULLPTR) {
     const QString localAppDataDirectory = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
