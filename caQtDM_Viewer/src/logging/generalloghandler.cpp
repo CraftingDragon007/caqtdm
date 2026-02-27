@@ -2,6 +2,7 @@
 
 #include "consoleloghandler.h"
 #include "fileloghandler.h"
+#include "logstashloghandler.h"
 #ifdef Q_OS_UNIX
 #include "syslogloghandler.h"
 #endif
@@ -37,6 +38,9 @@ QtMessageHandler GeneralLogHandler::initialize()
 
     AbstractLogHandler *fileLogHandler = new FileLogHandler();
     s_logHandlers.append(fileLogHandler);
+
+    AbstractLogHandler *logstashLogHandler = new LogstashLogHandler();
+    s_logHandlers.append(logstashLogHandler);
 
 #ifdef Q_OS_UNIX
     AbstractLogHandler *syslogLogHandler = new SyslogLogHandler();

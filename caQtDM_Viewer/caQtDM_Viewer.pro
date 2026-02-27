@@ -83,7 +83,8 @@ SOURCES +=\
     pipereader.cpp \
     src/logging/consoleloghandler.cpp \
     src/logging/fileloghandler.cpp \
-    src/logging/generalloghandler.cpp
+    src/logging/generalloghandler.cpp \
+    src/logging/logstashloghandler.cpp
 
 HEADERS  +=  \
     messagebox.h \
@@ -93,7 +94,8 @@ HEADERS  +=  \
     src/logging/abstractloghandler.h \
     src/logging/consoleloghandler.h \
     src/logging/fileloghandler.h \
-    src/logging/generalloghandler.h
+    src/logging/generalloghandler.h \
+    src/logging/logstashloghandler.h
 
 unix {
     SOURCES += src/logging/syslogloghandler.cpp
