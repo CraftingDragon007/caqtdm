@@ -130,8 +130,8 @@ jobs:
         id: push-cagw
         uses: docker/build-push-action@v6
         with:
-          context: ./caQtDM_Web
-          file: ./caQtDM_Web/docker/cagw/Dockerfile
+          context: ./caQtDM_Web/docker/gateway
+          file: ./caQtDM_Web/docker/gateway/Dockerfile
           push: true
           tags: ${{ steps.meta-cagw.outputs.tags }}
           labels: ${{ steps.meta-cagw.outputs.labels }}
