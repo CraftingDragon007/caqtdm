@@ -5,12 +5,18 @@
 #include <QJsonObject>
 #include <QNetworkReply>
 
+#ifdef QT_NO_SSL
+#define DEFAULT_LOGSTASH_URL "http://logstash03.psi.ch/loki/api/v1/push"
+#else
+#define DEFAULT_LOGSTASH_URL "https://logstash03.psi.ch/loki/api/v1/push"
+#endif
+
 LogstashLogHandler::LogstashLogHandler()
     : QObject(Q_NULLPTR)
 {
     m_logBufferTimeoutMs = 10000;
     m_logBufferMaxSize = 5;
-    m_backendUrl = "https://logstash03.psi.ch/loki/api/v1/push";
+    m_backendUrl = DEFAULT_LOGSTASH_URL;
     m_networkManager = new QNetworkAccessManager(this);
     m_logBufferTimer = new QTimer(this);
     QObject::connect(m_logBufferTimer,

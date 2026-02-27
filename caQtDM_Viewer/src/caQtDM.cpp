@@ -45,7 +45,10 @@
 #if QT_VERSION > QT_VERSION_CHECK(5, 0, 0)
 #include <QApplication>
 
+#ifndef CAQTDM_NO_CUSTOM_LOGHANDLER
 #include <logging/generalloghandler.h>
+#endif
+
 #else
 #include <QtGui/QApplication>
 #endif
@@ -143,7 +146,10 @@ int main(int argc, char *argv[])
     bool savetoimage = false;
     bool resizing = true;
 
+    QStringList arguments;
+    arguments.reserve(argc);
     for (numargs = argc, in = 1; in < numargs; in++) {
+        arguments.append(argv[in]);
         qDebug() << argv[in];
         if ( strcmp (argv[in], "-display" ) == 0 ) {
             in++;
@@ -273,6 +279,16 @@ int main(int argc, char *argv[])
     QApplication app(argc, argv);
     QApplication::setOrganizationName("Paul Scherrer Institut");
     QApplication::setApplicationName("caQtDM");
+
+#ifndef CAQTDM_NO_CUSTOM_LOGHANDLER
+    // From hereon, everything logged via qDebug or its siblings will be captured by the custom LogHandler.
+    GeneralLogHandler::initialize();
+    qInfo() << "initialized logger";
+    // Log all arguments that were previously shown to the user but not logged via the custom LogHandler
+    for (int i = 0; i < arguments.size(); i++) {
+        qDebug().nospace() << "Argument: " << i << ": " << arguments[i];
+    }
+#endif
 
 #ifdef MOBILE_ANDROID
     //qDebug() << QStyleFactory::keys();
@@ -420,9 +436,6 @@ int main(int argc, char *argv[])
     QObject::connect(&app, SIGNAL(aboutToQuit()), &fileOpenWindow, SLOT(doSomething()));
 
     int exitCode = 0;
-
-    GeneralLogHandler::initialize();
-    qInfo() << "initialized logger";
 
     // Put this into a try catch statement to catch all errors
     // Note: This won't work always, as some exeptions, such as segfaults, cannot be caught.
