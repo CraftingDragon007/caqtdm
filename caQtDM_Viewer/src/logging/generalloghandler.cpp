@@ -2,6 +2,9 @@
 
 #include "consoleloghandler.h"
 #include "fileloghandler.h"
+#ifdef Q_OS_UNIX
+#include "syslogloghandler.h"
+#endif
 
 #include <chrono>
 #include <ctime>
@@ -34,6 +37,11 @@ QtMessageHandler GeneralLogHandler::initialize()
 
     AbstractLogHandler *fileLogHandler = new FileLogHandler();
     s_logHandlers.append(fileLogHandler);
+
+#ifdef Q_OS_UNIX
+    AbstractLogHandler *syslogLogHandler = new SyslogLogHandler();
+    s_logHandlers.append(syslogLogHandler);
+#endif
 
     return previousHandler;
 }

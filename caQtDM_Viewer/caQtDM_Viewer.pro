@@ -95,6 +95,11 @@ HEADERS  +=  \
     src/logging/fileloghandler.h \
     src/logging/generalloghandler.h
 
+unix {
+    SOURCES += src/logging/syslogloghandler.cpp
+    HEADERS += src/logging/syslogloghandler.h
+}
+
 FORMS += main.ui
 
 # when epics4 not build, then do not import statically in fileopenwindow.cpp
