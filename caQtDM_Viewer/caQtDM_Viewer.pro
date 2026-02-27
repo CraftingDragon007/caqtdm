@@ -82,6 +82,7 @@ SOURCES +=\
     configDialog.cpp \
     pipereader.cpp \
     src/logging/consoleloghandler.cpp \
+    src/logging/fileloghandler.cpp \
     src/logging/generalloghandler.cpp
 
 HEADERS  +=  \
@@ -91,6 +92,7 @@ HEADERS  +=  \
     pipereader.h \
     src/logging/abstractloghandler.h \
     src/logging/consoleloghandler.h \
+    src/logging/fileloghandler.h \
     src/logging/generalloghandler.h
 
 FORMS += main.ui

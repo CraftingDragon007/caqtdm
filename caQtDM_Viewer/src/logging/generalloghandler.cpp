@@ -1,6 +1,7 @@
 #include "generalloghandler.h"
 
 #include "consoleloghandler.h"
+#include "fileloghandler.h"
 
 #include <chrono>
 #include <ctime>
@@ -28,8 +29,11 @@ QtMessageHandler GeneralLogHandler::initialize()
     s_logHandlers.clear();
 
     // Add console handler
-    ConsoleLogHandler *consoleLogHandler = new ConsoleLogHandler();
+    AbstractLogHandler *consoleLogHandler = new ConsoleLogHandler();
     s_logHandlers.append(consoleLogHandler);
+
+    AbstractLogHandler *fileLogHandler = new FileLogHandler();
+    s_logHandlers.append(fileLogHandler);
 
     return previousHandler;
 }
@@ -79,11 +83,15 @@ void GeneralLogHandler::messageHandler(QtMsgType type,
                   tm.tm_sec,
                   milliseconds);
 
+    const QString locationString = QString(context.file) + ":" + context.function + ":"
+                                   + QString::number(context.line);
+
     Log log = {msSinceEpoch,
                timestampUtc,
                type,
                logLevelString,
                message,
+               locationString,
                context.file,
                context.function,
                context.line,

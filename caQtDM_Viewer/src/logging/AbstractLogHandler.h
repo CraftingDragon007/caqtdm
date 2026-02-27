@@ -4,16 +4,18 @@
 #include <QString>
 #include <QtLogging>
 
-typedef struct {
-    const long long msSinceEpoch;
-    const QString timestampUtc;
-    const QtMsgType loglevel;
-    const QString loglevelString;
-    const QString message;
-    const QString file;
-    const QString function;
-    const int line;
-    const qint64 processId;
+typedef struct
+{
+    long long msSinceEpoch;
+    QString timestampUtc;
+    QtMsgType loglevel;
+    QString loglevelString;
+    QString message;
+    QString locationString;
+    QString file;
+    QString function;
+    int line;
+    qint64 processId;
 } Log;
 
 class AbstractLogHandler
