@@ -26,6 +26,8 @@
 #include <cadef.h>
 #include "epics3_plugin.h"
 
+Q_LOGGING_CATEGORY(epics3, "epics.3");
+
 typedef struct _connectInfo {
     int connected;
     int index;
@@ -50,12 +52,12 @@ QString Epics3Plugin::pluginName()
 
 Epics3Plugin::Epics3Plugin()
 {
-    qDebug() << "Epics3Plugin: Create";
+    qCDebug(epics3) << "Create";
 }
 
 int Epics3Plugin::initCommunicationLayer(MutexKnobData *data, MessageWindow *messageWindow, QMap<QString, QString> options)
 {
-    qDebug() << "Epics3Plugin: InitCommunicationLayer with options" << options;
+    qCDebug(epics3) << "InitCommunicationLayer with options" << options;
     QString msg=QString("Epics3Plugin: epics version: %1").arg(EPICS_VERSION_STRING);
     mutexknobdataP = data;
     messagewindowP = messageWindow;
@@ -74,7 +76,7 @@ int Epics3Plugin::pvAddMonitor(int index, knobData *kData, int rate, int skip) {
         //qDebug() << "Epics3Plugin:first" << kData->pv << kData;
         Channelcache.insert(kData->pv,index);
     }else{
-        qDebug() << "Epics3Plugin:dublicated" << kData->pv << Channelcache.value(kData->pv) ;
+        qCDebug(epics3) << "duplicated: " << kData->pv << Channelcache.value(kData->pv) ;
     }
 
     return CreateAndConnect(index, kData, rate, skip);

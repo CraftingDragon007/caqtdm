@@ -31,6 +31,9 @@
 #include "epicsExternals.h"
 #include <epicsVersion.h>
 
+#include <QLoggingCategory>
+Q_DECLARE_LOGGING_CATEGORY(epics3)
+
 class Q_DECL_EXPORT Epics3Plugin : public QObject, ControlsInterface
 {
     Q_OBJECT
