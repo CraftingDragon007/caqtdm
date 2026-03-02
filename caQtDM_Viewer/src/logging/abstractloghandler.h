@@ -28,8 +28,8 @@ public:
 
     static constexpr int severity(QtMsgType type)
     {
-        return (type == QtInfoMsg)       ? 0
-               : (type == QtDebugMsg)    ? 1
+        return (type == QtDebugMsg)       ? 0
+               : (type == QtInfoMsg)    ? 1
                : (type == QtWarningMsg)  ? 2
                : (type == QtCriticalMsg) ? 3
                : (type == QtFatalMsg)    ? 4
