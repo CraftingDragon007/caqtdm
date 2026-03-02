@@ -295,16 +295,14 @@ void HttpRetrieval::finishReply(QNetworkReply *reply)
         // Not using qUncompress because we have zLib encrypted data, so custom function is used.
         out = gUncompress(outCompressed);
     } catch (...) {
-        qDebug() << (__FILE__) << ":" << (__LINE__) << "|"
-                 << "failed to uncompress Data, treating it as plain json";
+        qCDebug(archiveHTTP) << "failed to uncompress Data, treating it as plain json";
         out = outCompressed;
     }
 
     if (out.isEmpty()) { // Must have been uncompressed data
         out = outCompressed;
         if (out.isEmpty()) { // well...
-            qDebug() << (__FILE__) << ":" << (__LINE__) << "|"
-                     << "Response is empty, aborting request.";
+            qCDebug(archiveHTTP) << "Response is empty, aborting request.";
             emit requestFinished();
             reply->deleteLater();
             m_errorString += "HTTP response was empty";
@@ -523,7 +521,7 @@ void HttpRetrieval::timeoutRequest()
 QByteArray HttpRetrieval::gUncompress(const QByteArray &data)
 {
     if (data.size() <= 4) {
-        qWarning("gUncompress: Input data is truncated");
+        qCWarning(archiveHTTP) << "Input data is truncated";
         return QByteArray();
     }
 

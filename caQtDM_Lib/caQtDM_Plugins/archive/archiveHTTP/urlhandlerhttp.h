@@ -30,6 +30,9 @@
 #include "qurl.h"
 #include <QObject>
 
+#include <QLoggingCategory>
+Q_DECLARE_LOGGING_CATEGORY(archiveHTTP)
+
 class Q_DECL_EXPORT UrlHandlerHttp : public QObject
 {
     Q_OBJECT
