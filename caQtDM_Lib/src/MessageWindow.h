@@ -35,9 +35,6 @@
 #include <QContextMenuEvent>
 #include "caQtDM_Lib_global.h"
 
-#include <QLoggingCategory>
-Q_DECLARE_LOGGING_CATEGORY(externC);
-
 class MsgTextEdit : public  QTextEdit {
 public:
     MsgTextEdit() {

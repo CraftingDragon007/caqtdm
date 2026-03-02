@@ -75,4 +75,13 @@ typedef struct MessageWindow MessageWindow;
 typedef struct MutexKnobData MutexKnobData;
 #endif
 
+// Not available to C
+#ifdef __cplusplus
+#include <QLoggingCategory>
+
+Q_DECLARE_LOGGING_CATEGORY(caQtDMLib);
+Q_DECLARE_LOGGING_CATEGORY(mutexKnobData);
+Q_DECLARE_LOGGING_CATEGORY(externC);
+#endif
+
 #endif // CAQTDM_LIB_GLOBAL_H

@@ -35,6 +35,8 @@
 #include <QPair>
 #include "QtControls"
 
+Q_LOGGING_CATEGORY(mutexKnobData, "lib.mutexknobdata");
+
 /**
  * this routine (re)allocates memory and copies the old data to the new memory
  */
@@ -43,8 +45,7 @@ MutexKnobData::MutexKnobData()
     KnobDataArraySize=500;
     KnobData = (knobData*) malloc(KnobDataArraySize * sizeof(knobData));
     if (KnobData==Q_NULLPTR) {
-        printf("caQtDM -- could not allocate memory -> exit\n");
-        exit(1);
+        qCFatal(mutexKnobData) << "caQtDM -- could not allocate memory -> exit";
     }
     for(int i=0; i < KnobDataArraySize; i++){
         KnobData[i].index  = -1;
@@ -177,8 +178,7 @@ void MutexKnobData::ReAllocate(int oldsize, int newsize, void **ptr)
     //printf("reallocate for %d size\n", newsize);
     tmp = (void *) malloc((size_t) newsize);
     if (tmp==Q_NULLPTR) {
-        printf("caQtDM -- could not allocate any more memory -> exit\n");
-        exit (1);
+        qCFatal(mutexKnobData) << "caQtDM -- could not allocate any more memory -> exit";
     }
     if(oldsize > 0) {
         memcpy(tmp, *ptr, (size_t) oldsize);
