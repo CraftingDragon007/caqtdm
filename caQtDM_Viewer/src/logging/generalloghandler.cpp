@@ -132,11 +132,17 @@ void GeneralLogHandler::messageHandler(QtMsgType type,
     const QString locationString = QString(context.file) + ":" + context.function + ":"
                                    + QString::number(context.line);
 
+    QString truncatedMessage = message;
+    // No need for trailing newlines, log handlers should receive message without them.
+    if (message.endsWith('\n')) {
+        truncatedMessage.remove(truncatedMessage.size() - 1, 1);
+    }
+
     Log log = {msSinceEpoch,
                timestampUtc,
                type,
                logLevelString,
-               message,
+               truncatedMessage,
                locationString,
                context.file,
                context.function,
