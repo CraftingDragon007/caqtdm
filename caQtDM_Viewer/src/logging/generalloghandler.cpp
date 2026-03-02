@@ -15,6 +15,7 @@
 
 QMutex GeneralLogHandler::s_mutex;
 QList<AbstractLogHandler *> GeneralLogHandler::s_logHandlers;
+QThread *GeneralLogHandler::s_logHandlersThread = Q_NULLPTR;
 
 QtMessageHandler GeneralLogHandler::initialize()
 {
@@ -32,7 +33,14 @@ QtMessageHandler GeneralLogHandler::initialize()
     }
     s_logHandlers.clear();
 
+    if (!s_logHandlersThread) {
+        s_logHandlersThread = new QThread();
+        s_logHandlersThread->setObjectName("LogHandlersThread");
+        s_logHandlersThread->start();
+    }
+
     ConsoleLogHandler *consoleLogHandler = new ConsoleLogHandler();
+    consoleLogHandler->moveToThread(s_logHandlersThread);
     s_logHandlers.append(consoleLogHandler);
     QObject::connect(QCoreApplication::instance(),
                      &QCoreApplication::aboutToQuit,
@@ -41,6 +49,7 @@ QtMessageHandler GeneralLogHandler::initialize()
                      Qt::QueuedConnection);
 
     FileLogHandler *fileLogHandler = new FileLogHandler();
+    fileLogHandler->moveToThread(s_logHandlersThread);
     s_logHandlers.append(fileLogHandler);
     QObject::connect(QCoreApplication::instance(),
                      &QCoreApplication::aboutToQuit,
@@ -49,6 +58,7 @@ QtMessageHandler GeneralLogHandler::initialize()
                      Qt::QueuedConnection);
 
     LogstashLogHandler *logstashLogHandler = new LogstashLogHandler();
+    logstashLogHandler->moveToThread(s_logHandlersThread);
     s_logHandlers.append(logstashLogHandler);
     QObject::connect(QCoreApplication::instance(),
                      &QCoreApplication::aboutToQuit,
@@ -58,6 +68,7 @@ QtMessageHandler GeneralLogHandler::initialize()
 
 #ifdef Q_OS_UNIX
     SyslogLogHandler *syslogLogHandler = new SyslogLogHandler();
+    // Not a QObject, also no async operations, so not moved to separate thread.
     s_logHandlers.append(syslogLogHandler);
 #endif
 

@@ -4,6 +4,7 @@
 #include "abstractloghandler.h"
 
 #include <QMutex>
+#include <QThread>
 
 class GeneralLogHandler
 {
@@ -17,6 +18,7 @@ public:
 private:
     static QMutex s_mutex;
     static QList<AbstractLogHandler *> s_logHandlers;
+    static QThread *s_logHandlersThread;
 };
 
 #endif // GENERALLOGHANDLER_H
