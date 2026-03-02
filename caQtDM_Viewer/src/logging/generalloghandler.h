@@ -6,6 +6,11 @@
 #include <QMutex>
 #include <QThread>
 
+#define DEFAULT_LOG_LEVEL QtDebugMsg
+
+#include <QLoggingCategory>
+Q_DECLARE_LOGGING_CATEGORY(generalLogHandler);
+
 class GeneralLogHandler
 {
 public:
@@ -16,6 +21,8 @@ public:
                                const QString &message);
 
 private:
+    static QtMsgType logLevelFromEnv(QtMsgType defaultLogLevel = DEFAULT_LOG_LEVEL);
+
     static QMutex s_mutex;
     static QList<AbstractLogHandler *> s_logHandlers;
     static QThread *s_logHandlersThread;

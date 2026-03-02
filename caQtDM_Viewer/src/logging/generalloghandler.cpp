@@ -13,10 +13,18 @@
 
 #include <QCoreApplication>
 
+#define ENV_LOG_LEVEL "CAQTDM_LOGGING_LEVEL"
+#define ENV_LOG_HANDLER_CONSOLE "CAQTDM_LOGGING_HANDLER_CONSOLE"
+#define ENV_LOG_HANDLER_FILE "CAQTDM_LOGGING_HANDLER_FILE"
+#define ENV_LOG_HANDLER_LOGSTASH "CAQTDM_LOGGING_HANDLER_LOGSTASH"
+#define ENV_LOG_HANDLER_SYSLOG "CAQTDM_LOGGING_HANDLER_SYSLOG"
+
 QMutex GeneralLogHandler::s_mutex;
 QList<AbstractLogHandler *> GeneralLogHandler::s_logHandlers;
 QThread *GeneralLogHandler::s_logHandlersThread = Q_NULLPTR;
 QtMsgType GeneralLogHandler::s_minLogLevel = QtDebugMsg;
+
+Q_LOGGING_CATEGORY(generalLogHandler, "logging.general");
 
 QtMessageHandler GeneralLogHandler::initialize()
 {
@@ -28,11 +36,16 @@ QtMessageHandler GeneralLogHandler::initialize()
         return previousHandler;
     }
 
+    // Re-install previous handler for initialization logs
+    qInstallMessageHandler(previousHandler);
+
     // Clean up any previous handlers
     for (auto existingLogHandler : s_logHandlers) {
         delete existingLogHandler;
     }
     s_logHandlers.clear();
+
+    s_minLogLevel = logLevelFromEnv();
 
     if (!s_logHandlersThread) {
         s_logHandlersThread = new QThread();
@@ -40,40 +53,81 @@ QtMessageHandler GeneralLogHandler::initialize()
         s_logHandlersThread->start();
     }
 
-    ConsoleLogHandler *consoleLogHandler = new ConsoleLogHandler();
-    consoleLogHandler->moveToThread(s_logHandlersThread);
-    s_logHandlers.append(consoleLogHandler);
-    QObject::connect(QCoreApplication::instance(),
-                     &QCoreApplication::aboutToQuit,
-                     consoleLogHandler,
-                     &ConsoleLogHandler::flush,
-                     Qt::QueuedConnection);
+    if (!qgetenv(ENV_LOG_HANDLER_CONSOLE).isEmpty()) {
+        qCInfo(generalLogHandler) << "adding console log handler";
+        ConsoleLogHandler *consoleLogHandler = new ConsoleLogHandler();
+        consoleLogHandler->moveToThread(s_logHandlersThread);
+        s_logHandlers.append(consoleLogHandler);
+        QObject::connect(QCoreApplication::instance(),
+                         &QCoreApplication::aboutToQuit,
+                         consoleLogHandler,
+                         &ConsoleLogHandler::flush,
+                         Qt::QueuedConnection);
+    }
 
-    FileLogHandler *fileLogHandler = new FileLogHandler();
-    fileLogHandler->moveToThread(s_logHandlersThread);
-    s_logHandlers.append(fileLogHandler);
-    QObject::connect(QCoreApplication::instance(),
-                     &QCoreApplication::aboutToQuit,
-                     fileLogHandler,
-                     &FileLogHandler::flush,
-                     Qt::QueuedConnection);
+    if (!qgetenv(ENV_LOG_HANDLER_FILE).isEmpty()) {
+        qCInfo(generalLogHandler) << "adding file log handler";
+        FileLogHandler *fileLogHandler = new FileLogHandler();
+        fileLogHandler->moveToThread(s_logHandlersThread);
+        s_logHandlers.append(fileLogHandler);
+        QObject::connect(QCoreApplication::instance(),
+                         &QCoreApplication::aboutToQuit,
+                         fileLogHandler,
+                         &FileLogHandler::flush,
+                         Qt::QueuedConnection);
+    }
 
-    LogstashLogHandler *logstashLogHandler = new LogstashLogHandler();
-    logstashLogHandler->moveToThread(s_logHandlersThread);
-    s_logHandlers.append(logstashLogHandler);
-    QObject::connect(QCoreApplication::instance(),
-                     &QCoreApplication::aboutToQuit,
-                     logstashLogHandler,
-                     &LogstashLogHandler::flush,
-                     Qt::QueuedConnection);
+    if (!qgetenv(ENV_LOG_HANDLER_LOGSTASH).isEmpty()) {
+        qCInfo(generalLogHandler) << "adding logstash log handler";
+        LogstashLogHandler *logstashLogHandler = new LogstashLogHandler();
+        logstashLogHandler->moveToThread(s_logHandlersThread);
+        s_logHandlers.append(logstashLogHandler);
+        QObject::connect(QCoreApplication::instance(),
+                         &QCoreApplication::aboutToQuit,
+                         logstashLogHandler,
+                         &LogstashLogHandler::flush,
+                         Qt::QueuedConnection);
+    }
 
 #ifdef Q_OS_UNIX
-    SyslogLogHandler *syslogLogHandler = new SyslogLogHandler();
-    // Not a QObject, also no async operations, so not moved to separate thread.
-    s_logHandlers.append(syslogLogHandler);
+    if (!qgetenv(ENV_LOG_HANDLER_SYSLOG).isEmpty()) {
+        qCInfo(generalLogHandler) << "adding syslog log handler";
+        SyslogLogHandler *syslogLogHandler = new SyslogLogHandler();
+        // Not a QObject, also no async operations, so not moved to separate thread.
+        s_logHandlers.append(syslogLogHandler);
+    }
 #endif
 
+    // Now the custom handler is ready to accept logs, so install it again
+    qInstallMessageHandler(GeneralLogHandler::messageHandler);
+
     return previousHandler;
+}
+
+QtMsgType GeneralLogHandler::logLevelFromEnv(QtMsgType defaultLogLevel)
+{
+    const QString logLevelString = qgetenv(ENV_LOG_LEVEL).toLower();
+    if (logLevelString.isEmpty()) {
+        return defaultLogLevel;
+    }
+
+    if (logLevelString == "all" || logLevelString == "debug" || logLevelString == "qtdebugmsg") {
+        return QtDebugMsg;
+    } else if (logLevelString == "info" || logLevelString == "qtinfomsg") {
+        return QtInfoMsg;
+    } else if (logLevelString == "warning" || logLevelString == "qtwarningmsg") {
+        return QtWarningMsg;
+    } else if (logLevelString == "critical" || logLevelString == "qtcriticalmsg") {
+        return QtCriticalMsg;
+    } else if (logLevelString == "fatal" || logLevelString == "qtfatalmsg") {
+        return QtFatalMsg;
+    } else {
+        qCWarning(generalLogHandler)
+            << ENV_LOG_LEVEL
+            << "is set and has a value, but could not be parsed. Using default log level:"
+            << defaultLogLevel;
+        return defaultLogLevel;
+    }
 }
 
 void GeneralLogHandler::messageHandler(QtMsgType type,

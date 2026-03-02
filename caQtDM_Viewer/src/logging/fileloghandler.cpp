@@ -5,6 +5,13 @@
 #include <QStandardPaths>
 #include <QThread>
 
+#define ENV_FILE_COUNT "CAQTDM_LOGGING_FILE_COUNT"
+#define ENV_FILE_SIZE "CAQTDM_LOGGING_FILE_SIZE"
+#define ENV_BUFFER_TIMEOUT "CAQTDM_LOGGING_FILE_BUFFER_TIMEOUT"
+#define ENV_BUFFER_SIZE "CAQTDM_LOGGING_FILE_BUFFER_SIZE"
+
+Q_LOGGING_CATEGORY(fileLogHandler, "logging.file");
+
 FileLogHandler::FileLogHandler(QObject *parent)
     : QObject(parent)
 {
@@ -19,17 +26,18 @@ FileLogHandler::FileLogHandler(QObject *parent)
     qint64 timestamp = QDateTime::currentSecsSinceEpoch();
     QFile logFile(logDirectory.filePath(QString::number(timestamp) + ".log"));
     if (!logFile.open(QIODevice::ReadWrite)) {
-        qCritical() << "Failed to create log file:" << logFile.fileName();
+        qCCritical(fileLogHandler) << "Failed to create log file:" << logFile.fileName();
         return;
     }
     m_logFilePath = logFile.fileName();
 
-    // Cleanup old logs, keep max 10 files including current
-    cleanupOldLogs(logDirectory, 10);
+    // Cleanup old logs, keep max number of files including current
+    int maxFiles = fileCountFromEnv();
+    cleanupOldLogs(logDirectory, maxFiles);
 
-    m_logFileMaxSizeB = 1000000; // 1MB
-    m_logBufferTimeoutMs = 10000;
-    m_logBufferMaxSize = 20;
+    m_logFileMaxSizeB = fileSizeBFromEnv();
+    m_logBufferTimeoutMs = bufferTimeoutMsFromEnv();
+    m_logBufferMaxSize = bufferSizeFromEnv();
     m_logBufferTimer = new QTimer(this);
     QObject::connect(m_logBufferTimer,
                      &QTimer::timeout,
@@ -43,6 +51,78 @@ FileLogHandler::FileLogHandler(QObject *parent)
 FileLogHandler::~FileLogHandler()
 {
     QMutexLocker locker(&m_logFileMutex);
+}
+
+int FileLogHandler::fileCountFromEnv(int defaultFileCount)
+{
+    const QString fileCountString = qgetenv(ENV_FILE_COUNT);
+    if (fileCountString.isEmpty()) {
+        return defaultFileCount;
+    }
+
+    bool ok;
+    const int fileCount = fileCountString.toInt(&ok);
+    if (!ok) {
+        qCWarning(fileLogHandler) << ENV_FILE_COUNT
+                                  << "is set and has a value, but could not be parsed to an int";
+        return defaultFileCount;
+    }
+
+    return fileCount;
+}
+
+int FileLogHandler::fileSizeBFromEnv(int defaultFileSizeB)
+{
+    const QString fileSizeString = qgetenv(ENV_FILE_SIZE);
+    if (fileSizeString.isEmpty()) {
+        return defaultFileSizeB;
+    }
+
+    bool ok;
+    const int fileSizeB = fileSizeString.toInt(&ok); // Must be in bytes
+    if (!ok) {
+        qCWarning(fileLogHandler) << ENV_FILE_SIZE
+                                  << "is set and has a value, but could not be parsed to an int";
+        return defaultFileSizeB;
+    }
+
+    return fileSizeB;
+}
+
+int FileLogHandler::bufferTimeoutMsFromEnv(int defaultTimeoutMs)
+{
+    const QString timeoutString = qgetenv(ENV_BUFFER_TIMEOUT);
+    if (timeoutString.isEmpty()) {
+        return defaultTimeoutMs;
+    }
+
+    bool ok;
+    const int timeout = timeoutString.toInt(&ok); // Must be in seconds (not ms!)
+    if (!ok) {
+        qCWarning(fileLogHandler) << ENV_BUFFER_TIMEOUT
+                                  << "is set and has a value, but could not be parsed to an int";
+        return defaultTimeoutMs;
+    }
+
+    return timeout * 1000;
+}
+
+int FileLogHandler::bufferSizeFromEnv(int defaultBufferSize)
+{
+    const QString bufferSizeString = qgetenv(ENV_BUFFER_SIZE);
+    if (bufferSizeString.isEmpty()) {
+        return defaultBufferSize;
+    }
+
+    bool ok;
+    const int bufferSize = bufferSizeString.toInt(&ok);
+    if (!ok) {
+        qCWarning(fileLogHandler) << ENV_BUFFER_SIZE
+                                  << "is set and has a value, but could not be parsed to an int";
+        return defaultBufferSize;
+    }
+
+    return bufferSize;
 }
 
 void FileLogHandler::cleanupOldLogs(const QDir &logDir, int maxFiles)
@@ -103,7 +183,7 @@ void FileLogHandler::clearLogBuffer()
 
     QFile logFile(m_logFilePath);
     if (!logFile.open(QIODevice::ReadWrite | QIODevice::Text | QIODevice::Append)) {
-        qCritical() << "Failed to open log file: " << logFile.fileName();
+        qCCritical(fileLogHandler) << "Failed to open log file: " << logFile.fileName();
         return;
     }
 
@@ -124,7 +204,7 @@ void FileLogHandler::truncateLogFile(QFile &logFile)
 
     // Read last half
     if (!logFile.seek(halfSize)) {
-        qCritical() << "Failed to seek in log file";
+        qCCritical(fileLogHandler) << "Failed to seek in log file";
         return;
     }
     QByteArray lastHalf = logFile.read(fileSize - halfSize);
@@ -132,7 +212,7 @@ void FileLogHandler::truncateLogFile(QFile &logFile)
     // Truncate and write back last half
     logFile.resize(0);
     if (logFile.write(lastHalf) != lastHalf.size()) {
-        qWarning() << "Failed to write truncated log file";
+        qCCritical(fileLogHandler) << "Failed to write truncated log file";
     }
 
     logFile.flush();

@@ -1,24 +1,24 @@
 #include "logstashloghandler.h"
 
+#include <QEventLoop>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QNetworkReply>
 #include <QThread>
-#include <QEventLoop>
 
-#ifdef QT_NO_SSL
-#define DEFAULT_LOGSTASH_URL "http://logstash03.psi.ch/loki/api/v1/push"
-#else
-#define DEFAULT_LOGSTASH_URL "https://logstash03.psi.ch/loki/api/v1/push"
-#endif
+#define ENV_BUFFER_TIMEOUT "CAQTDM_LOGGING_LOGSTASH_BUFFER_TIMEOUT"
+#define ENV_BUFFER_SIZE "CAQTDM_LOGGING_LOGSTASH_BUFFER_SIZE"
+#define ENV_LOGSTASH_URL "CAQTDM_LOGGING_LOGSTASH_URL"
+
+Q_LOGGING_CATEGORY(logstashLogHandler, "logging.logstash");
 
 LogstashLogHandler::LogstashLogHandler(QObject *parent)
     : QObject(parent)
 {
-    m_logBufferTimeoutMs = 60000;
-    m_logBufferMaxSize = 20;
-    m_backendUrl = DEFAULT_LOGSTASH_URL;
+    m_logBufferTimeoutMs = bufferTimeoutMsFromEnv();
+    m_logBufferMaxSize = bufferSizeFromEnv();
+    m_backendUrl = logstashUrlFromEnv();
     m_networkManager = new QNetworkAccessManager(this);
     m_logBufferTimer = new QTimer(this);
     QObject::connect(m_logBufferTimer,
@@ -31,6 +31,66 @@ LogstashLogHandler::LogstashLogHandler(QObject *parent)
 }
 
 LogstashLogHandler::~LogstashLogHandler() {}
+
+int LogstashLogHandler::bufferTimeoutMsFromEnv(int defaultTimeoutMs)
+{
+    const QString timeoutString = qgetenv(ENV_BUFFER_TIMEOUT);
+    if (timeoutString.isEmpty()) {
+        return defaultTimeoutMs;
+    }
+
+    bool ok;
+    const int timeout = timeoutString.toInt(&ok); // Must be in seconds (not ms!)
+    if (!ok) {
+        qCWarning(logstashLogHandler)
+            << ENV_BUFFER_TIMEOUT << "is set and has a value, but could not be parsed to an int";
+        return defaultTimeoutMs;
+    }
+
+    return timeout * 1000;
+}
+
+int LogstashLogHandler::bufferSizeFromEnv(int defaultBufferSize)
+{
+    const QString bufferSizeString = qgetenv(ENV_BUFFER_SIZE);
+    if (bufferSizeString.isEmpty()) {
+        return defaultBufferSize;
+    }
+
+    bool ok;
+    const int bufferSize = bufferSizeString.toInt(&ok);
+    if (!ok) {
+        qCWarning(logstashLogHandler)
+            << ENV_BUFFER_SIZE << "is set and has a value, but could not be parsed to an int";
+        return defaultBufferSize;
+    }
+
+    return bufferSize;
+}
+
+QUrl LogstashLogHandler::logstashUrlFromEnv(QString defaultLogstashUrl)
+{
+    const QString urlString = qgetenv(ENV_LOGSTASH_URL);
+    if (urlString.isEmpty()) {
+        return defaultLogstashUrl;
+    }
+
+    const QUrl url(defaultLogstashUrl);
+    if (!url.isValid()) {
+        qCCritical(logstashLogHandler)
+            << ENV_LOGSTASH_URL << "is set and has a value, but is not a valid QUrl";
+        return defaultLogstashUrl;
+    }
+
+#ifdef QT_NO_SSL
+    if (urlString.startsWith("https")) {
+        qCWarning(logstashLogHandler)
+            << ENV_LOGSTASH_URL << "is HTTPS, even though QT_NO_SSL is set. This might break.";
+    }
+#endif
+
+    return url;
+}
 
 void LogstashLogHandler::handleLog(const Log &log)
 {
@@ -97,7 +157,8 @@ void LogstashLogHandler::clearLogBuffer()
 
     QNetworkRequest request(m_backendUrl);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-    request.setHeader(QNetworkRequest::UserAgentHeader, QString("caQtDM:%1/Qt:%2").arg(BUILDVERSION).arg(qVersion()));
+    request.setHeader(QNetworkRequest::UserAgentHeader,
+                      QString("caQtDM:%1/Qt:%2").arg(BUILDVERSION).arg(qVersion()));
 
     m_networkManager->post(request, payload);
 }
