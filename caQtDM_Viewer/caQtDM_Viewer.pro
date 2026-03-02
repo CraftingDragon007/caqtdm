@@ -87,6 +87,7 @@ HEADERS  +=  \
     fileopenwindow.h \
     configDialog.h \
     pipereader.h \
+    src/loggingcategories.h
 
 CAQTDM_NO_CUSTOM_LOGHANDLER = $$(CAQTDM_NO_CUSTOM_LOGHANDLER)
 isEmpty(CAQTDM_NO_CUSTOM_LOGHANDLER) {
