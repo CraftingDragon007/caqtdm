@@ -16,7 +16,7 @@
 QMutex GeneralLogHandler::s_mutex;
 QList<AbstractLogHandler *> GeneralLogHandler::s_logHandlers;
 QThread *GeneralLogHandler::s_logHandlersThread = Q_NULLPTR;
-QtMsgType GeneralLogHandler::s_minLogLevel = QtInfoMsg;
+QtMsgType GeneralLogHandler::s_minLogLevel = QtDebugMsg;
 
 QtMessageHandler GeneralLogHandler::initialize()
 {

@@ -5,7 +5,7 @@
 ConsoleLogHandler::ConsoleLogHandler(QObject *parent)
     : QObject(parent)
 {
-    m_flushEachLog = false;
+    m_flushEachLog = true;
     m_verboseOutput = true;
 }
 
