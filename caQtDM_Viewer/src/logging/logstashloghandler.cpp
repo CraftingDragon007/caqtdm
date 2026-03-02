@@ -5,6 +5,7 @@
 #include <QJsonObject>
 #include <QNetworkReply>
 #include <QThread>
+#include <QEventLoop>
 
 #ifdef QT_NO_SSL
 #define DEFAULT_LOGSTASH_URL "http://logstash03.psi.ch/loki/api/v1/push"
@@ -50,6 +51,14 @@ void LogstashLogHandler::flush()
     } else {
         QMetaObject::invokeMethod(this, "clearLogBuffer", Qt::BlockingQueuedConnection);
     }
+
+    // Wait for a second (while allowing current thread to do work) to let network request arrive.
+    // Hardcoded to 1s to not accidentally stall forever if something goes wrong in the delivery.
+    QEventLoop loop;
+    QTimer timer;
+    QObject::connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
+    timer.start(1000);
+    loop.exec();
 }
 
 void LogstashLogHandler::clearLogBuffer()
