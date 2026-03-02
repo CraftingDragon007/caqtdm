@@ -19,6 +19,7 @@ private:
     static QMutex s_mutex;
     static QList<AbstractLogHandler *> s_logHandlers;
     static QThread *s_logHandlersThread;
+    static QtMsgType s_minLogLevel;
 };
 
 #endif // GENERALLOGHANDLER_H

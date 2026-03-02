@@ -16,6 +16,7 @@
 QMutex GeneralLogHandler::s_mutex;
 QList<AbstractLogHandler *> GeneralLogHandler::s_logHandlers;
 QThread *GeneralLogHandler::s_logHandlersThread = Q_NULLPTR;
+QtMsgType GeneralLogHandler::s_minLogLevel = QtWarningMsg;
 
 QtMessageHandler GeneralLogHandler::initialize()
 {
@@ -79,6 +80,9 @@ void GeneralLogHandler::messageHandler(QtMsgType type,
                                        const QMessageLogContext &context,
                                        const QString &message)
 {
+    if (AbstractLogHandler::severity(type) < AbstractLogHandler::severity(s_minLogLevel)) {
+        return;
+    }
 
     QString logLevelString;
     switch (type) {
