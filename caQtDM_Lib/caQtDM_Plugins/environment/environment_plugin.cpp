@@ -32,7 +32,7 @@
 //caType {caSTRING	= 0, caINT = 1, caFLOAT = 2, caENUM = 3, caCHAR = 4, caLONG = 5, caDOUBLE = 6};
 #define qasc(x) x.toLatin1().constData()
 
-Q_LOGGING_CATEGORY(environment, "environment");
+Q_LOGGING_CATEGORY(environment, "plugins.environment");
 
 // gives the plugin name back
 QString environmentPlugin::pluginName()
@@ -43,6 +43,8 @@ QString environmentPlugin::pluginName()
 // constructor
 environmentPlugin::environmentPlugin()
 {
+    qCDebug(environment) << "Create";
+
     mutexknobdataP = Q_NULLPTR;
     connect(qApp, SIGNAL(aboutToQuit()), this, SLOT(closeEvent()));
 }

@@ -39,11 +39,12 @@
 
 #define qasc(x) x.toLatin1().constData()
 
-Q_LOGGING_CATEGORY(archiveHTTP, "archive.http")
+Q_LOGGING_CATEGORY(archiveHTTP, "plugins.archive.http")
 
 ArchiveHTTP_Plugin::ArchiveHTTP_Plugin()
 {
     qCDebug(archiveHTTP) << "Create";
+
     m_IsSuspended = false;
     qRegisterMetaType<indexes>("indexes");
     qRegisterMetaType<QVector<double> >("QVector<double>");

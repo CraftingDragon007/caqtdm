@@ -34,7 +34,7 @@
 
 // This needs to be done ONLY once per Plugin.
 #include <QLoggingCategory>
-Q_LOGGING_CATEGORY(demo, "demo");
+Q_LOGGING_CATEGORY(demo, "plugins.demo");
 
 // gives the plugin name back
 QString DemoPlugin::pluginName()

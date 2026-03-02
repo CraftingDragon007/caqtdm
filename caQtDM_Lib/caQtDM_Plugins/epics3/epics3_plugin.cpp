@@ -26,7 +26,7 @@
 #include <cadef.h>
 #include "epics3_plugin.h"
 
-Q_LOGGING_CATEGORY(epics3, "epics.3");
+Q_LOGGING_CATEGORY(epics3, "plugins.epics.3");
 
 typedef struct _connectInfo {
     int connected;

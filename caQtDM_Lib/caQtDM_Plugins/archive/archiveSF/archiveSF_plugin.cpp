@@ -31,7 +31,7 @@
 
 #define qasc(x) x.toLatin1().constData()
 
-Q_LOGGING_CATEGORY(archiveSF, "archive.SF");
+Q_LOGGING_CATEGORY(archiveSF, "plugins.archive.SF");
 
 // gives the plugin name back
 QString ArchiveSF_Plugin::pluginName()
@@ -42,11 +42,12 @@ QString ArchiveSF_Plugin::pluginName()
 // constructor
 ArchiveSF_Plugin::ArchiveSF_Plugin()
 {
+    qCDebug(archiveSF) << "Create";
+
     suspend = false;
     qRegisterMetaType<indexes>("indexes");
     qRegisterMetaType<QVector<double> >("QVector<double>");
 
-    qCDebug(archiveSF) << "Create";
     archiverCommon = new ArchiverCommon();
 
     connect(archiverCommon, SIGNAL(Signal_UpdateInterface(QMap<QString, indexes>)), this,SLOT(Callback_UpdateInterface(QMap<QString, indexes>)));
