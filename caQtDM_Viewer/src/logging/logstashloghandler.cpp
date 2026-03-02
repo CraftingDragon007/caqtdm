@@ -96,6 +96,7 @@ void LogstashLogHandler::clearLogBuffer()
 
     QNetworkRequest request(m_backendUrl);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    request.setHeader(QNetworkRequest::UserAgentHeader, QString("caQtDM:%1/Qt:%2").arg(BUILDVERSION).arg(qVersion()));
 
     m_networkManager->post(request, payload);
 }
