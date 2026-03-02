@@ -32,6 +32,8 @@
 //caType {caSTRING	= 0, caINT = 1, caFLOAT = 2, caENUM = 3, caCHAR = 4, caLONG = 5, caDOUBLE = 6};
 #define qasc(x) x.toLatin1().constData()
 
+Q_LOGGING_CATEGORY(environment, "environment");
+
 // gives the plugin name back
 QString environmentPlugin::pluginName()
 {
@@ -84,7 +86,7 @@ void environmentPlugin::updateValues()
 // initialize our communicationlayer with everything you need
 int environmentPlugin::initCommunicationLayer(MutexKnobData *data, MessageWindow *messageWindow,QMap<QString, QString> options)
 {
-    qDebug() << "environmentPlugin: InitCommunicationLayer with options" << options;
+    qCDebug(environment) << "environmentPlugin: InitCommunicationLayer with options" << options;
 
     mutexknobdataP = data;
     messagewindowP = messageWindow;
