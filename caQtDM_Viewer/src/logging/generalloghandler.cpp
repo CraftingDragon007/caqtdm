@@ -79,7 +79,6 @@ void GeneralLogHandler::messageHandler(QtMsgType type,
                                        const QMessageLogContext &context,
                                        const QString &message)
 {
-    QMutexLocker locker(&s_mutex);
 
     QString logLevelString;
     switch (type) {
@@ -108,7 +107,12 @@ void GeneralLogHandler::messageHandler(QtMsgType type,
 
     std::time_t seconds = msSinceEpoch / 1000;
     int milliseconds = msSinceEpoch % 1000;
-    std::tm tm = *std::gmtime(&seconds);
+    std::tm tm;
+#if defined(_WIN32)
+    gmtime_s(&tm, &seconds);
+#else
+    gmtime_r(&seconds, &tm);
+#endif
     char timestampUtc[32];
     std::snprintf(timestampUtc,
                   sizeof(timestampUtc),
@@ -135,6 +139,7 @@ void GeneralLogHandler::messageHandler(QtMsgType type,
                context.line,
                QCoreApplication::applicationPid()};
 
+    QMutexLocker locker(&s_mutex);
     for (auto logHandler : s_logHandlers) {
         logHandler->handleLog(log);
     }
