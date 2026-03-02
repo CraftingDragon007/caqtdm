@@ -42,9 +42,6 @@
 #endif
 #endif
 
-#include <QLoggingCategory>
-Q_DECLARE_LOGGING_CATEGORY(environment);
-
 class Q_DECL_EXPORT environmentPlugin : public QObject, ControlsInterface
 {
     Q_OBJECT

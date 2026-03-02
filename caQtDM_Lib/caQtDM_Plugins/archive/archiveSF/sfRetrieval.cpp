@@ -42,6 +42,7 @@
 #endif
 
 #include "sfRetrieval.h"
+#include "loggingcategories.h"
 #include <QDebug>
 #include <QThread>
 #include <QTime>

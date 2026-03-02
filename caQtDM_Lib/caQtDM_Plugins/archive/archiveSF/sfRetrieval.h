@@ -39,9 +39,6 @@
 #include "JSON.h"
 #endif
 
-#include <QLoggingCategory>
-Q_DECLARE_LOGGING_CATEGORY(archiveSF)
-
 class QNetworkAccessManager;
 
 class sfRetrieval:public QObject

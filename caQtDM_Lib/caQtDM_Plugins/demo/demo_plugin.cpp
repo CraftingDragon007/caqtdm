@@ -25,6 +25,8 @@
 #include <QDebug>
 #include <QThread>
 #include "demo_plugin.h"
+// You need to modify this file to add a plugin-specific logging category
+#include "loggingcategories.h"
 
 // as defined in knobDefines.h
 //caType {caSTRING	= 0, caINT = 1, caFLOAT = 2, caENUM = 3, caCHAR = 4, caLONG = 5, caDOUBLE = 6};
@@ -33,7 +35,6 @@
 // at the epics3 plugin
 
 // This needs to be done ONLY once per Plugin.
-#include <QLoggingCategory>
 Q_LOGGING_CATEGORY(demo, "plugins.demo");
 
 // gives the plugin name back

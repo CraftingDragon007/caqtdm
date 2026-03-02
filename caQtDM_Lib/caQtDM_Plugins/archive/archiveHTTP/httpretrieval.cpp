@@ -54,6 +54,7 @@
 
 #include <fstream>
 #include <httpretrieval.h>
+#include "loggingcategories.h"
 #include <iostream>
 #include <sstream>
 

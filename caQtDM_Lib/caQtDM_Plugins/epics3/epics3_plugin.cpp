@@ -25,6 +25,7 @@
 #include <QDebug>
 #include <cadef.h>
 #include "epics3_plugin.h"
+#include "loggingcategories.h"
 
 Q_LOGGING_CATEGORY(epics3, "plugins.epics.3");
 

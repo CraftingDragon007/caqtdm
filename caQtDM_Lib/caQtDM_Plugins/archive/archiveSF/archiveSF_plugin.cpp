@@ -26,6 +26,7 @@
 #include <QApplication>
 
 #include "archiveSF_plugin.h"
+#include "loggingcategories.h"
 #include "archiverCommon.h"
 #include "caQtDM_Lib_global.h"
 
