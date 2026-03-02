@@ -35,6 +35,6 @@ void SyslogLogHandler::handleLog(const Log &log)
 
     syslog(priority,
            "%s",
-           qUtf8Printable("[" + log.timestampUtc + "] " + log.loglevelString + " | "
-                          + log.locationString + "> " + log.message));
+           qUtf8Printable("[" + log.timestampUtc + "] " + log.category + " | " + log.loglevelString
+                          + " | " + log.locationString + "> " + log.message));
 }

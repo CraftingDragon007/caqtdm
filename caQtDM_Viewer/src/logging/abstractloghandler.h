@@ -15,6 +15,7 @@ typedef struct
     QString file;
     QString function;
     int line;
+    QString category;
     qint64 processId;
 } Log;
 

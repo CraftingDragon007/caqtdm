@@ -95,8 +95,8 @@ void FileLogHandler::clearLogBuffer()
 
     QString logString;
     for (const auto &log : logs) {
-        logString.append("[" + log.timestampUtc + "] " + log.loglevelString + " | "
-                         + log.locationString + "> " + log.message + "\n");
+        logString.append("[" + log.timestampUtc + "] " + log.category + " | " + log.loglevelString
+                         + " | " + log.locationString + "> " + log.message + "\n");
     }
 
     QMutexLocker locker(&m_logFileMutex);

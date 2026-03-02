@@ -141,6 +141,7 @@ void GeneralLogHandler::messageHandler(QtMsgType type,
                context.file,
                context.function,
                context.line,
+               context.category,
                QCoreApplication::applicationPid()};
 
     QMutexLocker locker(&s_mutex);

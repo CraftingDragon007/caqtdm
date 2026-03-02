@@ -14,7 +14,7 @@ ConsoleLogHandler::~ConsoleLogHandler() {}
 void ConsoleLogHandler::handleLog(const Log &log)
 {
     if (m_verboseOutput) {
-        std::cout << "[" << log.timestampUtc.toStdString() << "] "
+        std::cout << "[" << log.timestampUtc.toStdString() << "] " << log.category.toStdString() << " | "
                   << log.loglevelString.toStdString() << " | " << log.locationString.toStdString()
                   << "> " << log.message.toStdString() << "\n";
     } else {

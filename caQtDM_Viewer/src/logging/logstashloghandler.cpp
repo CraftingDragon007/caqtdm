@@ -85,6 +85,7 @@ void LogstashLogHandler::clearLogBuffer()
         logJsonObject.insert("line", log.line);
         logJsonObject.insert("message", log.message);
         logJsonObject.insert("process_id", log.processId);
+        logJsonObject.insert("category", log.category);
 
         logsJsonArray.append(logJsonObject);
     }
