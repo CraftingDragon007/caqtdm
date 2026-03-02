@@ -23,6 +23,7 @@ class AbstractLogHandler
 public:
     virtual ~AbstractLogHandler() = default;
     virtual void handleLog(const Log &log) = 0;
+    virtual void flush() = 0;
 };
 
 #endif // ABSTRACTLOGHANDLER_H

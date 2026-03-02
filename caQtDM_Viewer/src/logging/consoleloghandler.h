@@ -15,7 +15,7 @@ public:
     void handleLog(const Log &log) override;
 
 public slots:
-    void flush();
+    void flush() override;
 
 private:
     bool m_flushEachLog;

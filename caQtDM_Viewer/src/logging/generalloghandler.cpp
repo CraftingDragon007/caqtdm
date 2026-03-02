@@ -127,4 +127,11 @@ void GeneralLogHandler::messageHandler(QtMsgType type,
     for (auto logHandler : s_logHandlers) {
         logHandler->handleLog(log);
     }
+
+    // Qt will exit faulty after this returns, so make sure to flush
+    if (type == QtFatalMsg) {
+        for (auto logHandler : s_logHandlers) {
+            logHandler->flush();
+        }
+    }
 }

@@ -10,6 +10,7 @@ public:
     ~SyslogLogHandler() override;
 
     void handleLog(const Log &log) override;
+    void flush() override {};
 };
 
 #endif // SYSLOGLOGHANDLER_H
