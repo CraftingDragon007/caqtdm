@@ -13,6 +13,22 @@ import { parseLogMarkup, formatDateTime } from './modules/utils/Logger.js';
   const macros = params.get('macros') || '';
   const displayMode = params.has('display');
 
+  function resolveBasePath() {
+    const path = window.location.pathname || '/';
+    const segments = path.split('/').filter(Boolean);
+    if (segments.length === 0) return '';
+    const reserved = new Set(['url-builder', 'noVNC', 'admin', 'websockify']);
+    if (reserved.has(segments[0])) return '';
+    return '/' + segments[0];
+  }
+
+  const basePath = resolveBasePath();
+
+  function withBasePath(path) {
+    const normalized = path.startsWith('/') ? path : '/' + path;
+    return basePath ? basePath + normalized : normalized;
+  }
+
   const vncContainer = document.getElementById('vnc-container');
   const reconnectOverlay = document.getElementById('reconnect-overlay');
   const dialogOverlay = document.getElementById('dialog-overlay');
@@ -160,12 +176,12 @@ import { parseLogMarkup, formatDateTime } from './modules/utils/Logger.js';
 
   // --- Clients ---
 
-  const vnc = new VNCClient(vncContainer, reconnectOverlay);
+  const vnc = new VNCClient(vncContainer, reconnectOverlay, basePath);
 
   const control = new ControlSocket({
     urlProvider: () => {
       const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-      return wsProtocol + window.location.host + '/websockify/' + encodeURIComponent(getActiveControlPath());
+      return wsProtocol + window.location.host + withBasePath('/websockify/' + encodeURIComponent(getActiveControlPath()));
     },
     onOpen: () => {
       const dateTime = formatDateTime(new Date());
@@ -421,7 +437,7 @@ import { parseLogMarkup, formatDateTime } from './modules/utils/Logger.js';
   const urlBuilderOpenTab = document.getElementById('url-builder-open-tab');
   if (urlBuilderOpenTab) {
     urlBuilderOpenTab.addEventListener('click', () => {
-      window.open('/url-builder', '_blank', 'noopener');
+      window.open(withBasePath('/url-builder'), '_blank', 'noopener');
       urlBuilderPopup.close();
     });
   }

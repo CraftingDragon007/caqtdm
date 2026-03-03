@@ -1,7 +1,7 @@
 import RFB from '../../noVNC/core/rfb.js';
 
 export class VNCClient {
-  constructor(container, reconnectOverlay) {
+  constructor(container, reconnectOverlay, basePath = '') {
     this.container = container;
     this.reconnectOverlay = reconnectOverlay;
     this.rfb = null;
@@ -9,6 +9,7 @@ export class VNCClient {
     this.reconnectDelay = 1000;
     this.isConnected = false;
     this.noVNCPath = '30001';
+    this.basePath = basePath;
   }
 
   setPath(path) {
@@ -39,7 +40,8 @@ export class VNCClient {
       }
     } catch (e) {
       const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-      wsUrl = wsProtocol + window.location.host + '/websockify/' + encodeURIComponent(path);
+      const prefix = this.basePath ? this.basePath : '';
+      wsUrl = wsProtocol + window.location.host + prefix + '/websockify/' + encodeURIComponent(path);
     }
 
     try {

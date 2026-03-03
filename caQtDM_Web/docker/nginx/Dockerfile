@@ -8,6 +8,8 @@ ENV PROXY_BACKEND=http://127.0.0.1
 
 RUN mkdir -p /etc/nginx/ssl
 
+RUN rm -f /etc/nginx/conf.d/default.conf
+
 COPY user /var/www/caqtdm_web/user
 COPY admin /var/www/caqtdm_web/admin
 COPY caqtdm_web.conf.template /etc/nginx/templates/caqtdm_web.conf.template
