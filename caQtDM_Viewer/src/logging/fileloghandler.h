@@ -28,7 +28,11 @@ public slots:
     void flush() override;
     void clearLogBuffer();
 
+#ifdef UNIT_TESTING
+public:
+#else
 private:
+#endif
     int fileCountFromEnv(int defaultFileCount = DEFAULT_FILE_COUNT);
     int fileSizeBFromEnv(int defaultFileSizeB = DEFAULT_FILE_SIZE_B);
     int bufferTimeoutMsFromEnv(int defaultTimeoutMs = DEFAULT_BUFFER_TIMEOUT_MS);

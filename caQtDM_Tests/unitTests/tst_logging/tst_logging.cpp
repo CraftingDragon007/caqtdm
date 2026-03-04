@@ -1,12 +1,12 @@
 #include <QCoreApplication>
 #include <QTest>
 
-#include "tst_generalloghandler.h"
 #include "tst_consoleloghandler.h"
 #include "tst_fileloghandler.h"
+#include "tst_generalloghandler.h"
 #include "tst_logstashloghandler.h"
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     QCoreApplication app(argc, argv);
     int status = 0;

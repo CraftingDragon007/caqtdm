@@ -20,7 +20,11 @@ public:
                                const QMessageLogContext &context,
                                const QString &message);
 
+#ifdef UNIT_TESTING
+public:
+#else
 private:
+#endif
     static QtMsgType logLevelFromEnv(QtMsgType defaultLogLevel = DEFAULT_LOG_LEVEL);
 
     static QMutex s_mutex;

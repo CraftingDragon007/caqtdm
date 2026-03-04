@@ -1,3 +1,5 @@
+include(../unitTests.pri)
+
 DEFINES += BUILDVERSION=\\\"UNITTEST\\\"
 
 QT += testlib network

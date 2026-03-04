@@ -14,7 +14,12 @@ private slots:
     void init();
     void cleanupTestCase();
     void cleanup();
-    void test_case1();
+    void parametersInitializedFromEnv();
+    void flushClearsBuffer();
+    void bufferMaxSizeFlushes();
+    void bufferTimeoutFlushes();
+    void fileCreationAndTruncationWorks();
+    void cleanupOldLogsWorks();
 };
 
 #endif // TST_FILELOGHANDLER_H

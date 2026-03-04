@@ -75,7 +75,7 @@ QUrl LogstashLogHandler::logstashUrlFromEnv(QString defaultLogstashUrl)
         return defaultLogstashUrl;
     }
 
-    const QUrl url(defaultLogstashUrl);
+    const QUrl url(urlString);
     if (!url.isValid()) {
         qCCritical(logstashLogHandler)
             << ENV_LOGSTASH_URL << "is set and has a value, but is not a valid QUrl";

@@ -1,8 +1,34 @@
 #include "tst_generalloghandler.h"
 
+#include "consoleloghandler.h"
+#include "fileloghandler.h"
 #include "generalloghandler.h"
+#include "logstashloghandler.h"
 
 #include <QTest>
+
+#define ENV_LOG_LEVEL "CAQTDM_LOGGING_LEVEL"
+#define ENV_LOG_HANDLER_CONSOLE "CAQTDM_LOGGING_HANDLER_CONSOLE"
+#define ENV_LOG_HANDLER_FILE "CAQTDM_LOGGING_HANDLER_FILE"
+#define ENV_LOG_HANDLER_LOGSTASH "CAQTDM_LOGGING_HANDLER_LOGSTASH"
+#define ENV_LOG_HANDLER_SYSLOG "CAQTDM_LOGGING_HANDLER_SYSLOG"
+
+static void mockMessageHandler(QtMsgType, const QMessageLogContext &, const QString &) {}
+
+class MockLogHandler : public AbstractLogHandler
+{
+public:
+    int handleLogCalls = 0;
+    int flushCalls = 0;
+
+    void handleLog(const Log &log) override
+    {
+        Q_UNUSED(log);
+        handleLogCalls++;
+    }
+
+    void flush() override { flushCalls++; }
+};
 
 void TestGeneralLogHandler::initTestCase()
 {
@@ -12,6 +38,12 @@ void TestGeneralLogHandler::initTestCase()
 void TestGeneralLogHandler::init()
 {
     // code to be executed before each test function
+
+    qunsetenv(ENV_LOG_LEVEL);
+    qunsetenv(ENV_LOG_HANDLER_CONSOLE);
+    qunsetenv(ENV_LOG_HANDLER_FILE);
+    qunsetenv(ENV_LOG_HANDLER_LOGSTASH);
+    qunsetenv(ENV_LOG_HANDLER_SYSLOG);
 }
 
 void TestGeneralLogHandler::cleanupTestCase()
@@ -22,8 +54,187 @@ void TestGeneralLogHandler::cleanupTestCase()
 void TestGeneralLogHandler::cleanup()
 {
     // code to be executed after each test function
+
+    // Reverse everything done in GeneralLogHandler::initialize()
+    qInstallMessageHandler(nullptr);
+
+    QMutexLocker locker(&GeneralLogHandler::s_mutex);
+    for (auto existingLogHandler : GeneralLogHandler::s_logHandlers) {
+        delete existingLogHandler;
+    }
+    GeneralLogHandler::s_logHandlers.clear();
+
+    if (GeneralLogHandler::s_logHandlersThread) {
+        GeneralLogHandler::s_logHandlersThread->quit();
+        GeneralLogHandler::s_logHandlersThread->wait();
+        delete GeneralLogHandler::s_logHandlersThread;
+        GeneralLogHandler::s_logHandlersThread = Q_NULLPTR;
+    }
 }
 
-void TestGeneralLogHandler::test_case1() {
-    qDebug() << "test3";
+void TestGeneralLogHandler::injectsMessageHandlerAndReturnsPrevious()
+{
+    qInstallMessageHandler(mockMessageHandler);
+
+    // This should return the previously injected handler
+    QtMessageHandler previousHandler = GeneralLogHandler::initialize();
+    QCOMPARE(previousHandler, mockMessageHandler);
+
+    // The currently installed handler should be GeneralLogHandler::messageHandler
+    QtMessageHandler currentHandler = qInstallMessageHandler(nullptr);
+    QCOMPARE(currentHandler, GeneralLogHandler::messageHandler);
+}
+
+void TestGeneralLogHandler::initializationIsIdempotent()
+{
+    GeneralLogHandler::initialize();
+
+    // Inject a handler that would be reset in case of complete (faulty) re-initialization
+    auto *handler = new MockLogHandler();
+    {
+        QMutexLocker locker(&GeneralLogHandler::s_mutex);
+        GeneralLogHandler::s_logHandlers.append(handler);
+    }
+
+    // This should return the already injected message handler
+    QtMessageHandler previousHandler = GeneralLogHandler::initialize();
+    QCOMPARE(previousHandler, GeneralLogHandler::messageHandler);
+
+    // And since the rest should not have been re-initialized, a log should still be received by the mock handler
+    QVERIFY(std::any_of(GeneralLogHandler::s_logHandlers.begin(),
+                        GeneralLogHandler::s_logHandlers.end(),
+                        [handler](AbstractLogHandler *h) {
+                            return dynamic_cast<MockLogHandler *>(h) == handler;
+                        }));
+    int previousCount = handler->handleLogCalls;
+    qDebug() << "test";
+    int currentCount = handler->handleLogCalls;
+    QCOMPARE_NE(previousCount, currentCount);
+}
+
+void TestGeneralLogHandler::callsHandlerWithMinLogLevel()
+{
+    auto *handler = new MockLogHandler();
+
+    GeneralLogHandler::s_minLogLevel = QtWarningMsg;
+
+    {
+        QMutexLocker locker(&GeneralLogHandler::s_mutex);
+        GeneralLogHandler::s_logHandlers.append(handler);
+    }
+
+    // Info message should not invoke handler
+    GeneralLogHandler::messageHandler(QtInfoMsg, {}, "debug");
+    QCOMPARE(handler->handleLogCalls, 0);
+
+    // Warning message should invoke handler
+    GeneralLogHandler::messageHandler(QtWarningMsg, {}, "warning");
+    QCOMPARE(handler->handleLogCalls, 1);
+
+    // Critical message should invoke handler
+    GeneralLogHandler::messageHandler(QtCriticalMsg, {}, "critical");
+    QCOMPARE(handler->handleLogCalls, 2);
+}
+
+void TestGeneralLogHandler::fatalMessageFlushesHandler()
+{
+    auto *handler = new MockLogHandler();
+
+    {
+        QMutexLocker locker(&GeneralLogHandler::s_mutex);
+        GeneralLogHandler::s_logHandlers.append(handler);
+    }
+
+    GeneralLogHandler::messageHandler(QtFatalMsg, {}, "fatal");
+
+    QCOMPARE(handler->flushCalls, 1);
+}
+
+void TestGeneralLogHandler::logLevelIsLoadedFromEnv()
+{
+    // Unset variable
+    QCOMPARE(GeneralLogHandler::logLevelFromEnv(QtFatalMsg), QtFatalMsg);
+
+    qputenv(ENV_LOG_LEVEL, "");
+    QCOMPARE(GeneralLogHandler::logLevelFromEnv(QtWarningMsg), QtWarningMsg);
+
+    qputenv(ENV_LOG_LEVEL, "all");
+    QCOMPARE(GeneralLogHandler::logLevelFromEnv(QtWarningMsg), QtDebugMsg);
+    qputenv(ENV_LOG_LEVEL, "debug");
+    QCOMPARE(GeneralLogHandler::logLevelFromEnv(QtWarningMsg), QtDebugMsg);
+    qputenv(ENV_LOG_LEVEL, "Qtdebugmsg");
+    QCOMPARE(GeneralLogHandler::logLevelFromEnv(QtWarningMsg), QtDebugMsg);
+
+    qputenv(ENV_LOG_LEVEL, "info");
+    QCOMPARE(GeneralLogHandler::logLevelFromEnv(QtWarningMsg), QtInfoMsg);
+    qputenv(ENV_LOG_LEVEL, "qtInfomsg");
+    QCOMPARE(GeneralLogHandler::logLevelFromEnv(QtWarningMsg), QtInfoMsg);
+
+    qputenv(ENV_LOG_LEVEL, "warning");
+    QCOMPARE(GeneralLogHandler::logLevelFromEnv(QtWarningMsg), QtWarningMsg);
+    qputenv(ENV_LOG_LEVEL, "qtwarningMsg");
+    QCOMPARE(GeneralLogHandler::logLevelFromEnv(QtDebugMsg), QtWarningMsg);
+
+    qputenv(ENV_LOG_LEVEL, "critical");
+    QCOMPARE(GeneralLogHandler::logLevelFromEnv(QtDebugMsg), QtCriticalMsg);
+    qputenv(ENV_LOG_LEVEL, "QtCriticalMsg");
+    QCOMPARE(GeneralLogHandler::logLevelFromEnv(QtDebugMsg), QtCriticalMsg);
+
+    qputenv(ENV_LOG_LEVEL, "fatal");
+    QCOMPARE(GeneralLogHandler::logLevelFromEnv(QtDebugMsg), QtFatalMsg);
+    qputenv(ENV_LOG_LEVEL, "QTFATALMSG");
+    QCOMPARE(GeneralLogHandler::logLevelFromEnv(QtDebugMsg), QtFatalMsg);
+
+    qputenv(ENV_LOG_LEVEL, "garbage");
+    QCOMPARE(GeneralLogHandler::logLevelFromEnv(QtInfoMsg), QtInfoMsg);
+}
+
+void TestGeneralLogHandler::logHandlersAreInitializedFromEnv()
+{
+    // Only console
+    qputenv(ENV_LOG_HANDLER_CONSOLE, "1");
+    GeneralLogHandler::initialize();
+    QVERIFY(std::any_of(GeneralLogHandler::s_logHandlers.begin(),
+                        GeneralLogHandler::s_logHandlers.end(),
+                        [](AbstractLogHandler *h) { return dynamic_cast<ConsoleLogHandler *>(h); }));
+
+    cleanup();
+    init();
+
+    // Only file
+    qputenv(ENV_LOG_HANDLER_FILE, "1");
+    GeneralLogHandler::initialize();
+    QVERIFY(std::any_of(GeneralLogHandler::s_logHandlers.begin(),
+                        GeneralLogHandler::s_logHandlers.end(),
+                        [](AbstractLogHandler *h) { return dynamic_cast<FileLogHandler *>(h); }));
+
+    cleanup();
+    init();
+
+    // Only logstash
+    qputenv(ENV_LOG_HANDLER_LOGSTASH, "1");
+    GeneralLogHandler::initialize();
+    QVERIFY(
+        std::any_of(GeneralLogHandler::s_logHandlers.begin(),
+                    GeneralLogHandler::s_logHandlers.end(),
+                    [](AbstractLogHandler *h) { return dynamic_cast<LogstashLogHandler *>(h); }));
+
+    cleanup();
+    init();
+
+    // Console + file + logstash
+    qputenv(ENV_LOG_HANDLER_CONSOLE, "1");
+    qputenv(ENV_LOG_HANDLER_FILE, "1");
+    qputenv(ENV_LOG_HANDLER_LOGSTASH, "1");
+    GeneralLogHandler::initialize();
+    QVERIFY(std::any_of(GeneralLogHandler::s_logHandlers.begin(),
+                        GeneralLogHandler::s_logHandlers.end(),
+                        [](AbstractLogHandler *h) { return dynamic_cast<ConsoleLogHandler *>(h); }));
+    QVERIFY(std::any_of(GeneralLogHandler::s_logHandlers.begin(),
+                        GeneralLogHandler::s_logHandlers.end(),
+                        [](AbstractLogHandler *h) { return dynamic_cast<FileLogHandler *>(h); }));
+    QVERIFY(
+        std::any_of(GeneralLogHandler::s_logHandlers.begin(),
+                    GeneralLogHandler::s_logHandlers.end(),
+                    [](AbstractLogHandler *h) { return dynamic_cast<LogstashLogHandler *>(h); }));
 }

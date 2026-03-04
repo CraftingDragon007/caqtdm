@@ -68,7 +68,7 @@ qtcontrols_utilities.depends = caQtDM_QtControls caQtDM_Lib
 caQtDM_Plugins.file = caQtDM_Lib/caQtDM_Plugins/csplugins.pro 
 caQtDM_Plugins.depends = caQtDM_Lib
 
-unitTests.depends += caQtDM_Viewer
+unitTests.depends = caQtDM_Viewer
 
 !MOBILE {
    SUBDIRS +=   parser

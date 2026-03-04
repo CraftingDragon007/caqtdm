@@ -193,7 +193,6 @@ void FileLogHandler::clearLogBuffer()
     if (logFile.size() > m_logFileMaxSizeB) {
         truncateLogFile(logFile);
     }
-
     logFile.close();
 }
 

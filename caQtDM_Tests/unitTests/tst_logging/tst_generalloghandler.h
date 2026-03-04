@@ -14,7 +14,12 @@ private slots:
     void init();
     void cleanupTestCase();
     void cleanup();
-    void test_case1();
+    void injectsMessageHandlerAndReturnsPrevious();
+    void initializationIsIdempotent();
+    void callsHandlerWithMinLogLevel();
+    void fatalMessageFlushesHandler();
+    void logLevelIsLoadedFromEnv();
+    void logHandlersAreInitializedFromEnv();
 };
 
 #endif // TST_GENERALLOGHANDLER_H

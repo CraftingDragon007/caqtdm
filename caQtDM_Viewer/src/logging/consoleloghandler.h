@@ -17,7 +17,11 @@ public:
 public slots:
     void flush() override;
 
+#ifdef UNIT_TESTING
+public:
+#else
 private:
+#endif
     bool m_flushEachLog;
     bool m_verboseOutput;
 };
