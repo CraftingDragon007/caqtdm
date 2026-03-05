@@ -89,7 +89,7 @@ void TestLogstashLogHandler::parametersInitializedFromEnv()
     QCOMPARE(handler.bufferSizeFromEnv(10), 3);
     QCOMPARE(handler.m_logBufferMaxSize, 3);
     QCOMPARE(handler.logstashUrlFromEnv("http://default"), QUrl("http://test:123"));
-    QCOMPARE(handler.m_backendUrl, QUrl("http://test:123"));
+    QCOMPARE(handler.m_logstashUrl, QUrl("http://test:123"));
 }
 
 void TestLogstashLogHandler::flushClearsBuffer()

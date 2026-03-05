@@ -18,7 +18,7 @@ LogstashLogHandler::LogstashLogHandler(QObject *parent)
 {
     m_logBufferTimeoutMs = bufferTimeoutMsFromEnv();
     m_logBufferMaxSize = bufferSizeFromEnv();
-    m_backendUrl = logstashUrlFromEnv();
+    m_logstashUrl = logstashUrlFromEnv();
     m_networkManager = new QNetworkAccessManager(this);
     m_logBufferTimer = new QTimer(this);
     QObject::connect(m_logBufferTimer,
@@ -147,10 +147,17 @@ void LogstashLogHandler::clearLogBuffer()
 
     const QByteArray payload = QJsonDocument(rootJsonObject).toJson(QJsonDocument::Compact);
 
-    QNetworkRequest request(m_backendUrl);
+    QNetworkRequest request(m_logstashUrl);
     request.setHeader(QNetworkRequest::ContentTypeHeader, QSL("application/json"));
     request.setHeader(QNetworkRequest::UserAgentHeader,
                       QString("caQtDM:%1/Qt:%2").arg(BUILDVERSION).arg(qVersion()));
 
-    m_networkManager->post(request, payload);
+    QNetworkReply *reply = m_networkManager->post(request, payload);
+    QObject::connect(reply, &QNetworkReply::finished, [reply]() {
+        if (reply->error() != QNetworkReply::NoError) {
+            qCCritical(logstashLogHandler)
+                << QSL("Failed to send log to Logstash:") << reply->errorString();
+        }
+        reply->deleteLater();
+    });
 }
