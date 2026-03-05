@@ -234,6 +234,9 @@ void TestGeneralLogHandler::logHandlersAreInitializedFromEnv()
                     GeneralLogHandler::s_logHandlers.end(),
                     [](AbstractLogHandler *h) { return dynamic_cast<LogstashLogHandler *>(h); }));
 
+    cleanup();
+    init();
+
     // for unix also check syslog (here: in combination with file and extra ',')
 #ifdef Q_OS_UNIX
     qputenv(ENV_LOG_HANDLERS, "file,syslog,");
