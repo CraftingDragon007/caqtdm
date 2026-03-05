@@ -45,7 +45,11 @@ MutexKnobData::MutexKnobData()
     KnobDataArraySize=500;
     KnobData = (knobData*) malloc(KnobDataArraySize * sizeof(knobData));
     if (KnobData==Q_NULLPTR) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
         qCFatal(mutexKnobData) << "caQtDM -- could not allocate memory -> exit";
+#else
+        qFatal("caQtDM -- could not allocate memory -> exit");
+#endif
     }
     for(int i=0; i < KnobDataArraySize; i++){
         KnobData[i].index  = -1;
@@ -178,7 +182,11 @@ void MutexKnobData::ReAllocate(int oldsize, int newsize, void **ptr)
     //printf("reallocate for %d size\n", newsize);
     tmp = (void *) malloc((size_t) newsize);
     if (tmp==Q_NULLPTR) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
         qCFatal(mutexKnobData) << "caQtDM -- could not allocate any more memory -> exit";
+#else
+        qFatal("caQtDM -- could not allocate any more memory -> exit");
+#endif
     }
     if(oldsize > 0) {
         memcpy(tmp, *ptr, (size_t) oldsize);

@@ -8963,8 +8963,12 @@ void CaQtDM_Lib::postMessageAndLog(QtMsgType type, char *msg, QMessageLogger::Ca
         qCCritical(category) << msg;
         break;
     case QtFatalMsg:
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
         qCFatal(category) << msg;
-        break;
+#else
+        qFatal("%s", msg);
+#endif
+	break;
     default:
         qCWarning(category) << msg;
         break;

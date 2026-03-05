@@ -78,11 +78,11 @@ void TestGeneralLogHandler::injectsMessageHandlerAndReturnsPrevious()
 
     // This should return the previously injected handler
     QtMessageHandler previousHandler = GeneralLogHandler::initialize();
-    QCOMPARE(previousHandler, mockMessageHandler);
+    QVERIFY(previousHandler == mockMessageHandler);
 
     // The currently installed handler should be GeneralLogHandler::messageHandler
     QtMessageHandler currentHandler = qInstallMessageHandler(nullptr);
-    QCOMPARE(currentHandler, GeneralLogHandler::messageHandler);
+    QVERIFY(currentHandler == GeneralLogHandler::messageHandler);
 }
 
 void TestGeneralLogHandler::initializationIsIdempotent()
@@ -98,7 +98,7 @@ void TestGeneralLogHandler::initializationIsIdempotent()
 
     // This should return the already injected message handler
     QtMessageHandler previousHandler = GeneralLogHandler::initialize();
-    QCOMPARE(previousHandler, GeneralLogHandler::messageHandler);
+    QVERIFY(previousHandler == GeneralLogHandler::messageHandler);
 
     // And since the rest should not have been re-initialized, a log should still be received by the mock handler
     QVERIFY(std::any_of(GeneralLogHandler::s_logHandlers.begin(),
@@ -109,7 +109,7 @@ void TestGeneralLogHandler::initializationIsIdempotent()
     int previousCount = handler->handleLogCalls;
     qDebug() << "test";
     int currentCount = handler->handleLogCalls;
-    QCOMPARE_NE(previousCount, currentCount);
+    QVERIFY(previousCount != currentCount);
 }
 
 void TestGeneralLogHandler::callsHandlerWithMinLogLevel()
