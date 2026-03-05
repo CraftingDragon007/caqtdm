@@ -9,6 +9,8 @@
 int main(int argc, char **argv)
 {
     QCoreApplication app(argc, argv);
+    QCoreApplication::setOrganizationName("Paul Scherrer Institut");
+    QCoreApplication::setApplicationName("caQtDM-UnitTests-Logging");
     int status = 0;
 
     {

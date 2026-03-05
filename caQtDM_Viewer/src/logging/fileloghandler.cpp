@@ -20,7 +20,10 @@ FileLogHandler::FileLogHandler(QObject *parent)
     QDir logDirectory = QDir(localAppDataDirectory).filePath(QSL("Logs"));
 
     if (!logDirectory.exists()) {
-        logDirectory.mkpath(logDirectory.path());
+        if (!logDirectory.mkpath(logDirectory.path())) {
+            qCCritical(fileLogHandler) << QSL("Failed to create log direcotry:") << logDirectory.path();
+            return;
+        }
     }
 
     const qint64 timestamp = QDateTime::currentSecsSinceEpoch();
@@ -153,7 +156,9 @@ void FileLogHandler::clearLogBuffer()
         return;
     }
 
-    logFile.write(qUtf8Printable(logString));
+    if (logFile.write(qUtf8Printable(logString)) == -1) {
+        qCCritical(fileLogHandler) << QSL("Failed to write log file: ") << logFile.fileName();
+    }
     logFile.flush();
 
     if (logFile.size() > m_logFileMaxSizeB) {

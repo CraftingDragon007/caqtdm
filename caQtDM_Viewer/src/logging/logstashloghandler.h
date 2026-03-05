@@ -43,7 +43,7 @@ private:
     int bufferSizeFromEnv(const int defaultBufferSize = DEFAULT_BUFFER_SIZE);
     QUrl logstashUrlFromEnv(const QString &defaultLogstashUrl = DEFAULT_LOGSTASH_URL);
 
-    QUrl m_backendUrl;
+    QUrl m_logstashUrl;
     QNetworkAccessManager *m_networkManager;
     QList<Log> m_logBuffer;
     QMutex m_logBufferMutex;

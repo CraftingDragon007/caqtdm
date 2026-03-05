@@ -199,7 +199,7 @@ void GeneralLogHandler::messageHandler(QtMsgType type,
 #else
     gmtime_r(&seconds, &tm);
 #endif
-    char timestampUtc[32];
+    char timestampUtc[sizeof("yyyy-MM-ddTHH:mm:ss.zzzZ")];
     std::snprintf(timestampUtc,
                   sizeof(timestampUtc),
                   "%04d-%02d-%02dT%02d:%02d:%02d.%03dZ",
@@ -211,7 +211,7 @@ void GeneralLogHandler::messageHandler(QtMsgType type,
                   tm.tm_sec,
                   milliseconds);
 
-    const QString locationString = QString(context.file) + ":" + context.function + ":"
+    const QString locationString = QString(context.file) + QSL(":") + context.function + QSL(":")
                                    + QString::number(context.line);
 
     QString truncatedMessage = message;
