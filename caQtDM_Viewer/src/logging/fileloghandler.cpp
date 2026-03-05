@@ -21,7 +21,8 @@ FileLogHandler::FileLogHandler(QObject *parent)
 
     if (!logDirectory.exists()) {
         if (!logDirectory.mkpath(logDirectory.path())) {
-            qCCritical(fileLogHandler) << QSL("Failed to create log direcotry:") << logDirectory.path();
+            qCCritical(fileLogHandler)
+                << QSL("Failed to create log direcotry:") << logDirectory.path();
             return;
         }
     }
@@ -54,6 +55,16 @@ FileLogHandler::FileLogHandler(QObject *parent)
 FileLogHandler::~FileLogHandler()
 {
     QMutexLocker locker(&m_logFileMutex);
+    if (QThread::currentThread() != this->thread()) {
+        QMetaObject::invokeMethod(
+            this,
+            [=]() {
+                if (m_logBufferTimer) {
+                    delete m_logBufferTimer;
+                }
+            },
+            Qt::BlockingQueuedConnection);
+    } // Otherwise, it will automatically be cleaned up by Qt due to being a child of this
 }
 
 int FileLogHandler::intFromEnv(const char *envName, const int defaultValue)

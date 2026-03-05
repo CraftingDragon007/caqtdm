@@ -30,7 +30,19 @@ LogstashLogHandler::LogstashLogHandler(QObject *parent)
     m_logBufferTimer->start();
 }
 
-LogstashLogHandler::~LogstashLogHandler() {}
+LogstashLogHandler::~LogstashLogHandler()
+{
+    if (QThread::currentThread() != this->thread()) {
+        QMetaObject::invokeMethod(
+            this,
+            [=]() {
+                if (m_logBufferTimer) {
+                    delete m_logBufferTimer;
+                }
+            },
+            Qt::BlockingQueuedConnection);
+    } // Otherwise, it will automatically be cleaned up by Qt due to being a child of this
+}
 
 int LogstashLogHandler::intFromEnv(const char *envName, const int defaultValue)
 {
