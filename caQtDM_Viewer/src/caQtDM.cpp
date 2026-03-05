@@ -431,10 +431,18 @@ int main(int argc, char *argv[])
 
 
     if (signal(SIGINT, unixSignalHandler) == SIG_ERR) {
-        qCFatal(viewer) << "An error occurred while setting a signal handler";
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+            qCFatal(viewer) << "An error occurred while setting a signal handler";
+#else
+	    qFatal("An error occurred while setting a signal handler");
+#endif
     }
     if (signal(SIGTERM, unixSignalHandler) == SIG_ERR) {
-        qCFatal(viewer) << "An error occurred while setting a signal handler";
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+	    qCFatal(viewer) << "An error occurred while setting a signal handler";
+#else
+	    qFatal("An error occurred while setting a signal handler");
+#endif
     }
 
     QObject::connect(&app, SIGNAL(aboutToQuit()), &fileOpenWindow, SLOT(doSomething()));

@@ -37,4 +37,9 @@ HEADERS +=\
     ../../../caQtDM_Viewer/src/logging/generalloghandler.h \
     ../../../caQtDM_Viewer/src/logging/logstashloghandler.h
 
+unix {
+    SOURCES += ../../../caQtDM_Viewer/src/logging/syslogloghandler.cpp
+    HEADERS += ../../../caQtDM_Viewer/src/logging/syslogloghandler.h
+}
+
 INCLUDEPATH += ../../../caQtDM_Viewer/src/logging

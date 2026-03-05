@@ -106,8 +106,9 @@ void TestGeneralLogHandler::initializationIsIdempotent()
                         [handler](AbstractLogHandler *h) {
                             return dynamic_cast<MockLogHandler *>(h) == handler;
                         }));
+    
     int previousCount = handler->handleLogCalls;
-    qDebug() << "test";
+    qInfo() << "test";
     int currentCount = handler->handleLogCalls;
     QVERIFY(previousCount != currentCount);
 }
@@ -124,7 +125,7 @@ void TestGeneralLogHandler::callsHandlerWithMinLogLevel()
     }
 
     // Info message should not invoke handler
-    GeneralLogHandler::messageHandler(QtInfoMsg, {}, "debug");
+    GeneralLogHandler::messageHandler(QtInfoMsg, {}, "info");
     QCOMPARE(handler->handleLogCalls, 0);
 
     // Warning message should invoke handler
