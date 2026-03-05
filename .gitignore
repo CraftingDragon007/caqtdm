@@ -30,8 +30,11 @@ qrc_caQtDM.cpp
 *.EXP
 *.OBJ
 *.PDB
-
+*.o
 
 #Tools
 .vs
 .qtc_clangd
+
+# Unit tests
+caQtDM_Tests/unitTests/tst_logging/target_wrapper.sh
