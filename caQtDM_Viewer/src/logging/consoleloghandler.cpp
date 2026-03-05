@@ -16,19 +16,21 @@ ConsoleLogHandler::~ConsoleLogHandler() {}
 
 void ConsoleLogHandler::handleLog(const Log &log)
 {
+    std::ostream &stream = (log.loglevel == QtCriticalMsg || log.loglevel == QtFatalMsg) ? std::cerr : std::cout;
     if (m_verboseOutput) {
-        std::cout << "[" << log.timestampUtc.toStdString() << "] " << log.category.toStdString()
+        stream << "[" << log.timestampUtc.toStdString() << "] " << log.category.toStdString()
                   << " | " << log.loglevelString.toStdString() << " | "
                   << log.locationString.toStdString() << "> " << log.message.toStdString() << "\n";
     } else {
-        std::cout << log.message.toStdString() << "\n";
+        stream << log.message.toStdString() << "\n";
     }
 
     if (m_flushEachLog)
-        std::cout.flush();
+        stream.flush();
 }
 
 void ConsoleLogHandler::flush()
 {
     std::cout.flush();
+    std::cerr.flush();
 }
