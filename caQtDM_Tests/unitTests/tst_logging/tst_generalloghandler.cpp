@@ -4,14 +4,14 @@
 #include "fileloghandler.h"
 #include "generalloghandler.h"
 #include "logstashloghandler.h"
+#ifdef Q_OS_UNIX
+#include "syslogloghandler.h"
+#endif
 
 #include <QTest>
 
 #define ENV_LOG_LEVEL "CAQTDM_LOGGING_LEVEL"
-#define ENV_LOG_HANDLER_CONSOLE "CAQTDM_LOGGING_HANDLER_CONSOLE"
-#define ENV_LOG_HANDLER_FILE "CAQTDM_LOGGING_HANDLER_FILE"
-#define ENV_LOG_HANDLER_LOGSTASH "CAQTDM_LOGGING_HANDLER_LOGSTASH"
-#define ENV_LOG_HANDLER_SYSLOG "CAQTDM_LOGGING_HANDLER_SYSLOG"
+#define ENV_LOG_HANDLERS "CAQTDM_LOGGING_HANDLERS"
 
 static void mockMessageHandler(QtMsgType, const QMessageLogContext &, const QString &) {}
 
@@ -40,10 +40,7 @@ void TestGeneralLogHandler::init()
     // code to be executed before each test function
 
     qunsetenv(ENV_LOG_LEVEL);
-    qunsetenv(ENV_LOG_HANDLER_CONSOLE);
-    qunsetenv(ENV_LOG_HANDLER_FILE);
-    qunsetenv(ENV_LOG_HANDLER_LOGSTASH);
-    qunsetenv(ENV_LOG_HANDLER_SYSLOG);
+    qunsetenv(ENV_LOG_HANDLERS);
 }
 
 void TestGeneralLogHandler::cleanupTestCase()
@@ -106,7 +103,7 @@ void TestGeneralLogHandler::initializationIsIdempotent()
                         [handler](AbstractLogHandler *h) {
                             return dynamic_cast<MockLogHandler *>(h) == handler;
                         }));
-    
+
     int previousCount = handler->handleLogCalls;
     qInfo() << "test";
     int currentCount = handler->handleLogCalls;
@@ -193,7 +190,7 @@ void TestGeneralLogHandler::logLevelIsLoadedFromEnv()
 void TestGeneralLogHandler::logHandlersAreInitializedFromEnv()
 {
     // Only console
-    qputenv(ENV_LOG_HANDLER_CONSOLE, "1");
+    qputenv(ENV_LOG_HANDLERS, "console");
     GeneralLogHandler::initialize();
     QVERIFY(std::any_of(GeneralLogHandler::s_logHandlers.begin(),
                         GeneralLogHandler::s_logHandlers.end(),
@@ -203,7 +200,7 @@ void TestGeneralLogHandler::logHandlersAreInitializedFromEnv()
     init();
 
     // Only file
-    qputenv(ENV_LOG_HANDLER_FILE, "1");
+    qputenv(ENV_LOG_HANDLERS, "fileloghandler");
     GeneralLogHandler::initialize();
     QVERIFY(std::any_of(GeneralLogHandler::s_logHandlers.begin(),
                         GeneralLogHandler::s_logHandlers.end(),
@@ -213,7 +210,7 @@ void TestGeneralLogHandler::logHandlersAreInitializedFromEnv()
     init();
 
     // Only logstash
-    qputenv(ENV_LOG_HANDLER_LOGSTASH, "1");
+    qputenv(ENV_LOG_HANDLERS, "logstash");
     GeneralLogHandler::initialize();
     QVERIFY(
         std::any_of(GeneralLogHandler::s_logHandlers.begin(),
@@ -224,9 +221,7 @@ void TestGeneralLogHandler::logHandlersAreInitializedFromEnv()
     init();
 
     // Console + file + logstash
-    qputenv(ENV_LOG_HANDLER_CONSOLE, "1");
-    qputenv(ENV_LOG_HANDLER_FILE, "1");
-    qputenv(ENV_LOG_HANDLER_LOGSTASH, "1");
+    qputenv(ENV_LOG_HANDLERS, "logstashloghandler, consoleloghandler,file");
     GeneralLogHandler::initialize();
     QVERIFY(std::any_of(GeneralLogHandler::s_logHandlers.begin(),
                         GeneralLogHandler::s_logHandlers.end(),
@@ -238,4 +233,13 @@ void TestGeneralLogHandler::logHandlersAreInitializedFromEnv()
         std::any_of(GeneralLogHandler::s_logHandlers.begin(),
                     GeneralLogHandler::s_logHandlers.end(),
                     [](AbstractLogHandler *h) { return dynamic_cast<LogstashLogHandler *>(h); }));
+
+    // for unix also check syslog (here: in combination with file and extra ',')
+#ifdef Q_OS_UNIX
+    qputenv(ENV_LOG_HANDLERS, "file,syslog,");
+    GeneralLogHandler::initialize();
+    QVERIFY(std::any_of(GeneralLogHandler::s_logHandlers.begin(),
+                        GeneralLogHandler::s_logHandlers.end(),
+                        [](AbstractLogHandler *h) { return dynamic_cast<SyslogLogHandler *>(h); }));
+#endif
 }

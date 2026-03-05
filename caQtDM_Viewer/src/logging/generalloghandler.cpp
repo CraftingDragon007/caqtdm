@@ -14,10 +14,7 @@
 #include <QCoreApplication>
 
 #define ENV_LOG_LEVEL "CAQTDM_LOGGING_LEVEL"
-#define ENV_LOG_HANDLER_CONSOLE "CAQTDM_LOGGING_HANDLER_CONSOLE"
-#define ENV_LOG_HANDLER_FILE "CAQTDM_LOGGING_HANDLER_FILE"
-#define ENV_LOG_HANDLER_LOGSTASH "CAQTDM_LOGGING_HANDLER_LOGSTASH"
-#define ENV_LOG_HANDLER_SYSLOG "CAQTDM_LOGGING_HANDLER_SYSLOG"
+#define ENV_LOG_HANDLERS "CAQTDM_LOGGING_HANDLERS"
 
 QMutex GeneralLogHandler::s_mutex;
 QList<AbstractLogHandler *> GeneralLogHandler::s_logHandlers;
@@ -53,7 +50,8 @@ QtMessageHandler GeneralLogHandler::initialize()
         s_logHandlersThread->start();
     }
 
-    if (!qgetenv(ENV_LOG_HANDLER_CONSOLE).isEmpty()) {
+    const QStringList selectedLogHandlers = selectedLogHandlersFromEnv();
+    if (selectedLogHandlers.contains("console")) {
         qCInfo(generalLogHandler) << "adding console log handler";
         ConsoleLogHandler *consoleLogHandler = new ConsoleLogHandler();
         consoleLogHandler->moveToThread(s_logHandlersThread);
@@ -65,7 +63,7 @@ QtMessageHandler GeneralLogHandler::initialize()
                          Qt::QueuedConnection);
     }
 
-    if (!qgetenv(ENV_LOG_HANDLER_FILE).isEmpty()) {
+    if (selectedLogHandlers.contains("file")) {
         qCInfo(generalLogHandler) << "adding file log handler";
         FileLogHandler *fileLogHandler = new FileLogHandler();
         fileLogHandler->moveToThread(s_logHandlersThread);
@@ -77,7 +75,7 @@ QtMessageHandler GeneralLogHandler::initialize()
                          Qt::QueuedConnection);
     }
 
-    if (!qgetenv(ENV_LOG_HANDLER_LOGSTASH).isEmpty()) {
+    if (selectedLogHandlers.contains("logstash")) {
         qCInfo(generalLogHandler) << "adding logstash log handler";
         LogstashLogHandler *logstashLogHandler = new LogstashLogHandler();
         logstashLogHandler->moveToThread(s_logHandlersThread);
@@ -90,7 +88,7 @@ QtMessageHandler GeneralLogHandler::initialize()
     }
 
 #ifdef Q_OS_UNIX
-    if (!qgetenv(ENV_LOG_HANDLER_SYSLOG).isEmpty()) {
+    if (selectedLogHandlers.contains("syslog")) {
         qCInfo(generalLogHandler) << "adding syslog log handler";
         SyslogLogHandler *syslogLogHandler = new SyslogLogHandler();
         // Not a QObject, also no async operations, so not moved to separate thread.
@@ -128,6 +126,35 @@ QtMsgType GeneralLogHandler::logLevelFromEnv(QtMsgType defaultLogLevel)
             << defaultLogLevel;
         return defaultLogLevel;
     }
+}
+
+QStringList GeneralLogHandler::selectedLogHandlersFromEnv(QString defaultConfig)
+{
+    if (!qEnvironmentVariableIsSet(ENV_LOG_HANDLERS)) {
+        return QStringList(defaultConfig);
+    }
+
+    QStringList selectedLogHandlers;
+    const QString config = qgetenv(ENV_LOG_HANDLERS).toLower().replace(" ", "");
+    for (const auto &handler : config.split(',')) {
+        if (handler == "console" || handler == "consoleloghandler") {
+            selectedLogHandlers.append("console");
+        } else if (handler == "file" || handler == "fileloghandler") {
+            selectedLogHandlers.append("file");
+        } else if (handler == "logstash" || handler == "logstashloghandler") {
+            selectedLogHandlers.append("logstash");
+        } else if (handler == "syslog" || handler == "syslogloghandler") {
+#ifndef Q_OS_UNIX
+            qCCritical(generalLogHandler)
+                << ENV_LOG_HANDLERS
+                << "specified syslog log handler, but this is invalid as system is not unix";
+#else
+            selectedLogHandlers.append("syslog");
+#endif
+        }
+    }
+
+    return selectedLogHandlers;
 }
 
 void GeneralLogHandler::messageHandler(QtMsgType type,

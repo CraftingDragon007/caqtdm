@@ -7,6 +7,7 @@
 #include <QThread>
 
 #define DEFAULT_LOG_LEVEL QtDebugMsg
+#define DEFAULT_LOG_HANDLERS "console"
 
 #include <QLoggingCategory>
 Q_DECLARE_LOGGING_CATEGORY(generalLogHandler);
@@ -26,6 +27,7 @@ public:
 private:
 #endif
     static QtMsgType logLevelFromEnv(QtMsgType defaultLogLevel = DEFAULT_LOG_LEVEL);
+    static QStringList selectedLogHandlersFromEnv(QString defaultSelection = DEFAULT_LOG_HANDLERS);
 
     static QMutex s_mutex;
     static QList<AbstractLogHandler *> s_logHandlers;
