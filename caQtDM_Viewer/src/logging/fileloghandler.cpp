@@ -17,22 +17,22 @@ FileLogHandler::FileLogHandler(QObject *parent)
 {
     const QString localAppDataDirectory = QStandardPaths::writableLocation(
         QStandardPaths::AppLocalDataLocation);
-    const QDir logDirectory = QDir(localAppDataDirectory).filePath("Logs");
+    QDir logDirectory = QDir(localAppDataDirectory).filePath(QSL("Logs"));
 
     if (!logDirectory.exists()) {
         logDirectory.mkpath(logDirectory.path());
     }
 
-    qint64 timestamp = QDateTime::currentSecsSinceEpoch();
-    QFile logFile(logDirectory.filePath(QString::number(timestamp) + ".log"));
+    const qint64 timestamp = QDateTime::currentSecsSinceEpoch();
+    QFile logFile(logDirectory.filePath(QString::number(timestamp) + QSL(".log")));
     if (!logFile.open(QIODevice::ReadWrite)) {
-        qCCritical(fileLogHandler) << "Failed to create log file:" << logFile.fileName();
+        qCCritical(fileLogHandler) << QSL("Failed to create log file:") << logFile.fileName();
         return;
     }
     m_logFilePath = logFile.fileName();
 
     // Cleanup old logs, keep max number of files including current
-    int maxFiles = fileCountFromEnv();
+    const int maxFiles = fileCountFromEnv();
     cleanupOldLogs(logDirectory, maxFiles);
 
     m_logFileMaxSizeB = fileSizeBFromEnv();
@@ -53,85 +53,50 @@ FileLogHandler::~FileLogHandler()
     QMutexLocker locker(&m_logFileMutex);
 }
 
-int FileLogHandler::fileCountFromEnv(int defaultFileCount)
+int FileLogHandler::intFromEnv(const char *envName, const int defaultValue)
 {
-    const QString fileCountString = qgetenv(ENV_FILE_COUNT);
-    if (fileCountString.isEmpty()) {
-        return defaultFileCount;
+    const QString valueString = qgetenv(envName);
+    if (valueString.isEmpty()) {
+        return defaultValue;
     }
 
     bool ok;
-    const int fileCount = fileCountString.toInt(&ok);
+    const int parsedValue = valueString.toInt(&ok);
     if (!ok) {
-        qCWarning(fileLogHandler) << ENV_FILE_COUNT
-                                  << "is set and has a value, but could not be parsed to an int";
-        return defaultFileCount;
+        qCWarning(fileLogHandler)
+            << envName << QSL("is set and has a value, but could not be parsed to an int");
+        return defaultValue;
     }
 
-    return fileCount;
+    return parsedValue;
 }
 
-int FileLogHandler::fileSizeBFromEnv(int defaultFileSizeB)
+int FileLogHandler::fileCountFromEnv(const int defaultFileCount)
 {
-    const QString fileSizeString = qgetenv(ENV_FILE_SIZE);
-    if (fileSizeString.isEmpty()) {
-        return defaultFileSizeB;
-    }
-
-    bool ok;
-    const int fileSizeB = fileSizeString.toInt(&ok); // Must be in bytes
-    if (!ok) {
-        qCWarning(fileLogHandler) << ENV_FILE_SIZE
-                                  << "is set and has a value, but could not be parsed to an int";
-        return defaultFileSizeB;
-    }
-
-    return fileSizeB;
+    return intFromEnv(ENV_FILE_COUNT, defaultFileCount);
 }
 
-int FileLogHandler::bufferTimeoutMsFromEnv(int defaultTimeoutMs)
+int FileLogHandler::fileSizeBFromEnv(const int defaultFileSizeB)
 {
-    const QString timeoutString = qgetenv(ENV_BUFFER_TIMEOUT);
-    if (timeoutString.isEmpty()) {
-        return defaultTimeoutMs;
-    }
-
-    bool ok;
-    const int timeout = timeoutString.toInt(&ok); // Must be in seconds (not ms!)
-    if (!ok) {
-        qCWarning(fileLogHandler) << ENV_BUFFER_TIMEOUT
-                                  << "is set and has a value, but could not be parsed to an int";
-        return defaultTimeoutMs;
-    }
-
-    return timeout * 1000;
+    return intFromEnv(ENV_FILE_SIZE, defaultFileSizeB);
 }
 
-int FileLogHandler::bufferSizeFromEnv(int defaultBufferSize)
+int FileLogHandler::bufferTimeoutMsFromEnv(const int defaultTimeoutS)
 {
-    const QString bufferSizeString = qgetenv(ENV_BUFFER_SIZE);
-    if (bufferSizeString.isEmpty()) {
-        return defaultBufferSize;
-    }
-
-    bool ok;
-    const int bufferSize = bufferSizeString.toInt(&ok);
-    if (!ok) {
-        qCWarning(fileLogHandler) << ENV_BUFFER_SIZE
-                                  << "is set and has a value, but could not be parsed to an int";
-        return defaultBufferSize;
-    }
-
-    return bufferSize;
+    return intFromEnv(ENV_BUFFER_TIMEOUT, defaultTimeoutS) * 1000; // Retrieved value is in seconds
 }
 
-void FileLogHandler::cleanupOldLogs(const QDir &logDir, int maxFiles)
+int FileLogHandler::bufferSizeFromEnv(const int defaultBufferSize)
 {
-    QDir dir(logDir);
-    dir.setFilter(QDir::Files);
-    dir.setSorting(QDir::Time | QDir::Reversed); // Oldest first
+    return intFromEnv(ENV_BUFFER_SIZE, defaultBufferSize);
+}
 
-    QFileInfoList files = dir.entryInfoList();
+void FileLogHandler::cleanupOldLogs(QDir logDir, const int maxFiles)
+{
+    logDir.setFilter(QDir::Files);
+    logDir.setSorting(QDir::Time | QDir::Reversed); // Oldest first
+
+    QFileInfoList files = logDir.entryInfoList();
     // Remove until only maxFiles remain
     while (files.size() > maxFiles) {
         QFileInfo oldest = files.takeFirst();
@@ -175,15 +140,16 @@ void FileLogHandler::clearLogBuffer()
 
     QString logString;
     for (const auto &log : logs) {
-        logString.append("[" + log.timestampUtc + "] " + log.category + " | " + log.loglevelString
-                         + " | " + log.locationString + "> " + log.message + "\n");
+        logString.append(QSL("[") + log.timestampUtc + QSL("] ") + log.category + QSL(" | ")
+                         + log.loglevelString + QSL(" | ") + log.locationString + QSL("> ")
+                         + log.message + QSL("\n"));
     }
 
     QMutexLocker locker(&m_logFileMutex);
 
     QFile logFile(m_logFilePath);
     if (!logFile.open(QIODevice::ReadWrite | QIODevice::Text | QIODevice::Append)) {
-        qCCritical(fileLogHandler) << "Failed to open log file: " << logFile.fileName();
+        qCCritical(fileLogHandler) << QSL("Failed to open log file: ") << logFile.fileName();
         return;
     }
 
@@ -198,20 +164,20 @@ void FileLogHandler::clearLogBuffer()
 
 void FileLogHandler::truncateLogFile(QFile &logFile)
 {
-    qint64 fileSize = logFile.size();
-    qint64 halfSize = fileSize / 2;
+    const qint64 fileSize = logFile.size();
+    const qint64 halfSize = fileSize / 2;
 
     // Read last half
     if (!logFile.seek(halfSize)) {
-        qCCritical(fileLogHandler) << "Failed to seek in log file";
+        qCCritical(fileLogHandler) << QSL("Failed to seek in log file");
         return;
     }
-    QByteArray lastHalf = logFile.read(fileSize - halfSize);
+    const QByteArray lastHalf = logFile.read(fileSize - halfSize);
 
     // Truncate and write back last half
     logFile.resize(0);
     if (logFile.write(lastHalf) != lastHalf.size()) {
-        qCCritical(fileLogHandler) << "Failed to write truncated log file";
+        qCCritical(fileLogHandler) << QSL("Failed to write truncated log file");
     }
 
     logFile.flush();

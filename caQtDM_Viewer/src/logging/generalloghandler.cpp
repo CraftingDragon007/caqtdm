@@ -46,53 +46,53 @@ QtMessageHandler GeneralLogHandler::initialize()
 
     if (!s_logHandlersThread) {
         s_logHandlersThread = new QThread();
-        s_logHandlersThread->setObjectName("LogHandlersThread");
+        s_logHandlersThread->setObjectName(QSL("LogHandlersThread"));
         s_logHandlersThread->start();
     }
 
     const QStringList selectedLogHandlers = selectedLogHandlersFromEnv();
-    if (selectedLogHandlers.contains("console")) {
-        qCInfo(generalLogHandler) << "adding console log handler";
-        ConsoleLogHandler *consoleLogHandler = new ConsoleLogHandler();
-        consoleLogHandler->moveToThread(s_logHandlersThread);
-        s_logHandlers.append(consoleLogHandler);
+    if (selectedLogHandlers.contains(QSL("console"))) {
+        qCInfo(generalLogHandler) << QSL("adding console log handler");
+        auto *consoleHandler = new ConsoleLogHandler();
+        consoleHandler->moveToThread(s_logHandlersThread);
+        s_logHandlers.append(consoleHandler);
         QObject::connect(QCoreApplication::instance(),
                          &QCoreApplication::aboutToQuit,
-                         consoleLogHandler,
+                         consoleHandler,
                          &ConsoleLogHandler::flush,
                          Qt::QueuedConnection);
     }
 
-    if (selectedLogHandlers.contains("file")) {
-        qCInfo(generalLogHandler) << "adding file log handler";
-        FileLogHandler *fileLogHandler = new FileLogHandler();
-        fileLogHandler->moveToThread(s_logHandlersThread);
-        s_logHandlers.append(fileLogHandler);
+    if (selectedLogHandlers.contains(QSL("file"))) {
+        qCInfo(generalLogHandler) << QSL("adding file log handler");
+        auto *fileHandler = new FileLogHandler();
+        fileHandler->moveToThread(s_logHandlersThread);
+        s_logHandlers.append(fileHandler);
         QObject::connect(QCoreApplication::instance(),
                          &QCoreApplication::aboutToQuit,
-                         fileLogHandler,
+                         fileHandler,
                          &FileLogHandler::flush,
                          Qt::QueuedConnection);
     }
 
-    if (selectedLogHandlers.contains("logstash")) {
-        qCInfo(generalLogHandler) << "adding logstash log handler";
-        LogstashLogHandler *logstashLogHandler = new LogstashLogHandler();
-        logstashLogHandler->moveToThread(s_logHandlersThread);
-        s_logHandlers.append(logstashLogHandler);
+    if (selectedLogHandlers.contains(QSL("logstash"))) {
+        qCInfo(generalLogHandler) << QSL("adding logstash log handler");
+        auto *logstashHandler = new LogstashLogHandler();
+        logstashHandler->moveToThread(s_logHandlersThread);
+        s_logHandlers.append(logstashHandler);
         QObject::connect(QCoreApplication::instance(),
                          &QCoreApplication::aboutToQuit,
-                         logstashLogHandler,
+                         logstashHandler,
                          &LogstashLogHandler::flush,
                          Qt::QueuedConnection);
     }
 
 #ifdef Q_OS_UNIX
-    if (selectedLogHandlers.contains("syslog")) {
-        qCInfo(generalLogHandler) << "adding syslog log handler";
-        SyslogLogHandler *syslogLogHandler = new SyslogLogHandler();
+    if (selectedLogHandlers.contains(QSL("syslog"))) {
+        qCInfo(generalLogHandler) << QSL("adding syslog log handler");
+        auto *syslogHandler = new SyslogLogHandler();
         // Not a QObject, also no async operations, so not moved to separate thread.
-        s_logHandlers.append(syslogLogHandler);
+        s_logHandlers.append(syslogHandler);
     }
 #endif
 
@@ -102,33 +102,34 @@ QtMessageHandler GeneralLogHandler::initialize()
     return previousHandler;
 }
 
-QtMsgType GeneralLogHandler::logLevelFromEnv(QtMsgType defaultLogLevel)
+QtMsgType GeneralLogHandler::logLevelFromEnv(const QtMsgType defaultLogLevel)
 {
     const QString logLevelString = qgetenv(ENV_LOG_LEVEL).toLower();
     if (logLevelString.isEmpty()) {
         return defaultLogLevel;
     }
 
-    if (logLevelString == "all" || logLevelString == "debug" || logLevelString == "qtdebugmsg") {
+    if (logLevelString == QSL("all") || logLevelString == QSL("debug")
+        || logLevelString == QSL("qtdebugmsg")) {
         return QtDebugMsg;
-    } else if (logLevelString == "info" || logLevelString == "qtinfomsg") {
+    } else if (logLevelString == QSL("info") || logLevelString == QSL("qtinfomsg")) {
         return QtInfoMsg;
-    } else if (logLevelString == "warning" || logLevelString == "qtwarningmsg") {
+    } else if (logLevelString == QSL("warning") || logLevelString == QSL("qtwarningmsg")) {
         return QtWarningMsg;
-    } else if (logLevelString == "critical" || logLevelString == "qtcriticalmsg") {
+    } else if (logLevelString == QSL("critical") || logLevelString == QSL("qtcriticalmsg")) {
         return QtCriticalMsg;
-    } else if (logLevelString == "fatal" || logLevelString == "qtfatalmsg") {
+    } else if (logLevelString == QSL("fatal") || logLevelString == QSL("qtfatalmsg")) {
         return QtFatalMsg;
     } else {
         qCWarning(generalLogHandler)
             << ENV_LOG_LEVEL
-            << "is set and has a value, but could not be parsed. Using default log level:"
+            << QSL("is set and has a value, but could not be parsed. Using default log level:")
             << defaultLogLevel;
         return defaultLogLevel;
     }
 }
 
-QStringList GeneralLogHandler::selectedLogHandlersFromEnv(QString defaultConfig)
+QStringList GeneralLogHandler::selectedLogHandlersFromEnv(const QString &defaultConfig)
 {
     if (!qEnvironmentVariableIsSet(ENV_LOG_HANDLERS)) {
         return QStringList(defaultConfig);
@@ -137,17 +138,17 @@ QStringList GeneralLogHandler::selectedLogHandlersFromEnv(QString defaultConfig)
     QStringList selectedLogHandlers;
     const QString config = qgetenv(ENV_LOG_HANDLERS).toLower().replace(" ", "");
     for (const auto &handler : config.split(',')) {
-        if (handler == "console" || handler == "consoleloghandler") {
-            selectedLogHandlers.append("console");
-        } else if (handler == "file" || handler == "fileloghandler") {
-            selectedLogHandlers.append("file");
-        } else if (handler == "logstash" || handler == "logstashloghandler") {
-            selectedLogHandlers.append("logstash");
-        } else if (handler == "syslog" || handler == "syslogloghandler") {
+        if (handler == QSL("console") || handler == QSL("consoleloghandler")) {
+            selectedLogHandlers.append(QSL("console"));
+        } else if (handler == QSL("file") || handler == QSL("fileloghandler")) {
+            selectedLogHandlers.append(QSL("file"));
+        } else if (handler == QSL("logstash") || handler == "logstashloghandler") {
+            selectedLogHandlers.append(QSL("logstash"));
+        } else if (handler == QSL("syslog") || handler == QSL("syslogloghandler")) {
 #ifndef Q_OS_UNIX
             qCCritical(generalLogHandler)
                 << ENV_LOG_HANDLERS
-                << "specified syslog log handler, but this is invalid as system is not unix";
+                << QSL("specified syslog log handler, but this is invalid as system is not unix");
 #else
             selectedLogHandlers.append("syslog");
 #endif
@@ -168,30 +169,30 @@ void GeneralLogHandler::messageHandler(QtMsgType type,
     QString logLevelString;
     switch (type) {
     case QtDebugMsg:
-        logLevelString = "QtDebugMsg";
+        logLevelString = QSL("QtDebugMsg");
         break;
     case QtInfoMsg:
-        logLevelString = "QtInfoMsg";
+        logLevelString = QSL("QtInfoMsg");
         break;
     case QtWarningMsg:
-        logLevelString = "QtWarningMsg";
+        logLevelString = QSL("QtWarningMsg");
         break;
     case QtCriticalMsg:
-        logLevelString = "QtCriticalMsg";
+        logLevelString = QSL("QtCriticalMsg");
         break;
     case QtFatalMsg:
-        logLevelString = "QtFatalMsg";
+        logLevelString = QSL("QtFatalMsg");
         break;
     default:
-        logLevelString = "unkown QtMsgType";
+        logLevelString = QSL("unkown QtMsgType");
     }
 
-    long long msSinceEpoch = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                 std::chrono::system_clock::now().time_since_epoch())
-                                 .count();
+    const long long msSinceEpoch = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                       std::chrono::system_clock::now().time_since_epoch())
+                                       .count();
 
-    std::time_t seconds = msSinceEpoch / 1000;
-    int milliseconds = msSinceEpoch % 1000;
+    const std::time_t seconds = msSinceEpoch / 1000;
+    const int milliseconds = msSinceEpoch % 1000;
     std::tm tm;
 #if defined(_WIN32)
     gmtime_s(&tm, &seconds);
@@ -219,26 +220,26 @@ void GeneralLogHandler::messageHandler(QtMsgType type,
         truncatedMessage.remove(truncatedMessage.size() - 1, 1);
     }
 
-    Log log = {msSinceEpoch,
-               timestampUtc,
-               type,
-               logLevelString,
-               truncatedMessage,
-               locationString,
-               context.file,
-               context.function,
-               context.line,
-               context.category,
-               QCoreApplication::applicationPid()};
+    const Log log = {msSinceEpoch,
+                     timestampUtc,
+                     type,
+                     logLevelString,
+                     truncatedMessage,
+                     locationString,
+                     context.file,
+                     context.function,
+                     context.line,
+                     context.category,
+                     QCoreApplication::applicationPid()};
 
     QMutexLocker locker(&s_mutex);
-    for (auto logHandler : s_logHandlers) {
+    for (const auto logHandler : s_logHandlers) {
         logHandler->handleLog(log);
     }
 
     // Qt will exit faulty after this returns, so make sure to flush
     if (type == QtFatalMsg) {
-        for (auto logHandler : s_logHandlers) {
+        for (const auto logHandler : s_logHandlers) {
             logHandler->flush();
         }
     }

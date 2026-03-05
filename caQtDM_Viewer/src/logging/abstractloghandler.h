@@ -4,6 +4,9 @@
 #include <QString>
 #include <QtGlobal>
 
+// Use this when implementing log handlers for known constant QStrings, it will result in compile-time optimizations
+#define QSL(x) QStringLiteral(x)
+
 typedef struct
 {
     long long msSinceEpoch;
@@ -26,7 +29,7 @@ public:
     virtual void handleLog(const Log &log) = 0;
     virtual void flush() = 0;
 
-    static constexpr int severity(QtMsgType type)
+    static constexpr int severity(const QtMsgType type)
     {
         return (type == QtDebugMsg)       ? 0
                : (type == QtInfoMsg)    ? 1

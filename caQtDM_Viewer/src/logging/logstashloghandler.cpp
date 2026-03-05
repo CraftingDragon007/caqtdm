@@ -32,43 +32,35 @@ LogstashLogHandler::LogstashLogHandler(QObject *parent)
 
 LogstashLogHandler::~LogstashLogHandler() {}
 
-int LogstashLogHandler::bufferTimeoutMsFromEnv(int defaultTimeoutMs)
+int LogstashLogHandler::intFromEnv(const char *envName, const int defaultValue)
 {
-    const QString timeoutString = qgetenv(ENV_BUFFER_TIMEOUT);
-    if (timeoutString.isEmpty()) {
-        return defaultTimeoutMs;
+    const QString valueString = qgetenv(envName);
+    if (valueString.isEmpty()) {
+        return defaultValue;
     }
 
     bool ok;
-    const int timeout = timeoutString.toInt(&ok); // Must be in seconds (not ms!)
+    const int parsedValue = valueString.toInt(&ok);
     if (!ok) {
         qCWarning(logstashLogHandler)
-            << ENV_BUFFER_TIMEOUT << "is set and has a value, but could not be parsed to an int";
-        return defaultTimeoutMs;
+            << envName << QSL("is set and has a value, but could not be parsed to an int");
+        return defaultValue;
     }
 
-    return timeout * 1000;
+    return parsedValue;
 }
 
-int LogstashLogHandler::bufferSizeFromEnv(int defaultBufferSize)
+int LogstashLogHandler::bufferTimeoutMsFromEnv(const int defaultTimeoutS)
 {
-    const QString bufferSizeString = qgetenv(ENV_BUFFER_SIZE);
-    if (bufferSizeString.isEmpty()) {
-        return defaultBufferSize;
-    }
-
-    bool ok;
-    const int bufferSize = bufferSizeString.toInt(&ok);
-    if (!ok) {
-        qCWarning(logstashLogHandler)
-            << ENV_BUFFER_SIZE << "is set and has a value, but could not be parsed to an int";
-        return defaultBufferSize;
-    }
-
-    return bufferSize;
+    return intFromEnv(ENV_BUFFER_TIMEOUT, defaultTimeoutS) * 1000;
 }
 
-QUrl LogstashLogHandler::logstashUrlFromEnv(QString defaultLogstashUrl)
+int LogstashLogHandler::bufferSizeFromEnv(const int defaultBufferSize)
+{
+    return intFromEnv(ENV_BUFFER_SIZE, defaultBufferSize);
+}
+
+QUrl LogstashLogHandler::logstashUrlFromEnv(const QString &defaultLogstashUrl)
 {
     const QString urlString = qgetenv(ENV_LOGSTASH_URL);
     if (urlString.isEmpty()) {
@@ -78,7 +70,7 @@ QUrl LogstashLogHandler::logstashUrlFromEnv(QString defaultLogstashUrl)
     const QUrl url(urlString);
     if (!url.isValid()) {
         qCCritical(logstashLogHandler)
-            << ENV_LOGSTASH_URL << "is set and has a value, but is not a valid QUrl";
+            << ENV_LOGSTASH_URL << QSL("is set and has a value, but is not a valid QUrl");
         return defaultLogstashUrl;
     }
 
@@ -137,26 +129,26 @@ void LogstashLogHandler::clearLogBuffer()
     QJsonArray logsJsonArray;
     for (const Log &log : logs) {
         QJsonObject logJsonObject;
-        logJsonObject.insert("timestamp", log.timestampUtc);
-        logJsonObject.insert("type", static_cast<int>(log.loglevel));
-        logJsonObject.insert("type_string", log.loglevelString);
-        logJsonObject.insert("file", log.file);
-        logJsonObject.insert("function", log.function);
-        logJsonObject.insert("line", log.line);
-        logJsonObject.insert("message", log.message);
-        logJsonObject.insert("process_id", log.processId);
-        logJsonObject.insert("category", log.category);
+        logJsonObject.insert(QSL("timestamp"), log.timestampUtc);
+        logJsonObject.insert(QSL("type"), static_cast<int>(log.loglevel));
+        logJsonObject.insert(QSL("type_string"), log.loglevelString);
+        logJsonObject.insert(QSL("file"), log.file);
+        logJsonObject.insert(QSL("function"), log.function);
+        logJsonObject.insert(QSL("line"), log.line);
+        logJsonObject.insert(QSL("message"), log.message);
+        logJsonObject.insert(QSL("process_id"), log.processId);
+        logJsonObject.insert(QSL("category"), log.category);
 
         logsJsonArray.append(logJsonObject);
     }
 
     QJsonObject rootJsonObject;
-    rootJsonObject.insert("caqtdm_events", logsJsonArray);
+    rootJsonObject.insert(QSL("caqtdm_events"), logsJsonArray);
 
-    QByteArray payload = QJsonDocument(rootJsonObject).toJson(QJsonDocument::Compact);
+    const QByteArray payload = QJsonDocument(rootJsonObject).toJson(QJsonDocument::Compact);
 
     QNetworkRequest request(m_backendUrl);
-    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    request.setHeader(QNetworkRequest::ContentTypeHeader, QSL("application/json"));
     request.setHeader(QNetworkRequest::UserAgentHeader,
                       QString("caQtDM:%1/Qt:%2").arg(BUILDVERSION).arg(qVersion()));
 

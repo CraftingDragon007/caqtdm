@@ -8,13 +8,13 @@
 #include <QTimer>
 #include <QUrl>
 
-#define DEFAULT_BUFFER_TIMEOUT_MS 60000
+#define DEFAULT_BUFFER_TIMEOUT_S 60
 #define DEFAULT_BUFFER_SIZE 20
 
 #ifdef QT_NO_SSL
-#define DEFAULT_LOGSTASH_URL "http://logstash03.psi.ch/loki/api/v1/push"
+#define DEFAULT_LOGSTASH_URL QSL("http://logstash03.psi.ch/loki/api/v1/push")
 #else
-#define DEFAULT_LOGSTASH_URL "https://logstash03.psi.ch/loki/api/v1/push"
+#define DEFAULT_LOGSTASH_URL QSL("https://logstash03.psi.ch/loki/api/v1/push")
 #endif
 
 #include <QLoggingCategory>
@@ -38,9 +38,10 @@ public:
 #else
 private:
 #endif
-    int bufferTimeoutMsFromEnv(int defaultTimeoutMs = DEFAULT_BUFFER_TIMEOUT_MS);
-    int bufferSizeFromEnv(int defaultBufferSize = DEFAULT_BUFFER_SIZE);
-    QUrl logstashUrlFromEnv(QString defaultLogstashUrl = DEFAULT_LOGSTASH_URL);
+    int intFromEnv(const char *envName, const int defaultValue);
+    int bufferTimeoutMsFromEnv(const int defaultTimeoutS = DEFAULT_BUFFER_TIMEOUT_S);
+    int bufferSizeFromEnv(const int defaultBufferSize = DEFAULT_BUFFER_SIZE);
+    QUrl logstashUrlFromEnv(const QString &defaultLogstashUrl = DEFAULT_LOGSTASH_URL);
 
     QUrl m_backendUrl;
     QNetworkAccessManager *m_networkManager;

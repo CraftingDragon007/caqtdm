@@ -9,7 +9,7 @@
 
 #define DEFAULT_FILE_COUNT 10
 #define DEFAULT_FILE_SIZE_B 1000000
-#define DEFAULT_BUFFER_TIMEOUT_MS 10000
+#define DEFAULT_BUFFER_TIMEOUT_S 10
 #define DEFAULT_BUFFER_SIZE 20
 
 #include <QLoggingCategory>
@@ -33,11 +33,12 @@ public:
 #else
 private:
 #endif
-    int fileCountFromEnv(int defaultFileCount = DEFAULT_FILE_COUNT);
-    int fileSizeBFromEnv(int defaultFileSizeB = DEFAULT_FILE_SIZE_B);
-    int bufferTimeoutMsFromEnv(int defaultTimeoutMs = DEFAULT_BUFFER_TIMEOUT_MS);
-    int bufferSizeFromEnv(int defaultBufferSize = DEFAULT_BUFFER_SIZE);
-    void cleanupOldLogs(const QDir &logDir, int maxFiles);
+    int intFromEnv(const char *envName, const int defaultValue);
+    int fileCountFromEnv(const int defaultFileCount = DEFAULT_FILE_COUNT);
+    int fileSizeBFromEnv(const int defaultFileSizeB = DEFAULT_FILE_SIZE_B);
+    int bufferTimeoutMsFromEnv(const int defaultTimeoutS = DEFAULT_BUFFER_TIMEOUT_S);
+    int bufferSizeFromEnv(const int defaultBufferSize = DEFAULT_BUFFER_SIZE);
+    void cleanupOldLogs(QDir logDir, const int maxFiles);
     void truncateLogFile(QFile &logFile);
 
     QString m_logFilePath;

@@ -10,6 +10,9 @@
 #define ENV_BUFFER_TIMEOUT "CAQTDM_LOGGING_FILE_BUFFER_TIMEOUT"
 #define ENV_BUFFER_SIZE "CAQTDM_LOGGING_FILE_BUFFER_SIZE"
 
+// Note about logfile creation: These do NOT overwrite the regular caQtDM application logs.
+// Instead, since this is a separate executable, they are put into the AppLocalDataLocation for tst_logging.
+
 void TestFileLogHandler::initTestCase()
 {
     // code to be executed before the first test function
