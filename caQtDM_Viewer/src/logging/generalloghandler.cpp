@@ -166,27 +166,6 @@ void GeneralLogHandler::messageHandler(QtMsgType type,
         return;
     }
 
-    QString logLevelString;
-    switch (type) {
-    case QtDebugMsg:
-        logLevelString = QSL("QtDebugMsg");
-        break;
-    case QtInfoMsg:
-        logLevelString = QSL("QtInfoMsg");
-        break;
-    case QtWarningMsg:
-        logLevelString = QSL("QtWarningMsg");
-        break;
-    case QtCriticalMsg:
-        logLevelString = QSL("QtCriticalMsg");
-        break;
-    case QtFatalMsg:
-        logLevelString = QSL("QtFatalMsg");
-        break;
-    default:
-        logLevelString = QSL("unkown QtMsgType");
-    }
-
     const long long msSinceEpoch = std::chrono::duration_cast<std::chrono::milliseconds>(
                                        std::chrono::system_clock::now().time_since_epoch())
                                        .count();
@@ -210,6 +189,28 @@ void GeneralLogHandler::messageHandler(QtMsgType type,
                   tm.tm_min,
                   tm.tm_sec,
                   milliseconds);
+
+    QString logLevelString;
+    switch (type) {
+    case QtDebugMsg:
+        logLevelString = QSL("QtDebugMsg");
+        break;
+    case QtInfoMsg:
+        logLevelString = QSL("QtInfoMsg");
+        break;
+    case QtWarningMsg:
+        logLevelString = QSL("QtWarningMsg");
+
+        break;
+    case QtCriticalMsg:
+        logLevelString = QSL("QtCriticalMsg");
+        break;
+    case QtFatalMsg:
+        logLevelString = QSL("QtFatalMsg");
+        break;
+    default:
+        logLevelString = QSL("unkown QtMsgType");
+    }
 
     const QString locationString = QString(context.file) + QSL(":") + context.function + QSL(":")
                                    + QString::number(context.line);

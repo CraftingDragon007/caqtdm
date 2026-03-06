@@ -51,7 +51,8 @@ public:
                : (type == QtCriticalMsg) ? 3
                : (type == QtFatalMsg)    ? 4
                                          : 3;
-        // Not specified enum values values (last line, return = 3) are unspecified (or deprecated QtSystemMsg which is = QtCriticalMsg either way),
+        // Not specified enum values values (last line, return = 3) are unspecified
+        // (or deprecated QtSystemMsg which is = QtCriticalMsg either way),
         // so assume something went wrong badly and treat the same as QtCriticalMsg
     };
 };

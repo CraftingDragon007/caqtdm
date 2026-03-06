@@ -40,8 +40,8 @@ FileLogHandler::FileLogHandler(QObject *parent)
     cleanupOldLogs(logDirectory, maxFiles);
 
     m_logFileMaxSizeB = fileSizeBFromEnv();
-    m_logBufferTimeoutMs = bufferTimeoutMsFromEnv();
     m_logBufferMaxSize = bufferSizeFromEnv();
+    m_logBufferTimeoutMs = bufferTimeoutMsFromEnv();
     m_logBufferTimer = new QTimer(this);
     QObject::connect(m_logBufferTimer,
                      &QTimer::timeout,
@@ -134,11 +134,7 @@ void FileLogHandler::handleLog(const Log &log)
 
 void FileLogHandler::flush()
 {
-    if (QThread::currentThread() == this->thread()) {
-        clearLogBuffer();
-    } else {
-        QMetaObject::invokeMethod(this, "clearLogBuffer", Qt::BlockingQueuedConnection);
-    }
+    clearLogBuffer();
 }
 
 void FileLogHandler::clearLogBuffer()
