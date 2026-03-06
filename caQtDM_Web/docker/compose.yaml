@@ -10,17 +10,43 @@ services:
     networks:
       - caqtdm-web
     environment:
-      - PROXY_BACKEND=http://caqtdm
-      - BASIC_AUTH_USER=user
-      - BASIC_AUTH_PASSWORD=password
+      - PROXY_BACKEND=http://caqtdm # if you need more than one instance refer to compose.multi.yaml for an example of how to set up multiple backends with subroutes
+      - BASIC_AUTH_USER=user # remove if not using basic auth
+      - BASIC_AUTH_PASSWORD=password # remove if not using basic auth
 
   caqtdm:
     image: caqtdm-web/caqtdm
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # Remove if not using the gateway
     build:
       context: ../../
       dockerfile: caQtDM_Web/docker/caqtdm/Dockerfile
     networks:
       - caqtdm-web
+    environment:
+      - EPICS_CA_MAX_ARRAY_BYTES=40000000
+      - EPICS_CA_AUTO_ADDR_LIST=NO # using this wouldn't work as udp broadcast (multicast) from the host doesn't reach the container, so you have to specify the gateway or iocs directly
+      - EPICS_CA_ADDR_LIST=host.docker.internal:5062 # if using the gateway, leave as is, otherwise specify your iocs directly here, e.g. 10.0.0.45:5063 192.168.1.25:5062
+      # optionaly specify other environment variables like ENTRY_PANEL, EXTRA_ARGS, VIRTUAL_WIDTH, VIRTUAL_HEIGHT, QT_LOGGING_RULES, CAQTDM_DISPLAY_PATH (you would need to mount volumes) as needed
+
+  gateway: # to bridge the gap between the container and the host's EPICS network, you can use the host network mode and run an EPICS gateway in a container.
+    image: caqtdm-web/gateway
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    network_mode: "host" # required for udp broadcast (multicast) to work, but be aware that this means the container shares the host's network stack and ports
+    volumes:
+      - ./gateway/gateway.access:/etc/gateway.access:ro,Z
+    environment:
+         - EPICS_CA_ADDR_LIST= #enter your subnets here, e.g. 10.0.0.255 192.168.1.255 ... or iocs directly, e.g. 10.0.0.45:5063 192.168.1.25:5062 
+         # (note that direct unicast would also work without the gateway, so you could get rid of the gateway if you only need that)
+         - EPICS_CA_AUTO_ADDR_LIST=YES # set to NO if you don't want the gateway to automatically use the hosts broadcast addresses
+         - EPICS_CA_MAX_ARRAY_BYTES=40000000
+    command: > # 0.0.0.0 is required for the gateway to work with rootless podman, as the other containers won't be able to access the gateway on 127.0.0.1
+      -sip 0.0.0.0
+      -cport 5062
+      -access /etc/gateway.access
+      -log /dev/stdout
 
 networks:
   caqtdm-web: {}
