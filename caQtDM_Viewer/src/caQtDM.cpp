@@ -286,7 +286,7 @@ int main(int argc, char *argv[])
     // From hereon, everything logged via qDebug or its siblings will be captured by the custom LogHandler.
     GeneralLogHandler::initialize();
     qCInfo(viewer) << "initialized logger";
-    // Log all arguments that were previously shown to the user but not logged via the custom LogHandler
+    // Log all arguments the application was started with (before they were processed)
     for (int i = 0; i < arguments.size(); i++) {
         qCDebug(viewer).nospace() << "Argument: " << i << ": " << arguments[i];
     }
