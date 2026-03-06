@@ -132,7 +132,7 @@ QtMsgType GeneralLogHandler::logLevelFromEnv(const QtMsgType defaultLogLevel)
 QStringList GeneralLogHandler::selectedLogHandlersFromEnv(const QString &defaultConfig)
 {
     if (!qEnvironmentVariableIsSet(ENV_LOG_HANDLERS)) {
-        return QStringList(defaultConfig);
+        return defaultConfig.split(',');
     }
 
     QStringList selectedLogHandlers;
