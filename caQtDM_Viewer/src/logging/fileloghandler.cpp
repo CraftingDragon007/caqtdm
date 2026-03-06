@@ -120,12 +120,14 @@ void FileLogHandler::cleanupOldLogs(QDir logDir, const int maxFiles)
 
 void FileLogHandler::handleLog(const Log &log)
 {
+    bool shouldClear;
     {
         QMutexLocker locker(&m_logBufferMutex);
         m_logBuffer.append(log);
+        shouldClear = m_logBuffer.size() > m_logBufferMaxSize;
     }
 
-    if (m_logBuffer.size() > m_logBufferMaxSize) {
+    if (shouldClear) {
         QMetaObject::invokeMethod(this, "clearLogBuffer", Qt::QueuedConnection);
     }
 }
@@ -173,12 +175,12 @@ void FileLogHandler::clearLogBuffer()
     logFile.flush();
 
     if (logFile.size() > m_logFileMaxSizeB) {
-        truncateLogFile(logFile);
+        halveLogFile(logFile);
     }
     logFile.close();
 }
 
-void FileLogHandler::truncateLogFile(QFile &logFile)
+void FileLogHandler::halveLogFile(QFile &logFile)
 {
     const qint64 fileSize = logFile.size();
     const qint64 halfSize = fileSize / 2;

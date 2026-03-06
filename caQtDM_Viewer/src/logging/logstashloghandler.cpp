@@ -98,12 +98,14 @@ QUrl LogstashLogHandler::logstashUrlFromEnv(const QString &defaultLogstashUrl)
 
 void LogstashLogHandler::handleLog(const Log &log)
 {
+    bool shouldClear;
     {
         QMutexLocker locker(&m_logBufferMutex);
         m_logBuffer.append(log);
+        shouldClear = m_logBuffer.size() > m_logBufferMaxSize;
     }
 
-    if (m_logBuffer.size() > m_logBufferMaxSize) {
+    if (shouldClear) {
         QMetaObject::invokeMethod(this, "clearLogBuffer", Qt::QueuedConnection);
     }
 }

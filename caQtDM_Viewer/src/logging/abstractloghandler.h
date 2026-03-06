@@ -26,13 +26,27 @@ class AbstractLogHandler
 {
 public:
     virtual ~AbstractLogHandler() = default;
+    /**
+     * @brief Can be called with logs to process.
+     * This function may not be thread-safe.
+     * @param log: The log, fields may be default-constructed
+     */
     virtual void handleLog(const Log &log) = 0;
+    /**
+     * @brief Flushes all currently buffered logs (if any) such that they are processed finally.
+     * This function may not be thread-safe. It must be blocking until all logs are flushed.
+     */
     virtual void flush() = 0;
 
+    /**
+     * @brief Maps a numerical severity to a QtMsgType to compare against others.
+     * @param type: The QtMsgType to map
+     * @return The mapped severity
+     */
     static constexpr int severity(const QtMsgType type)
     {
-        return (type == QtDebugMsg)       ? 0
-               : (type == QtInfoMsg)    ? 1
+        return (type == QtDebugMsg)      ? 0
+               : (type == QtInfoMsg)     ? 1
                : (type == QtWarningMsg)  ? 2
                : (type == QtCriticalMsg) ? 3
                : (type == QtFatalMsg)    ? 4

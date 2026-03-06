@@ -12,9 +12,18 @@ public:
     explicit ConsoleLogHandler(QObject *parent = Q_NULLPTR);
     ~ConsoleLogHandler() override;
 
+    /**
+     * @brief Prints the passed log to stdout or sterr, based on QtMsgType.
+     * This function is not thread-safe.
+     * @param log: The log to print
+     */
     void handleLog(const Log &log) override;
 
 public slots:
+    /**
+     * @brief Flushes stdout and stderr.
+     * This function is not guaranteed to be thread-safe.
+     */
     void flush() override;
 
 #ifdef UNIT_TESTING

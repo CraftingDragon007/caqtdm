@@ -9,7 +9,15 @@ public:
     SyslogLogHandler();
     ~SyslogLogHandler() override;
 
+    /**
+     * @brief Calls syslog with log.
+     * This function is thread-safe.
+     * @param log: The log to process.
+     */
     void handleLog(const Log &log) override;
+    /**
+     * @brief Does nothing.
+     */
     void flush() override {};
 };
 
