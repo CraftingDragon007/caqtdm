@@ -3429,12 +3429,16 @@ To use those you can configure a docker-compose.yml file like this:
             - path_to_your_panels:/app/caqtdm_display_path # Replace with the path to your .ui files
          environment:
             - ENTRY_PANEL=your-main.ui # Replace with your main .ui file
-            - EPICS_CA_ADDR_LIST=your_epics_ca_addr_list # Replace with your EPICS CA address list (remove if not needed)
+            - EPICS_CA_ADDR_LIST=your_epics_ca_addr_list # Replace with your EPICS CA address list
+
    networks:
       - caqtdm-web
 
 
 Make sure to replace the placeholders with your actual paths and settings.
+
+NOTE: multicast/broadcast doesn't work in docker networks, so you need to specify the ioc address(es) for unicast access here
+or use a channel access gateway that runs on the host network and allows unicast access to the iocs, see :ref:`broadcasting-multicast-docker` for more details
 
 To start the services, run:
 
@@ -3462,6 +3466,28 @@ This will build the Docker image with caQtDM and the qnovnc-platform-plugin incl
 
 Make sure to adjust the compose.yaml file as needed for your setup, similar to the example provided with :ref:`prebuilt-images`.
 
+
+.. _broadcasting-multicast-docker:
+
+Using broadcast/multicast for ioc access
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+By default, caQtDM Web when running in docker uses unicast to access the ioc, which means that it will only listen for updates from the ioc specified in the EPICS_CA_ADDR_LIST environment variable.
+NOTE: This is not a limitation of caQtDM Web itself, but a limitation of docker networks, as they do not support multicast / broadcast traffic or the necessary routing.
+If you need to access subnets via broadcast / multicast, you'll need to add a channel access gateway to your setup, you can take a look at ``caQtDM_Web/docker/compose.yaml`` for an example of how to set up caQtDM Web with `ca-gateway <https://github.com/epics-extensions/ca-gateway>`__.
+Of couse this gateway would need to be run on the host network (look at the compose.yaml to see how) to be able to receive the broadcast / multicast traffic from the ioc.
+
+Multiple instances
+^^^^^^^^^^^^^^^^^^^^^
+
+It is possible to run multiple instances of caQtDM Web on the same machine, for example to serve different panels with a different EPICS_CA_ADDR_LIST.
+To do this, simply start the ``compose.multi.yaml`` located in the ``caQtDM_Web/docker`` directory inside the caQtDM repository with the following command:
+
+.. code:: bash
+
+   docker compose -f compose.multi.yaml up -d
+
+You can adjust the behaviour of each instance by adjusting the environment variables in the ``compose.multi.yaml`` file.
 
 Normal Setup
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -3597,7 +3623,7 @@ When running in web mode, caQtDM will adjust some of its behaviour to better sui
    
 
 caQtDM Web specific configuration options
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Command line options
 ^^^^^^^^^^^^^^^^^^^^^
