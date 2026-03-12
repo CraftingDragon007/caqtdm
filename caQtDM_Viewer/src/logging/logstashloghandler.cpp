@@ -44,7 +44,7 @@ LogstashLogHandler::~LogstashLogHandler()
     } // Otherwise, it will automatically be cleaned up by Qt due to being a child of this
 }
 
-int LogstashLogHandler::intFromEnv(const char *envName, const int defaultValue)
+qint64 LogstashLogHandler::intFromEnv(const char *envName, const qint64 defaultValue)
 {
     const QString valueString = qgetenv(envName);
     if (valueString.isEmpty()) {
@@ -52,7 +52,7 @@ int LogstashLogHandler::intFromEnv(const char *envName, const int defaultValue)
     }
 
     bool ok;
-    const int parsedValue = valueString.toInt(&ok);
+    const qint64 parsedValue = valueString.toLongLong(&ok);
     if (!ok) {
         qCWarning(logstashLogHandler)
             << envName << QSL("is set and has a value, but could not be parsed to an int");
@@ -64,12 +64,42 @@ int LogstashLogHandler::intFromEnv(const char *envName, const int defaultValue)
 
 int LogstashLogHandler::bufferTimeoutMsFromEnv(const int defaultTimeoutS)
 {
-    return intFromEnv(ENV_BUFFER_TIMEOUT, defaultTimeoutS) * 1000;
+    qint64 bufferTimeoutS = intFromEnv(ENV_BUFFER_TIMEOUT, defaultTimeoutS);
+    if (bufferTimeoutS < 1) {
+        qCWarning(logstashLogHandler)
+            << ENV_BUFFER_TIMEOUT << QSL("specified invalid buffer timeout, must be positive");
+        return defaultTimeoutS;
+    }
+
+    if (bufferTimeoutS
+        > INT_MAX
+              / 1000) { // Will be multiplied by 1000 afterwards to get MS, but cannot multiply in here due to potential overflow -> divide limit instead
+        qCWarning(logstashLogHandler)
+            << ENV_BUFFER_TIMEOUT << QSL("specified invalid buffer timeout, must be smaller than")
+            << INT_MAX / 1000;
+        return defaultTimeoutS;
+    }
+
+    return bufferTimeoutS * 1000;
 }
 
 int LogstashLogHandler::bufferSizeFromEnv(const int defaultBufferSize)
 {
-    return intFromEnv(ENV_BUFFER_SIZE, defaultBufferSize);
+    qint64 bufferSize = intFromEnv(ENV_BUFFER_SIZE, defaultBufferSize);
+    if (bufferSize < 0) {
+        qCWarning(logstashLogHandler)
+            << ENV_BUFFER_SIZE << QSL("specified invalid buffer size, must be >= 0");
+        return defaultBufferSize;
+    }
+
+    if (bufferSize > INT_MAX) {
+        qCWarning(logstashLogHandler)
+            << ENV_BUFFER_SIZE << QSL("specified invalid buffer size, must be smaller than")
+            << INT_MAX;
+        return defaultBufferSize;
+    }
+
+    return bufferSize;
 }
 
 QUrl LogstashLogHandler::logstashUrlFromEnv(const QString &defaultLogstashUrl)

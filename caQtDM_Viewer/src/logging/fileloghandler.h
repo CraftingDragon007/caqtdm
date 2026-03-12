@@ -50,14 +50,14 @@ public:
 #else
 private:
 #endif
-    int intFromEnv(const char *envName, const int defaultValue);
+    qint64 intFromEnv(const char *envName, const qint64 defaultValue);
     int fileCountFromEnv(const int defaultFileCount = DEFAULT_FILE_COUNT);
     /**
      * @brief Reads the log file max size from an env stored in bytes.
      * @param defaultFileSizeB: The default size in bytes
      * @return The final value to be used
      */
-    int fileSizeBFromEnv(const int defaultFileSizeB = DEFAULT_FILE_SIZE_B);
+    qint64 fileSizeBFromEnv(const qint64 defaultFileSizeB = DEFAULT_FILE_SIZE_B);
     /**
      * @brief Reads the buffer timeout from an env stored in seconds, and returns it in milliseconds.
      * @param defaultTimeoutS: The default timeeout in seconds
@@ -85,7 +85,7 @@ private:
     QTimer *m_logBufferTimer;
     int m_logBufferTimeoutMs;
     int m_logBufferMaxSize;
-    int m_logFileMaxSizeB;
+    qint64 m_logFileMaxSizeB;
 };
 
 #endif // FILELOGHANDLER_H

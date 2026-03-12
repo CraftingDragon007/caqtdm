@@ -67,7 +67,7 @@ FileLogHandler::~FileLogHandler()
     } // Otherwise, it will automatically be cleaned up by Qt due to being a child of this
 }
 
-int FileLogHandler::intFromEnv(const char *envName, const int defaultValue)
+qint64 FileLogHandler::intFromEnv(const char *envName, const qint64 defaultValue)
 {
     const QString valueString = qgetenv(envName);
     if (valueString.isEmpty()) {
@@ -75,7 +75,7 @@ int FileLogHandler::intFromEnv(const char *envName, const int defaultValue)
     }
 
     bool ok;
-    const int parsedValue = valueString.toInt(&ok);
+    const qint64 parsedValue = valueString.toLongLong(&ok);
     if (!ok) {
         qCWarning(fileLogHandler)
             << envName << QSL("is set and has a value, but could not be parsed to an int");
@@ -87,22 +87,73 @@ int FileLogHandler::intFromEnv(const char *envName, const int defaultValue)
 
 int FileLogHandler::fileCountFromEnv(const int defaultFileCount)
 {
-    return intFromEnv(ENV_FILE_COUNT, defaultFileCount);
+    qint64 fileCount = intFromEnv(ENV_FILE_COUNT, defaultFileCount);
+    if (fileCount < 1) {
+        qCWarning(fileLogHandler) << ENV_FILE_COUNT
+                                  << QSL("specified an invalid file count, must be positive");
+        return defaultFileCount;
+    }
+
+    if (fileCount > INT_MAX) {
+        qCWarning(fileLogHandler) << ENV_FILE_COUNT
+                                  << QSL("specified invalid file count, must be smaller than")
+                                  << INT_MAX;
+        return defaultFileCount;
+    }
+
+    return fileCount;
 }
 
-int FileLogHandler::fileSizeBFromEnv(const int defaultFileSizeB)
+qint64 FileLogHandler::fileSizeBFromEnv(const qint64 defaultFileSizeB)
 {
-    return intFromEnv(ENV_FILE_SIZE, defaultFileSizeB);
+    quint64 fileSizeB = intFromEnv(ENV_FILE_SIZE, defaultFileSizeB);
+    if (fileSizeB < 1) {
+        qCWarning(fileLogHandler) << ENV_FILE_SIZE
+                                  << QSL("specified invalid file size, must be positive");
+        return defaultFileSizeB;
+    }
+
+    return fileSizeB;
 }
 
 int FileLogHandler::bufferTimeoutMsFromEnv(const int defaultTimeoutS)
 {
-    return intFromEnv(ENV_BUFFER_TIMEOUT, defaultTimeoutS) * 1000; // Retrieved value is in seconds
+    qint64 bufferTimeoutS = intFromEnv(ENV_BUFFER_TIMEOUT, defaultTimeoutS);
+    if (bufferTimeoutS < 1) {
+        qCWarning(fileLogHandler) << ENV_BUFFER_TIMEOUT
+                                  << QSL("specified invalid buffer timeout, must be positive");
+        return defaultTimeoutS;
+    }
+
+    if (bufferTimeoutS
+        > INT_MAX
+              / 1000) { // Will be multiplied by 1000 afterwards to get MS, but cannot multiply in here due to potential overflow -> divide limit instead
+        qCWarning(fileLogHandler) << ENV_BUFFER_TIMEOUT
+                                  << QSL("specified invalid buffer timeout, must be smaller than")
+                                  << INT_MAX / 1000;
+        return defaultTimeoutS;
+    }
+
+    return bufferTimeoutS * 1000;
 }
 
 int FileLogHandler::bufferSizeFromEnv(const int defaultBufferSize)
 {
-    return intFromEnv(ENV_BUFFER_SIZE, defaultBufferSize);
+    qint64 bufferSize = intFromEnv(ENV_BUFFER_SIZE, defaultBufferSize);
+    if (bufferSize < 0) {
+        qCWarning(fileLogHandler) << ENV_BUFFER_SIZE
+                                  << QSL("specified invalid buffer size, must be >= 0");
+        return defaultBufferSize;
+    }
+
+    if (bufferSize > INT_MAX) {
+        qCWarning(fileLogHandler) << ENV_BUFFER_SIZE
+                                  << QSL("specified invalid buffer size, must be smaller than")
+                                  << INT_MAX;
+        return defaultBufferSize;
+    }
+
+    return bufferSize;
 }
 
 void FileLogHandler::cleanupOldLogs(QDir logDir, const int maxFiles)

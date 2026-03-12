@@ -58,7 +58,7 @@ public:
 #else
 private:
 #endif
-    int intFromEnv(const char *envName, const int defaultValue);
+    qint64 intFromEnv(const char *envName, const qint64 defaultValue);
     /**
      * @brief Reads the buffer timeout from an env stored in seconds, and returns it in milliseconds.
      * @param defaultTimeoutS: The default timeeout in seconds
