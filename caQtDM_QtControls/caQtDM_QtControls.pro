@@ -26,7 +26,10 @@ contains(QT_VER_MAJ, 5) {
       }
 }
 contains(QT_VER_MAJ, 6) {
-      QT += widgets concurrent uitools opengl core network
+      QT += widgets concurrent opengl core network
+      !android {
+        QT += uitools
+      }
       CONFIG  += plugin cahmi
       ios | android {
             QT += uiplugin
