@@ -10,7 +10,7 @@ IF "%1"=="4" GOTO SELECT4
 echo =============================================================================================
 echo Select Build Environment
 echo 1) QT 4.8.5  QWT6.1.3 32 Bit VS2010  
-echo 2) QT 6.7.1  QWT6.2.0 64 Bit VS2019  
+echo 2) QT 6.10.0  QWT6.3.0 64 Bit VS2022  
 echo 3) QT 5.15.0 QWT6.3.0 64 Bit VS2019
 set /P SELCTION=Select: 
 echo =============================================================================================
@@ -68,18 +68,18 @@ REM ============================================================================
 
 :SELECT2 
 
-  call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
+  call "C:\Program Files\Microsoft Visual Studio\2022\Professional\VC\Auxiliary\Build\vcvarsall.bat" x64
   d:	
  
-  set QTHOME=D:\qt\build\Qt-6.9.0_VS22_64bit
+  set QTHOME=D:\qt\build\Qt-6.10.0_VS22_64bit
   
-  set QWTHOME=D:/qt/qwt-6.3.0_Qt6.9.0_64bit
-  set QWTINCLUDE=:/qt/qwt-6.3.0_Qt6.9.0_64bit/src
+  set QWTHOME=D:/qt/qwt-6.3.0_Qt6.10.0_64bit
+  set QWTINCLUDE=D:/qt/qwt-6.3.0_Qt6.10.0_64bit/src
   set QWTLIB=%QWTHOME%/lib
   set QWTLIBNAME=qwt
   set QWTVERSION=6.2
   set CAQTDMQTVER=QT6
-  set CAQTDM_GPS=1
+  
   
   
   set GITPATH=C:\Users\brands\AppData\Local\Atlassian\SourceTree\git_local\bin\
@@ -103,7 +103,7 @@ REM ============================================================================
   set ZMQ=D:\epics\softioc\common\external\zeromq-4.3.5_windows-x64
   set ZMQINC=D:\epics\softioc\common\external\zeromq-4.3.5\include
   set ZMQLIB=D:\epics\softioc\common\external\zeromq-4.3.5_windows-x64\lib\Release
-  set ZMQ=D:\epics\softioc\common\external\zeromq-4.3.5_windows-x64\bin\Release
+  set ZMQBIN=D:\epics\softioc\common\external\zeromq-4.3.5_windows-x64\bin\Release
   set ZMQLIBRARY=libzmq-v142-mt-4_3_5.dll
   
   set SSL=D:\qt\openssl-1.0.2n_VS16_64bit
