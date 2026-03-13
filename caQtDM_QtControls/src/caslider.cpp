@@ -962,6 +962,6 @@ void caSlider::setScaleValueEnabled(bool b)
     configureScale();
     setDirection(thisDirection);
 }
-
+#ifndef MOBILE
 #include "moc_caslider.cpp"
-
+#endif

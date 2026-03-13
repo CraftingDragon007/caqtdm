@@ -49,12 +49,14 @@ bool HTTPCONFIGURATOR = false;
 #include <fstream>
 #include <string>
 
+#if QT_VERSION > QT_VERSION_CHECK(5,0,0)
 #ifndef MOBILE
 #include <hmisharedeventbus.h>
 #include <hmisharedconfiglistmanager.h>
 #include <websocketserver.h>
 #include <webportpool.h>
 #include <weblaunchermanager.h>
+#endif
 #endif
 
 #include <QFileDialog>
@@ -114,6 +116,42 @@ int setenv(const char *name, const char *value, int overwrite)
   #include <mach/mach_init.h>
   #include <mach/vm_statistics.h>
 #endif
+
+// in case of tablets, use static plugins linked in
+#ifdef MOBILE
+Q_IMPORT_PLUGIN(CustomWidgetCollectionInterface_Controllers);
+Q_IMPORT_PLUGIN(CustomWidgetCollectionInterface_Monitors);
+Q_IMPORT_PLUGIN(CustomWidgetCollectionInterface_Graphics);
+Q_IMPORT_PLUGIN(CustomWidgetCollectionInterface_Utilities);
+Q_IMPORT_PLUGIN(DemoPlugin);
+Q_IMPORT_PLUGIN(Epics3Plugin);
+Q_IMPORT_PLUGIN(environmentPlugin);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 9, 0)
+#ifdef CAQTDM_MODBUS
+Q_IMPORT_PLUGIN(modbusPlugin);
+#endif
+#ifdef CAQTDM_GPS
+Q_IMPORT_PLUGIN(gpsPlugin);
+#endif
+#endif
+//*************************************
+#ifdef EPICS4
+Q_IMPORT_PLUGIN(Epics4Plugin);
+#endif
+#ifdef ARCHIVESF
+Q_IMPORT_PLUGIN(ArchiveSF_Plugin);
+#endif
+#ifdef ARCHIVEHIPA
+Q_IMPORT_PLUGIN(ArchiveHIPA_Plugin);
+#endif
+#ifdef ARCHIVEPRO
+Q_IMPORT_PLUGIN(ArchivePRO_Plugin);
+#endif
+//*************************************
+
+#endif
+
+
 
 #if QT_VERSION > 0x050000
 void FileOpenWindow::onApplicationStateChange(Qt::ApplicationState state)
@@ -240,41 +278,9 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
     // set for epics longer waveforms
     QString maxBytes = (QString)  qgetenv("EPICS_CA_MAX_ARRAY_BYTES");
     if(maxBytes.size() == 0) setenv("EPICS_CA_MAX_ARRAY_BYTES", "150000000", 1);
-
-    // in case of tablets, use static plugins linked in
 #ifdef MOBILE
-    Q_IMPORT_PLUGIN(CustomWidgetCollectionInterface_Controllers);
-    Q_IMPORT_PLUGIN(CustomWidgetCollectionInterface_Monitors);
-    Q_IMPORT_PLUGIN(CustomWidgetCollectionInterface_Graphics);
-    Q_IMPORT_PLUGIN(CustomWidgetCollectionInterface_Utilities);
-    Q_IMPORT_PLUGIN(DemoPlugin);
-    Q_IMPORT_PLUGIN(Epics3Plugin);
-    Q_IMPORT_PLUGIN(environmentPlugin);
-#if QT_VERSION >= QT_VERSION_CHECK(5, 9, 0)
-    #ifdef CAQTDM_MODBUS
-        Q_IMPORT_PLUGIN(modbusPlugin);
-    #endif
-    #ifdef CAQTDM_GPS
-        Q_IMPORT_PLUGIN(gpsPlugin);
-    #endif
-#endif
-//*************************************
-#ifdef EPICS4
-    Q_IMPORT_PLUGIN(Epics4Plugin);
-#endif
-#ifdef ARCHIVESF
-    Q_IMPORT_PLUGIN(ArchiveSF_Plugin);
-#endif
-#ifdef ARCHIVEHIPA
-    Q_IMPORT_PLUGIN(ArchiveHIPA_Plugin);
-#endif
-#ifdef ARCHIVEPRO
-    Q_IMPORT_PLUGIN(ArchivePRO_Plugin);
-#endif
-//*************************************
     Q_INIT_RESOURCE(qtcontrolsplugin);  // load resources from resource file
 #endif
-
     // message window used by library and here
     messageWindow = new MessageWindow();
 
@@ -336,6 +342,8 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
         ui.menuBar->setEnabled(false);
     } else {
 #endif
+
+    connect(this, &FileOpenWindow::themeChanged, messageWindow, &MessageWindow::themeChanged);
 
     // connect action buttons
     connect( this->ui.fileAction, SIGNAL( triggered() ), this, SLOT(Callback_OpenButton()) );
@@ -2085,6 +2093,16 @@ bool FileOpenWindow::event(QEvent *e)
         qDebug()<<"QEvent::Show!";
         // Qt 6.5.2 ShowMinimized=crash in QWidget::event better solution = setVisible(false)
         if (!debugWindow) this->setVisible(false);
+    }
+    return QWidget::event(e);
+}
+#else
+bool FileOpenWindow::event(QEvent *e)
+{
+    if (e->type() == QEvent::ThemeChange) {
+        emit themeChanged();
+        // we don't retun true here, because we want the base implementation and
+        // all child items to also receive the ThemeChange event, so they can correctly change to the new theme.
     }
     return QWidget::event(e);
 }

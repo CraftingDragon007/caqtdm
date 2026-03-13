@@ -142,7 +142,7 @@ locally without installing.
    the test directory.
 #. in case you have qwt 6.1 or greater you will have to use the file qwt_thermo_marker_61
    in caQtDM_QtControls/src. (*instead of qwt_thermo_marker*)
-#. in case you are already using Qt5 or Qt6 with qwt6.2 the build process should also be
+#. in case you are already using Qt5 or Qt6 with qwt6.3 the build process should also be
    straight forward.
 #. Instructions for compiling caQtDM on Windows/Linux/Mac Requirements:
 
@@ -389,6 +389,26 @@ Development history
 The following list describe the new features and bug fixes for every
 release. You can follow the development history and detect if a bug in
 the used version has been solved.
+
+.. container::
+
+   4.6.0
+   
+- update fix for unconnected Channels
+- ``%read`` command for cainclude and caRelatedDisplay
+- old files cleanup
+- implement pipelines for various target systems (github actions)
+- added various packing mechanissmen
+- caWavetable got some signals and slots for generating for vertical and horizontal sync
+- caWavetable added header manipulation functions
+- fix in RPM dependencies
+- cainfo Panel corrections and remove EPICS data requests (avoid unesseary channel searchs)
+- recoloring caDoubleTabWidget via Stylesheets
+- added a CloseOnExit0 for the caScriptbutton
+- added the localisation for characters to caMenu and caMessageButton
+- added selecting/copy/paste mechanisem at various parts of the caqtdm
+- caMessageButton can now set strings
+- changed the build system that for linux systems to build without RPATH
 
 .. container::
 
@@ -2263,6 +2283,76 @@ is the equivalent of the Composite in MEDM
    placing a semicolon after the file name and entering them like on the
    command line.
 
+   **Properties:**
+   The following properties are available:
+
+   ``macroList``
+      List of strings to define macros. As in the commandline multiple macros have to be seperated by commas. If it is needed 
+      you can load a macrolist from a text file with the command %(read <path>/<filename>)
+      Type: name/identifier (string)
+
+   ``xPositionsOrChannels``
+      in case stacking is position the x position inside the caInclude Widget can be defined here. This can be a constant or a channel
+      Type: name/identifier (string)	
+
+   ``yPositionsOrChannels``
+      in case stacking is position the y position inside the caInclude Widget can be defined here. This can be a constant or a channel
+      Type: name/identifier (string)
+
+   ``xCorrectionFactor``
+      linear conversion factor for the x position (channel value -> display coordinates)
+      Type: number (float)
+
+   ``yCorrectionFactor``
+      linear conversion factor for the x position (channel value -> display coordinates)
+      Type: number (float)
+
+   ``filename``
+      UI file name that is loaded and displayed inside the area of the caInclude Widget. 
+      Type: name/identifier (string)
+   ``stacking``
+      
+
+      Type: options (enum)
+
+   ``maximumLines``
+   ``maximumColumns``
+   ``adjustSizeToContents``
+   ``verticalSpacing``
+   ``horizontalSpacing``
+   ``frameShape``
+   ``frameShadow``
+   ``frameLineWidth``
+   ``frameColor``
+   ``visibility + Calc + channels``
+
+
+   ``lable``
+      String to define a lable in the menue-Mode. The icon that is display can be removed with adding a "-" in the beginning of the string
+      Type: name/identifier (string)
+
+   ``lablesList``
+      List of strings to name the buttons/menu entries.
+      Type: name/identifier (string)
+
+   ``filesList``
+      List of strings of UI files to be loaded.
+      Type: name/identifier (string)
+
+
+
+
+
+   ``fontScaleMode``
+      Menue to define the behavior of the lables during rescaling.
+      Type: options (enum)
+
+   ``stackingMode``
+      To define the stacking generated buttons on the display (Menue/Row/Column/RowColumn/Hidden.  
+      The hidden option can be used when the loading gets triggered by signal.
+      Type: options (enum)
+
+
 --------------
 
 .. _caDoubleTabWidget:
@@ -2413,6 +2503,7 @@ is the equivalent of the Related Display in MEDM
    |                     | item to toggle the marking of hidden buttons  |
    |                     | in case the user cannot find them.            |
    +---------------------+-----------------------------------------------+
+
    **Properties:**
    The following properties are available:
 
@@ -3187,28 +3278,41 @@ scanned for the given source characters ( or -sequences) and every occurrence wi
 given replacement characters ( or -sequence). Unit replacements do not affect the UI file or EPICS data
 and are purely visible and around for the caQtDM process that was started with them.
 To start a caQtDM process with custom unit replacements, the following environment variable has to be set with the wanted replacements:
-CAQTDM_CUSTOM_UNIT_REPLACEMENTS
+
+**CAQTDM_CUSTOM_UNIT_REPLACEMENTS**
+
 The syntax for the custom unit replacements is as follows:
 The characters are written either in utf-8 coded characters or as a hexadecimal or decimal code for the character in utf-8 coding.
-Hexadeciaml codes need to start with "0x", caQtDM will try to parse all other characters first as a decimal code, if they are not purely numerical it will
+Hexadecimal codes need to start with "0x", caQtDM will try to parse all other characters first as a decimal code, if they are not purely numerical it will
 interpret them as utf-8 coded characters. Multiple characters that should be treated as one string have to be seperated by comma (,). If you use utf-8 coded characters,
 you can also just write them as a string without the need for commas. so "hi" would be written as "0x48,0x69", or simply just "hi".
 Double quotes are possible but removed by caQtDM when parsing the environment variable, single quotes are treated literally as characters to replace, so don't use them to encapsulate.
 You have to first write the source characters you want to replace, then an equal sign (=) and finally the replacement characters that should be drawn instead. To set multiple
 character replacements, seperate them by semicolon (;). Parts that dont contain an equal sign but are seperated from other parts with semicolon are ignored. All put together this would be the structure:
-CAQTDM_CUSTOM_UNIT_REPLACEMENTS={sourceCharacters}={replacementCharacters};{anotherReplacement}
+
+``CAQTDM_CUSTOM_UNIT_REPLACEMENTS={sourceCharacters}={replacementCharacters};{anotherReplacement}``
+
 An example (that doesnt make much sense but displays many possibilities) would be:
-CAQTDM_CUSTOM_UNIT_REPLACEMENTS=charsToReplace=charsToUse;0x48,0x68=bye;charsWithHex,0x4f=something;
+
+``CAQTDM_CUSTOM_UNIT_REPLACEMENTS=charsToReplace=charsToUse;0x48,0x68=bye;charsWithHex,0x4f=something;``
+
 It can be seen that all combinations of strings, hex- and deciaml character codes are possible to form a source or replacement string.
 All replacements will be done sequentially, with the leftmost replacements being done first. Therefore, it can also be possible, that later replacements replace characters in a string
 that has already been replaced before by another replacements.
 When doing custom unit replacements, always consider that your replacements might not be done to the original string from EPICS, but on the already
-processed string with the default unit replacements. To see how they are implemented, you might want to check out teh first few lines in caQtDM_Lib/src/mutexKnobData.cpp
+processed string with the default unit replacements. To see how they are implemented, you might want to check out the first few lines in 
+
+``caQtDM_Lib/src/mutexKnobData.cpp``
+
 There are already some default unit replacements that were introduced because common systems had difficulties displaying widely-used characters.
 Those unit replacements always take place before custom unit replacements, you can disable them by setting the following environment variable to "false":
-CAQTDM_DEFAULT_UNIT_REPLACEMENTS
+
+**CAQTDM_DEFAULT_UNIT_REPLACEMENTS**
+
 It is not recommended to disable them, as they are tested on all common systems and should be working with most clients, however disabling might help
 in some edge cases.
+
+.. _copy.past:
 
 Copying and selecting Text
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -3217,6 +3321,7 @@ Multiple widgets support some kind of selection of their displayed values. All o
 They do not behave exactly the same, but their differences are relatively minor and mostly in how they are implemented: 
 
 **Comparison**
+
 +------------------------+--------+--------+--------------------------+-----------------------------+-----------------------+
 | Widget                 | Ctrl+C | Ctrl+A | Behaviour on Single Click| Behaviour on Double-Click   |  Selection on Change  |
 +========================+========+========+==========================+=============================+=======================+
@@ -3234,6 +3339,7 @@ They do not behave exactly the same, but their differences are relatively minor 
 +------------------------+--------------------------------------------+-----------------------------+-----------------------+
 
 **Shortcuts**
+
 Although the widgets might work differently, the shortcuts are the same across all of them. The shortcuts use, if any exists, the industry standard that most people are familiar with.
 When no industry standard is available, caQtDM uses the Combination ``Ctrl+Alt``, in combination with the first letter of the action performed (Ex. **R** for **R**eload in ``Ctrl+Alt+R``).
 

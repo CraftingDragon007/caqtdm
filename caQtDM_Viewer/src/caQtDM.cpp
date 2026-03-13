@@ -518,6 +518,7 @@ int main(int argc, char *argv[])
             if (theme.toLower() == "oxygen" && server) {
                 qWarning() << "caQtDM_Web -- Warning: You can expect degraded performance using this theme (Oxygen) in server mode";
             }
+
             QApplication::setStyle(QStyleFactory::create(theme));
         } else {
             qWarning() << "caQtDM -- Invalid theme" << theme << "specified, falling back to default system theme";
@@ -576,7 +577,7 @@ int main(int argc, char *argv[])
             printf("caQtDM -- custom stylesheet file <%s> replaced the default stylesheet\n", qasc(fileNameStylesheet));
             fflush(stdout);
             app.setStyleSheet(StyleSheet);
-            app.setProperty("user_defined_stylesheet", fileNameFound);
+            qApp->setProperty("user_defined_stylesheet", fileNameStylesheet);
             file.close();
         }
         delete searchCustomStyleSheet;

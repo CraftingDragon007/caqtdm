@@ -22,7 +22,7 @@ contains(QT_VER_MAJ, 5) {
        QT += printsupport
     }
 
-    CONFIG += qt plugin thread
+    CONFIG += qt plugin thread cahmi
     DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x000000
 }
 
@@ -32,7 +32,7 @@ contains(QT_VER_MAJ, 6) {
        message("caQtDM_Lib -- printsupport added")
        QT += printsupport
     }
-    CONFIG += qt plugin thread
+    CONFIG += qt plugin thread cahmi
     DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x050000
 }
 
@@ -68,8 +68,6 @@ SOURCES += caqtdm_lib.cpp \
     mutexKnobData.cpp \
     MessageWindow.cpp \
     src/causerid.cpp \
-    src/hmisharedconfiglistmanager.cpp \
-    src/hmisharedeventbus.cpp \
     vaPrintf.c \
     myMessageBox.cpp \
     limitsStripplotDialog.cpp \
@@ -78,7 +76,14 @@ SOURCES += caqtdm_lib.cpp \
     sliderDialog.cpp \
     splashscreen.cpp \
     loadPlugins.cpp
-    
+
+cahmi{
+SOURCES +=\
+    src/hmisharedconfiglistmanager.cpp \
+    src/hmisharedeventbus.cpp \
+}
+
+
 HEADERS += caqtdm_lib.h\
         caQtDM_Lib_global.h \
     mutexKnobDataWrapper.h \
@@ -89,10 +94,6 @@ HEADERS += caqtdm_lib.h\
     alarmstrings.h \
     MessageWindow.h \
     messageWindowWrapper.h \
-    src/causerid.h \
-    src/hmi_common_event_defs.h \
-    src/hmisharedconfiglistmanager.h \
-    src/hmisharedeventbus.h \
     vaPrintf.h \
     myMessageBox.h \
     limitsStripplotDialog.h \
@@ -104,6 +105,17 @@ HEADERS += caqtdm_lib.h\
     inlines.h \
     loadPlugins.h \
     caqtdm_lib_interface.h
+
+cahmi{
+HEADERS += \
+    src/causerid.h \
+    src/hmi_common_event_defs.h \
+    src/hmisharedconfiglistmanager.h \
+    src/hmisharedeventbus.h \
+}
+
+
+
 
 !MOBILE {
     SOURCES += myQProcess.cpp  processWindow.cpp  websocketserver.cpp  src/webportpool.cpp  src/weblaunchermanager.cpp

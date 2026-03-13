@@ -34,12 +34,14 @@
 #include <iostream>
 #include <sstream>
 
+#if QT_VERSION > QT_VERSION_CHECK(5,0,0)
 #ifndef MOBILE
 #include "hmisharedeventbus.h"
 #include "hmisharedconfiglistmanager.h"
 #include "websocketserver.h"
 #include "webportpool.h"
 #include "weblaunchermanager.h"
+#endif
 #endif
 
 #ifndef MOBILE_ANDROID
@@ -584,9 +586,9 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
     setContextMenuPolicy(Qt::CustomContextMenu);
     connect(this, SIGNAL(customContextMenuRequested(const QPoint&)), this, SLOT(ShowContextMenu(const QPoint&)));
 
+#ifndef MOBILE
     this->globalEventFilter = new HMIApplicationEventFilter(this);
 
-#ifndef MOBILE
     if (qApp != Q_NULLPTR){
         //qDebug() << "GLOBAL EVENT FILTER INSTALLED FOR CAHMICONFIG!!!!!!!!";
         qApp->installEventFilter(globalEventFilter);
@@ -718,8 +720,40 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
         splash->deleteLater();
     }
     // reapply a globally loaded user stylesheet, cainlude seems to disable it
+    printf("caQtDM -- user_defined_stylesheet: %s \n",qasc(qApp->property("user_defined_stylesheet").toString()));
+    fflush(stdout);
     if (qApp->property("user_defined_stylesheet").isValid() && (!qApp->property("user_defined_stylesheet").toString().isEmpty())){
-        qApp->setStyleSheet(qApp->styleSheet());
+        QString stylereload = (QString)  qgetenv("CAQTDM_STYLESHEET_RELOAD");
+        //if (stylereload.isEmpty()) qApp->setStyleSheet(qApp->styleSheet());
+
+        if (stylereload.contains("file",Qt::CaseInsensitive)){
+            searchFile *searchDefaultStyleSheet = new searchFile(qApp->property("user_defined_stylesheet").toString());
+            QString fileNameFound = searchDefaultStyleSheet->findFile();
+            printf("caQtDM -- custom stylesheet found: %s\n",qasc(fileNameFound));
+            if(!fileNameFound.isEmpty()) {
+                QFile file(fileNameFound);
+                file.open(QFile::ReadOnly);
+                QString StyleSheet = QLatin1String(file.readAll());
+                printf("caQtDM -- custom stylesheet file <%s> replaced the default stylesheet\n", qasc(fileNameFound));
+                fflush(stdout);
+                if (!stylereload.contains("later",Qt::CaseInsensitive)) qApp->setStyleSheet(StyleSheet);
+                file.close();
+            }
+            delete searchDefaultStyleSheet;
+        }
+        if (stylereload.contains("apply",Qt::CaseInsensitive)){
+            qApp->setStyleSheet(qApp->styleSheet());
+        }
+        if (stylereload.contains("print",Qt::CaseInsensitive)){
+            QString data=qApp->styleSheet();
+            printf("caQtDM -- custom stylesheet file data:\n%s \n", qasc(data));
+            fflush(stdout);
+        }
+        if (stylereload.contains("later",Qt::CaseInsensitive)){
+            QTimer::singleShot(300, this, [] () {
+                    qApp->setStyleSheet(qApp->styleSheet());
+                });
+        }
     }
 
     // add a reload action
@@ -4057,7 +4091,7 @@ void CaQtDM_Lib::GlobalShortcutWindow() {
 
     QSet<QString> uuidsToRemove;
     qint64 threeSecondsAgo = QDateTime::currentDateTime().addSecs(-3).toMSecsSinceEpoch();
-
+#ifndef MOBILE
     if (HmiSharedConfigListManager::instance().isInitialized()) {
         auto currentExternalItems = HmiSharedConfigListManager::instance().readList();
         QMutableListIterator<QSharedPointer<caHMIConfigTransferItem>> iterator(currentExternalItems);
@@ -4185,6 +4219,7 @@ void CaQtDM_Lib::GlobalShortcutWindow() {
     if (shortcutWindow == Q_NULLPTR) return;
     shortcutWindow->close();
     shortcutWindow->deleteLater();
+#endif
 }
 
 void CaQtDM_Lib::Callback_UndefinedMacrowindowExit(){
@@ -6998,6 +7033,7 @@ void CaQtDM_Lib::Callback_WaveEntryChanged(const QString& text, int index)
 
 void CaQtDM_Lib::Callback_ExternalHmiEventReceived(int eventType, int senderPid, qint64 timestamp, const QByteArray& payload)
 {
+#ifndef MOBILE
     Q_UNUSED(timestamp)
     if (senderPid == QApplication::applicationPid()) return; // ignore own events
     if (eventType == EventTypes::KeyPress) {
@@ -7024,6 +7060,7 @@ void CaQtDM_Lib::Callback_ExternalHmiEventReceived(int eventType, int senderPid,
         QEvent *constructed = new QMouseEvent(type, QPointF(x, y), QPointF(x, y), Qt::MouseButton::NoButton, Qt::MouseButton::NoButton, Qt::KeyboardModifier::NoModifier);
         this->hmiHandleIncomingEvent(Q_NULLPTR, constructed, constructed, true);
     }
+#endif
 }
 
 void CaQtDM_Lib::hmiHandleKeyPressed(QObject *target, QKeyEvent *event)
@@ -10785,6 +10822,13 @@ void CaQtDM_Lib::Callback_WriteDetectedValues(QWidget* child)
         break;
 
     default:
+        return;
+    }
+
+    if (thisString.count() != count) {
+        QString message="not the correct amount of PVs defined for writing ROI values: ";
+        message.append(child->objectName());
+        messageWindowP->postMsgEvent(QtInfoMsg,  (char*)qasc(message));
         return;
     }
 

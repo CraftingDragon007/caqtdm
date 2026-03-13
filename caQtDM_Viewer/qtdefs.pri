@@ -309,6 +309,10 @@ DEFINES += TARGET_INTERNALNAME=\"\\\"$${TARGET_INTERNALNAME}\\\"\"
 DEFINES += TARGET_VERSION_STR=\"\\\"$${CAQTDM_VERSION}\\\"\"
 
 # 4.6.0
+# update fix for unconnected Channels
+# %read command for cainclude and caRelatedDisplay
+# old files cleanup
+# implement pipelines for various target systems (github actions)
 # added various packing mechanissmen
 # caWavetable got some signals and slots for generating for vertical and horizontal sync
 # caWavetable added header manipulation functions
@@ -317,6 +321,7 @@ DEFINES += TARGET_VERSION_STR=\"\\\"$${CAQTDM_VERSION}\\\"\"
 # recoloring caDoubleTabWidget via Stylesheets
 # added a CloseOnExit0 for the caScriptbutton
 # added the localisation for characters to caMenu and caMessageButton
+# added selecting/copy/paste mechanisem at various parts of the caqtdm
 # caMessageButton can now set strings
 # changed the build system that for linux systems to build without RPATH
 

@@ -13,7 +13,7 @@ contains(QT_VER_MAJ, 4) {
 }
 contains(QT_VER_MAJ, 5) {
       QT += widgets concurrent uitools opengl network
-      CONFIG  += qwt plugin
+      CONFIG  += qwt plugin cahmi
       DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x000000
       ios | android {
          greaterThan(QT_MINOR_VERSION, 4) {
@@ -26,8 +26,8 @@ contains(QT_VER_MAJ, 5) {
       }
 }
 contains(QT_VER_MAJ, 6) {
-      QT += widgets concurrent uitools opengl core
-      CONFIG  += plugin
+      QT += widgets concurrent uitools opengl core network
+      CONFIG  += plugin cahmi
       ios | android {
             QT += uiplugin
       }else {
@@ -69,22 +69,22 @@ PRE_TARGETDEPS += \
      moc/moc_cacartesianplot.cpp \
      moc/moc_castripplot.cpp \
      moc/moc_cameter.cpp \
-     moc/moc_caclock.cpp \
-     moc/moc_cahmiconfigtransferitem.cpp
+     moc/moc_caclock.cpp
 
-contains(QWT_VER_MIN, 1)|contains(QWT_VER_MIN, 2) {
+cahmi{
+    PRE_TARGETDEPS += moc/moc_cahmiconfigtransferitem.cpp
+}
+
+contains(QWT_VER_MIN, 1)|contains(QWT_VER_MIN, 2)|contains(QWT_VER_MIN, 3) {
   PRE_TARGETDEPS += moc/moc_qwt_thermo_marker_61.cpp
 }
 
 SOURCES	+= \
     src/caframe.cpp \
-    src/cahmiconfig.cpp \
-    src/cahmiconfigtransferitem.cpp \
     src/cainclude.cpp \
     src/caimage.cpp \
     src/cagraphics.cpp \
     src/capolyline.cpp \
-    src/hmiapplicationeventfilter.cpp \
     src/searchfile.cpp \
     src/elabel.cpp \
     src/esimplelabel.cpp \
@@ -156,6 +156,14 @@ SOURCES	+= \
     src/textedit.cpp \
     src/wmsignalrescale.cpp
 
+cahmi{
+SOURCES	+= \
+    src/hmiapplicationeventfilter.cpp \
+    src/cahmiconfig.cpp \
+    src/cahmiconfigtransferitem.cpp \
+}
+
+
 ADL_EDL_FILES {
     SOURCES	+= src/parseotherfile.cpp
 }
@@ -174,12 +182,8 @@ XDR_HACK {
     HEADERS +=  src/cadoubletabwidgetextensionfactory.h  src/capolylinetaskmenu.h
 }
 
-QT += network
 HEADERS += src/networkaccess.h src/fileFunctions.h \
-    src/cahmiconfig.h \
-    src/cahmiconfigtransferitem.h \
     src/calinedraw.h \
-    src/hmiapplicationeventfilter.h \
     src/plotHelperClasses.h \
     src/wmsignalpropagator.h \
     src/replacemacro.h \
@@ -188,6 +192,15 @@ HEADERS += src/networkaccess.h src/fileFunctions.h \
     src/networkmodel.h \
     src/textedit.h \
     src/wmsignalrescale.h
+
+cahmi{
+HEADERS += \
+    src/hmiapplicationeventfilter.h \
+    src/cahmiconfig.h \
+    src/cahmiconfigtransferitem.h \
+}
+
+
 SOURCES += src/networkaccess.cpp src/fileFunctions.cpp
 
 contains(QWT_VER_MIN, 0) {

@@ -35,6 +35,7 @@
 #include <QFile>
 #include <QDebug>
 #include <QTextStream>
+#include <QScrollBar>
 #ifndef MOBILE_ANDROID
 #include <sys/timeb.h>
 #else
@@ -159,6 +160,29 @@ QString MessageWindow::getMessageBoxContents() {
 QString MessageWindow::getLogFilePath()
 {
     return m_logFilePath;
+}
+
+void MessageWindow::themeChanged() {
+    QApplication* guiApp = qobject_cast<QApplication*>(qApp);
+    QPalette palette = guiApp->palette();
+    QString oldColorNormalHex = m_normalTextColorHex;
+    QString oldColorDebugHex = m_debugTextColorHex;
+    m_normalTextColorHex = palette.color(QPalette::Active, QPalette::Text).name();
+    m_debugTextColorHex = palette.color(QPalette::Active, QPalette::Link).name();
+
+    if (oldColorNormalHex != m_normalTextColorHex || oldColorDebugHex != m_debugTextColorHex) {
+        redrawText(oldColorNormalHex, oldColorDebugHex);
+    }
+}
+
+void MessageWindow::redrawText(const QString& oldNormalTextColorHex, const QString& oldDebugTextColorHex) {
+    QString text = msgTextEdit.toHtml();
+    text = text.replace(oldNormalTextColorHex, m_normalTextColorHex).replace(oldDebugTextColorHex, m_debugTextColorHex);
+    msgTextEdit.setHtml(text);
+    QScrollBar *vScrollBar = msgTextEdit.verticalScrollBar();
+    if (vScrollBar) {
+        vScrollBar->setValue(vScrollBar->maximum());
+    }
 }
 
 void MessageWindow::postMsgEvent(QtMsgType type, char* msg)
