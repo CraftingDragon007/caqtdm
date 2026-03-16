@@ -240,6 +240,7 @@
 
 public slots:
      void doSomething() {
+#ifdef WEB
          {
              QWriteLocker locker(&CaQtDM_Lib::webChildProcessesLock);
              foreach (auto item, CaQtDM_Lib::webChildProcesses) {
@@ -260,6 +261,7 @@ public slots:
                  }
              }
          }
+#endif
 
          printf("About to quit!\n");
 #if defined linux || defined TARGET_OS_MAC

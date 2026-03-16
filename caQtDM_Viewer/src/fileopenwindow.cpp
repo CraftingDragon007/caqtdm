@@ -53,6 +53,8 @@ bool HTTPCONFIGURATOR = false;
 #ifndef MOBILE
 #include <hmisharedeventbus.h>
 #include <hmisharedconfiglistmanager.h>
+#endif
+#ifdef WEB
 #include <websocketserver.h>
 #include <webportpool.h>
 #include <weblaunchermanager.h>
@@ -292,7 +294,7 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
     setGeometry(0,0, 300, 150);
     this->statusBar()->show();
 
-#ifndef MOBILE
+#ifdef WEB
     // disable buttons that shouldn't be used when in vnc and hide window
     if (options["vnc_server"].toInt() == 1) {
         CaQtDM_Lib::vncServer = options["vnc_server"].toInt();
@@ -357,7 +359,7 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
     connect( this->ui.emptycacheAction, SIGNAL( triggered() ), this, SLOT(Callback_EmptyCache()) );
     this->ui.timedAction->setChecked(true);
 
-#ifndef MOBILE
+#ifdef WEB
     }
 #endif
 
@@ -921,7 +923,7 @@ void FileOpenWindow::timerEvent(QTimerEvent *event)
     if(caQtDM_TimeOutEnabled) {
         caQtDM_TimeLeft -= 1.0/3600.0;
         if(caQtDM_TimeLeft <= 0) {
-#ifndef MOBILE
+#ifdef WEB
             if (WebSocketServer::instance().isInitialized() && CaQtDM_Lib::interactionBasedTimeout && CaQtDM_Lib::slaveServer) {
                 qDebug() << "Sending interaction based shutdown msg";
                 WebSocketServer::instance().sendInteractionBasedShutdownMsg();
@@ -1244,6 +1246,7 @@ QMainWindow *FileOpenWindow::loadMainWindow(const QPoint &position, const QStrin
     messageWindow->postMsgEvent(QtDebugMsg, asc);
     free(asc);
 
+#ifdef WEB
     QPointer<QMainWindow> safeMainWindow = mainWindow;
 
     if (CaQtDM_Lib::vncServer) {
@@ -1257,8 +1260,8 @@ QMainWindow *FileOpenWindow::loadMainWindow(const QPoint &position, const QStrin
                 return;
 #endif
             } else {
-                QByteArray envWidth = qgetenv("VIRTUAL_WIDTH");
-                QByteArray envHeight = qgetenv("VIRTUAL_HEIGHT");
+                QByteArray envWidth = qgetenv("CAQTDM_VIRTUAL_WIDTH");
+                QByteArray envHeight = qgetenv("CAQTDM_VIRTUAL_HEIGHT");
 
                 if (!envWidth.isEmpty() && !envHeight.isEmpty()) {
                     bool wOk, hOk;
@@ -1282,6 +1285,7 @@ QMainWindow *FileOpenWindow::loadMainWindow(const QPoint &position, const QStrin
         });
 #endif
     }
+#endif
     return mainWindow;
 }
 

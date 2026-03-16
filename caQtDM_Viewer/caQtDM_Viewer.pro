@@ -10,7 +10,10 @@ contains(QT_VER_MAJ, 4) {
    CONFIG += qt warn_on thread uitools
 }
 contains(QT_VER_MAJ, 5) {
-   QT     += core gui svg uitools network opengl websockets
+   QT     += core gui svg uitools network opengl
+   web {
+      QT += websockets
+   }
    modbus{
       QT += serialbus
       DEFINES += CAQTDM_MODBUS
@@ -34,8 +37,11 @@ unix:!macx:!ios:!android{
 }
 
 contains(QT_VER_MAJ, 6) {
-    QT     += core gui svg uitools network opengl websockets
+    QT     += core gui svg uitools network opengl
     CONFIG += qt warn_on thread widgets
+    web {
+       QT += websockets
+    }
     modbus{
        QT += serialbus
        DEFINES += CAQTDM_MODBUS

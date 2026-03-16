@@ -54,7 +54,7 @@ public:
 
     caMimeDisplay(QWidget *parent);
 
-#ifndef MOBILE
+#ifdef WEB
     void setVNCEnabled(bool isVNC);
 
 signals:
@@ -75,7 +75,7 @@ public slots:
 
 private:
     bool eventFilter(QObject *obj, QEvent *event);
-#ifndef MOBILE
+#ifdef WEB
     bool m_isVNC;
 #endif
 

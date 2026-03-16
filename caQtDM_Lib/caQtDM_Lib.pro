@@ -16,7 +16,11 @@ contains(QT_VER_MAJ, 4) {
 }
 
 contains(QT_VER_MAJ, 5) {
-    QT += widgets  uitools opengl websockets
+    QT += widgets  uitools opengl
+    web {
+        QT += websockets
+        DEFINES += WEB
+    }
     !ios:!android {
        message("caQtDM_Lib -- printsupport added")
        QT += printsupport
@@ -27,7 +31,11 @@ contains(QT_VER_MAJ, 5) {
 }
 
 contains(QT_VER_MAJ, 6) {
-    QT += widgets  uitools opengl websockets
+    QT += widgets  uitools opengl
+    web {
+        QT += websockets
+        DEFINES += WEB
+    }
     !ios:!android {
        message("caQtDM_Lib -- printsupport added")
        QT += printsupport
@@ -83,6 +91,13 @@ SOURCES +=\
     src/hmisharedeventbus.cpp \
 }
 
+web {
+SOURCES +=\
+    websocketserver.cpp \
+    webportpool.cpp \
+    weblaunchermanager.cpp
+}
+
 
 HEADERS += caqtdm_lib.h\
         caQtDM_Lib_global.h \
@@ -114,12 +129,20 @@ HEADERS += \
     src/hmisharedeventbus.h \
 }
 
+web {
+HEADERS += \
+    websocketserver.h \
+    vncwebchildprocess.h \
+    webportpool.h \
+    weblaunchermanager.h
+}
+
 
 
 
 !MOBILE {
-    SOURCES += myQProcess.cpp  processWindow.cpp  websocketserver.cpp  src/webportpool.cpp  src/weblaunchermanager.cpp
-    HEADERS += myQProcess.h  processWindow.h  websocketserver.h  src/vncwebchildprocess.h  src/webportpool.h src/weblaunchermanager.h
+    SOURCES += myQProcess.cpp  processWindow.cpp
+    HEADERS += myQProcess.h  processWindow.h
 }
 
 #if we want some info from the australian lightsource, define it above

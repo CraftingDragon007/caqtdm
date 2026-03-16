@@ -141,6 +141,20 @@ exists($(EPICSINCLUDE)/pv/pvAccess.h) {
     }
 }
 
+_CAQTDM_WEB = $$(CAQTDM_WEB)
+isEmpty(_CAQTDM_WEB) {
+message( "caQtDM Web support will not be built" )
+}
+else {
+  greaterThan(QT_VER_MAJ, 4) {
+    CONFIG += web
+    DEFINES += WEB
+    web {
+      message( "Configuring build for caQtDM Web" )
+    }
+  }
+}
+
 _CAQTDM_MODBUS = $$(CAQTDM_MODBUS)
 isEmpty(_CAQTDM_MODBUS) {
 message("Modbus Plugin will not be build")

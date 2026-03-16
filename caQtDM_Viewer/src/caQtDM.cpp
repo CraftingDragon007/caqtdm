@@ -90,6 +90,7 @@ static void createMap(QMap<QString, QString> &map, const QString& option)
     //qDebug() << "resulting map=" << map;
 }
 
+#ifdef WEB
 struct WidgetDimensions {
     bool found = false;
     int width = -1;
@@ -173,6 +174,7 @@ WidgetDimensions getWidgetDimensionsFromUi(QString& uiFilePath) {
 
     return priorityDims.found ? priorityDims : firstWidgetDims;
 }
+#endif
 
 int main(int argc, char *argv[])
 {
@@ -211,6 +213,7 @@ int main(int argc, char *argv[])
     bool printscreen = false;
     bool savetoimage = false;
     bool resizing = true;
+#ifdef WEB
     bool server = false;
     bool use_novnc_plugin = false;
     bool novnc_readonly = false;
@@ -223,6 +226,9 @@ int main(int argc, char *argv[])
     quint16 web_instance_limit = 1000;
     uint web_timeout = 0;
     QString web_launcher_file;
+#else
+#define server false
+#endif
 
     for (numargs = argc, in = 1; in < numargs; in++) {
         qDebug() << argv[in];
@@ -321,6 +327,7 @@ int main(int argc, char *argv[])
             in++;
             printf("caQtDM -- option <%s>\n", argv[in]);
             createMap(options, QString(argv[in]));
+#ifdef WEB
         } else if (strcmp (argv[in], "-server") == 0) {
             server = true;
             minimize = false;
@@ -405,6 +412,7 @@ int main(int argc, char *argv[])
         } else if (strcmp (argv[in], "-web_allow_insecure_cashell_commands") == 0) {
             web_allow_insecure_cashell_commands = true;
             printf("caQtDM - Allowing executing of caShellCommands in web mode, please be careful!");
+#endif
         } else if (strncmp (argv[in], "-" , 1) == 0) {
             /* unknown application argument */
             printf("caQtDM -- Argument %d = [%s] is unknown!, possible -attach -macro -noMsg -stylefile -dg -x -print -httpconfig -noResize -option\n",in,argv[in]);
@@ -415,11 +423,12 @@ int main(int argc, char *argv[])
         }
     }
 
+#ifdef WEB
     if (server && fileName.length() > 0) {
         WidgetDimensions dimensions;
 
-        QByteArray envWidth = qgetenv("VIRTUAL_WIDTH");
-        QByteArray envHeight = qgetenv("VIRTUAL_HEIGHT");
+        QByteArray envWidth = qgetenv("CAQTDM_VIRTUAL_WIDTH");
+        QByteArray envHeight = qgetenv("CAQTDM_VIRTUAL_HEIGHT");
         if (!envWidth.isEmpty() && !envHeight.isEmpty()) {
             dimensions = WidgetDimensions();
             bool wOk, hOk;
@@ -476,6 +485,8 @@ int main(int argc, char *argv[])
 #endif
     }
 
+#endif // WEB
+
     // prevents QApplication from handling style on it's own
     if (!theme.isEmpty() && styleIndex > -1) {
         if (styleIndex < argc - 1) {
@@ -500,11 +511,9 @@ int main(int argc, char *argv[])
     QApplication::setOrganizationName("Paul Scherrer Institut");
     QApplication::setApplicationName("caQtDM");
 
-#ifndef MOBILE
     if (server) {
         app.setQuitOnLastWindowClosed(false);
     }
-#endif
 
 #ifdef MOBILE_ANDROID
     //qDebug() << QStyleFactory::keys();

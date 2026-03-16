@@ -48,7 +48,7 @@ void caMimeDisplay::Callback_Clicked(int indx)
 
         // file contains things like http:// or file:// or ...
         if(urlStr.contains("://")) {
-#ifndef MOBILE
+#ifdef WEB
             if (m_isVNC) {
                 emit triggerURLWeb(urlStr);
                 return;
@@ -76,7 +76,7 @@ void caMimeDisplay::Callback_Clicked(int indx)
 
             // must be a local file we have to search its location (application path, CAQTDM_DISPLAY_PATH, CAQTDM_MIME_PATH
         } else {
-#ifndef MOBILE
+#ifdef WEB
             if (m_isVNC) {
                 if (!urlStr.startsWith(":"))
                 urlStr = "file://" + urlStr;
@@ -138,7 +138,7 @@ bool caMimeDisplay::eventFilter(QObject *obj, QEvent *event)
     return QObject::eventFilter(obj, event);
 }
 
-#ifndef MOBILE
+#ifdef WEB
 void caMimeDisplay::setVNCEnabled(bool isVNC) {
     m_isVNC = isVNC;
 }

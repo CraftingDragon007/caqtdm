@@ -71,7 +71,9 @@
 #ifndef MOBILE
    #include "myQProcess.h"
    #include "processWindow.h"
-   #include "vncwebchildprocess.h"
+#endif
+#ifdef WEB
+#include "vncwebchildprocess.h"
 #endif
 #include "mutexKnobData.h"
 #include "mutexKnobDataWrapper.h"
@@ -90,6 +92,7 @@
 
 // interface used enabling some widgets doing their own acquisition by calling caQtDM_Lib routines
 #include "caqtdm_lib_interface.h"
+
 #include <QtControls>
 
 #ifdef MOBILE
@@ -141,7 +144,7 @@ public:
     static QList<caHMIConfigTransferItem*> hmiConfigList;
     static QReadWriteLock hmiConfigListLock;
 
-#ifndef MOBILE
+#ifdef WEB
     static QHash<QString, VncWebChildProcess*> webChildProcesses;
     static QReadWriteLock webChildProcessesLock;
 
@@ -164,6 +167,8 @@ public:
     static QString getChildProcessKey(QString absoluteFilePath, QString macros);
 
     static VncWebChildProcess* startVncChildProcess(quint16 vncPort, quint16 webPort, QString file, QString macros, QWidget* parent = nullptr);
+#else
+#define vncServer false
 #endif
 
     // interface implementation
@@ -597,12 +602,11 @@ private slots:
     }
 
     void Callback_printWindow() {
-#ifndef MOBILE
         if (vncServer) {
             QMessageBox::critical(this, "Error", "Printing disabled in web version");
             return;
         }
-#endif
+
         print();
     }
 

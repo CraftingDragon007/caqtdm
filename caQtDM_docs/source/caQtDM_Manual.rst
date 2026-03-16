@@ -3698,7 +3698,7 @@ For testing purposes, you can also run Caddy directly from the command line:
 
 .. code:: bash
 
-   caddy run --config /path/to/Caddyfile 
+   caddy run --config /path/to/Caddyfile
    # Use sudo if using privileged ports (<1024, e.g., 443 or 80)
 
 Others
@@ -3720,13 +3720,13 @@ When running in web mode, caQtDM will adjust some of its behaviour to better sui
    "Message Window", "Messages are also sent to the web client and can be viewed in the web interface by clicking on the message button in the top right corner. You can only see messages that were generated after you opened the web interface, there is no message history for the web client, tip: reload your panel to see log output from panel initialization"
    "Printing", "Panel printing is not supported in web mode (we don't want to print from a server or service user), so any actions that would normally trigger a print dialog is disabled/hidden."
    "Tooltips", "Tooltips are disabled in web mode to prevent one user's tooltip from being shown to all users, which could lead to confusion."
-   "Window Size", "By default, caQtDM Web will use a virtual display the same size as the panel being served (dynamically parsed at start time), but you can also specify a custom size using the ``VIRTUAL_WIDTH`` and ``VIRTUAL_HEIGHT`` environment variables (This will force scale the widget to that size, this may not look ideal if your panel isn't configured to be resized). The virtual display is used to render the panel, which is then streamed to the web client. This allows caQtDM Web to work even in headless environments without a physical display."
+   "Window Size", "By default, caQtDM Web will use a virtual display the same size as the panel being served (dynamically parsed at start time), but you can also specify a custom size using the ``CAQTDM_VIRTUAL_WIDTH`` and ``CAQTDM_VIRTUAL_HEIGHT`` environment variables (This will force scale the widget to that size, this may not look ideal if your panel isn't configured to be resized). The virtual display is used to render the panel, which is then streamed to the web client. This allows caQtDM Web to work even in headless environments without a physical display."
    "Starting panels", "The panel specified with a caQtDM Web server will be served by default, but you can also start other panels by using caRelatedDisplays, the web launcher or by building your own url with the url builder (in the web interface) to start a panel of your choice. When starting new panels, they will be started as new instances of caQtDM Web in a new tab (except if you directly adjust the url to open in the same tab)."
    "Splash screen", "The splash screen is disabled in web mode, instead the loading process is shown as a progress bar in the menu bar."
    "``caRelatedDisplay``", "When clicking a related display from the web interface, a new instance of caQtDM Web will be started to serve the related display, instead of opening it in the same instance. You and other users will then be asked if you want to open the related display in a new tab"
    "``caScriptButton`` / ``caShellCommand``", "When clicked, these buttons will just show an error message, because executing scripts or commands from a web interface can be a security / availability (undefined behavior) risk, so this functionality is disabled in web mode. (Another Reason: It is not possible to display other graphical applications besides caQtDM panels.) You can still use these buttons in web mode if you enable the ``-web_allow_insecure_cashell_commands`` option, but make sure you understand the implications and only use it if you are sure about the commands being executed and the users using your web interface."
    "``caMimeDisplay``", "Clicking on a caMimeDisplay will over you to open urls in new tabs and to copy file names to the clipboard, but it will not be able to open files on the server or show previews of files."
-   
+
 
 caQtDM Web specific configuration options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -3765,8 +3765,8 @@ You can use the following environment variables in addition to the regular caQtD
 .. csv-table::
    :header: "Environment Variable", "Description", "Notes"
 
-   "``VIRTUAL_WIDTH``", "Width of the virtual display used by caQtDM Web", "Default is determined automatically based on the panel size"
-   "``VIRTUAL_HEIGHT``", "Height of the virtual display used by caQtDM Web", "Default is determined automatically based on the panel size"
+   "``CAQTDM_VIRTUAL_WIDTH``", "Width of the virtual display used by caQtDM Web", "Default is determined automatically based on the panel size"
+   "``CAQTDM_VIRTUAL_HEIGHT``", "Height of the virtual display used by caQtDM Web", "Default is determined automatically based on the panel size"
 
 Docker specific
 >>>>>>>>>>>>>>>>

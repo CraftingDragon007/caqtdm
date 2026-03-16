@@ -38,6 +38,9 @@
 #ifndef MOBILE
 #include "hmisharedeventbus.h"
 #include "hmisharedconfiglistmanager.h"
+#endif
+
+#ifdef WEB
 #include "websocketserver.h"
 #include "webportpool.h"
 #include "weblaunchermanager.h"
@@ -135,8 +138,9 @@
 
 #define POPUPDEFENITION "popup.ui"
 
-
+#ifdef WEB
 #define WEB_CARELATED_DISPLAY_ERROR_MSG "Unable to open this caRelatedDisplay, please check your caQtDM Web configuration."
+#endif
 
 // used for calculating visibility for several types of widgets
 #define ComputeVisibility(x, obj)  {  \
@@ -322,7 +326,7 @@ QReadWriteLock CaQtDM_Lib::externalHmiConfigListLock;
 QList<caHMIConfigTransferItem*> CaQtDM_Lib::hmiConfigList;
 QReadWriteLock CaQtDM_Lib::hmiConfigListLock;
 
-#ifndef MOBILE
+#ifdef WEB
 QHash<QString, VncWebChildProcess*> CaQtDM_Lib::webChildProcesses;
 QReadWriteLock CaQtDM_Lib::webChildProcessesLock;
 
@@ -631,15 +635,18 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
     }
 
     if(nbIncludes > 0 && !thisFileFull.contains(POPUPDEFENITION)) {
+#ifdef WEB
         if (vncServer && WebSocketServer::instance().isInitialized()) {
             WebSocketServer::instance().sendProgressInfo(0, nbIncludes);
         } else {
+#endif
             splash = new SplashScreen(parent);
             splash->setMaximum(nbIncludes);
             splash->show();
             splash->setProgress(0);
-
+#ifdef WEB
         }
+#endif
     }
 
     savedFile[0] = fi.baseName();
@@ -1598,7 +1605,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         //qDebug() << "create caMimeDisplay";
         w1->setProperty("ObjectType", caMimeDisplay_Widget);
 
-#ifndef MOBILE
+#ifdef WEB
         mimeWidget->setVNCEnabled(vncServer);
 
         connect(mimeWidget, &caMimeDisplay::triggerURLWeb, this, [](QString url) {
@@ -2865,9 +2872,12 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         if(nbIncludes > 0 && !thisFileFull.contains(POPUPDEFENITION)) {
             for (int i = topIncludesWidgetList.count()-1; i >= 0; --i) {
                 if(w1 ==  topIncludesWidgetList.at(i)) {
+#ifdef WEB
                     if (vncServer && WebSocketServer::instance().isInitialized()) {
                         WebSocketServer::instance().sendProgressUpdate(splashCounter++);
-                    } else splash->setProgress(splashCounter++);
+                    } else
+#endif
+                    splash->setProgress(splashCounter++);
                     break;
                 }
             }
@@ -7384,7 +7394,7 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
         }
 
     }
-#ifndef MOBILE
+#ifdef WEB
     else if (!slaveServer) {
         // start new process and vnc or novnc
 
@@ -7482,7 +7492,7 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
 }
 
 
-#ifndef MOBILE
+#ifdef WEB
 QString CaQtDM_Lib::getChildProcessKey(QString absoluteFilePath, QString macros) {
     QString key = absoluteFilePath;
     if (macros.length() > 0) {
@@ -7729,10 +7739,12 @@ void CaQtDM_Lib::Callback_ByteControllerClicked(int bit)
 void CaQtDM_Lib::Callback_ScriptButton()
 {
 #ifndef MOBILE
+#ifdef WEB
     if (vncServer && !webAllowInsecureCaShellCommands) {
         QMessageBox::critical(this, "Error", "caScriptButton script execution disabled due to security reasons");
         return;
     }
+#endif
     QString command = "";
     bool displayWindow;
     caScriptButton *w = qobject_cast<caScriptButton *>(sender());
@@ -7860,7 +7872,7 @@ void CaQtDM_Lib::Callback_TableDoubleClicked(const QString& pv)
 
 void CaQtDM_Lib::Callback_ShellCommandClicked(int indx)
 {
-#ifndef MOBILE
+#ifdef WEB
     if (vncServer && !webAllowInsecureCaShellCommands) {
         QMessageBox::critical(this, "Error", "caShellCommand execution disabled due to security reasons");
         return;
@@ -7962,7 +7974,7 @@ void CaQtDM_Lib::shellCommand(QString command) {
 
 void CaQtDM_Lib::closeWindow()
 {
-#ifndef MOBILE
+#ifdef WEB
     if (vncServer && !slaveServer && this->property("open_as_popupwindow").isNull()) {
         QMessageBox::critical(this, "Error", "Closing of main process prohibited in web mode");
         return;
@@ -8068,12 +8080,14 @@ void CaQtDM_Lib::closeEvent(QCloseEvent* ce)
   */
 void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
 {
+#ifdef WEB
     // prevent opening of popup windows when main window is to small to properly display them
     if (vncServer && (this->width() < 380 || this->height() < 560)) {
         if (WebSocketServer::instance().isInitialized())
             WebSocketServer::instance().sendError("Widget is to small to be able to display a context menu or popup window");
         return;
     }
+#endif
 
     QMenu myMenu;
     QPoint cursorPos =QCursor::pos() ;
