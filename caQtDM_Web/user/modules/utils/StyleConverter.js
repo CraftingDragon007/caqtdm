@@ -28,10 +28,10 @@ function parseStyleString(styleString) {
     .map(function(style) {
       const colonIndex = style.indexOf(':');
       if (colonIndex === -1) return null;
-      
+
       const property = style.substring(0, colonIndex).trim();
       const value = style.substring(colonIndex + 1).trim();
-      
+
       return property && value ? { property: property, value: value } : null;
     })
     .filter(function(declaration) { return declaration !== null; });
@@ -96,7 +96,7 @@ function parseFontParts(parts) {
 }
 
 function isFontWeight(normalizedValue, originalValue) {
-  return FONT_WEIGHTS.indexOf(normalizedValue) !== -1 || 
+  return FONT_WEIGHTS.indexOf(normalizedValue) !== -1 ||
          FONT_PATTERNS.WEIGHT.test(originalValue);
 }
 

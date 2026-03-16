@@ -27,7 +27,7 @@ services:
       - EPICS_CA_MAX_ARRAY_BYTES=40000000
       - EPICS_CA_AUTO_ADDR_LIST=NO # using this wouldn't work as udp broadcast (multicast) from the host doesn't reach the container, so you have to specify the gateway or iocs directly
       - EPICS_CA_ADDR_LIST=host.docker.internal:5062 # if using the gateway, leave as is, otherwise specify your iocs directly here, e.g. 10.0.0.45:5063 192.168.1.25:5062
-      # optionaly specify other environment variables like ENTRY_PANEL, EXTRA_ARGS, VIRTUAL_WIDTH, VIRTUAL_HEIGHT, QT_LOGGING_RULES, CAQTDM_DISPLAY_PATH (you would need to mount volumes) as needed
+      # optionaly specify other environment variables like ENTRY_PANEL, EXTRA_ARGS, CAQTDM_VIRTUAL_WIDTH, CAQTDM_VIRTUAL_HEIGHT, QT_LOGGING_RULES, CAQTDM_DISPLAY_PATH (you would need to mount volumes) as needed
 
   gateway: # to bridge the gap between the container and the host's EPICS network, you can use the host network mode and run an EPICS gateway in a container.
     image: caqtdm-web/gateway

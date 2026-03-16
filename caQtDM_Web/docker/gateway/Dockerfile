@@ -21,7 +21,7 @@ RUN git clone --depth 1 https://github.com/epics-modules/pcas.git pcas
 
 WORKDIR /usr/local/epics/modules/pcas
 RUN printf "EPICS_BASE=/usr/local/epics/base\n" > configure/RELEASE \
-    && make -j$(nproc)  
+    && make -j$(nproc)
 
 WORKDIR /usr/local/epics/extensions
 RUN git clone --depth 1 --recursive https://github.com/epics-extensions/ca-gateway.git ca-gateway

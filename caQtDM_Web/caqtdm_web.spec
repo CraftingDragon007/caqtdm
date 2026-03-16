@@ -18,7 +18,7 @@ License:        GPLv3+
 URL:            https://caqtdm.github.io/
 Source0:        caqtdm_web.tar.gz
 
-BuildArch:      noarch 
+BuildArch:      noarch
 # This package contains only configuration and static content.
 
 Requires:       nginx
@@ -73,7 +73,7 @@ chmod -R 0755 %{buildroot}%{WEB_ROOT}
 # $1 is 1 for initial install, 2 for upgrade
 if [ "$1" -ge 1 ]; then
     echo "--- %{APP_NAME} post-installation script ---"
-    
+
     FQDN=$(hostname -f)
     if [ -z "$FQDN" ]; then
         echo "WARNING: Could not determine FQDN. Using 'localhost' as fallback." >&2
@@ -85,19 +85,19 @@ if [ "$1" -ge 1 ]; then
     sed -e "s/_INSTALL_HOSTNAME_/${FQDN}/g" \
         -e "s/_INSTALL_CERT_BASENAME_/%{CERT_BASENAME}/g" \
         %{NGINX_CONF_FILE}.template > %{NGINX_CONF_FILE}
-    
+
     chmod 0644 %{NGINX_CONF_FILE}
     chown root:root %{NGINX_CONF_FILE}
     echo "Nginx configuration updated with ${FQDN}."
 
     echo "Generating self-signed TLS certificate and private key..."
-    
+
     if [ ! -f "%{KEY_FILE}" ] || [ ! -f "%{CERT_FILE}" ]; then
         echo "Creating new self-signed certificate and key for ${FQDN}..."
         openssl genrsa -out %{KEY_FILE} 2048
         chmod 0600 %{KEY_FILE}
         chown root:root %{KEY_FILE}
-        
+
         openssl req -x509 -new -nodes -key %{KEY_FILE} -sha256 -days 365 \
             -subj "/C=CH/ST=Aargau/L=Villigen PSI/O=Paul Scherrer Institut/OU=%{APP_NAME}/CN=${FQDN}" \
             -out %{CERT_FILE}
