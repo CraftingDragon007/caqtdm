@@ -4,7 +4,6 @@ RUN apk add --no-cache openssl apache2-utils
 
 ENV INSTALL_HOSTNAME=localhost
 ENV INSTALL_CERT_BASENAME=caqtdm_web
-ENV PROXY_BACKEND=http://127.0.0.1
 
 RUN mkdir -p /etc/nginx/ssl
 
@@ -16,7 +15,7 @@ COPY caqtdm_web.conf.template /etc/nginx/templates/caqtdm_web.conf.template
 
 RUN sed -i 's|_INSTALL_HOSTNAME_|${INSTALL_HOSTNAME}|g' /etc/nginx/templates/caqtdm_web.conf.template && \
     sed -i 's|_INSTALL_CERT_BASENAME_|${INSTALL_CERT_BASENAME}|g' /etc/nginx/templates/caqtdm_web.conf.template && \
-    sed -i 's|http://127\.0\.0\.1|${PROXY_BACKEND}|g' /etc/nginx/templates/caqtdm_web.conf.template && \
+    sed -i 's|http://127\.0\.0\.1|\${PROXY_BACKEND}|g' /etc/nginx/templates/caqtdm_web.conf.template && \
     sed -i 's|/etc/pki/tls/certs|/etc/nginx/ssl|g' /etc/nginx/templates/caqtdm_web.conf.template && \
     sed -i 's|/etc/pki/tls/private|/etc/nginx/ssl|g' /etc/nginx/templates/caqtdm_web.conf.template && \
     sed '/server {/a \    ${AUTH_CONFIG}' /etc/nginx/templates/caqtdm_web.conf.template > /etc/nginx/templates/caqtdm_web.conf.tmp && \
@@ -43,3 +42,5 @@ COPY docker/nginx/13-basic-auth_config.envsh /docker-entrypoint.d/13-basic-auth_
 RUN chmod +x /docker-entrypoint.d/13-basic-auth_config.envsh
 COPY docker/nginx/15-local-resolvers.envsh /docker-entrypoint.d/15-local-resolvers.envsh
 RUN chmod +x /docker-entrypoint.d/15-local-resolvers.envsh
+
+ENV PROXY_BACKEND=http://caqtdm
