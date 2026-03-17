@@ -64,6 +64,7 @@ RUN mkdir -p /opt/caqtdm/lib/qt6 && \
     export ZMQINC=/usr/include && \
     export CAQTDM_MODBUS=1 && \
     export CAQTDM_GPS=1 && \
+    export CAQTDM_WEB=1 && \
     export CAQTDM_COLLECT=/opt/caqtdm/lib/qt6 && \
     export QTDM_RPATH=/opt/caqtdm/lib/qt6 && \
     export QTCONTROLS_LIBS=/opt/caqtdm/lib/qt6 && \
