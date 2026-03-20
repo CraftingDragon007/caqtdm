@@ -456,7 +456,10 @@ import { parseLogMarkup, formatDateTime } from './modules/utils/Logger.js';
   // --- Initialization ---
 
   vnc.setPath(getActiveNoVNCPath());
-  vnc.connect();
+  // For unresolved non-numeric ?path, wait for INSTANCE response before first VNC connect.
+  if (!(isNonNumericControlPath && resolvedControlPath == null)) {
+    vnc.connect();
+  }
   control.connect();
   registerServiceWorker();
 
