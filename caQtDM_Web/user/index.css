@@ -26,8 +26,16 @@ body, html {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
   font-weight: 600;
   color: #1e293b;
+}
+#menu-version {
+  font-weight: 400;
+  color: #475569;
+  font-size: 12px;
 }
 #menu-bar button {
   background: transparent;

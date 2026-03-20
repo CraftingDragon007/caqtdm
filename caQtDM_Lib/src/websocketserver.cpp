@@ -7,7 +7,7 @@
 #include "weblaunchermanager.h"
 #include "webportpool.h"
 
-WebSocketServer::WebSocketServer(QObject *parent) : QObject(parent), m_isInitialized(false)
+WebSocketServer::WebSocketServer(QObject *parent) : QObject(parent), m_pWebSocketServer(nullptr), m_isInitialized(false), m_isShuttingDown(false)
 {}
 
 WebSocketServer& WebSocketServer::instance() {
@@ -19,11 +19,12 @@ bool WebSocketServer::isInitialized() const {
     return this->m_isInitialized;
 }
 
-bool WebSocketServer::setup(quint16 port) {
-    return setup("127.0.0.1", port);
+bool WebSocketServer::setup(const QString &caQtDM_Version, quint16 port) {
+    return setup(caQtDM_Version, "127.0.0.1", port);
 }
 
-bool WebSocketServer::setup(QString host, quint16 port) {
+bool WebSocketServer::setup(const QString &caQtDM_Version, QString host, quint16 port) {
+    m_caQtDM_VersionString = caQtDM_Version;
     m_pWebSocketServer = new QWebSocketServer(QStringLiteral("caQtDM Websocket Server"),
                                               QWebSocketServer::NonSecureMode, this);
 
@@ -60,11 +61,12 @@ WebSocketServer::~WebSocketServer()
 void WebSocketServer::onNewConnection()
 {
     QWebSocket *pSocket = m_pWebSocketServer->nextPendingConnection();
+
+    if (!pSocket) return;
+
     if (m_isShuttingDown) {
-        if (pSocket != nullptr) {
-            pSocket->close(QWebSocketProtocol::CloseCodeNormal, "Application shutdown");
-            pSocket->deleteLater();
-        }
+        pSocket->close(QWebSocketProtocol::CloseCodeNormal, "Application shutdown");
+        pSocket->deleteLater();
         return;
     }
 
@@ -73,6 +75,8 @@ void WebSocketServer::onNewConnection()
     connect(pSocket, &QWebSocket::textMessageReceived, this, &WebSocketServer::processTextMessage);
     connect(pSocket, &QWebSocket::binaryMessageReceived, this, &WebSocketServer::processBinaryMessage);
     connect(pSocket, &QWebSocket::disconnected, this, &WebSocketServer::socketDisconnected);
+
+    sendVersionInfo(pSocket, m_caQtDM_VersionString);
 
     int count;
     {
@@ -89,9 +93,9 @@ void WebSocketServer::onNewConnection()
 void WebSocketServer::processTextMessage(const QString &message)
 {
     QWebSocket *pSender = qobject_cast<QWebSocket *>(sender());
-    qDebug().noquote() << "Text message received from" << pSender->peerAddress().toString() + ":" + QString::number(pSender->peerPort()) << "(" + getIPAddress(pSender) + ")" << ":" << message;
 
     if (pSender) {
+        qDebug().noquote() << "Text message received from" << pSender->peerAddress().toString() + ":" + QString::number(pSender->peerPort()) << "(" + getIPAddress(pSender) + ")" << ":" << message;
         if (message.startsWith("PING")) {
             pSender->sendTextMessage("PONG");
         } else if (message.startsWith("RESOLVE|") && !CaQtDM_Lib::slaveServer) {
@@ -216,9 +220,9 @@ void WebSocketServer::sendInstanceInfo(QWebSocket *receiver, quint16 vncPort, qu
 void WebSocketServer::processBinaryMessage(const QByteArray &message)
 {
     QWebSocket *pSender = qobject_cast<QWebSocket *>(sender());
-    qDebug().noquote() << "Binary message received from" << pSender->peerAddress().toString() + ":" + QString::number(pSender->peerPort()) << "(" + getIPAddress(pSender) + ")" << ":" << message.size() << "bytes";
 
     if (pSender) {
+        qDebug().noquote() << "Binary message received from" << pSender->peerAddress().toString() + ":" + QString::number(pSender->peerPort()) << "(" + getIPAddress(pSender) + ")" << ":" << message.size() << "bytes";
         pSender->sendBinaryMessage("Server received your binary data");
     }
 }
@@ -257,7 +261,7 @@ void WebSocketServer::shutdownNoUserTimeout() {
     QCoreApplication::quit();
 }
 
-void WebSocketServer::sendLog(const QString text) {
+void WebSocketServer::sendLog(const QString &text) {
     QReadLocker locker(&m_clientReadWriteLock);
     foreach (QWebSocket *pSocket, m_clients) {
         if (pSocket != Q_NULLPTR) {
@@ -266,7 +270,7 @@ void WebSocketServer::sendLog(const QString text) {
     }
 }
 
-void WebSocketServer::sendOpenFileRequest(const QString file, const QString macros) {
+void WebSocketServer::sendOpenFileRequest(const QString &file, const QString &macros) {
     QReadLocker locker(&m_clientReadWriteLock);
     foreach (QWebSocket *pSocket, m_clients) {
         if (pSocket != Q_NULLPTR) {
@@ -275,7 +279,7 @@ void WebSocketServer::sendOpenFileRequest(const QString file, const QString macr
     }
 }
 
-void WebSocketServer::sendOpenURLRequest(const QString url) {
+void WebSocketServer::sendOpenURLRequest(const QString &url) {
     QReadLocker locker(&m_clientReadWriteLock);
     foreach (QWebSocket *pSocket, m_clients) {
         if (pSocket != Q_NULLPTR) {
@@ -331,6 +335,12 @@ void WebSocketServer::sendLauncherInfo(QWebSocket *receiver, QJsonValue launcher
     if (!launcherInfo.isNull() && receiver != nullptr && launcherInfo.isObject()) {
         QJsonDocument doc(launcherInfo.toObject());
         receiver->sendTextMessage(QString("LAUNCHER|%1").arg(QString::fromUtf8(doc.toJson(QJsonDocument::Indented))));
+    }
+}
+
+void WebSocketServer::sendVersionInfo(QWebSocket *receiver, const QString& version) {
+    if (receiver && !version.isEmpty()) {
+        receiver->sendTextMessage(QString("VERSION|%1").arg(version));
     }
 }
 

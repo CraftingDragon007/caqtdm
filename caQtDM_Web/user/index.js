@@ -37,6 +37,7 @@ import { parseLogMarkup, formatDateTime } from './modules/utils/Logger.js';
   const errorMessage = document.getElementById('error-message');
   const menuLogsButton = document.getElementById('menu-logs');
   const menuUrlBuilderButton = document.getElementById('menu-url-builder');
+  const menuVersion = document.getElementById('menu-version');
   const usersCount = document.getElementById('users-count');
   const logWindow = document.getElementById('log-window');
   const logContent = document.getElementById('log-content');
@@ -247,6 +248,10 @@ import { parseLogMarkup, formatDateTime } from './modules/utils/Logger.js';
       handleTimeout(data.slice(8));
       return;
     }
+    if (data.startsWith('VERSION|')) {
+      handleVersion(data.slice(8));
+      return;
+    }
     if (data.startsWith('OPEN_URL|')) {
       handleOpenUrl(data.slice(9).trim());
       return;
@@ -339,6 +344,12 @@ import { parseLogMarkup, formatDateTime } from './modules/utils/Logger.js';
     }
     urlDialog.setMessage(message);
     urlDialog.open();
+  }
+
+  function handleVersion(versionText) {
+    if (!menuVersion) return;
+    const text = String(versionText || '').trim();
+    menuVersion.textContent = text;
   }
 
   function handleInstance(payload) {

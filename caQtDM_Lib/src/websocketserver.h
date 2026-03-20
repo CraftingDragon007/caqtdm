@@ -13,12 +13,12 @@ class CAQTDM_LIBSHARED_EXPORT WebSocketServer : public QObject
     Q_OBJECT
 public:
     static WebSocketServer& instance();
-    bool setup(quint16 port);
-    bool setup(QString host, quint16 port);
+    bool setup(const QString &caQtDM_Version, quint16 port);
+    bool setup(const QString &caQtDM_Version, QString host, quint16 port);
     bool isInitialized() const;
-    void sendLog(const QString text);
-    void sendOpenFileRequest(const QString file, const QString macros);
-    void sendOpenURLRequest(const QString url);
+    void sendLog(const QString &text);
+    void sendOpenFileRequest(const QString &file, const QString &macros);
+    void sendOpenURLRequest(const QString &url);
     void sendInstanceInfo(QWebSocket *receiver, quint16 vncPort, quint16 webPort);
 
     void sendInteractionBasedShutdownMsg();
@@ -49,11 +49,14 @@ private:
     QReadWriteLock m_clientReadWriteLock;
     bool m_isInitialized;
     bool m_isShuttingDown;
+    QString m_caQtDM_VersionString;
 
     void tryScheduleTimeout(int count);
     QString getIPAddress(QWebSocket *client);
 
     void sendLauncherInfo(QWebSocket *receiver, QJsonValue launcherInfo);
+
+    void sendVersionInfo(QWebSocket *receiver, const QString &version);
 
     WebSocketServer(const WebSocketServer&) = delete;
     WebSocketServer& operator=(const WebSocketServer&) = delete;

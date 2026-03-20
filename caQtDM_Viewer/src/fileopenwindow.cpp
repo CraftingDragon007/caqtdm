@@ -271,11 +271,12 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
 #endif
     // Set Window Title without the whole path
     QString title("caQtDM ");
-    title.append(BUILDVERSION);
-    title.append(" Build=");
-    title.append(__DATE__);
-    title.append(" ");
-    title.append(BUILDTIME);
+    QString version(BUILDVERSION);
+    version.append(" Build=");
+    version.append(__DATE__);
+    version.append(" ");
+    version.append(BUILDTIME);
+    title.append(version);
 
     // set for epics longer waveforms
     QString maxBytes = (QString)  qgetenv("EPICS_CA_MAX_ARRAY_BYTES");
@@ -322,7 +323,7 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
 
         CaQtDM_Lib::webInstanceLimit = options["web_instance_limit"].toUShort();
 
-        WebSocketServer::instance().setup(host, web_port);
+        WebSocketServer::instance().setup(version, host, web_port);
 
         connect(messageWindow, &MessageWindow::newMessageReceivedEvent, [](QString text){
             WebSocketServer::instance().sendLog(text);
