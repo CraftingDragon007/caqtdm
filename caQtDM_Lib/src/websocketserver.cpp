@@ -252,13 +252,18 @@ void WebSocketServer::tryScheduleTimeout(int count) {
         if (timeout == 0) timeout = 30 * 60;
         uint timeoutMsec = timeout * 1000;
         QTimer::singleShot(timeoutMsec, this, SLOT(shutdownNoUserTimeout()));
+        qDebug() << "Scheduled no user shutdown timeout in" << timeout << "seconds";
     }
 }
 
 void WebSocketServer::shutdownNoUserTimeout() {
-    QReadLocker locker(&m_clientReadWriteLock);
-    if (m_clients.count() > 0) return;
-    QCoreApplication::quit();
+    {
+        QReadLocker locker(&m_clientReadWriteLock);
+        qDebug() << "No user timeout reached";
+        if (m_clients.count() > 0) return;
+    }
+    qDebug() << "No user based shutdown triggered!";
+    QCoreApplication::exit(0);
 }
 
 void WebSocketServer::sendLog(const QString &text) {
