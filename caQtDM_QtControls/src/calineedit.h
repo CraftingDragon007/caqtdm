@@ -188,7 +188,7 @@ private:
     SourceMode thisLimitsMode;
 
     bool thisUnitMode;
-
+    QString keepText; // Don't touch this! caTextEntry is using caLineEdit as a Base class without this caTextEntry is not working
     char thisFormat[MAX_STRING_LENGTH];
     char thisFormatC[20];
     bool d_rescaleFontOnTextChanged;

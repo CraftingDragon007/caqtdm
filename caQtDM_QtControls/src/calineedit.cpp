@@ -108,8 +108,9 @@ caLineEdit::caLineEdit(QWidget *parent) : QLineEdit(parent), FontScalingWidget(t
     setMaxValue(0.0);
     setFrame(false);
 
+    keepText = " ";
     unitsLast = "";
-    setTextLine(" ");
+    setTextLine(keepText);
     setValueType(false);
     //thisDatatype = caDOUBLE;
 
@@ -600,13 +601,14 @@ void caLineEdit::updateAlarmColors()
 void caLineEdit::setTextLine(const QString &txt)
 {
     int pos;
-    if(QLineEdit::text() == txt) {  // accelerate things
+    if(keepText == txt) {  // accelerate things
         return;
     }
     pos = cursorPosition();
 
+    //printf("settext: %s <%s> <%s> cursor@%d\n", qasc(thisPV),  qasc(txt), qasc(keepText), pos);
 
-    if(QLineEdit::text().size() != txt.size()) {
+    if(keepText.size() != txt.size()) {
        FontScalingWidget::rescaleFont(txt, d_savedTextSpace);
        QLineEdit::setText(txt);
        repaint();
@@ -614,11 +616,21 @@ void caLineEdit::setTextLine(const QString &txt)
        QLineEdit::setText(txt);
     }
 
-    setCursorPosition(pos);
+    keepText = txt;
     //printf("settext: %s <%s> <%s> cursor@%d\n", qasc(thisPV),  qasc(txt), pos);
 }
 
-
+/* attempt to improve performance
+void caLineEdit::setTextLine(const QString &txt)
+{
+    if(keepText == txt) return;
+    if(keepText.size() != txt.size()) {
+        FontScalingWidget::rescaleFont(txt, d_savedTextSpace);
+    }
+    keepText = txt;
+    repaint();
+}
+*/
 
 void caLineEdit::forceText(const QString &txt)
 {
