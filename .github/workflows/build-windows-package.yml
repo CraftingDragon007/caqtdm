@@ -267,6 +267,7 @@ jobs:
           echo ZMQ=${{ env.ZEROMQ_INSTALL_DIR }}>> %GITHUB_ENV%
           echo ZMQINC=${{ env.ZEROMQ_INSTALL_DIR }}\include>> %GITHUB_ENV%
           echo ZMQLIB=${{ env.ZEROMQ_INSTALL_DIR }}\lib>> %GITHUB_ENV%
+          echo ZMQBIN=${{ env.ZEROMQ_INSTALL_DIR }}\bin>> %GITHUB_ENV%
           echo ZMQ_VERSION=${{ matrix.zeromq-version }}>> %GITHUB_ENV%
           echo EPICSINCLUDE=${{ env.EPICS_BASE }}\include>> %GITHUB_ENV%
           echo QTCONTROLS_LIBS=${{ env.CAQTDM_DIR }}\caQtDM_Binaries>> %GITHUB_ENV%
