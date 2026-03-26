@@ -302,6 +302,8 @@ jobs:
       - name: Set packaging environment variables
         run: |
           echo ZMQ=${{ env.ZEROMQ_INSTALL_DIR }}\lib>> %GITHUB_ENV%
+          echo ZMQLIB=${{ env.ZEROMQ_INSTALL_DIR }}\lib>> %GITHUB_ENV%
+          echo ZMQBIN=${{ env.ZEROMQ_INSTALL_DIR }}\bin>> %GITHUB_ENV%
 
       - name: Create caQtDM Windows package
         working-directory: ${{ env.CAQTDM_DIR }}\caQtDM_Viewer\package\windows
