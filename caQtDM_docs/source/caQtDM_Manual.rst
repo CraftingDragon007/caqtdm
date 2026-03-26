@@ -3378,63 +3378,89 @@ caQtDM uses the following environment variables:
 
 **from caQtDM:**
 
-+--------------------------------------+-----------------------------------------------+
-| ``CAQTDM_DISPLAY_PATH``              | A colon-separated (semi-colon-separated on    |
-|                                      | Mircosoft Windows) list of directories in     |
-|                                      | which to look for display files. Only looks   |
-|                                      | in the current working directory if not       |
-|                                      | specified. Related Displays have to be in     |
-|                                      | your current directory or in this path        |
-|                                      |                                               |
-+--------------------------------------+-----------------------------------------------+
-| ``CAQTDM_URL_DISPLAY_PATH``          | paths to look for ui and stylesheet files     | 
-|                                      | to download via http                          |
-+--------------------------------------+-----------------------------------------------+
-| ``CAQTDM_EXEC_LIST``                 | A list of commands for the Context Menu . See |
-|                                      | the :ref:`context.menu.customization` for     |
-|                                      | the format.                                   |
-+--------------------------------------+-----------------------------------------------+
-| ``MEDM_EXEC_LIST``                   | for backwards compatability                   |
-+--------------------------------------+-----------------------------------------------+
-| ``CAQTDM_LAUNCHFILE``                | Enviroment file for Mobile devices            |
-+--------------------------------------+-----------------------------------------------+
-| ``CAQTDM_TIMEOUT_HOURS``             | to exit caQtDM after some amount of time      |
-+--------------------------------------+-----------------------------------------------+
-| ``CAQTDM_FINDRECORD_DIRECT``         | override all other find record settings       |
-|                                      | (direct json http download)                   |
-+--------------------------------------+-----------------------------------------------+
-| ``CAQTDM_FINDRECORD_SRV``            | for autocompletion, the request URL           |
-+--------------------------------------+-----------------------------------------------+
-| ``CAQTDM_FINDRECORD_FACILITY``       | search limitation for a facility              |
-+--------------------------------------+-----------------------------------------------+
-| ``CAQTDM_FINDRECORD_LIMIT``          | search limit max number of entries            |
-+--------------------------------------+-----------------------------------------------+
-| ``CAQTDM_DEFAULT_UNIT_REPLACEMENTS`` | if set to "false", default unit replacements  |
-|                                      | are disabled.                                 |
-+--------------------------------------+-----------------------------------------------+
-| ``CAQTDM_CUSTOM_UNIT_REPLACEMENTS``  | define custom unit replacements. They are     |
-|                                      | replaced after default replacements took      |
-|                                      | place, if enabled.You can use unicode         |
-|                                      | characters or hexadecimal / decimal utf-8     |
-|                                      | character codes, seperated by (,) , (=)       |
-|                                      | and (;).                                      |
-+--------------------------------------+-----------------------------------------------+
-| ``CAQTDM_SCREENSHOT_NAME``           | If caQtDM was started with -print this will   |
-|                                      | specify the name of the screenshot file       |
-+--------------------------------------+-----------------------------------------------+
-| ``CAQTDM_SUPPRESS_UPDATES_ONLOAD``   | Disables widgets from being updated while a   |
-|                                      | file is being opened. This can reduce load    |
-|                                      | times of big panels by more than 50%.         |
-|                                      | Values: "TRUE", "FALSE" , without quotes      |
-+--------------------------------------+-----------------------------------------------+
-| ``CAQTDM_CREATE_LOGFILE``            | If set to "TRUE", caQtDM will create a logfile|
-|                                      | containing all of the input from the message  |
-|                                      | window. If caQtDM exits successfully, this    |
-|                                      | file gets deleted after termination.          |
-+--------------------------------------+-----------------------------------------------+
-| ``CAQTDM_LOGFILE_PATH``              | This specifies the path where the logfile, if |
-|                                      | logging is active, will be stored.            |
-+--------------------------------------+-----------------------------------------------+
++------------------------------------------+-----------------------------------------------+
+| ``CAQTDM_DISPLAY_PATH``                  | A colon-separated (semi-colon-separated on    |
+|                                          | Mircosoft Windows) list of directories in     |
+|                                          | which to look for display files. Only looks   |
+|                                          | in the current working directory if not       |
+|                                          | specified. Related Displays have to be in     |
+|                                          | your current directory or in this path        |
+|                                          |                                               |
++------------------------------------------+-----------------------------------------------+
+| ``CAQTDM_URL_DISPLAY_PATH``              | paths to look for ui and stylesheet files     | 
+|                                          | to download via http                          |
++------------------------------------------+-----------------------------------------------+
+| ``CAQTDM_EXEC_LIST``                     | A list of commands for the Context Menu . See |
+|                                          | the :ref:`context.menu.customization` for     |
+|                                          | the format.                                   |
++------------------------------------------+-----------------------------------------------+
+| ``MEDM_EXEC_LIST``                       | for backwards compatability                   |
++------------------------------------------+-----------------------------------------------+
+| ``CAQTDM_LAUNCHFILE``                    | Enviroment file for Mobile devices            |
++------------------------------------------+-----------------------------------------------+
+| ``CAQTDM_TIMEOUT_HOURS``                 | to exit caQtDM after some amount of time      |
++------------------------------------------+-----------------------------------------------+
+| ``CAQTDM_FINDRECORD_DIRECT``             | override all other find record settings       |
+|                                          | (direct json http download)                   |
++------------------------------------------+-----------------------------------------------+
+| ``CAQTDM_FINDRECORD_SRV``                | for autocompletion, the request URL           |
++------------------------------------------+-----------------------------------------------+
+| ``CAQTDM_FINDRECORD_FACILITY``           | search limitation for a facility              |
++------------------------------------------+-----------------------------------------------+
+| ``CAQTDM_FINDRECORD_LIMIT``              | search limit max number of entries            |
++------------------------------------------+-----------------------------------------------+
+| ``CAQTDM_DEFAULT_UNIT_REPLACEMENTS``     | if set to "false", default unit replacements  |
+|                                          | are disabled.                                 |
++------------------------------------------+-----------------------------------------------+
+| ``CAQTDM_CUSTOM_UNIT_REPLACEMENTS``      | define custom unit replacements. They are     |
+|                                          | replaced after default replacements took      |
+|                                          | place, if enabled.You can use unicode         |
+|                                          | characters or hexadecimal / decimal utf-8     |
+|                                          | character codes, seperated by (,) , (=)       |
+|                                          | and (;).                                      |
++------------------------------------------+-----------------------------------------------+
+| ``CAQTDM_SCREENSHOT_NAME``               | If caQtDM was started with -print this will   |
+|                                          | specify the name of the screenshot file       |
++------------------------------------------+-----------------------------------------------+
+| ``CAQTDM_SUPPRESS_UPDATES_ONLOAD``       | Disables widgets from being updated while a   |
+|                                          | file is being opened. This can reduce load    |
+|                                          | times of big panels by more than 50%.         |
+|                                          | Values: "TRUE", "FALSE" , without quotes      |
++------------------------------------------+-----------------------------------------------+
+| ``CAQTDM_LOGGING_LEVEL``                 | Overwrites what level is logged for qDebugs.  |
+|                                          | Can be any Enum value for QtMsgType.          |
+|                                          | If not set, QtDebugMsg is used.               |
++------------------------------------------+-----------------------------------------------+
+| ``CAQTDM_LOGGING_HANDLERS``              | Overwrites which handlers process qDebugs.    |
+|                                          | If set to be empty, qDebugs are not processed.|
+|                                          | Can be a comma separated list of these:       |
+|                                          | console, file, syslog, logstash               |
++------------------------------------------+-----------------------------------------------+
+| ``CAQTDM_LOGGING_CONSOLE_NO_FLUSH``      | If not empty, console logs will not be flushed|
++------------------------------------------+-----------------------------------------------+
+| ``CAQTDM_LOGGING_CONSOLE_VERBOSE``       | If not empty, console logs will have more     |
+|                                          | infos than just the message, so context infos |
++------------------------------------------+-----------------------------------------------+
+| ``CAQTDM_LOGGING_FILE_COUNT``            | Specifies the maximum number of logfiles.     |
+|                                          | Each startup creates one under LOCALAPPDATA.  |
++------------------------------------------+-----------------------------------------------+
+| ``CAQTDM_LOGGING_FILE_SIZE``             | Specified the maximum logfile size.           |
+|                                          | The size may be exceeded by a bit.            |
++------------------------------------------+-----------------------------------------------+
+| ``CAQTDM_LOGGING_FILE_BUFFER_TIMEOUT``   | Specifies the timeout, in which the logfile   |
+|                                          | will be written to with all buffered logs.    |
++------------------------------------------+-----------------------------------------------+
+|``CAQTDM_LOGGING_FILE_BUFFER_SIZE``       | Specifies the amount of logs to buffer before |
+|                                          | writing to the file. Extends the timeout check|
++------------------------------------------+-----------------------------------------------+
+|``CAQTDM_LOGGING_LOGSTASH_URL``           | The full HTTP(s) API Endpoint to post logs to.|
++------------------------------------------+-----------------------------------------------+
+|``CAQTDM_LOGGING_LOGSTASH_BUFFER_TIMEOUT``| Same as for file-logging                      |
++------------------------------------------+-----------------------------------------------+
+|``CAQTDM_LOGGING_LOGSTASH_BUFFER_SIZE``   | Same as for file-logigng                      |
++------------------------------------------+-----------------------------------------------+
+|``CAQTDM_NO_CUSTOM_LOGHANDLER``           | Build: disables building of custom logging.   |
++------------------------------------------+-----------------------------------------------+
 
 **from plugins:**
 

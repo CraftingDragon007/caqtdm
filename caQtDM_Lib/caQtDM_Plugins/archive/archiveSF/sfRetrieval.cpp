@@ -42,6 +42,7 @@
 #endif
 
 #include "sfRetrieval.h"
+#include "loggingcategories.h"
 #include <QDebug>
 #include <QThread>
 #include <QTime>
@@ -182,7 +183,7 @@ void sfRetrieval::finishReply(QNetworkReply *reply)
         errorString = tr("Temporary Redirect status code %1 [%2] from %3").arg(status.toInt()).arg(reply->attribute(QNetworkRequest::HttpReasonPhraseAttribute).toString()).arg(downloadUrl.toString());
         //qDebug() << QTime::currentTime().toString() << this << PV << "finishreply" << errorString;
         QByteArray header = reply->rawHeader("location");
-        qDebug() << "location" << header;
+        qCDebug(archiveSF) << "location" << header;
         finished = true;
         intern_is_Redirected=true;
         Redirected_Url=header;
@@ -280,7 +281,7 @@ void sfRetrieval::finishReply(QNetworkReply *reply)
     } else {
 
         if(!value->IsArray()) {
-            qDebug() << QTime::currentTime().toString() << "finishreply the json root element is not an array, something has changed";
+            qCDebug(archiveSF) << "the json root element is not an array, something has changed";
         }
 
         if(value->IsArray()) {
@@ -373,7 +374,7 @@ void sfRetrieval::finishReply(QNetworkReply *reply)
                                     if(getDoubleFromString(QString::fromWCharArray(root1[L"globalSeconds"]->AsString().c_str()), archiveTime)){
                                         timeFound = true;
                                     } else {
-                                        qDebug() << tr("could not decode globalSeconds ????");
+                                        qCDebug(archiveSF) << tr("could not decode globalSeconds ????");
                                         break;
                                     }
                                 }
@@ -423,7 +424,7 @@ void sfRetrieval::finishReply(QNetworkReply *reply)
                                         timeFound = true;
                                         //qDebug() << "time found" << archiveTime;
                                     } else {
-                                        qDebug() << tr("could not decode globalSeconds ????");
+                                        qCDebug(archiveSF) << tr("could not decode globalSeconds ????");
                                         break;
                                     }
                                 }
