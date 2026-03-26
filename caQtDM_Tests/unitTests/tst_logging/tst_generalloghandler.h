@@ -16,9 +16,8 @@ private slots:
     void cleanup();
     void injectsMessageHandlerAndReturnsPrevious();
     void initializationIsIdempotent();
-    void callsHandlerWithMinLogLevel();
+    void callsHandler();
     void fatalMessageFlushesHandler();
-    void logLevelIsLoadedFromEnv();
     void logHandlersAreInitializedFromEnv();
 };
 

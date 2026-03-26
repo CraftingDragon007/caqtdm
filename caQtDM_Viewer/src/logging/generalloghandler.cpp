@@ -19,7 +19,6 @@
 QMutex GeneralLogHandler::s_mutex;
 QList<AbstractLogHandler *> GeneralLogHandler::s_logHandlers;
 QThread *GeneralLogHandler::s_logHandlersThread = Q_NULLPTR;
-QtMsgType GeneralLogHandler::s_minLogLevel = QtDebugMsg;
 
 Q_LOGGING_CATEGORY(generalLogHandler, "logging.general");
 
@@ -41,8 +40,6 @@ QtMessageHandler GeneralLogHandler::initialize()
         delete existingLogHandler;
     }
     s_logHandlers.clear();
-
-    s_minLogLevel = logLevelFromEnv();
 
     if (!s_logHandlersThread) {
         s_logHandlersThread = new QThread();
@@ -102,33 +99,6 @@ QtMessageHandler GeneralLogHandler::initialize()
     return previousHandler;
 }
 
-QtMsgType GeneralLogHandler::logLevelFromEnv(const QtMsgType defaultLogLevel)
-{
-    const QString logLevelString = qgetenv(ENV_LOG_LEVEL).toLower();
-    if (logLevelString.isEmpty()) {
-        return defaultLogLevel;
-    }
-
-    if (logLevelString == QSL("all") || logLevelString == QSL("debug")
-        || logLevelString == QSL("qtdebugmsg")) {
-        return QtDebugMsg;
-    } else if (logLevelString == QSL("info") || logLevelString == QSL("qtinfomsg")) {
-        return QtInfoMsg;
-    } else if (logLevelString == QSL("warning") || logLevelString == QSL("qtwarningmsg")) {
-        return QtWarningMsg;
-    } else if (logLevelString == QSL("critical") || logLevelString == QSL("qtcriticalmsg")) {
-        return QtCriticalMsg;
-    } else if (logLevelString == QSL("fatal") || logLevelString == QSL("qtfatalmsg")) {
-        return QtFatalMsg;
-    } else {
-        qCWarning(generalLogHandler)
-            << ENV_LOG_LEVEL
-            << QSL("is set and has a value, but could not be parsed. Using default log level:")
-            << defaultLogLevel;
-        return defaultLogLevel;
-    }
-}
-
 QStringList GeneralLogHandler::selectedLogHandlersFromEnv(const QString &defaultConfig)
 {
     if (!qEnvironmentVariableIsSet(ENV_LOG_HANDLERS)) {
@@ -162,9 +132,7 @@ void GeneralLogHandler::messageHandler(QtMsgType type,
                                        const QMessageLogContext &context,
                                        const QString &message)
 {
-    if (AbstractLogHandler::severity(type) < AbstractLogHandler::severity(s_minLogLevel)) {
-        return;
-    }
+    // Loglevel is filtered via QT_LOGGING_RULES environment variable.
 
     const long long msSinceEpoch = std::chrono::duration_cast<std::chrono::milliseconds>(
                                        std::chrono::system_clock::now().time_since_epoch())

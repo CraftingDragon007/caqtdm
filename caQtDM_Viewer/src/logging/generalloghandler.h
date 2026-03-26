@@ -39,12 +39,6 @@ public:
 private:
 #endif
     /**
-     * @brief Loads the minimum log level to be handled by this handler.
-     * @param defaultLogLevel: Default to use if the env doesn't specify a valid value
-     * @return The final value to be used
-     */
-    static QtMsgType logLevelFromEnv(const QtMsgType defaultLogLevel = DEFAULT_LOG_LEVEL);
-    /**
      * @brief Loads the names for the different logging endpoints to be instantiated, in short form.
      * @param defaultSelection: A QString that holds a valid set of short names, separated by comma and without spaces
      * @return A list with the names, can be an (unordered) selection from: console, file, syslog, logstash
@@ -55,7 +49,6 @@ private:
     static QMutex s_mutex;
     static QList<AbstractLogHandler *> s_logHandlers;
     static QThread *s_logHandlersThread;
-    static QtMsgType s_minLogLevel;
 };
 
 #endif // GENERALLOGHANDLER_H

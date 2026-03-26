@@ -110,28 +110,26 @@ void TestGeneralLogHandler::initializationIsIdempotent()
     QVERIFY(previousCount != currentCount);
 }
 
-void TestGeneralLogHandler::callsHandlerWithMinLogLevel()
+void TestGeneralLogHandler::callsHandler()
 {
     auto *handler = new MockLogHandler();
-
-    GeneralLogHandler::s_minLogLevel = QtWarningMsg;
 
     {
         QMutexLocker locker(&GeneralLogHandler::s_mutex);
         GeneralLogHandler::s_logHandlers.append(handler);
     }
 
-    // Info message should not invoke handler
+    // Should invoke
     GeneralLogHandler::messageHandler(QtInfoMsg, {}, "info");
-    QCOMPARE(handler->handleLogCalls, 0);
-
-    // Warning message should invoke handler
-    GeneralLogHandler::messageHandler(QtWarningMsg, {}, "warning");
     QCOMPARE(handler->handleLogCalls, 1);
 
-    // Critical message should invoke handler
-    GeneralLogHandler::messageHandler(QtCriticalMsg, {}, "critical");
+    // Should also invoke
+    GeneralLogHandler::messageHandler(QtWarningMsg, {}, "warning");
     QCOMPARE(handler->handleLogCalls, 2);
+
+    // ... should also invoke
+    GeneralLogHandler::messageHandler(QtCriticalMsg, {}, "critical");
+    QCOMPARE(handler->handleLogCalls, 3);
 }
 
 void TestGeneralLogHandler::fatalMessageFlushesHandler()
@@ -146,45 +144,6 @@ void TestGeneralLogHandler::fatalMessageFlushesHandler()
     GeneralLogHandler::messageHandler(QtFatalMsg, {}, "fatal");
 
     QCOMPARE(handler->flushCalls, 1);
-}
-
-void TestGeneralLogHandler::logLevelIsLoadedFromEnv()
-{
-    // Unset variable
-    QCOMPARE(GeneralLogHandler::logLevelFromEnv(QtFatalMsg), QtFatalMsg);
-
-    qputenv(ENV_LOG_LEVEL, "");
-    QCOMPARE(GeneralLogHandler::logLevelFromEnv(QtWarningMsg), QtWarningMsg);
-
-    qputenv(ENV_LOG_LEVEL, "all");
-    QCOMPARE(GeneralLogHandler::logLevelFromEnv(QtWarningMsg), QtDebugMsg);
-    qputenv(ENV_LOG_LEVEL, "debug");
-    QCOMPARE(GeneralLogHandler::logLevelFromEnv(QtWarningMsg), QtDebugMsg);
-    qputenv(ENV_LOG_LEVEL, "Qtdebugmsg");
-    QCOMPARE(GeneralLogHandler::logLevelFromEnv(QtWarningMsg), QtDebugMsg);
-
-    qputenv(ENV_LOG_LEVEL, "info");
-    QCOMPARE(GeneralLogHandler::logLevelFromEnv(QtWarningMsg), QtInfoMsg);
-    qputenv(ENV_LOG_LEVEL, "qtInfomsg");
-    QCOMPARE(GeneralLogHandler::logLevelFromEnv(QtWarningMsg), QtInfoMsg);
-
-    qputenv(ENV_LOG_LEVEL, "warning");
-    QCOMPARE(GeneralLogHandler::logLevelFromEnv(QtWarningMsg), QtWarningMsg);
-    qputenv(ENV_LOG_LEVEL, "qtwarningMsg");
-    QCOMPARE(GeneralLogHandler::logLevelFromEnv(QtDebugMsg), QtWarningMsg);
-
-    qputenv(ENV_LOG_LEVEL, "critical");
-    QCOMPARE(GeneralLogHandler::logLevelFromEnv(QtDebugMsg), QtCriticalMsg);
-    qputenv(ENV_LOG_LEVEL, "QtCriticalMsg");
-    QCOMPARE(GeneralLogHandler::logLevelFromEnv(QtDebugMsg), QtCriticalMsg);
-
-    qputenv(ENV_LOG_LEVEL, "fatal");
-    QCOMPARE(GeneralLogHandler::logLevelFromEnv(QtDebugMsg), QtFatalMsg);
-    qputenv(ENV_LOG_LEVEL, "QTFATALMSG");
-    QCOMPARE(GeneralLogHandler::logLevelFromEnv(QtDebugMsg), QtFatalMsg);
-
-    qputenv(ENV_LOG_LEVEL, "garbage");
-    QCOMPARE(GeneralLogHandler::logLevelFromEnv(QtInfoMsg), QtInfoMsg);
 }
 
 void TestGeneralLogHandler::logHandlersAreInitializedFromEnv()

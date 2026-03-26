@@ -3427,10 +3427,6 @@ caQtDM uses the following environment variables:
 |                                          | times of big panels by more than 50%.         |
 |                                          | Values: "TRUE", "FALSE" , without quotes      |
 +------------------------------------------+-----------------------------------------------+
-| ``CAQTDM_LOGGING_LEVEL``                 | Overwrites what level is logged for qDebugs.  |
-|                                          | Can be any Enum value for QtMsgType.          |
-|                                          | If not set, QtDebugMsg is used.               |
-+------------------------------------------+-----------------------------------------------+
 | ``CAQTDM_LOGGING_HANDLERS``              | Overwrites which handlers process qDebugs.    |
 |                                          | If set to be empty, qDebugs are not processed.|
 |                                          | Can be a comma separated list of these:       |
@@ -3457,7 +3453,7 @@ caQtDM uses the following environment variables:
 +------------------------------------------+-----------------------------------------------+
 |``CAQTDM_LOGGING_LOGSTASH_BUFFER_TIMEOUT``| Same as for file-logging                      |
 +------------------------------------------+-----------------------------------------------+
-|``CAQTDM_LOGGING_LOGSTASH_BUFFER_SIZE``   | Same as for file-logigng                      |
+|``CAQTDM_LOGGING_LOGSTASH_BUFFER_SIZE``   | Same as for file-logging                      |
 +------------------------------------------+-----------------------------------------------+
 |``CAQTDM_NO_CUSTOM_LOGHANDLER``           | Build: disables building of custom logging.   |
 +------------------------------------------+-----------------------------------------------+
