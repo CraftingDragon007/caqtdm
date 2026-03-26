@@ -220,7 +220,7 @@ jobs:
         shell: pwsh
         run : |
           $zmqVersionUnderscore = "${{ matrix.zeromq-version }}".Replace(".", "_")
-          Add-Content -Path $env:GITHUB_ENV -Value "ZMQLIBRARY=libzmq-${{ env.MSVC_SUFFIX }}-mt-$zmqVersionUnderscore.lib"
+          Add-Content -Path $env:GITHUB_ENV -Value "ZMQLIBRARY=libzmq-${{ env.MSVC_SUFFIX }}-mt-$zmqVersionUnderscore.dll"
           Add-Content -Path $env:GITHUB_ENV -Value "ZMQ_LIB_NAME=libzmq-${{ env.MSVC_SUFFIX }}-mt-$zmqVersionUnderscore.lib"
 
       - name: Create EPICS Base directory
