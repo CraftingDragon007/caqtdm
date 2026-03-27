@@ -19,6 +19,7 @@
 QMutex GeneralLogHandler::s_mutex;
 QList<AbstractLogHandler *> GeneralLogHandler::s_logHandlers;
 QThread *GeneralLogHandler::s_logHandlersThread = Q_NULLPTR;
+qint64 GeneralLogHandler::s_processId = -1;
 
 Q_LOGGING_CATEGORY(generalLogHandler, "logging.general");
 
@@ -34,6 +35,9 @@ QtMessageHandler GeneralLogHandler::initialize()
 
     // Re-install previous handler for initialization logs
     qInstallMessageHandler(previousHandler);
+
+    // This shouldn't change
+    s_processId = QCoreApplication::applicationPid();
 
     // Clean up any previous handlers
     for (auto existingLogHandler : s_logHandlers) {
@@ -199,7 +203,7 @@ void GeneralLogHandler::messageHandler(QtMsgType type,
                      context.function,
                      context.line,
                      context.category,
-                     QCoreApplication::applicationPid()};
+                     s_processId};
 
     QMutexLocker locker(&s_mutex);
     for (const auto logHandler : s_logHandlers) {

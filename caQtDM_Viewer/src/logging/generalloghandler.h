@@ -49,6 +49,7 @@ private:
     static QMutex s_mutex;
     static QList<AbstractLogHandler *> s_logHandlers;
     static QThread *s_logHandlersThread;
+    static qint64 s_processId;
 };
 
 #endif // GENERALLOGHANDLER_H
