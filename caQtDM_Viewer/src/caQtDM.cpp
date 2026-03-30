@@ -73,6 +73,10 @@
         #include <X11/Xatom.h>
 #endif //CAQTDM_X11
 
+#ifdef MOBILE_ANDROID
+#include <QStyleFactory>
+#endif
+
 Q_LOGGING_CATEGORY(viewer, "viewer");
 
 static void unixSignalHandler(int signum) {

@@ -25,12 +25,13 @@
 
 #include "processWindow.h"
 
-processWindow::processWindow(QWidget *parent, bool display, QWidget *caller): QMainWindow(parent)
+processWindow::processWindow(QWidget *parent, bool display, bool CloseExit0, QWidget *caller): QMainWindow(parent)
 {
     outputWindow = (QTextEdit *) Q_NULLPTR;
     debugWindow = (QTextEdit *) Q_NULLPTR;
     splitter = (QSplitter *) Q_NULLPTR;
     displayWindow = display;
+    m_CloseExit0 = CloseExit0;
     thisCaller = caller;
     thisPID =(Q_PID) Q_NULLPTR;
 
@@ -180,7 +181,7 @@ void processWindow::processFinished()
     QTextCursor cursor = outputWindow->textCursor(); // retrieve  cursor
     cursor.movePosition(QTextCursor::End);           // move to the end of text
     outputWindow->setTextCursor(cursor);
-    if (termProcess->exitCode()==0){
+    if ( m_CloseExit0 && (termProcess->exitCode()==0)){
         tryTerminate();
     }
 

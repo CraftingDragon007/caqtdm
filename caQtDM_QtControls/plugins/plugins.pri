@@ -16,12 +16,17 @@ contains(QT_VER_MAJ, 5) {
 }
 contains(QT_VER_MAJ, 6) {
       CONFIG += plugin qt thread warn_on cahmi
-      QT += widgets uitools opengl
+      QT += widgets opengl
+      !android {
+        QT += uitools
+      }
       DEFINES += CAHMI
       !MOBILE {
         QT += designer
       }else{
-        QT += uiplugin
+        !android {
+          QT += uiplugin
+        }
       }
 }
 TEMPLATE = lib
@@ -29,11 +34,20 @@ TEMPLATE = lib
 
 ios | android {
   CONFIG += static
-  LIBS += $$(QWTHOME)/lib/$$(QWTLIBNAME).a
-  LIBS += ../$(CAQTDM_COLLECT)/libqtcontrols.a
+  android {
+    QT += xml
+    LIBS += $$(QWTLIB)/lib-$$(QWTLIBNAME)_$${QT_ARCH}.a
+    LIBS += ../$(CAQTDM_COLLECT)/libqtcontrols_$${QT_ARCH}.a
+  }
+  ios {
+    LIBS += $$(QWTHOME)/lib/$$(QWTLIBNAME).a
+    LIBS += ../$(CAQTDM_COLLECT)/libqtcontrols.a
+  }
   INCLUDEPATH += $(QWTINCLUDE)
   INCLUDEPATH += $$(QWTHOME)/src
-  INCLUDEPATH += $(QTHOME)/include
+  ios {
+    INCLUDEPATH += $(QTHOME)/include
+  }
   MOC_DIR = moc
   OBJECTS_DIR = obj
 }

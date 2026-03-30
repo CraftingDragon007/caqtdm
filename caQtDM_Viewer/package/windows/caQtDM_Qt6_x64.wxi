@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Include>
-<Component Id="Qt_6.5.1" Guid="F3DFC6F4-9D32-47EF-9200-E4625F071E90" Win64="yes">
+<Component Id="Qt_6.10.0" Guid="F3DFC6F4-9D32-47EF-9200-E4625F071E90" Win64="yes">
 	<File Id="DESIGNER.EXE" Name="designer.exe" Source="$(env.QTHOME)\bin\designer.exe" />
 	<File Id="ASSISTANT.EXE" Name="assistant.exe" Source="$(env.QTHOME)\bin\assistant.exe" />
 	<File Id="QT6QUICKPARTICLES.DLL" Name="Qt6QuickParticles.dll" Source="$(env.QTHOME)\bin\Qt6QuickParticles.dll" />
