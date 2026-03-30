@@ -40,6 +40,14 @@
 #include <QStyleOptionProgressBar>
 #endif
 #include <QApplication>
+#include <QFile>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QRandomGenerator>
+#include <QImageReader>
+
+#define PROGRESS_BAR_AREA_HEIGHT 50
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 SplashScreen::SplashScreen(QWidget *parent) : QSplashScreen(parent), m_progress(0)
@@ -48,55 +56,136 @@ SplashScreen::SplashScreen(QWidget *parent) : QSplashScreen(), m_progress(0)
 #endif
 
 {
-    Qt::WindowFlags flags = (Qt::WindowFlags)0;
-    flags |= Qt::WindowStaysOnTopHint | Qt::SplashScreen ;
+    Qt::WindowFlags flags = Qt::WindowStaysOnTopHint | Qt::SplashScreen | Qt::FramelessWindowHint;
     setWindowFlags(flags);
+
+    setAttribute(Qt::WA_TranslucentBackground);
 
     m_maximum = 100;
 
+    QDate currentDate = QDate::currentDate();
+    QString mappedSplashScreen = getMappedSplashScreenImage(currentDate);
+    if (!mappedSplashScreen.isEmpty()) {
+        pixmapLoad.load(mappedSplashScreen);
+    } else {
+        pixmapLoad.load(":caQtDM-logos.png");
+    }
+
+    int scaledWidth = 425;
 #if defined(MOBILE_IOS)
-    pixmapLoad.load(":caQtDM-logos.png");
     QSize size = qApp->primaryScreen()->size();
     if(size.height() < 500) {
-       pixmap = pixmapLoad.scaled(pixmapLoad.size().width()/2, pixmapLoad.size().height()/2);
+       scaledWidth = 212;
     } else {
-       pixmap = pixmapLoad.scaled(pixmapLoad.size().width(), pixmapLoad.size().height());
+       scaledWidth = 425;
     }
 #elif defined(MOBILE_ANDROID)
-    pixmapLoad.load(":caQtDM-logos.png");
-    pixmap = pixmapLoad.scaled(pixmapLoad.size().width()*1.5, pixmapLoad.size().height()*1.5); // probably wrong
-#else
-    pixmap.load(":caQtDM-logos.png");
+    scaledWidth = 635;
 #endif
+    pixmap = pixmapLoad.scaledToWidth(scaledWidth, Qt::SmoothTransformation);
 
-    this->resize(pixmap.size().width()+200, pixmap.size().height()+100);
+    if (mappedSplashScreen.isEmpty()) {
+       // For the known and established portrait effect, resize the default logo
+       pixmap = pixmap.scaled(pixmap.width(), pixmap.height() * .6, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+    }
 
-    // in order to have a pseudo-transparent image, I load the background (22.4.2015 do not do this anymore, while for Qt5 not ok anyhow
-//#ifndef MOBILE
-//    QPixmap desktopBackground= QPixmap::grabWindow(QApplication::desktop()->winId(), x()- width()/2, y()-height()/2, width(),height());
-//#else
-    QPixmap desktopBackground( width(),height());
-    desktopBackground.fill(Qt::gray);
-//#endif
+    const int splashWidth = pixmap.width();
+    const int splashHeight = pixmap.height() + PROGRESS_BAR_AREA_HEIGHT;
 
-    // and merge the two pixmaps
-    QPainter p;
-    p.begin(&desktopBackground);
-    QPixmap scaledPixmap = pixmap.scaled(pixmap.size().width()+200,  pixmap.size().height()+200);
-    p.drawPixmap(0, 0, scaledPixmap);
+    // Whole image
+    QPixmap splashPixmap(splashWidth, splashHeight);
+    splashPixmap.fill(Qt::transparent);
 
-    p.setPen(QPen(QColor(200,200,200), 2));
-    p.drawRect(2,2, width()-4,height()-4);
+    QPainter painter(&splashPixmap);
 
-    QBrush brush(QColor(200,200,200,255), Qt::SolidPattern);
-    p.setBrush(brush);
-    p.drawRect(2, height()-70, width()-4, 68);
+    // Icon / Logo
+    painter.drawPixmap(0, 0, pixmap);
 
-    p.end();
+    // Bottom box where text and progress bar are
+    painter.setBrush(QColor(200, 200, 200, 255));
+    painter.setPen(Qt::NoPen);
+    painter.drawRect(0, pixmap.height(), splashWidth, PROGRESS_BAR_AREA_HEIGHT);
 
-    this->setPixmap(desktopBackground);
+    painter.end();
+
+
+    this->setPixmap(splashPixmap);
     this->setCursor(Qt::BusyCursor);
     this->showMessage("loading include ui files", Qt::AlignBottom, QColor(Qt::black));
+}
+
+QString SplashScreen::getMappedSplashScreenImage(QDate &date)
+{
+    QFile mappingFile(":splashScreenMapping.json");
+    if (!mappingFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+       qCritical() << "Couldn't open splashScreen mapping file";
+       return "";
+    }
+
+    QByteArray mappingData = mappingFile.readAll();
+    mappingFile.close();
+    QJsonDocument mappingDocument = QJsonDocument::fromJson(mappingData);
+    if (mappingDocument.isNull()) {
+       qCritical() << "Couldn't parse JSON from splashScreen mapping file";
+       return "";
+    }
+
+    QJsonObject mappingObject = mappingDocument.object();
+    QJsonValue mappedValue = mappingObject.value(date.toString("MM-dd")); // month-day, zero-padded
+
+    if (isEaster(date) && mappingObject.contains("EASTER")) {
+       mappedValue = mappingObject.value("EASTER");
+    } else if (isCoffeeTime(QTime::currentTime()) && mappingObject.contains("COFFEE")) {
+       mappedValue = mappingObject.value("COFFEE");
+    }
+
+    QString mappedImagePath;
+    if (mappedValue.isArray()) {
+       QJsonArray mappedValueArray = mappedValue.toArray();
+       mappedImagePath = mappedValueArray
+                             .at(QRandomGenerator::global()->bounded(mappedValueArray.size()))
+                             .toString();
+    } else {
+       mappedImagePath = mappedValue.toString();
+    }
+
+    if (mappedImagePath.isEmpty()) {
+       qCritical() << "splashScreen mapping file is empty";
+       return "";
+    }
+
+    QImageReader reader(mappedImagePath);
+    if (reader.format() != "png") {
+       qCritical() << "mapped splashScreen File is not a valid png: " << reader.fileName() << " error: " << reader.errorString();
+       return "";
+    }
+
+    return mappedImagePath;
+}
+
+bool SplashScreen::isEaster(QDate &date) {
+    return easter_gregorian(date.year()) == std::pair<int, int>(date.month(), date.day());
+}
+
+bool SplashScreen::isCoffeeTime(QTime time) {
+    return time.hour() == 16 && time.minute() == 0;
+}
+
+// from https://www.daniweb.com/programming/software-development/threads/463261/c-easter-day-calculation
+std::pair<int, int> SplashScreen::easter_gregorian(int y) {
+   if (y < 1583 || y > 9999) throw std::out_of_range("Gregorian years only");
+   int a = y % 19;
+   int b = y / 100, c = y % 100;
+   int d = b / 4, e = b % 4;
+   int f = (b + 8) / 25;
+   int g = (b - f + 1) / 3;
+   int h = (19*a + b - d - g + 15) % 30;
+   int i = c / 4, k = c % 4;
+   int l = (32 + 2*e + 2*i - h - k) % 7;
+   int m = (a + 11*h + 22*l) / 451;
+   int month = (h + l - 7*m + 114) / 31;          // 3=March, 4=April
+   int day   = ((h + l - 7*m + 114) % 31) + 1;
+   return {month, day};
 }
 
 void SplashScreen::setMaximum(int max)
@@ -124,7 +213,8 @@ void SplashScreen::drawContents(QPainter *painter)
       pbstyle.invertedAppearance = false;
       pbstyle.text = "loading";
       pbstyle.textVisible = true;
-      pbstyle.rect = QRect(0, pixmap.size().height()+50, pixmap.size().width()+200, 25);
+      pbstyle.rect = QRect(5, pixmap.height() + 3, pixmap.width() - 10, PROGRESS_BAR_AREA_HEIGHT  / 2 - 5);
+
       style()->drawControl(QStyle::CE_ProgressBar, &pbstyle, painter, this);
 
 }
