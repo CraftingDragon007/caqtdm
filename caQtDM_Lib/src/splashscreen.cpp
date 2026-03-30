@@ -68,7 +68,7 @@ SplashScreen::SplashScreen(QWidget *parent) : QSplashScreen(), m_progress(0)
     if (!mappedSplashScreen.isEmpty()) {
         pixmapLoad.load(mappedSplashScreen);
     } else {
-        pixmapLoad.load(":caQtDM-logos.png");
+        pixmapLoad.load(":logo_caqtdm.png");
     }
 
     int scaledWidth = 425;
@@ -83,11 +83,6 @@ SplashScreen::SplashScreen(QWidget *parent) : QSplashScreen(), m_progress(0)
     scaledWidth = 635;
 #endif
     pixmap = pixmapLoad.scaledToWidth(scaledWidth, Qt::SmoothTransformation);
-
-    if (mappedSplashScreen.isEmpty()) {
-       // For the known and established portrait effect, resize the default logo
-       pixmap = pixmap.scaled(pixmap.width(), pixmap.height() * .6, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
-    }
 
     const int splashWidth = pixmap.width();
     const int splashHeight = pixmap.height() + PROGRESS_BAR_AREA_HEIGHT;
