@@ -259,10 +259,10 @@ void limitsCartesianplotDialog::applyClicked()
     // set x scale
     if(indx == 0) { // auto
         CartesianPlot->setXscaling(caCartesianPlot::Auto);
-        qDebug() << "set xlimits to auto";
+        qCDebug(caCartesianPlotW) << "set xlimits to auto";
     } else if(indx == 1) { // channel
         CartesianPlot->setXscaling(caCartesianPlot::Channel);
-        qDebug() << "set xlimits to channel";
+        qCDebug(caCartesianPlotW) << "set xlimits to channel";
         QString pvs = CartesianPlot->getPV(0);
         QStringList vars = pvs.split(";");
         if((vars.size()== 2) || (vars.at(0).trimmed().length() > 0)) {
@@ -281,7 +281,7 @@ void limitsCartesianplotDialog::applyClicked()
 
     } else if(indx == 2) { // user
         CartesianPlot->setXscaling(caCartesianPlot::User);
-        qDebug() << "set xlimits to" << xLimits;
+        qCDebug(caCartesianPlotW) << "set xlimits to" << xLimits;
         CartesianPlot->setXaxisLimits(xLimits);
     }
 
@@ -308,7 +308,7 @@ void limitsCartesianplotDialog::applyClicked()
         }
     } else if(indy == 2) { // user
         CartesianPlot->setYscaling(caCartesianPlot::User);
-        qDebug() << "set ylimits to" << yLimits;
+        qCDebug(caCartesianPlotW) << "set ylimits to" << yLimits;
         CartesianPlot->setYaxisLimits(yLimits);
     }
 
