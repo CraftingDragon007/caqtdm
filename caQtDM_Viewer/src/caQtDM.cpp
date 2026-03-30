@@ -67,6 +67,10 @@
         #include <X11/Xatom.h>
 #endif //CAQTDM_X11
 
+#ifdef MOBILE_ANDROID
+#include <QStyleFactory>
+#endif
+
 static void unixSignalHandler(int signum) {
 
     Q_UNUSED(signum);

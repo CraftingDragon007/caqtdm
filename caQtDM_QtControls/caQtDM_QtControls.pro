@@ -26,7 +26,10 @@ contains(QT_VER_MAJ, 5) {
       }
 }
 contains(QT_VER_MAJ, 6) {
-      QT += widgets concurrent uitools opengl core network
+      QT += widgets concurrent opengl core network
+      !android {
+        QT += uitools
+      }
       CONFIG  += plugin cahmi
       ios | android {
             QT += uiplugin
@@ -75,7 +78,7 @@ cahmi{
     PRE_TARGETDEPS += moc/moc_cahmiconfigtransferitem.cpp
 }
 
-contains(QWT_VER_MIN, 1)|contains(QWT_VER_MIN, 2)|contains(QWT_VER_MIN, 3) {
+!contains(QWT_VER_MIN, 0){
   PRE_TARGETDEPS += moc/moc_qwt_thermo_marker_61.cpp
 }
 
@@ -206,8 +209,7 @@ SOURCES += src/networkaccess.cpp src/fileFunctions.cpp
 contains(QWT_VER_MIN, 0) {
    HEADERS	+= src/qwt_thermo_marker.h
    SOURCES	+= src/qwt_thermo_marker.cpp
-}
-contains(QWT_VER_MIN, 1)|contains(QWT_VER_MIN, 2) {
+}else {
    HEADERS	+= src/qwt_thermo_marker_61.h
    SOURCES	+= src/qwt_thermo_marker_61.cpp
 }

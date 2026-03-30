@@ -695,10 +695,10 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
     printf("caQtDM -- user_defined_stylesheet: %s \n",qasc(qApp->property("user_defined_stylesheet").toString()));
     fflush(stdout);
     if (qApp->property("user_defined_stylesheet").isValid() && (!qApp->property("user_defined_stylesheet").toString().isEmpty())){
+        QString printdata=qApp->styleSheet();
         QString stylereload = (QString)  qgetenv("CAQTDM_STYLESHEET_RELOAD");
-        //if (stylereload.isEmpty()) qApp->setStyleSheet(qApp->styleSheet());
-
         if (stylereload.contains("file",Qt::CaseInsensitive)){
+            printf("caQtDM -- search for: %s\n",qasc(qApp->property("user_defined_stylesheet").toString()));
             searchFile *searchDefaultStyleSheet = new searchFile(qApp->property("user_defined_stylesheet").toString());
             QString fileNameFound = searchDefaultStyleSheet->findFile();
             printf("caQtDM -- custom stylesheet found: %s\n",qasc(fileNameFound));
@@ -706,25 +706,25 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
                 QFile file(fileNameFound);
                 file.open(QFile::ReadOnly);
                 QString StyleSheet = QLatin1String(file.readAll());
-                printf("caQtDM -- custom stylesheet file <%s> replaced the default stylesheet\n", qasc(fileNameFound));
+                printdata=StyleSheet;
+                printf("caQtDM -- custom stylesheet file <%s> reloaded stylesheet\n", qasc(fileNameFound));
                 fflush(stdout);
-                if (!stylereload.contains("later",Qt::CaseInsensitive)) qApp->setStyleSheet(StyleSheet);
+                if (stylereload.contains("later",Qt::CaseInsensitive)){
+                    QTimer::singleShot(3000, this, [this,StyleSheet] () {
+                            this->setStyleSheet(StyleSheet);
+                        });
+                }else setStyleSheet(StyleSheet);
                 file.close();
             }
             delete searchDefaultStyleSheet;
         }
         if (stylereload.contains("apply",Qt::CaseInsensitive)){
-            qApp->setStyleSheet(qApp->styleSheet());
+            setStyleSheet(qApp->styleSheet());
         }
+
         if (stylereload.contains("print",Qt::CaseInsensitive)){
-            QString data=qApp->styleSheet();
-            printf("caQtDM -- custom stylesheet file data:\n%s \n", qasc(data));
+            printf("caQtDM -- custom stylesheet file data:\n%s \n", qasc(printdata));
             fflush(stdout);
-        }
-        if (stylereload.contains("later",Qt::CaseInsensitive)){
-            QTimer::singleShot(300, this, [] () {
-                    qApp->setStyleSheet(qApp->styleSheet());
-                });
         }
     }
 
@@ -7399,7 +7399,7 @@ void CaQtDM_Lib::Callback_ScriptButton()
 {
 #ifndef MOBILE
     QString command = "";
-    bool displayWindow;
+    bool displayWindow,CloseOnExit0;
     caScriptButton *w = qobject_cast<caScriptButton *>(sender());
     command.append(w->getScriptCommand());
 
@@ -7414,9 +7414,10 @@ void CaQtDM_Lib::Callback_ScriptButton()
     }
 #endif
     displayWindow = w->getDisplayShowExecution();
+    CloseOnExit0 = w->getCloseExit0();
 
     if(w->getAccessW()) {
-        processWindow *t = new processWindow(this, displayWindow, w);
+        processWindow *t = new processWindow(this, displayWindow,CloseOnExit0, w);
         connect(t, SIGNAL(processClose()), this, SLOT(processTerminated()));
 #ifdef _MSC_VER
         t->setArguments(w->getScriptParam());
