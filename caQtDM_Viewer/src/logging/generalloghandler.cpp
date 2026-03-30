@@ -36,6 +36,11 @@ QtMessageHandler GeneralLogHandler::initialize()
     // Re-install previous handler for initialization logs
     qInstallMessageHandler(previousHandler);
 
+    // Unless overwritten via env, disable all QtDebugMsg Logs
+    QLoggingCategory::setFilterRules("*.debug=false");
+    qCDebug(generalLogHandler) << "If you see this message, the env QT_LOGGING_CONF or QT_LOGGING_RULES is defined and allows debug messages explicitely.";
+    qCInfo(generalLogHandler) << "If not overwritten by env QT_LOGGING_CONF or QT_LOGGING_RULES caQtDM will disable all debug messages. You will still see info, warning, critical and fatal messages. This is an info message.";
+
     // This shouldn't change
     s_processId = QCoreApplication::applicationPid();
 
