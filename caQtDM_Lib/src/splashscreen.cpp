@@ -134,30 +134,35 @@ QString SplashScreen::getMappedSplashScreenImage(QDate &date)
     QJsonValue mappedValue = mappingObject.value(date.toString("MM-dd")); // month-day, zero-padded
 
     if (isEaster(date) && mappingObject.contains("EASTER")) {
-       mappedValue = mappingObject.value("EASTER");
+        mappedValue = mappingObject.value("EASTER");
     } else if (isCoffeeTime(QTime::currentTime()) && mappingObject.contains("COFFEE")) {
-       mappedValue = mappingObject.value("COFFEE");
+        mappedValue = mappingObject.value("COFFEE");
+    } else if (mappedValue.isUndefined() && mappingObject.contains("RANDOM")
+               && QRandomGenerator::global()->bounded(100.0) > 99.0) {
+        // 1% chance to take one of the randomly available ones
+        mappedValue = mappingObject.value("RANDOM");
     }
 
     QString mappedImagePath;
     if (mappedValue.isArray()) {
-       QJsonArray mappedValueArray = mappedValue.toArray();
-       mappedImagePath = mappedValueArray
-                             .at(QRandomGenerator::global()->bounded(mappedValueArray.size()))
-                             .toString();
+        QJsonArray mappedValueArray = mappedValue.toArray();
+        mappedImagePath = mappedValueArray
+                              .at(QRandomGenerator::global()->bounded(mappedValueArray.size()))
+                              .toString();
     } else {
-       mappedImagePath = mappedValue.toString();
+        mappedImagePath = mappedValue.toString();
     }
 
     if (mappedImagePath.isEmpty()) {
-       qCritical() << "splashScreen mapping file is empty";
-       return "";
+        qCritical() << "splashScreen mapping file is empty";
+        return "";
     }
 
     QImageReader reader(mappedImagePath);
     if (reader.format() != "png") {
-       qCritical() << "mapped splashScreen File is not a valid png: " << reader.fileName() << " error: " << reader.errorString();
-       return "";
+        qCritical() << "mapped splashScreen File is not a valid png: " << reader.fileName()
+                    << " error: " << reader.errorString();
+        return "";
     }
 
     return mappedImagePath;
