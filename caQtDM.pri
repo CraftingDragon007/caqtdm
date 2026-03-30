@@ -1,4 +1,4 @@
-﻿#==========================================================================================================
+#==========================================================================================================
 archive_plugin {
         CONFIG += Define_ControlsysTargetDir Define_Build_objDirs
 
@@ -944,7 +944,6 @@ caQtDM_Viewer {
                         DESTDIR = $$(CAQTDM_COLLECT)
                         CONFIG += staticlib
                         CONFIG += console
-
                         LIBS += $$(EPICSLIB)/libca.a
                         LIBS += $$(EPICSLIB)/libCom.a
                         LIBS += $$(EPICSLIB)/libdbCore.a
