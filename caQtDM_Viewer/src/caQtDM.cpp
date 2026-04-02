@@ -298,7 +298,7 @@ int main(int argc, char *argv[])
 #endif
 
 #ifdef MOBILE_ANDROID
-    qCDebug(viewer) << QStyleFactory::keys();
+    qCDebug(caQtDM) << QStyleFactory::keys();
     app.setStyle(QStyleFactory::create("Fusion"));
 #endif
 
@@ -343,7 +343,7 @@ int main(int argc, char *argv[])
         }
         delete reader;
         delete loop;
-        qCDebug(viewer) << "use now file" << fileName;
+        qCDebug(caQtDM) << "use now file" << fileName;
     }
 #endif
 
@@ -392,7 +392,7 @@ int main(int argc, char *argv[])
                       "case of problems\n          you may disable this by not defining "
                       "IO_OPTIMIZED_FOR_TABWIDGETS in qtdefs.pri";
 #else
-    qCInfo(viewer)
+    qCInfo(caQtDM)
         << "caQtDM -- viewer will not disable monitors for hidden pages of QTabWidgets\n          "
            "you may enable this by defining IO_OPTIMIZED_FOR_TABWIDGETS in qtdefs.pri";
 #endif
