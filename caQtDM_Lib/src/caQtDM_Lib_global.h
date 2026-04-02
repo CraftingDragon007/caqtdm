@@ -79,9 +79,9 @@ typedef struct MutexKnobData MutexKnobData;
 #ifdef __cplusplus
 #include <QLoggingCategory>
 
-Q_DECLARE_LOGGING_CATEGORY(caQtDMLib);
-Q_DECLARE_LOGGING_CATEGORY(mutexKnobData);
-Q_DECLARE_LOGGING_CATEGORY(externC);
+Q_DECLARE_LOGGING_CATEGORY(caQtDMLibLog);
+Q_DECLARE_LOGGING_CATEGORY(mutexKnobDataLog);
+Q_DECLARE_LOGGING_CATEGORY(externCLog);
 #endif
 
 #endif // CAQTDM_LIB_GLOBAL_H

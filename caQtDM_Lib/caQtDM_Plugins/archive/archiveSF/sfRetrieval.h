@@ -51,7 +51,7 @@ public:
     ~sfRetrieval() {
         X.clear();
         Y.clear();
-        qCDebug(archiveSF) << this << "destructor" << PV;
+        qCDebug(archiveSFLog) << this << "destructor" << PV;
     }
     bool requestUrl(const QUrl url, const QByteArray &json, int secondsPast, bool binned, bool timeAxis, QString key);
     const QString lastError();

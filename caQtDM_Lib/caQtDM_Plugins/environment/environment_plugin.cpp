@@ -33,7 +33,7 @@
 //caType {caSTRING	= 0, caINT = 1, caFLOAT = 2, caENUM = 3, caCHAR = 4, caLONG = 5, caDOUBLE = 6};
 #define qasc(x) x.toLatin1().constData()
 
-Q_LOGGING_CATEGORY(environment, "caqtdm.plugins.environment");
+Q_LOGGING_CATEGORY(environmentLog, "caqtdm.plugins.environment");
 
 // gives the plugin name back
 QString environmentPlugin::pluginName()
@@ -44,7 +44,7 @@ QString environmentPlugin::pluginName()
 // constructor
 environmentPlugin::environmentPlugin()
 {
-    qCInfo(environment) << "Environment: Create";
+    qCInfo(environmentLog) << "Environment: Create";
 
     mutexknobdataP = Q_NULLPTR;
     connect(qApp, SIGNAL(aboutToQuit()), this, SLOT(closeEvent()));
@@ -89,7 +89,7 @@ void environmentPlugin::updateValues()
 // initialize our communicationlayer with everything you need
 int environmentPlugin::initCommunicationLayer(MutexKnobData *data, MessageWindow *messageWindow,QMap<QString, QString> options)
 {
-    qCDebug(environment) << "environmentPlugin: InitCommunicationLayer with options" << options;
+    qCDebug(environmentLog) << "environmentPlugin: InitCommunicationLayer with options" << options;
 
     mutexknobdataP = data;
     messagewindowP = messageWindow;
@@ -117,7 +117,7 @@ int environmentPlugin::pvAddMonitor(int index, knobData *kData, int rate, int sk
     QString value = (QString)  qgetenv(qasc(datapv));
     if (!value.isEmpty()){
         dataSize= value.length();
-        qCDebug(environment) << "PV:" << datapv << value;
+        qCDebug(environmentLog) << "PV:" << datapv << value;
         if(dataSize != kData->edata.dataSize) {
            if(kData->edata.dataB != (void*) Q_NULLPTR) free(kData->edata.dataB);
             kData->edata.dataB = (void*) malloc((size_t) dataSize*sizeof(char)+5);
@@ -155,7 +155,7 @@ int environmentPlugin::pvClearMonitor(knobData *kData) {
 }
 int environmentPlugin::pvFreeAllocatedData(knobData *kData)
 {
-    qCDebug(environment) << "DemoPlugin:pvFreeAllocatedData";
+    qCDebug(environmentLog) << "DemoPlugin:pvFreeAllocatedData";
     if (kData->edata.info != (void *) Q_NULLPTR) {
         free(kData->edata.info);
         kData->edata.info = (void*) Q_NULLPTR;
@@ -178,7 +178,7 @@ int environmentPlugin::pvSetValue(char *pv, double rdata, int32_t idata, char *s
     Q_UNUSED(errmess)
     Q_UNUSED(object)
     QMutexLocker locker(&mutex);
-    qCDebug(environment) << "environmentPlugin:pvSetValue" << pv << rdata << idata << sdata;
+    qCDebug(environmentLog) << "environmentPlugin:pvSetValue" << pv << rdata << idata << sdata;
     return 0;
 }
 
@@ -236,20 +236,20 @@ int environmentPlugin::pvDisconnect(knobData *kData) {
 
 // flush any io
 int environmentPlugin::FlushIO() {
-    qCDebug(environment) << "environmentPlugin:FlushIO";
+    qCDebug(environmentLog) << "environmentPlugin:FlushIO";
     return true;
 }
 
 // termination
 int environmentPlugin::TerminateIO() {
-    qCDebug(environment) << "environmentPlugin:TerminateIO";
+    qCDebug(environmentLog) << "environmentPlugin:TerminateIO";
     //timerValues->stop();
     //timer->stop();
     return true;
 }
 
 void environmentPlugin::closeEvent(){
-    qCDebug(environment) << "environmentPlugin:closeEvent";
+    qCDebug(environmentLog) << "environmentPlugin:closeEvent";
     emit closeSignal();
 
 }

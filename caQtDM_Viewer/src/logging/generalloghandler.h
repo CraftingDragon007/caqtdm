@@ -10,7 +10,7 @@
 #define DEFAULT_LOG_HANDLERS QStringLiteral("console")
 
 #include <QLoggingCategory>
-Q_DECLARE_LOGGING_CATEGORY(generalLogHandler);
+Q_DECLARE_LOGGING_CATEGORY(generalLogHandlerLog);
 
 class GeneralLogHandler
 {

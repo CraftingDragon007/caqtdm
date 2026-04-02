@@ -34,7 +34,7 @@ namespace epics { namespace pvData {
 
 epics4_CallbackThread::~epics4_CallbackThread()
 {
-    qCDebug(epics4) << "CallbackThread::~CallbackThread()";
+    qCDebug(epics4Log) << "CallbackThread::~CallbackThread()";
 }
 
 void epics4_CallbackThread::run()

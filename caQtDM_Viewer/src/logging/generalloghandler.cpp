@@ -21,7 +21,7 @@ QList<AbstractLogHandler *> GeneralLogHandler::s_logHandlers;
 QThread *GeneralLogHandler::s_logHandlersThread = Q_NULLPTR;
 qint64 GeneralLogHandler::s_processId = -1;
 
-Q_LOGGING_CATEGORY(generalLogHandler, "caqtdm.logging.general");
+Q_LOGGING_CATEGORY(generalLogHandlerLog, "caqtdm.logging.general");
 
 QtMessageHandler GeneralLogHandler::initialize()
 {
@@ -38,8 +38,8 @@ QtMessageHandler GeneralLogHandler::initialize()
 
     // Unless overwritten via env, disable all QtDebugMsg Logs
     QLoggingCategory::setFilterRules("*.debug=false");
-    qCDebug(generalLogHandler) << "If you see this message, the env QT_LOGGING_CONF or QT_LOGGING_RULES is defined and allows debug messages explicitely.";
-    qCInfo(generalLogHandler) << "If not overwritten by env QT_LOGGING_CONF or QT_LOGGING_RULES caQtDM will disable all debug messages. You will still see info, warning, critical and fatal messages. This is an info message.";
+    qCDebug(generalLogHandlerLog) << "If you see this message, the env QT_LOGGING_CONF or QT_LOGGING_RULES is defined and allows debug messages explicitely.";
+    qCInfo(generalLogHandlerLog) << "If not overwritten by env QT_LOGGING_CONF or QT_LOGGING_RULES caQtDM will disable all debug messages. You will still see info, warning, critical and fatal messages. This is an info message.";
 
     // This shouldn't change
     s_processId = QCoreApplication::applicationPid();
@@ -58,7 +58,7 @@ QtMessageHandler GeneralLogHandler::initialize()
 
     const QStringList selectedLogHandlers = selectedLogHandlersFromEnv();
     if (selectedLogHandlers.contains(QSL("console"))) {
-        qCInfo(generalLogHandler) << QSL("adding console log handler");
+        qCInfo(generalLogHandlerLog) << QSL("adding console log handler");
         auto *consoleHandler = new ConsoleLogHandler();
         consoleHandler->moveToThread(s_logHandlersThread);
         s_logHandlers.append(consoleHandler);
@@ -70,7 +70,7 @@ QtMessageHandler GeneralLogHandler::initialize()
     }
 
     if (selectedLogHandlers.contains(QSL("file"))) {
-        qCInfo(generalLogHandler) << QSL("adding file log handler");
+        qCInfo(generalLogHandlerLog) << QSL("adding file log handler");
         auto *fileHandler = new FileLogHandler();
         fileHandler->moveToThread(s_logHandlersThread);
         s_logHandlers.append(fileHandler);
@@ -82,7 +82,7 @@ QtMessageHandler GeneralLogHandler::initialize()
     }
 
     if (selectedLogHandlers.contains(QSL("logstash"))) {
-        qCInfo(generalLogHandler) << QSL("adding logstash log handler");
+        qCInfo(generalLogHandlerLog) << QSL("adding logstash log handler");
         auto *logstashHandler = new LogstashLogHandler();
         logstashHandler->moveToThread(s_logHandlersThread);
         s_logHandlers.append(logstashHandler);
@@ -95,7 +95,7 @@ QtMessageHandler GeneralLogHandler::initialize()
 
 #ifdef Q_OS_UNIX
     if (selectedLogHandlers.contains(QSL("syslog"))) {
-        qCInfo(generalLogHandler) << QSL("adding syslog log handler");
+        qCInfo(generalLogHandlerLog) << QSL("adding syslog log handler");
         auto *syslogHandler = new SyslogLogHandler();
         // Not a QObject, also no async operations, so not moved to separate thread.
         s_logHandlers.append(syslogHandler);
@@ -125,7 +125,7 @@ QStringList GeneralLogHandler::selectedLogHandlersFromEnv(const QString &default
             selectedLogHandlers.append(QSL("logstash"));
         } else if (handler == QSL("syslog") || handler == QSL("syslogloghandler")) {
 #ifndef Q_OS_UNIX
-            qCCritical(generalLogHandler)
+            qCCritical(generalLogHandlerLog)
                 << ENV_LOG_HANDLERS
                 << QSL("specified syslog log handler, but this is invalid as system is not unix");
 #else

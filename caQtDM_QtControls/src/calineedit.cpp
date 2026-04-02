@@ -43,7 +43,7 @@
     #endif
 #endif
 
-Q_LOGGING_CATEGORY(caLineEditW, "caqtdm.widgets.calineedit");
+Q_LOGGING_CATEGORY(caLineEditLog, "caqtdm.widgets.calineedit");
 
 caLineEdit::caLineEdit(QWidget *parent) : QLineEdit(parent), FontScalingWidget(this)
 {
@@ -57,7 +57,7 @@ caLineEdit::caLineEdit(QWidget *parent) : QLineEdit(parent), FontScalingWidget(t
     QFontInfo info(font);
     //font.setStyleStrategy(QFont::NoAntialias);
     QString family = info.family();
-    qCDebug(caLineEditW) << "got font" << family;
+    qCDebug(caLineEditLog) << "got font" << family;
     if(!family.contains("Lucida Sans Typewriter")) {
         QFont  newfont("Monospace");   // not very nice, while a a dot inside the zero to distinguish from o
         newfont.setStyleHint(QFont::TypeWriter);

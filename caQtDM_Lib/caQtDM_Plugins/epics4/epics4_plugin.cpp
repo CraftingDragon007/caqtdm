@@ -33,7 +33,7 @@
 #include <epicsThread.h>
 #include "loggingcategories.h"
 
-Q_LOGGING_CATEGORY(epics4, "caqtdm.plugins.epics.4");
+Q_LOGGING_CATEGORY(epics4Log, "caqtdm.plugins.epics.4");
 
 using namespace std;
 using namespace epics::pvData;
@@ -97,7 +97,7 @@ public:
     }
 
     virtual ~PVAChannelRequester() {
-        if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "~PVAChannelRequester";
+        if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "~PVAChannelRequester";
     }
 
     virtual std::string getRequesterName()
@@ -284,7 +284,7 @@ public:
     PVAGetFieldRequester(PVAInterfacePtr const & pvaInterface) : pvaInterface(pvaInterface)
     {}
     virtual ~PVAGetFieldRequester() {
-        if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "~PVAGetFieldRequester";
+        if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "~PVAGetFieldRequester";
     }
 
     virtual std::string getRequesterName()
@@ -319,7 +319,7 @@ public:
     }
 
     virtual ~PVAChannelGetRequester() {
-        if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "~PVAChannelGetRequester";
+        if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "~PVAChannelGetRequester";
     }
 
     virtual std::string getRequesterName()
@@ -368,7 +368,7 @@ public:
     {}
 
     virtual ~PVAChannelPutRequester() {
-        if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "~PVAChannelPutRequester";
+        if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "~PVAChannelPutRequester";
     }
 
     virtual std::string getRequesterName()
@@ -425,7 +425,7 @@ public:
     {}
 
     virtual ~PVAMonitorRequester() {
-        if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "~PVAMonitorRequester";
+        if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "~PVAMonitorRequester";
     }
 
     virtual std::string getRequesterName()
@@ -475,17 +475,17 @@ PVAChannel::PVAChannel(const string & fullName, const string & mapName,
     callbackThread(callbackThread),
     providerN(providerN)
 {
-    if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "PVAChannel::PVAChannel() fullName" << fullName << mapName;
+    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "PVAChannel::PVAChannel() fullName" << fullName << mapName;
 }
 
 PVAChannel::~PVAChannel()
 {
-    if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "PVAChannel::~PVAChannel()";
+    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "PVAChannel::~PVAChannel()";
 }
 
 void PVAChannel::destroy()
 {
-    if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "PVAChannel::destroy()";
+    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "PVAChannel::destroy()";
     pvaChannelRequester.reset();
     channel->destroy();
 }
@@ -503,7 +503,7 @@ void PVAChannel::message(string const & message,MessageType messageType)
 void PVAChannel::channelCreated(const Status & status, Channel::shared_pointer const & channel)
 {
     if(Epics4Plugin::getDebug()) {
-        qCDebug(::epics4) << "PVAChannel::created"
+        qCDebug(::epics4Log) << "PVAChannel::created"
              << "fullName" << getFullName() << "status.isOK()" << ( status.isOK() ? "true" : "false")
              << "channel->isConnected())" << ( channel->isConnected() ? "true" : "false");
     }
@@ -518,13 +518,13 @@ void PVAChannel::channelStateChange(
         Channel::shared_pointer const & channel,Channel::ConnectionState connectionState)
 {
     Q_UNUSED(channel);
-    if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "PVAChannel::channelStateChange";
+    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "PVAChannel::channelStateChange";
     Lock xx(mutex);
     if(pvaInterfaceList.empty()) return;
     size_t num = pvaInterfaceList.size();
     bool value = (connectionState==Channel::CONNECTED ? true :  false);
     if(Epics4Plugin::getDebug()) {
-        qCDebug(::epics4) << "PVAChannel::channelStateChange isConnected" << ( value ? "true" : "false")
+        qCDebug(::epics4Log) << "PVAChannel::channelStateChange isConnected" << ( value ? "true" : "false")
              << "fullName" << getFullName() << "num" << num;
     }
 
@@ -536,12 +536,12 @@ void PVAChannel::channelStateChange(
 
 void PVAChannel::connect(const string & channelName,const string & providerName)
 {
-    if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "PVAChannel::connect" + channelName;
+    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "PVAChannel::connect" + channelName;
 
     if(!providerN) {
         requester->message(channelName + " provider " + providerName + "not registered",errorMessage);
     }
-    if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "PVAChannel::provider=" + providerN->getProviderName();
+    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "PVAChannel::provider=" + providerN->getProviderName();
 
     pvaChannelRequester = PVAChannelRequesterPtr(new PVAChannelRequester(shared_from_this()));
 
@@ -554,7 +554,7 @@ void PVAChannel::connect(const string & channelName,const string & providerName)
     };
 
     if(Epics4Plugin::getDebug()) {
-        qCDebug(::epics4) << "PVAChannel::connect" << channel.get()
+        qCDebug(::epics4Log) << "PVAChannel::connect" << channel.get()
              << "fullName" << getFullName()
              << "channel->isConnected())" <<( channel->isConnected() ? "true" : "false");
     }
@@ -564,7 +564,7 @@ void PVAChannel::connect(const string & channelName,const string & providerName)
 void PVAChannel::addInterface(const PVAInterfacePtr & pvaInterface)
 {
     if(Epics4Plugin::getDebug()) {
-        qCDebug(::epics4) << "PVAChannel::addInterface"
+        qCDebug(::epics4Log) << "PVAChannel::addInterface"
              << "fullName" << getFullName()
              << "channel->isConnected())" << ( channel->isConnected() ? "true" : "false");
     }
@@ -579,7 +579,7 @@ bool PVAChannel::removeInterface(const PVAInterfacePtr & pvaInterface)
     Lock xx(mutex);
     size_t num = pvaInterfaceList.size();
     if(Epics4Plugin::getDebug()) {
-        qCDebug(::epics4) << "PVAChannel::removeInterface"
+        qCDebug(::epics4Log) << "PVAChannel::removeInterface"
              << "fullName" << getFullName() << "num" << num;
     }
     for(size_t ind = 0; ind<num; ++ind) {
@@ -591,7 +591,7 @@ bool PVAChannel::removeInterface(const PVAInterfacePtr & pvaInterface)
     }
     num = pvaInterfaceList.size();
     if(Epics4Plugin::getDebug()) {
-        qCDebug(::epics4) << "after remove num" << pvaInterfaceList.size();
+        qCDebug(::epics4Log) << "after remove num" << pvaInterfaceList.size();
     }
     return ((num==0) ? true : false);
 }
@@ -607,7 +607,7 @@ public:
     ~PVAInterfaceGlue()
     {
         if(Epics4Plugin::getDebug()) {
-            qCDebug(::epics4) << "~PVAInterfaceGlue()"
+            qCDebug(::epics4Log) << "~PVAInterfaceGlue()"
                  << "pvaInterface use count" << pvaInterface.use_count();
         }
     }
@@ -639,12 +639,12 @@ PVAInterface::PVAInterface(
       callbackType(unknown_t),
       convert(getConvert())
 {
-    if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "PVAInterface::PVAInterface()";
+    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "PVAInterface::PVAInterface()";
 }
 
 PVAInterface::~PVAInterface()
 {
-    if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "PVAInterface::~PVAInterface()";
+    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "PVAInterface::~PVAInterface()";
 }
 
 void PVAInterface::clearMonitor()
@@ -683,26 +683,26 @@ void PVAInterface::startMonitor()
 
 void PVAInterface::destroy()
 {
-    if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "PVAInterface::destroy calling pvaChannelGet->destroy";
+    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "PVAInterface::destroy calling pvaChannelGet->destroy";
     if(pvaChannelGet) pvaChannelGet->destroy();
-    if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "PVAInterface::destroy calling pvaChannelPut->destroy";
+    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "PVAInterface::destroy calling pvaChannelPut->destroy";
     if(pvaChannelPut) pvaChannelPut->destroy();
-    if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "PVAInterface::destroy calling pvaChannel.reset";
+    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "PVAInterface::destroy calling pvaChannel.reset";
     pvaChannel.reset();
-    if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "PVAInterface::destroy return";
+    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "PVAInterface::destroy return";
 }
 
 void PVAInterface::channelStateChange(bool isConnected)
 {
     if(Epics4Plugin::getDebug()) {
-        qCDebug(::epics4) << "PVAInterface::channelStateChange index" << index
+        qCDebug(::epics4Log) << "PVAInterface::channelStateChange index" << index
              << "fullName" << pvaChannel->getFullName()
              << "isConnected" << (isConnected ? "true" : "false");
     }
     if(gotFirstConnect) mutexKnobData->SetMutexKnobDataConnected(index, isConnected);
     if(!isConnected || gotFirstConnect) return;
     callbackType = interface_t;
-    if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "queue request";
+    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "queue request";
     callbackThread->queueRequest(shared_from_this());
 }
 
@@ -791,7 +791,7 @@ void PVAInterface::monitorConnect(
         Structure::const_shared_pointer const & structure)
 {
     Q_UNUSED(structure);
-    if(Epics4Plugin::getDebug()) qCDebug(::epics4) << " PVAInterface::monitorConnect";
+    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << " PVAInterface::monitorConnect";
     if(status.isOK()) {
         Lock lock(mutex);
         if(!monitorStarted) {
@@ -808,13 +808,13 @@ void PVAInterface::monitorConnect(
 void PVAInterface::unlisten(MonitorPtr const & monitor)
 {
     Q_UNUSED(monitor);
-    qCDebug(::epics4) << "PVAInterface::unlisten";
+    qCDebug(::epics4Log) << "PVAInterface::unlisten";
     unlistenCalled = true;
 }
 
 void PVAInterface::monitorEvent(MonitorPtr const & monitor)
 {
-    if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "PVAInterface::monitorEvent";
+    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "PVAInterface::monitorEvent";
     while(true) {
         MonitorElementPtr monitorElement(monitor->poll());
         if(!monitorElement) break;
@@ -847,7 +847,7 @@ void PVAInterface::monitorEvent(MonitorPtr const & monitor)
             case ntscalararray_t : getScalarArrayData(pvStructure); break;
             default: throw std::runtime_error("PVAInterface::event logic error");
         }
-        qCDebug(::epics4) << "update" << kData.pv << kData.index << kData.pluginFlavor << kData.dispName <<kData.edata.rvalue << kData.edata.ivalue;
+        qCDebug(::epics4Log) << "update" << kData.pv << kData.index << kData.pluginFlavor << kData.dispName <<kData.edata.rvalue << kData.edata.ivalue;
         mutexKnobData->SetMutexKnobDataReceived(&kData);
 
         mutexKnobData->DataUnlock(&kData);
@@ -896,13 +896,13 @@ void PVAInterface::putDone(
     }
     Lock lock(mutex);
     putFinished = true;
-    if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "PVAInterface::putDone set putFinished = true";
+    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "PVAInterface::putDone set putFinished = true";
 }
 
 
 void PVAInterface::callback()
 {
-    if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "PVAInterface::callback() index" << index << "callbacktype" << callbackType;
+    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "PVAInterface::callback() index" << index << "callbacktype" << callbackType;
     try {
         switch(callbackType) {
             case interface_t : getInterface(); break;
@@ -924,19 +924,19 @@ PVAChannelPtr PVAInterface::getPVAChannel()
 
 int PVAInterface::reconnect()
 {
-    if(Epics4Plugin::getDebug()) qCWarning(::epics4) << "PVAInterface::reconnect() not implemented";
+    if(Epics4Plugin::getDebug()) qCWarning(::epics4Log) << "PVAInterface::reconnect() not implemented";
     return false;
 }
 
 int PVAInterface::disconnect()
 {
-    if(Epics4Plugin::getDebug()) qCWarning(::epics4) << "PVAInterface::disconnect()  not implemented";
+    if(Epics4Plugin::getDebug()) qCWarning(::epics4Log) << "PVAInterface::disconnect()  not implemented";
     return false;
 }
 
 int PVAInterface::terminateIO()
 {
-    if(Epics4Plugin::getDebug()) qCWarning(::epics4) << "PVAInterface::terminateIO()  not implemented";
+    if(Epics4Plugin::getDebug()) qCWarning(::epics4Log) << "PVAInterface::terminateIO()  not implemented";
     return false;
 }
 
@@ -949,7 +949,7 @@ void PVAInterface::getInterface()
 
 void PVAInterface::gotInterface()
 {
-    if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "PVAInterface::gotInterface()";
+    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "PVAInterface::gotInterface()";
     if(normativeType==ntenum_t) {
         callbackType = enum_t;
         callbackThread->queueRequest(shared_from_this());
@@ -1144,7 +1144,7 @@ void PVAInterface::gotEnum(PVStructurePtr const & pvStructure)
 
 void PVAInterface::createMonitor()
 {
-    if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "PVAInterface::createMonitor()";
+    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "PVAInterface::createMonitor()";
     try {
         if(normativeType==ntunknown_t) return;
         string request("value,alarm,timeStamp");
@@ -1162,16 +1162,16 @@ void PVAInterface::createMonitor()
 
 void PVAInterface::gotMonitor()
 {
-    if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "PVAInterface::gotMonitor()";
+    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "PVAInterface::gotMonitor()";
 }
 
 
 void PVAInterface::getScalarData(PVStructurePtr const & pvStructure)
 {
-    if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "getScalarData " << kData.pv;
+    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "getScalarData " << kData.pv;
     PVScalarPtr pvScalar = pvStructure->getSubField<PVScalar>("value");
     if(!pvScalar) {
-        qCDebug(::epics4) << "PVAInterface::getScalarData pvStructure \n" << pvStructure.get();
+        qCDebug(::epics4Log) << "PVAInterface::getScalarData pvStructure \n" << pvStructure.get();
         return;
     }
     
@@ -1489,7 +1489,7 @@ bool PVAInterface::setValue(double rdata, int32_t idata, char *sdata, int forceT
     {
         Lock lock(mutex);
         if(Epics4Plugin::getDebug())
-            qCDebug(::epics4) << "PVAInterface::setValue putFinished" << (putFinished ? "true" : "false");
+            qCDebug(::epics4Log) << "PVAInterface::setValue putFinished" << (putFinished ? "true" : "false");
         if(!putFinished) {
             requester->message("previous put did not complete", errorMessage);
             return false;
@@ -1592,7 +1592,7 @@ bool PVAInterface::setArrayValue(
     {
         Lock lock(mutex);
         if(Epics4Plugin::getDebug())
-            qCDebug(::epics4) << "PVAInterface::setArrayValue putFinished" << (putFinished ? "true" : "false");
+            qCDebug(::epics4Log) << "PVAInterface::setArrayValue putFinished" << (putFinished ? "true" : "false");
         if(!putFinished) {
             requester->message("previous put did not complete", errorMessage);
             return false;
@@ -1723,19 +1723,19 @@ QString Epics4Plugin::pluginName()
 
 Epics4Plugin::Epics4Plugin()
 {
-    if(Epics4Plugin::getDebug()) qCInfo(::epics4) << "Epics4: Create";
+    if(Epics4Plugin::getDebug()) qCInfo(::epics4Log) << "Epics4: Create";
     connect(qApp, SIGNAL(aboutToQuit()), this, SLOT(closeEvent()));
 }
 
 Epics4Plugin::~Epics4Plugin()
 {
-    if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "Epics4Plugin:~Epics4Plugin";
+    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "Epics4Plugin:~Epics4Plugin";
 }
 
 int Epics4Plugin::initCommunicationLayer(MutexKnobData *mutexKnobDataP, MessageWindow *messageWindow, QMap<QString, QString> options)
 {
     Q_UNUSED(options);
-    if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "Epics4Plugin::initCommunicationLayer";
+    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "Epics4Plugin::initCommunicationLayer";
     QString msg=QString("Epics4Plugin: epics version: %1").arg(EPICS_VERSION_STRING);
     if(messageWindow != (MessageWindow *) Q_NULLPTR) messageWindow->postMsgEvent(QtDebugMsg,(char*) msg.toLatin1().constData());
     mutexKnobData = mutexKnobDataP;
@@ -1743,7 +1743,7 @@ int Epics4Plugin::initCommunicationLayer(MutexKnobData *mutexKnobDataP, MessageW
     CAClientFactory::start();
     epics4_callbackThread = epics4_CallbackThread::create();
     requester = Epics4RequesterPtr(new Epics4Requester(messageWindow));
-    if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "Epics4Plugin::initCommunicationLayer return true";
+    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "Epics4Plugin::initCommunicationLayer return true";
     return true;
 
 }
@@ -1753,7 +1753,7 @@ int Epics4Plugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
     Q_UNUSED(rate);
     Q_UNUSED(skip);
     if(Epics4Plugin::getDebug()) {
-        qCDebug(::epics4) << "Epics4Plugin::pvAddMonitor"
+        qCDebug(::epics4Log) << "Epics4Plugin::pvAddMonitor"
              << "pv" << kData->pv << "index" << kData->index;
     }
 
@@ -1768,7 +1768,7 @@ int Epics4Plugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
     string mapname = fullname + "_" + out.str();
 
     if(Epics4Plugin::getDebug()) {
-        qCDebug(::epics4) << "providerName" << providerName
+        qCDebug(::epics4Log) << "providerName" << providerName
              << "channelName" << channelName
              << "fullname" << fullname;
     }
@@ -1799,19 +1799,19 @@ int Epics4Plugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
         pvaChannel->connect(channelName,providerName);
         pvaChannelMap.insert(std::pair<string,PVAChannelWPtr>(mapname,pvaChannel));
         pvMap.insert(std::pair<string,int>(mapname, kData->index));
-        if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "created new and called connect";
+        if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "created new and called connect";
     }
     PVAInterfacePtr pvaInterface(new PVAInterface(pvaChannel, mutexKnobData,index,requester,epics4_callbackThread));
     pvaInterfaceGlue = new PVAInterfaceGlue(pvaInterface);
     kData->edata.info = pvaInterfaceGlue;
     C_SetMutexKnobData(mutexKnobData, index, *kData);
-    if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "calling addInterface";
+    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "calling addInterface";
     pvaChannel->addInterface(pvaInterface);
     return true;
 }
 
 int Epics4Plugin::pvClearMonitor(knobData *kData) {
-    if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "Epics4Plugin:pvClearMonitor";
+    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "Epics4Plugin:pvClearMonitor";
     if (kData->edata.info == (void *) Q_NULLPTR)
         throw std::runtime_error(
                 "Epics4Plugin::pvClearMonitor kData->edata.info  is null");
@@ -1825,7 +1825,7 @@ int Epics4Plugin::pvClearMonitor(knobData *kData) {
 
 int Epics4Plugin::pvFreeAllocatedData(knobData *kData)
 {
-    if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "Epics4Plugin:pvFreeAllocatedData";
+    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "Epics4Plugin:pvFreeAllocatedData";
     if (kData->edata.info == (void *) Q_NULLPTR)
         throw std::runtime_error(
                 "Epics4Plugin::pvFreeAllocatedData kData->edata.info  is null");
@@ -1860,7 +1860,7 @@ bool Epics4Plugin::pvSetValue(knobData *kData,
     Q_UNUSED(object);
     Q_UNUSED(errmess);
     Q_UNUSED(forceType);
-    if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "Epics4Plugin:pvSetValue";
+    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "Epics4Plugin:pvSetValue";
     if (kData->edata.info == (void *) Q_NULLPTR) throw std::runtime_error("Epics4Plugin::pvSetValue kData->edata.info  is null");
     PVAInterfaceGlue *pvaInterfaceGlue  = static_cast<PVAInterfaceGlue *>(kData->edata.info);
     PVAInterfacePtr pvaInterface = pvaInterfaceGlue->getPVAInterface();
@@ -1875,7 +1875,7 @@ bool Epics4Plugin::pvSetWave(knobData *kData,
 {
     Q_UNUSED(object);
     Q_UNUSED(errmess);
-    if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "Epics4Plugin:pvSetWave";
+    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "Epics4Plugin:pvSetWave";
     if (kData->edata.info == (void *) Q_NULLPTR) throw std::runtime_error("Epics4Plugin::pvSetWave kData->edata.info  is null");
     PVAInterfaceGlue *pvaInterfaceGlue  = static_cast<PVAInterfaceGlue *>(kData->edata.info);
     PVAInterfacePtr pvaInterface = pvaInterfaceGlue->getPVAInterface();
@@ -1885,7 +1885,7 @@ bool Epics4Plugin::pvSetWave(knobData *kData,
 
 int Epics4Plugin::pvGetTimeStamp(char *pv, char *timestamp)
 {
-    if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "Epics4Plugin:pvGetTimeStamp";
+    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "Epics4Plugin:pvGetTimeStamp";
     map<std::string, int>::iterator it = pvMap.begin();
     while (it != pvMap.end()) {
         string mapname = it->first;
@@ -1901,7 +1901,7 @@ int Epics4Plugin::pvGetTimeStamp(char *pv, char *timestamp)
 }
 
 bool Epics4Plugin::pvGetTimeStampN(knobData *kData, char *timestamp) {
-    if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "Epics4Plugin:pvGetTimeStamp";
+    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "Epics4Plugin:pvGetTimeStamp";
     if (kData->edata.info == (void *) Q_NULLPTR) throw std::runtime_error("Epics4Plugin::pvSetWave kData->edata.info  is null");
     PVAInterfaceGlue *pvaInterfaceGlue  = static_cast<PVAInterfaceGlue *>(kData->edata.info);
     PVAInterfacePtr pvaInterface = pvaInterfaceGlue->getPVAInterface();
@@ -1912,7 +1912,7 @@ bool Epics4Plugin::pvGetTimeStampN(knobData *kData, char *timestamp) {
 
 int Epics4Plugin::pvGetDescription(char *pv, char *description)
 {
-    if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "Epics4Plugin:pvGetDescription";
+    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "Epics4Plugin:pvGetDescription";
     map<std::string, int>::iterator it = pvMap.begin();
     while (it != pvMap.end()) {
         string mapname = it->first;
@@ -1928,7 +1928,7 @@ int Epics4Plugin::pvGetDescription(char *pv, char *description)
 }
 
 bool Epics4Plugin::pvGetDescriptionN(knobData *kData, char *description) {
-    if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "Epics4Plugin:pvGetTimeStamp";
+    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "Epics4Plugin:pvGetTimeStamp";
     if (kData->edata.info == (void *) Q_NULLPTR) throw std::runtime_error("Epics4Plugin::pvSetWave kData->edata.info  is null");
     PVAInterfaceGlue *pvaInterfaceGlue  = static_cast<PVAInterfaceGlue *>(kData->edata.info);
     PVAInterfacePtr pvaInterface = pvaInterfaceGlue->getPVAInterface();
@@ -1938,7 +1938,7 @@ bool Epics4Plugin::pvGetDescriptionN(knobData *kData, char *description) {
 }
 
 int Epics4Plugin::pvClearEvent(void * ptr) {
-    if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "Epics4Plugin:pvClearEvent";
+    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "Epics4Plugin:pvClearEvent";
     PVAInterfaceGlue *pvaInterfaceGlue  = static_cast<PVAInterfaceGlue *>(ptr);
     PVAInterfacePtr pvaInterface = pvaInterfaceGlue->getPVAInterface();
     if(!pvaInterface) throw std::runtime_error("Epics4Plugin::pvSetWave pvaInterface is null");
@@ -1948,7 +1948,7 @@ int Epics4Plugin::pvClearEvent(void * ptr) {
 }
 
 int Epics4Plugin::pvAddEvent(void * ptr) {
-    if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "Epics4Plugin:pvAddEvent";
+    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "Epics4Plugin:pvAddEvent";
     PVAInterfaceGlue *pvaInterfaceGlue  = static_cast<PVAInterfaceGlue *>(ptr);
     PVAInterfacePtr pvaInterface = pvaInterfaceGlue->getPVAInterface();
     if(!pvaInterface) throw std::runtime_error("Epics4Plugin::pvSetWave pvaInterface is null");
@@ -1957,7 +1957,7 @@ int Epics4Plugin::pvAddEvent(void * ptr) {
 }
 
 int Epics4Plugin::pvReconnect(knobData *kData) {
-    if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "Epics4Plugin:pvReconnect";
+    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "Epics4Plugin:pvReconnect";
     if (kData->edata.info == (void *) Q_NULLPTR) throw std::runtime_error("Epics4Plugin::pvReconnect kData->edata.info  is null");
     PVAInterfaceGlue *pvaInterfaceGlue  = static_cast<PVAInterfaceGlue *>(kData->edata.info);
     PVAInterfacePtr pvaInterface = pvaInterfaceGlue->getPVAInterface();
@@ -1966,7 +1966,7 @@ int Epics4Plugin::pvReconnect(knobData *kData) {
 }
 
 int Epics4Plugin::pvDisconnect(knobData *kData) {
-    if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "Epics4Plugin:pvDisconnect";
+    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "Epics4Plugin:pvDisconnect";
     if (kData->edata.info == (void *) Q_NULLPTR) throw std::runtime_error("Epics4Plugin::pvDisconnect kData->edata.info  is null");
     PVAInterfaceGlue *pvaInterfaceGlue  = static_cast<PVAInterfaceGlue *>(kData->edata.info);
     PVAInterfacePtr pvaInterface = pvaInterfaceGlue->getPVAInterface();
@@ -1975,7 +1975,7 @@ int Epics4Plugin::pvDisconnect(knobData *kData) {
 }
 
 int Epics4Plugin::FlushIO() {
-    if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "Epics4Plugin:FlushIO";
+    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "Epics4Plugin:FlushIO";
     ca_flush_io();
     return true;
 }
@@ -1983,18 +1983,18 @@ int Epics4Plugin::FlushIO() {
 void Epics4Plugin::closeEvent(){
    TerminateIO();
    Epics4Plugin::setDebug(true);
-   if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "Epics4Plugin::closeEvent calling ClientFactory::stop();";
+   if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "Epics4Plugin::closeEvent calling ClientFactory::stop();";
    ClientFactory::stop();
-   if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "Epics4Plugin::closeEvent calling CAClientFactory::stop();";
+   if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "Epics4Plugin::closeEvent calling CAClientFactory::stop();";
    CAClientFactory::stop();
-   if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "Epics4Plugin::closeEvent calling epics4_callbackThread->stop();";
+   if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "Epics4Plugin::closeEvent calling epics4_callbackThread->stop();";
    epics4_callbackThread->stop();
    providerN=Q_NULLPTR;
 
 }
 
 int Epics4Plugin::TerminateIO() {
-    if(Epics4Plugin::getDebug()) qCDebug(::epics4) << "Epics4Plugin::TerminateIO returning true;";
+    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "Epics4Plugin::TerminateIO returning true;";
     return true;
 }
 

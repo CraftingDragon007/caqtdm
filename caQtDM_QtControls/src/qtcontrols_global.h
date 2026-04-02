@@ -75,9 +75,8 @@
             //#define QPalette::Background QPalette::Window
 #endif
 
-// Names cannot be the same as widget, therefore add W (for widget)
-Q_DECLARE_LOGGING_CATEGORY(caTextEntryW);
-Q_DECLARE_LOGGING_CATEGORY(caLineEditW);
-Q_DECLARE_LOGGING_CATEGORY(caCartesianPlotW)
+Q_DECLARE_LOGGING_CATEGORY(caTextEntryLog);
+Q_DECLARE_LOGGING_CATEGORY(caLineEditLog);
+Q_DECLARE_LOGGING_CATEGORY(caCartesianPlotLog)
 
 #endif //QTCONGLOBAL_H

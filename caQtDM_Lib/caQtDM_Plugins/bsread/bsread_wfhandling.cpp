@@ -81,7 +81,7 @@ void bsread_wfhandling::wfconvert()
         }
         case bs_string:
         case bs_bool:{
-          qCWarning(bsread) << "bool and string not yet handled as waveform";
+          qCWarning(bsreadLog) << "bool and string not yet handled as waveform";
           break;
         }
 

@@ -11,7 +11,7 @@
 #define ENV_BUFFER_SIZE "CAQTDM_LOGGING_LOGSTASH_BUFFER_SIZE"
 #define ENV_LOGSTASH_URL "CAQTDM_LOGGING_LOGSTASH_URL"
 
-Q_LOGGING_CATEGORY(logstashLogHandler, "caqtdm.logging.logstash");
+Q_LOGGING_CATEGORY(logstashLogHandlerLog, "caqtdm.logging.logstash");
 
 LogstashLogHandler::LogstashLogHandler(QObject *parent)
     : QObject(parent)
@@ -54,7 +54,7 @@ qint64 LogstashLogHandler::intFromEnv(const char *envName, const qint64 defaultV
     bool ok;
     const qint64 parsedValue = valueString.toLongLong(&ok);
     if (!ok) {
-        qCWarning(logstashLogHandler)
+        qCWarning(logstashLogHandlerLog)
             << envName << QSL("is set and has a value, but could not be parsed to an int");
         return defaultValue;
     }
@@ -66,7 +66,7 @@ int LogstashLogHandler::bufferTimeoutMsFromEnv(const int defaultTimeoutS)
 {
     qint64 bufferTimeoutS = intFromEnv(ENV_BUFFER_TIMEOUT, defaultTimeoutS);
     if (bufferTimeoutS < 1) {
-        qCWarning(logstashLogHandler)
+        qCWarning(logstashLogHandlerLog)
             << ENV_BUFFER_TIMEOUT << QSL("specified invalid buffer timeout, must be positive");
         return defaultTimeoutS;
     }
@@ -74,7 +74,7 @@ int LogstashLogHandler::bufferTimeoutMsFromEnv(const int defaultTimeoutS)
     if (bufferTimeoutS
         > INT_MAX
               / 1000) { // Will be multiplied by 1000 afterwards to get MS, but cannot multiply in here due to potential overflow -> divide limit instead
-        qCWarning(logstashLogHandler)
+        qCWarning(logstashLogHandlerLog)
             << ENV_BUFFER_TIMEOUT << QSL("specified invalid buffer timeout, must be smaller than")
             << INT_MAX / 1000;
         return defaultTimeoutS;
@@ -87,13 +87,13 @@ int LogstashLogHandler::bufferSizeFromEnv(const int defaultBufferSize)
 {
     qint64 bufferSize = intFromEnv(ENV_BUFFER_SIZE, defaultBufferSize);
     if (bufferSize < 0) {
-        qCWarning(logstashLogHandler)
+        qCWarning(logstashLogHandlerLog)
             << ENV_BUFFER_SIZE << QSL("specified invalid buffer size, must be >= 0");
         return defaultBufferSize;
     }
 
     if (bufferSize > INT_MAX) {
-        qCWarning(logstashLogHandler)
+        qCWarning(logstashLogHandlerLog)
             << ENV_BUFFER_SIZE << QSL("specified invalid buffer size, must be smaller than")
             << INT_MAX;
         return defaultBufferSize;
@@ -111,14 +111,14 @@ QUrl LogstashLogHandler::logstashUrlFromEnv(const QString &defaultLogstashUrl)
 
     const QUrl url(urlString);
     if (!url.isValid()) {
-        qCCritical(logstashLogHandler)
+        qCCritical(logstashLogHandlerLog)
             << ENV_LOGSTASH_URL << QSL("is set and has a value, but is not a valid QUrl");
         return defaultLogstashUrl;
     }
 
 #ifdef QT_NO_SSL
     if (urlString.startsWith("https")) {
-        qCWarning(logstashLogHandler)
+        qCWarning(logstashLogHandlerLog)
             << ENV_LOGSTASH_URL << "is HTTPS, even though QT_NO_SSL is set. This might break.";
     }
 #endif
@@ -199,7 +199,7 @@ void LogstashLogHandler::clearLogBuffer()
     QNetworkReply *reply = m_networkManager->post(request, payload);
     QObject::connect(reply, &QNetworkReply::finished, [reply]() {
         if (reply->error() != QNetworkReply::NoError) {
-            qCCritical(logstashLogHandler)
+            qCCritical(logstashLogHandlerLog)
                 << QSL("Failed to send log to Logstash:") << reply->errorString();
         }
         reply->deleteLater();

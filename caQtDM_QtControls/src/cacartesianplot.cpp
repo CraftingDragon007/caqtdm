@@ -33,7 +33,7 @@
 #include "plotHelperClasses.h"
 #include <QtCore>
 
-Q_LOGGING_CATEGORY(caCartesianPlotW, "caqtdm.widgets.cacartesianplot");
+Q_LOGGING_CATEGORY(caCartesianPlotLog, "caqtdm.widgets.cacartesianplot");
 
 caCartesianPlot::caCartesianPlot(QWidget *parent) : QwtPlot(parent)
 {
@@ -1291,7 +1291,7 @@ void caCartesianPlot::setMinXResize(double value){
             if (fabs(data_minX-value)>std::numeric_limits<double>::epsilon()*10){
                 data_minX=value;
                 setScaleX(data_minX, data_maxX);
-                qCDebug(caCartesianPlotW) << "setMinXResize: "<< data_minX << data_maxX;
+                qCDebug(caCartesianPlotLog) << "setMinXResize: "<< data_minX << data_maxX;
             }
         }else{
            ignorefirst_MinX=false;
@@ -1313,7 +1313,7 @@ void caCartesianPlot::setMaxXResize(double value){
             if (fabs(data_maxX-value)>std::numeric_limits<double>::epsilon()*10){
                 data_maxX=value;
                 setScaleX(data_minX, data_maxX);
-                qCDebug(caCartesianPlotW) << "setMaxXResize: "<< data_minX << data_maxX;
+                qCDebug(caCartesianPlotLog) << "setMaxXResize: "<< data_minX << data_maxX;
             }
         }else{
            ignorefirst_MaxX=false;
@@ -1336,7 +1336,7 @@ void caCartesianPlot::setMinYResize(double value){
             if (fabs(data_minY-value)>std::numeric_limits<double>::epsilon()*10){
                 data_minY=value;
                 setScaleY(data_minY, data_maxY);
-                qCDebug(caCartesianPlotW) << "setMinYResize: "<< data_minY << data_maxY;
+                qCDebug(caCartesianPlotLog) << "setMinYResize: "<< data_minY << data_maxY;
             }
         }else{
            ignorefirst_MinY=false;
@@ -1358,7 +1358,7 @@ void caCartesianPlot::setMaxYResize(double value){
             if (fabs(data_maxY-value)>std::numeric_limits<double>::epsilon()*10){
                 data_maxY=value;
                 setScaleY(data_minY, data_maxY);
-                qCDebug(caCartesianPlotW) << "setMaxYResize: "<< data_minY << data_maxY;
+                qCDebug(caCartesianPlotLog) << "setMaxYResize: "<< data_minY << data_maxY;
             }
         }else{
            ignorefirst_MaxY=false;

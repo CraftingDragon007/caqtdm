@@ -10,7 +10,7 @@
 #define ENV_BUFFER_TIMEOUT "CAQTDM_LOGGING_FILE_BUFFER_TIMEOUT"
 #define ENV_BUFFER_SIZE "CAQTDM_LOGGING_FILE_BUFFER_SIZE"
 
-Q_LOGGING_CATEGORY(fileLogHandler, "caqtdm.logging.file");
+Q_LOGGING_CATEGORY(fileLogHandlerLog, "caqtdm.logging.file");
 
 FileLogHandler::FileLogHandler(QObject *parent)
     : QObject(parent)
@@ -21,7 +21,7 @@ FileLogHandler::FileLogHandler(QObject *parent)
 
     if (!logDirectory.exists()) {
         if (!logDirectory.mkpath(logDirectory.path())) {
-            qCCritical(fileLogHandler)
+            qCCritical(fileLogHandlerLog)
                 << QSL("Failed to create log direcotry:") << logDirectory.path();
             return;
         }
@@ -30,7 +30,7 @@ FileLogHandler::FileLogHandler(QObject *parent)
     const qint64 timestamp = QDateTime::currentSecsSinceEpoch();
     QFile logFile(logDirectory.filePath(QString::number(timestamp) + QSL(".log")));
     if (!logFile.open(QIODevice::ReadWrite)) {
-        qCCritical(fileLogHandler) << QSL("Failed to create log file:") << logFile.fileName();
+        qCCritical(fileLogHandlerLog) << QSL("Failed to create log file:") << logFile.fileName();
         return;
     }
     m_logFilePath = logFile.fileName();
@@ -77,7 +77,7 @@ qint64 FileLogHandler::intFromEnv(const char *envName, const qint64 defaultValue
     bool ok;
     const qint64 parsedValue = valueString.toLongLong(&ok);
     if (!ok) {
-        qCWarning(fileLogHandler)
+        qCWarning(fileLogHandlerLog)
             << envName << QSL("is set and has a value, but could not be parsed to an int");
         return defaultValue;
     }
@@ -89,13 +89,13 @@ int FileLogHandler::fileCountFromEnv(const int defaultFileCount)
 {
     qint64 fileCount = intFromEnv(ENV_FILE_COUNT, defaultFileCount);
     if (fileCount < 1) {
-        qCWarning(fileLogHandler) << ENV_FILE_COUNT
+        qCWarning(fileLogHandlerLog) << ENV_FILE_COUNT
                                   << QSL("specified an invalid file count, must be positive");
         return defaultFileCount;
     }
 
     if (fileCount > INT_MAX) {
-        qCWarning(fileLogHandler) << ENV_FILE_COUNT
+        qCWarning(fileLogHandlerLog) << ENV_FILE_COUNT
                                   << QSL("specified invalid file count, must be smaller than")
                                   << INT_MAX;
         return defaultFileCount;
@@ -108,7 +108,7 @@ qint64 FileLogHandler::fileSizeBFromEnv(const qint64 defaultFileSizeB)
 {
     quint64 fileSizeB = intFromEnv(ENV_FILE_SIZE, defaultFileSizeB);
     if (fileSizeB < 1) {
-        qCWarning(fileLogHandler) << ENV_FILE_SIZE
+        qCWarning(fileLogHandlerLog) << ENV_FILE_SIZE
                                   << QSL("specified invalid file size, must be positive");
         return defaultFileSizeB;
     }
@@ -120,7 +120,7 @@ int FileLogHandler::bufferTimeoutMsFromEnv(const int defaultTimeoutS)
 {
     qint64 bufferTimeoutS = intFromEnv(ENV_BUFFER_TIMEOUT, defaultTimeoutS);
     if (bufferTimeoutS < 1) {
-        qCWarning(fileLogHandler) << ENV_BUFFER_TIMEOUT
+        qCWarning(fileLogHandlerLog) << ENV_BUFFER_TIMEOUT
                                   << QSL("specified invalid buffer timeout, must be positive");
         return defaultTimeoutS;
     }
@@ -128,7 +128,7 @@ int FileLogHandler::bufferTimeoutMsFromEnv(const int defaultTimeoutS)
     if (bufferTimeoutS
         > INT_MAX
               / 1000) { // Will be multiplied by 1000 afterwards to get MS, but cannot multiply in here due to potential overflow -> divide limit instead
-        qCWarning(fileLogHandler) << ENV_BUFFER_TIMEOUT
+        qCWarning(fileLogHandlerLog) << ENV_BUFFER_TIMEOUT
                                   << QSL("specified invalid buffer timeout, must be smaller than")
                                   << INT_MAX / 1000;
         return defaultTimeoutS;
@@ -141,13 +141,13 @@ int FileLogHandler::bufferSizeFromEnv(const int defaultBufferSize)
 {
     qint64 bufferSize = intFromEnv(ENV_BUFFER_SIZE, defaultBufferSize);
     if (bufferSize < 0) {
-        qCWarning(fileLogHandler) << ENV_BUFFER_SIZE
+        qCWarning(fileLogHandlerLog) << ENV_BUFFER_SIZE
                                   << QSL("specified invalid buffer size, must be >= 0");
         return defaultBufferSize;
     }
 
     if (bufferSize > INT_MAX) {
-        qCWarning(fileLogHandler) << ENV_BUFFER_SIZE
+        qCWarning(fileLogHandlerLog) << ENV_BUFFER_SIZE
                                   << QSL("specified invalid buffer size, must be smaller than")
                                   << INT_MAX;
         return defaultBufferSize;
@@ -212,12 +212,12 @@ void FileLogHandler::clearLogBuffer()
 
     QFile logFile(m_logFilePath);
     if (!logFile.open(QIODevice::ReadWrite | QIODevice::Text | QIODevice::Append)) {
-        qCCritical(fileLogHandler) << QSL("Failed to open log file: ") << logFile.fileName();
+        qCCritical(fileLogHandlerLog) << QSL("Failed to open log file: ") << logFile.fileName();
         return;
     }
 
     if (logFile.write(qUtf8Printable(logString)) == -1) {
-        qCCritical(fileLogHandler) << QSL("Failed to write log file: ") << logFile.fileName();
+        qCCritical(fileLogHandlerLog) << QSL("Failed to write log file: ") << logFile.fileName();
     }
     logFile.flush();
 
@@ -234,7 +234,7 @@ void FileLogHandler::halveLogFile(QFile &logFile)
 
     // Read last half
     if (!logFile.seek(halfSize)) {
-        qCCritical(fileLogHandler) << QSL("Failed to seek in log file");
+        qCCritical(fileLogHandlerLog) << QSL("Failed to seek in log file");
         return;
     }
     const QByteArray lastHalf = logFile.read(fileSize - halfSize);
@@ -242,7 +242,7 @@ void FileLogHandler::halveLogFile(QFile &logFile)
     // Truncate and write back last half
     logFile.resize(0);
     if (logFile.write(lastHalf) != lastHalf.size()) {
-        qCCritical(fileLogHandler) << QSL("Failed to write truncated log file");
+        qCCritical(fileLogHandlerLog) << QSL("Failed to write truncated log file");
     }
 
     logFile.flush();

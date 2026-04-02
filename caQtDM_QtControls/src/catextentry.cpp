@@ -28,7 +28,7 @@
 #include <QMouseEvent>
 #include <QMimeData>
 
-Q_LOGGING_CATEGORY(caTextEntryW, "caqtdm.widgets.catextentry");
+Q_LOGGING_CATEGORY(caTextEntryLog, "caqtdm.widgets.catextentry");
 
 caTextEntry::caTextEntry(QWidget *parent) : caLineEdit(parent)
 {
@@ -127,10 +127,10 @@ bool caTextEntry::eventFilter(QObject *obj, QEvent *event)
         setReadOnly(false);
         if(!keepFocusOnLeave) clearFocus();
     } else if(event->type() == QEvent::FocusOut) {
-        qCDebug(caTextEntryW) << "lost focus, set text to" << startText;
+        qCDebug(caTextEntryLog) << "lost focus, set text to" << startText;
         forceText(startText);
     } else if (event->type() == QEvent::FocusIn) {
-        qCDebug(caTextEntryW) << "focus in";
+        qCDebug(caTextEntryLog) << "focus in";
     }
     return QObject::eventFilter(obj, event);
 }

@@ -32,7 +32,7 @@
 #include "fileFunctions.h"
 #include "loggingcategories.h"
 
-Q_LOGGING_CATEGORY(modbus, "caqtdm.plugins.modbus");
+Q_LOGGING_CATEGORY(modbusLog, "caqtdm.plugins.modbus");
 
 // as defined in knobDefines.h
 //caType {caSTRING	= 0, caINT = 1, caFLOAT = 2, caENUM = 3, caCHAR = 4, caLONG = 5, caDOUBLE = 6};
@@ -46,7 +46,7 @@ QString modbusPlugin::pluginName()
 // constructor
 modbusPlugin::modbusPlugin()
 {
-    qCInfo(modbus) << "modbusPlugin: Create";
+    qCInfo(modbusLog) << "modbusPlugin: Create";
 
     mutexknobdataP = Q_NULLPTR;
     connect(qApp, SIGNAL(aboutToQuit()), this, SLOT(closeEvent()));
@@ -63,7 +63,7 @@ modbusPlugin:: ~modbusPlugin()
 // initialize our communicationlayer with everything you need
 int modbusPlugin::initCommunicationLayer(MutexKnobData *data, MessageWindow *messageWindow,QMap<QString, QString> options)
 {
-    qCDebug(modbus) << "modbusPlugin: InitCommunicationLayer with options" << options;
+    qCDebug(modbusLog) << "modbusPlugin: InitCommunicationLayer with options" << options;
 
     mutexknobdataP = data;
     messagewindowP = messageWindow;
@@ -72,7 +72,7 @@ int modbusPlugin::initCommunicationLayer(MutexKnobData *data, MessageWindow *mes
     QStringList modbus_database_files;
 
     QString url = (QString)  qgetenv("CAQTDM_URL_DISPLAY_PATH");
-    qCDebug(modbus) << "url " << url;
+    qCDebug(modbusLog) << "url " << url;
     QString database_file = (QString)  qgetenv("CAQTDM_MODBUS_DATABASE");
 
     modbus_database_files.append(database_file.split(","));
@@ -84,12 +84,12 @@ int modbusPlugin::initCommunicationLayer(MutexKnobData *data, MessageWindow *mes
     foreach (QString modbus_database_file,modbus_database_files) {
 
         if (!url.isEmpty()){
-            qCDebug(modbus) << "TestDownload:" << modbus_database_file;
+            qCDebug(modbusLog) << "TestDownload:" << modbus_database_file;
             filefunction.checkFileAndDownload(modbus_database_file, url);
         }
         searchFile *s = new searchFile(modbus_database_file);
         QString fileNameFound = s->findFile();
-        qCDebug(modbus) << "fileNameFound:" << fileNameFound;
+        qCDebug(modbusLog) << "fileNameFound:" << fileNameFound;
         delete s;
         if (!fileNameFound.isEmpty()){
             QFile file(fileNameFound);
@@ -149,7 +149,7 @@ int modbusPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip) {
     int pos;
 
     QMutexLocker locker(&mutex);
-    qCDebug(modbus) << "modbusPlugin:pvAddMonitor" << kData->pv << kData->index << kData;
+    qCDebug(modbusLog) << "modbusPlugin:pvAddMonitor" << kData->pv << kData->index << kData;
 
     QString target=kData->pv;
     QString replace=modbus_translation_map.value(removeEPICSExtensions(target),"");
@@ -172,9 +172,9 @@ int modbusPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip) {
         break;
     }
     if (!connector){
-        qCDebug(modbus) << "create new decode" << target;
+        qCDebug(modbusLog) << "create new decode" << target;
         connector = new modbus_decode();
-        qCDebug(modbus) << "Target" << target << QUrl::fromUserInput(target);
+        qCDebug(modbusLog) << "Target" << target << QUrl::fromUserInput(target);
         connector->setModbustarget(QUrl::fromUserInput(target));
 
 
@@ -197,7 +197,7 @@ int modbusPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip) {
        msg.append(target);
        if(messagewindowP != Q_NULLPTR) messagewindowP->postMsgEvent(QtDebugMsg,(char*) msg.toLatin1().constData());
     }else{
-        qCDebug(modbus) << "reuse decode" << target;
+        qCDebug(modbusLog) << "reuse decode" << target;
     }
 
 
@@ -225,7 +225,7 @@ int modbusPlugin::pvClearMonitor(knobData *kData) {
 int modbusPlugin::pvFreeAllocatedData(knobData *kData)
 {
     Q_UNUSED(kData)
-    qCDebug(modbus) << "DemoPlugin:pvFreeAllocatedData";
+    qCDebug(modbusLog) << "DemoPlugin:pvFreeAllocatedData";
     //if (kData->edata.info != (void *) Q_NULLPTR) {
         //free(kData->edata.info);
      //   kData->edata.info = (void*) Q_NULLPTR;
@@ -248,7 +248,7 @@ int modbusPlugin::pvSetValue(char *pv, double rdata, int32_t idata, char *sdata,
     foreach(QPointer<modbus_decode> connector, connectors) {
        connector->pvSetValue(pv,rdata,idata,sdata,object,errmess,forceType);
     }
-    qCDebug(modbus) << "modbusPlugin:pvSetValue" << pv << rdata << idata << sdata;
+    qCDebug(modbusLog) << "modbusPlugin:pvSetValue" << pv << rdata << idata << sdata;
     return 1;
 }
 
@@ -265,7 +265,7 @@ int modbusPlugin::pvSetWave(char *pv, float *fdata, double *ddata, int16_t *data
     Q_UNUSED(errmess);
 
     QMutexLocker locker(&mutex);
-    qCDebug(modbus) << "modbusPlugin:pvSetWave";
+    qCDebug(modbusLog) << "modbusPlugin:pvSetWave";
     return false;
 }
 
@@ -281,7 +281,7 @@ int modbusPlugin::pvGetTimeStamp(char *pv, char *timestamp) {
 // caQtDM_Lib will call this routine for getting the timestamp for this monitor
 int modbusPlugin::pvGetDescription(char *pv, char *description) {
     Q_UNUSED(pv);
-    qCDebug(modbus) << "modbusPlugin:pvGetDescription";
+    qCDebug(modbusLog) << "modbusPlugin:pvGetDescription";
     qstrcpy(description, "no Description available for MODBUS data transfer");
     return true;
 }
@@ -289,20 +289,20 @@ int modbusPlugin::pvGetDescription(char *pv, char *description) {
 // next routines are used to stop and restart the dataacquisition (used in case of tabWidgets in the display)
 int modbusPlugin::pvClearEvent(void * ptr) {
     Q_UNUSED(ptr);
-    qCDebug(modbus) << "modbusPlugin:pvClearEvent";
+    qCDebug(modbusLog) << "modbusPlugin:pvClearEvent";
     return true;
 }
 
 int modbusPlugin::pvAddEvent(void * ptr) {
     Q_UNUSED(ptr);
-    qCDebug(modbus) << "modbusPlugin:pvAddEvent";
+    qCDebug(modbusLog) << "modbusPlugin:pvAddEvent";
     return true;
 }
 
 // next routines are used to Connect and disconnect monitors
 int modbusPlugin::pvReconnect(knobData *kData) {
      Q_UNUSED(kData);
-    qCDebug(modbus) << "modbusPlugin:pvReconnect";
+    qCDebug(modbusLog) << "modbusPlugin:pvReconnect";
     QMutexLocker locker(&mutex);
     QList<QPointer<modbus_decode>> connectors=modbusconnections.values();
     foreach(QPointer<modbus_decode> connector, connectors) {
@@ -314,7 +314,7 @@ int modbusPlugin::pvReconnect(knobData *kData) {
 }
 
 int modbusPlugin::pvDisconnect(knobData *kData) {
-    qCDebug(modbus) << "modbusPlugin:pvDisconnect";
+    qCDebug(modbusLog) << "modbusPlugin:pvDisconnect";
     QMutexLocker locker(&mutex);
     QList<QString> usedkeys=modbusconnections.keys();
     foreach (QString index,usedkeys){
@@ -332,13 +332,13 @@ int modbusPlugin::pvDisconnect(knobData *kData) {
 
 // flush any io
 int modbusPlugin::FlushIO() {
-    qCDebug(modbus) << "modbusPlugin:FlushIO";
+    qCDebug(modbusLog) << "modbusPlugin:FlushIO";
     return true;
 }
 
 // termination
 int modbusPlugin::TerminateIO() {
-    qCDebug(modbus) << "modbusPlugin:TerminateIO";
+    qCDebug(modbusLog) << "modbusPlugin:TerminateIO";
     QMutexLocker locker(&mutex);
     QList<QPointer<modbus_decode>> connectors=modbusconnections.values();
     foreach(QPointer<modbus_decode> connector, connectors) {
@@ -348,7 +348,7 @@ int modbusPlugin::TerminateIO() {
 }
 
 void modbusPlugin::closeEvent(){
-    qCDebug(modbus) << "modbusPlugin:closeEvent ";
+    qCDebug(modbusLog) << "modbusPlugin:closeEvent ";
     QMutexLocker locker(&mutex);
     QList<QPointer<modbus_decode>> connectors=modbusconnections.values();
     foreach(QPointer<modbus_decode> connector, connectors) {

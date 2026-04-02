@@ -50,7 +50,7 @@
 const char* MessageWindow::WINDOW_TITLE = "caQtDM Messages";
 MessageWindow* MessageWindow::MsgHandler = Q_NULLPTR;
 
-Q_LOGGING_CATEGORY(externC, "caqtdm.extern.c");
+Q_LOGGING_CATEGORY(externCLog, "caqtdm.extern.c");
 
 MessageWindow::MessageWindow(QWidget* parent) : QDockWidget(parent)
 {
@@ -223,16 +223,16 @@ extern "C" MessageWindow* C_postMsgEvent(MessageWindow* p, int type, char* msg)
     switch (type) {
     case 0:
         msgType = QtDebugMsg;
-        qCDebug(externC) << msg;
+        qCDebug(externCLog) << msg;
         break;
     case 1:
         msgType = QtWarningMsg;
-        qCWarning(externC) << msg;
+        qCWarning(externCLog) << msg;
         break;
     case 2:
     case 3:
         msgType = QtCriticalMsg;
-        qCCritical(externC) << msg;
+        qCCritical(externCLog) << msg;
         break;
     default:
         return p;

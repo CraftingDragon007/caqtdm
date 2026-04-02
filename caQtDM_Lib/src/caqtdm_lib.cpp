@@ -311,8 +311,8 @@ double CaQtDM_Lib::rTime()
 }
 #endif
 
-Q_LOGGING_CATEGORY(caQtDMLib, "caqtdm.lib.lib");
-Q_LOGGING_CATEGORY(caCartesianPlotW, "caqtdm.widgets.cacartesianplot");
+Q_LOGGING_CATEGORY(caQtDMLibLog, "caqtdm.lib.lib");
+Q_LOGGING_CATEGORY(caCartesianPlotLog, "caqtdm.widgets.cacartesianplot");
 
 QList<QSharedPointer<caHMIConfigTransferItem>> CaQtDM_Lib::externalHmiConfigList;
 QReadWriteLock CaQtDM_Lib::externalHmiConfigListLock;
@@ -5957,7 +5957,7 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
             if(data.edata.fieldtype == caSTRING ||  data.edata.fieldtype ==  caCHAR) {
                 char asc[MAX_STRING_LENGTH];
                 snprintf(asc, MAX_STRING_LENGTH, "caNumeric %s does not treat other then numerical values", qasc(w->objectName()));
-                postMessageAndLog(QtCriticalMsg, asc, caQtDMLib);
+                postMessageAndLog(QtCriticalMsg, asc, caQtDMLibLog);
                 numericWidget->setEnabled(false);
             } else {
                 numericWidget->silentSetValue(data.edata.rvalue);
@@ -5985,7 +5985,7 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
             if(data.edata.fieldtype == caSTRING || data.edata.fieldtype ==  caCHAR) {
                 char asc[MAX_STRING_LENGTH];
                 snprintf(asc, MAX_STRING_LENGTH, "caSpinbox %s does not treat other then numerical values", qasc(w->objectName()));
-                postMessageAndLog(QtCriticalMsg, asc, caQtDMLib);
+                postMessageAndLog(QtCriticalMsg, asc, caQtDMLibLog);
                 spinboxWidget->setEnabled(false);
             } else {
                 spinboxWidget->silentSetValue(data.edata.rvalue);
@@ -6040,7 +6040,7 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
                     } else {
                         char asc[MAX_STRING_LENGTH];
                         snprintf(asc, MAX_STRING_LENGTH, "PV <%s> (x axis) in widget <%s> is set to channel scaling, but the channel limits are invalid. Therefore, the x axis scaling for the widget is reset to auto.", data.pv, qasc(w->objectName()));
-                        postMessageAndLog(QtFatalMsg, asc, caCartesianPlotW);
+                        postMessageAndLog(QtFatalMsg, asc, caCartesianPlotLog);
                         cartesianplotWidget->setXscaling(caCartesianPlot::Auto);
                     }
                 } else if(XorY == caCartesianPlot::CH_Y && cartesianplotWidget->getYscaling() == caCartesianPlot::Channel) {
@@ -6049,7 +6049,7 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
                     } else {
                         char asc[MAX_STRING_LENGTH];
                         snprintf(asc, MAX_STRING_LENGTH, "PV <%s> (y axis) in widget <%s> is set to channel scaling, but the channel limits are invalid. Therefore, the y axis scaling for the widget is reset to auto.", data.pv, qasc(w->objectName()));
-                        postMessageAndLog(QtFatalMsg, asc, caCartesianPlotW);
+                        postMessageAndLog(QtFatalMsg, asc, caCartesianPlotLog);
                         cartesianplotWidget->setYscaling(caCartesianPlot::Auto);
                     }
                 }
@@ -6392,14 +6392,14 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
                 else  {
                     char asc[MAX_STRING_LENGTH];
                     snprintf(asc, MAX_STRING_LENGTH, "camera mode %s from pv %s not recognized", qasc(String), qasc(cameraWidget->getPV_ColormodeChannel()));
-                    postMessageAndLog(QtDebugMsg, asc, caQtDMLib);
+                    postMessageAndLog(QtDebugMsg, asc, caQtDMLibLog);
                 }
             } else if(data.specData[0] == 4) { // packing mode overwrite channel if present
                 if(cameraWidget->testPackingmodeStr(String)) cameraWidget->setPackingmodeStr(String);
                 else  {
                     char asc[MAX_STRING_LENGTH];
                     snprintf(asc,MAX_STRING_LENGTH, "camera packing mode %s from pv %s not recognized", qasc(String), qasc(cameraWidget->getPV_PackingmodeChannel()));
-                    postMessageAndLog(QtDebugMsg, asc, caQtDMLib);
+                    postMessageAndLog(QtDebugMsg, asc, caQtDMLibLog);
                 }
             } else if(data.specData[0] == 5) { // minimum level channel if present
                 cameraWidget->updateMin((int) data.edata.rvalue);
@@ -6510,7 +6510,7 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
         Q_UNUSED(wmSignalRescaleWidget)
     } else {
         // something else (user defined monitors with non ca imageWidgets ?) ==============================================
-        qCWarning(caQtDMLib) << "unrecognized widget" << w->metaObject()->className();
+        qCWarning(caQtDMLibLog) << "unrecognized widget" << w->metaObject()->className();
     }
 }
 

@@ -26,7 +26,7 @@
 #include <pipereader.h>
 #include <loggingcategories.h>
 
-Q_LOGGING_CATEGORY(pipeReader, "caqtdm.viewer.pipereader");
+Q_LOGGING_CATEGORY(pipeReaderLog, "caqtdm.viewer.pipereader");
 
 PipeReader::PipeReader(QEventLoop *loop, QObject *parent) : QObject(parent)
 {
@@ -46,9 +46,9 @@ PipeReader::~PipeReader()
 {
 }
 
-void PipeReader:: Quit()
+void PipeReader::Quit()
 {
-    //qDebug() << "timeout";
+    qCDebug(pipeReaderLog) << "timeout";
     timer->stop();
     // get rid of notifier
     disconnect(notifier, SIGNAL(activated(int)), 0, 0 );
@@ -61,14 +61,14 @@ void PipeReader::DataReadyOnStdin() {
     timer->stop();
     QByteArray newData = std_in->readAll();
     std_in->close();
-    //qDebug() << data << data.size();
+    qCDebug(pipeReaderLog) << data << data.size();
     if(newData.size() == 0) {
 
     } else {
         QTemporaryFile file(QDir::tempPath()+"/qt-tempFile");
         file.setAutoRemove(false);
         if(file.open()) {
-            qCInfo(pipeReader) << file.fileName();
+            qCInfo(pipeReaderLog) << file.fileName();
             file.write(newData);
             file.close();
             filename = file.fileName() + ".ui";
@@ -85,7 +85,7 @@ void PipeReader::DataReadyOnStdin() {
 
 QString PipeReader::getTemporaryFilename()
 {
-    //qDebug() << "getTemporaryFilename" << filename;
+    qCDebug(pipeReaderLog) << "getTemporaryFilename" << filename;
     return filename;
 }
 

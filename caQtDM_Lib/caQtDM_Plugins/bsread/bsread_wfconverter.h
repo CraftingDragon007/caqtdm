@@ -149,12 +149,12 @@ public:
 #endif
                 }
                 Sectors.waitForFinished();
-                //qCDebug(bsread) << "Image timer :" << "timer.elapsed() << "milliseconds";
+                //qCDebug(bsreadLog) << "Image timer :" << "timer.elapsed() << "milliseconds";
     #else
                 ConProcess(1,1,ptr,elementcount,target);
     #endif
             }
-            //qCDebug(bsread) << "convert timer :" <<  timer.elapsed() << "milliseconds";
+            //qCDebug(bsreadLog) << "convert timer :" <<  timer.elapsed() << "milliseconds";
           }
       }
     }
