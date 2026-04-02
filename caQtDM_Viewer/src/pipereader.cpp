@@ -24,6 +24,9 @@
  */
 
 #include <pipereader.h>
+#include <loggingcategories.h>
+
+Q_LOGGING_CATEGORY(pipeReader, "caqtdm.viewer.pipereader");
 
 PipeReader::PipeReader(QEventLoop *loop, QObject *parent) : QObject(parent)
 {
@@ -65,7 +68,7 @@ void PipeReader::DataReadyOnStdin() {
         QTemporaryFile file(QDir::tempPath()+"/qt-tempFile");
         file.setAutoRemove(false);
         if(file.open()) {
-            qDebug() << file.fileName();
+            qCInfo(pipeReader) << file.fileName();
             file.write(newData);
             file.close();
             filename = file.fileName() + ".ui";
