@@ -27,13 +27,13 @@ bool HmiSharedConfigListManager::isInitialized() const {
 bool HmiSharedConfigListManager::setup() {
     if (!this_sharedMemory.attach()) {
         if (!this_sharedMemory.create(MAX_SHARED_MEMORY_SIZE)) {
-            qCritical() << PREFIX << "Failed to create or attach shared memory:" << this_sharedMemory.errorString();
+            qCCritical(caHMILog) << PREFIX << "Failed to create or attach shared memory:" << this_sharedMemory.errorString();
             return false;
         }
-        qDebug() << PREFIX << "Shared memory created and attached.";
+        qCInfo(caHMILog) << PREFIX << "Shared memory created and attached.";
 
         if (!this_semaphore.acquire()) {
-            qCritical() << PREFIX << "Failed to acquire semaphore during initial write:" << this_semaphore.errorString();
+            qCCritical(caHMILog) << PREFIX << "Failed to acquire semaphore during initial write:" << this_semaphore.errorString();
             return false;
         }
         if (this_sharedMemory.lock()) {
@@ -41,11 +41,11 @@ bool HmiSharedConfigListManager::setup() {
             memcpy(this_sharedMemory.data(), &initialSize, sizeof(quint32));
             this_sharedMemory.unlock();
         } else {
-            qCritical() << PREFIX << "Failed to lock shared memory during initial write:" << this_sharedMemory.errorString();
+            qCCritical(caHMILog) << PREFIX << "Failed to lock shared memory during initial write:" << this_sharedMemory.errorString();
         }
         this_semaphore.release();
     } else {
-        qDebug() << PREFIX << "Shared memory attached to existing segment.";
+        qCInfo(caHMILog) << PREFIX << "Shared memory attached to existing segment.";
     }
     this_isInitialized = true;
     return true;
@@ -54,9 +54,9 @@ bool HmiSharedConfigListManager::setup() {
 void HmiSharedConfigListManager::shutdown() {
     if (this_sharedMemory.isAttached()) {
         if (!this_sharedMemory.detach()) {
-            qWarning() << PREFIX << "Failed to detach from shared memory:" << this_sharedMemory.errorString();
+            qCWarning(caHMILog) << PREFIX << "Failed to detach from shared memory:" << this_sharedMemory.errorString();
         } else {
-            qDebug() << PREFIX << "Detached from shared memory.";
+            qCInfo(caHMILog) << PREFIX << "Detached from shared memory.";
         }
     }
 }
@@ -71,7 +71,7 @@ QList<QSharedPointer<caHMIConfigTransferItem>> HmiSharedConfigListManager::readL
     QByteArray rawDataFromSharedMemory;
 
     if (!this_semaphore.acquire()) {
-        qCritical() << PREFIX << "Failed to acquire semaphore for reading:" << this_semaphore.errorString();
+        qCCritical(caHMILog) << PREFIX << "Failed to acquire semaphore for reading:" << this_semaphore.errorString();
         return list;
     }
 
@@ -80,7 +80,7 @@ QList<QSharedPointer<caHMIConfigTransferItem>> HmiSharedConfigListManager::readL
         if (this_sharedMemory.constData() && static_cast<size_t>(this_sharedMemory.size()) >= sizeof(quint32)) {
             memcpy(&dataSize, this_sharedMemory.constData(), sizeof(quint32));
         } else {
-            qWarning() << PREFIX << "Shared memory is empty or too small to read data size.";
+            qCWarning(caHMILog) << PREFIX << "Shared memory is empty or too small to read data size.";
             this_sharedMemory.unlock();
             this_semaphore.release();
             return list;
@@ -90,13 +90,13 @@ QList<QSharedPointer<caHMIConfigTransferItem>> HmiSharedConfigListManager::readL
             const char* dataPtr = static_cast<const char*>(this_sharedMemory.constData()) + sizeof(quint32);
             rawDataFromSharedMemory = QByteArray(dataPtr, static_cast<int>(dataSize)); // Copy actual data
         } else if (dataSize == 0) {
-            qDebug() << PREFIX << "Shared memory contains an empty list.";
+            qCDebug(caHMILog) << PREFIX << "Shared memory contains an empty list.";
         } else {
-            qWarning() << PREFIX << "Invalid data size detected in shared memory or shared memory too small. Data size:" << dataSize << "Shared memory size:" << this_sharedMemory.size();
+            qCWarning(caHMILog) << PREFIX << "Invalid data size detected in shared memory or shared memory too small. Data size:" << dataSize << "Shared memory size:" << this_sharedMemory.size();
         }
         this_sharedMemory.unlock();
     } else {
-        qCritical() << PREFIX << "Failed to lock shared memory for reading:" << this_sharedMemory.errorString();
+        qCCritical(caHMILog) << PREFIX << "Failed to lock shared memory for reading:" << this_sharedMemory.errorString();
     }
     this_semaphore.release();
 
@@ -142,11 +142,11 @@ bool HmiSharedConfigListManager::writeList(const QList<QSharedPointer<caHMIConfi
         memcpy(this_sharedMemory.data(), &dataSize, sizeof(quint32));
         memcpy(static_cast<char*>(this_sharedMemory.data()) + sizeof(quint32), serializedData.constData(), dataSize);
         this_sharedMemory.unlock();
-        //qDebug() << PREFIX << "List successfully written to shared memory. Size:" << dataSize << "bytes.";
+        qCDebug(caHMILog) << PREFIX << "List successfully written to shared memory. Size:" << dataSize << "bytes.";
         emit dataChanged();
         // Note: This signal is only emitted within the current process.
     } else {
-        qCritical() << PREFIX << "Failed to lock shared memory for writing:" << this_sharedMemory.errorString();
+        qCCritical(caHMILog) << PREFIX << "Failed to lock shared memory for writing:" << this_sharedMemory.errorString();
         this_semaphore.release();
         return false;
     }

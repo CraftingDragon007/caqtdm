@@ -49,6 +49,8 @@
 
 #define PROGRESS_BAR_AREA_HEIGHT 50
 
+Q_LOGGING_CATEGORY(splashScreen, "caqtdm.lib.spashscreen");
+
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 SplashScreen::SplashScreen(QWidget *parent) : QSplashScreen(parent), m_progress(0)
 #else
@@ -113,7 +115,7 @@ QString SplashScreen::getMappedSplashScreenImage(QDate &date)
 {
     QFile mappingFile(":splashScreenMapping.json");
     if (!mappingFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-       qCritical() << "Couldn't open splashScreen mapping file";
+       qCCritical(splashScreen) << "Couldn't open splashScreen mapping file";
        return "";
     }
 
@@ -121,7 +123,7 @@ QString SplashScreen::getMappedSplashScreenImage(QDate &date)
     mappingFile.close();
     QJsonDocument mappingDocument = QJsonDocument::fromJson(mappingData);
     if (mappingDocument.isNull()) {
-       qCritical() << "Couldn't parse JSON from splashScreen mapping file";
+       qCCritical(splashScreen) << "Couldn't parse JSON from splashScreen mapping file";
        return "";
     }
 
@@ -138,6 +140,10 @@ QString SplashScreen::getMappedSplashScreenImage(QDate &date)
         mappedValue = mappingObject.value("RANDOM");
     }
 
+    if (mappedValue.isUndefined()) {
+        return "";
+    }
+
     QString mappedImagePath;
     if (mappedValue.isArray()) {
         QJsonArray mappedValueArray = mappedValue.toArray();
@@ -149,13 +155,13 @@ QString SplashScreen::getMappedSplashScreenImage(QDate &date)
     }
 
     if (mappedImagePath.isEmpty()) {
-        qCritical() << "splashScreen mapping file is empty";
+        qCCritical(splashScreen) << "splashScreen mapped filepath is empty";
         return "";
     }
 
     QImageReader reader(mappedImagePath);
     if (reader.format() != "png") {
-        qCritical() << "mapped splashScreen File is not a valid png: " << reader.fileName()
+        qCCritical(splashScreen) << "mapped splashScreen File is not a valid png: " << reader.fileName()
                     << " error: " << reader.errorString();
         return "";
     }

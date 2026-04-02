@@ -1,4 +1,5 @@
 #include "causerid.h"
+#include "caQtDM_Lib_global.h"
 
 #include <QDebug>
 
@@ -9,6 +10,8 @@
 #else
 #include <unistd.h>
 #endif
+
+Q_LOGGING_CATEGORY(caUserIdLog, "caqtdm.lib.causerid");
 
 QString getUniqueUserId()
 {
@@ -22,13 +25,13 @@ QString getUniqueUserId()
     GetUserNameW(nullptr, &usernameBufferSize);
 
     if (usernameBufferSize == 0) {
-        qWarning("getUserUniqueId: Failed to get username buffer size. Error: %d", GetLastError());
+        qCWarning(caUserIdLog) << "getUserUniqueId: Failed to get username buffer size. Error:" << GetLastError();
         return QString();
     }
 
     std::vector<WCHAR> usernameBuffer(usernameBufferSize);
     if (!GetUserNameW(usernameBuffer.data(), &usernameBufferSize)) {
-        qWarning("getUserUniqueId: Failed to get username. Error: %d", GetLastError());
+        qCWarning(caUserIdLog) << "getUserUniqueId: Failed to get username. Error:" << GetLastError();
         return QString();
     }
     QString username = QString::fromWCharArray(usernameBuffer.data());
@@ -53,7 +56,7 @@ QString getUniqueUserId()
     if (sidBufferSize == 0 || domainBufferSize == 0) {
         DWORD err = GetLastError();
         if (err != ERROR_INSUFFICIENT_BUFFER) {
-            qWarning("getUserUniqueId: LookupAccountNameW failed for buffer sizing. Error: %d", err);
+            qCWarning(caUserIdLog) << "getUserUniqueId:  LookupAccountNameW failed for buffer sizing. Error:" << err;
             return QString();
         }
     }
@@ -71,14 +74,14 @@ QString getUniqueUserId()
             &domainBufferSize,
             &snu
             )) {
-        qWarning("getUserUniqueId: LookupAccountNameW failed. Error: %d", GetLastError());
+        qCWarning(caUserIdLog) << "getUserUniqueId: LookupAccountNameW failed. Error:" << GetLastError();
         return QString();
     }
 
     // Convert the binary SID to a human-readable string
     LPWSTR sidString = nullptr;
     if (!ConvertSidToStringSidW(reinterpret_cast<PSID>(sidBuffer.data()), &sidString)) {
-        qWarning("getUserUniqueId: ConvertSidToStringSidW failed. Error: %d", GetLastError());
+        qCWarning(caUserIdLog) << "getUserUniqueId: ConvertSidToStringSidW failed. Error:" << GetLastError();
         return QString();
     }
 
