@@ -19,6 +19,7 @@
 #include "mutexKnobData.h"
 #include "bsread_channeldata.h"
 #include "bsread_wfblockconverter.h"
+#include "loggingcategories.h"
 
 #ifndef QT_NO_CONCURRENT
 #include <QtConcurrentRun>
@@ -146,33 +147,17 @@ public:
 #else
                     Sectors.addFuture(QtConcurrent::run(&bsread_wfConverter::ConProcess,this,sector,threadcounter,ptr,elementcount,target));
 #endif
-
-
-
                 }
                 Sectors.waitForFinished();
-                //printf("Image timer : %d milliseconds \n",timer.elapsed());
-
-
+                //qCDebug(bsread) << "Image timer :" << "timer.elapsed() << "milliseconds";
     #else
                 ConProcess(1,1,ptr,elementcount,target);
     #endif
-
-
-
             }
-
-            //qDebug() << "convert timer :" <<  timer.elapsed() << "milliseconds";
-
+            //qCDebug(bsread) << "convert timer :" <<  timer.elapsed() << "milliseconds";
           }
       }
     }
 };
-
-
-
-
-
-
 #endif // BSREAD_WFCONVERTER_H
 

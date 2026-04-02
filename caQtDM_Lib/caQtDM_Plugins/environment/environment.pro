@@ -18,8 +18,7 @@ INCLUDEPATH    += .
 INCLUDEPATH    += ../
 INCLUDEPATH    += ../../src
 
-HEADERS         = environment_plugin.h ../controlsinterface.h \
-    loggingcategory.h
+HEADERS         = environment_plugin.h ../controlsinterface.h ../loggingcategories.h
 
 SOURCES         = environment_plugin.cpp
 

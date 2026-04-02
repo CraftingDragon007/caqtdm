@@ -47,7 +47,7 @@ QString DemoPlugin::pluginName()
 DemoPlugin::DemoPlugin()
 {
     // Logging this way, there is no need to manually specify information about where this log is from etc.
-    qCDebug(demo) << "Create";
+    qCInfo(demo) << "Demo: Create";
 }
 
 // in this demo we update our interface here; normally you should update in from your controlsystem
@@ -162,7 +162,7 @@ int DemoPlugin::pvClearMonitor(knobData *kData) {
 
 int DemoPlugin::pvFreeAllocatedData(knobData *kData)
 {
-    //qDebug() << "DemoPlugin:pvFreeAllocatedData";
+    qCDebug(demo) << "DemoPlugin:pvFreeAllocatedData";
     if (kData->edata.info != (void *) Q_NULLPTR) {
         free(kData->edata.info);
         kData->edata.info = (void*) Q_NULLPTR;
@@ -250,7 +250,7 @@ int DemoPlugin::pvDisconnect(knobData *kData) {
 // flush any io is periodically called (1s timer) in order to flush the disconnection and reconnection
 // used for pv's that will be hidden and shown in case of tabwidgets
 int DemoPlugin::FlushIO() {
-    //qDebug() << "DemoPlugin:FlushIO";
+    qCDebug(demo) << "DemoPlugin:FlushIO";
     return true;
 }
 
@@ -258,7 +258,7 @@ int DemoPlugin::FlushIO() {
 // otherwise probably no meaning; in this demo, we stop the simulation, however it will not be reactivated
 // any more (you may do that through pvReconnect)
 int DemoPlugin::TerminateIO() {
-    //qDebug() << "DemoPlugin:TerminateIO";
+    qCDebug(demo) << "DemoPlugin:TerminateIO";
     timerValues->stop();
     timer->stop();
     return true;

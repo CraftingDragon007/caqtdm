@@ -63,26 +63,26 @@ sfRetrieval::sfRetrieval()
     manager = new QNetworkAccessManager(this);
     eventLoop = new QEventLoop(this);
     errorString = "";
-    //qDebug() << QTime::currentTime().toString() << this << "constructor";
+    qCDebug(archiveSF) << QTime::currentTime().toString() << this << "constructor";
     connect(this, SIGNAL(requestFinished()), this, SLOT(downloadFinished()) );
 }
 
 void sfRetrieval::timeoutL()
 {
     errorString = "http request timeout";
-    //qDebug() << QTime::currentTime().toString() << this << PV << "timeout" << errorString;
+    qCDebug(archiveSF) << QTime::currentTime().toString() << this << PV << "timeout" << errorString;
     cancelDownload();
 }
 
 bool sfRetrieval::requestUrl(const QUrl url, const QByteArray &json, int secondsPast, bool binned, bool timeAxis, QString key)
 {
-    //qDebug() << "sfRetrieval::requestUrl" << json;
+    qCDebug(archiveSF) << "sfRetrieval::requestUrl" << json;
     aborted = false;
     finished = false;
     totalCount = 0;
     secndsPast = secondsPast;
     QString out = QString(json);
-    //printf("caQtDM -- request from %s with %s\n", qasc(url.toString()), qasc(out));
+    qCDebug(archiveSF) << "caQtDM -- request from" << url << "with" << out;
     downloadUrl = url;
     isBinned = binned;
     timAxis = timeAxis;
@@ -112,7 +112,7 @@ bool sfRetrieval::requestUrl(const QUrl url, const QByteArray &json, int seconds
 
     reply = manager->post(*request, json);
 
-    //qDebug() << "requesturl reply" << reply;
+    qCDebug(archiveSF) << "requesturl reply" << reply;
 
     connect(manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(finishReply(QNetworkReply*)));
 
@@ -121,7 +121,7 @@ bool sfRetrieval::requestUrl(const QUrl url, const QByteArray &json, int seconds
     timeoutHelper->setInterval(60000);
     timeoutHelper->start();
     connect(timeoutHelper, SIGNAL(timeout()), this, SLOT(timeoutL()));
-    //qDebug() << QTime::currentTime().toString() << this << PV << "go on eventloop->exec";
+    qCDebug(archiveSF) << QTime::currentTime().toString() << this << PV << "go on eventloop->exec";
     eventLoop->exec();
 
     //downloadfinished will continue
@@ -141,7 +141,7 @@ void sfRetrieval::cancelDownload()
 
     disconnect(manager);
     if( reply != Q_NULLPTR ) {
-        //qDebug() << QTime::currentTime().toString() << this << PV << "!!!!!!!!!!!!!!!!! abort networkreply for";
+        qCDebug(archiveSF) << QTime::currentTime().toString() << this << PV << "!!!!!!!!!!!!!!!!! abort networkreply for";
         reply->abort();
         reply->deleteLater();
         reply = Q_NULLPTR;
@@ -153,7 +153,7 @@ void sfRetrieval::cancelDownload()
 
 int sfRetrieval::downloadFinished()
 {
-    //qDebug() << QTime::currentTime().toString() << this << PV << "download finished";
+    qCDebug(archiveSF) << QTime::currentTime().toString() << this << PV << "download finished";
     //eventLoop->processEvents();
 #if QT_VERSION > QT_VERSION_CHECK(4, 8, 0)
     eventLoop->quit();
@@ -166,7 +166,7 @@ int sfRetrieval::downloadFinished()
 void sfRetrieval::finishReply(QNetworkReply *reply)
 {
     if(aborted) return;
-    //qDebug() << QTime::currentTime().toString() << this << PV << "reply received";
+    qCDebug(archiveSF) << QTime::currentTime().toString() << this << PV << "reply received";
     int count = 0;
     struct timeb now;
     int valueIndex = 2;
@@ -181,7 +181,7 @@ void sfRetrieval::finishReply(QNetworkReply *reply)
 
     if(status.toInt() == 301||status.toInt() == 302||status.toInt() == 303||status.toInt() == 307||status.toInt() == 308) {
         errorString = tr("Temporary Redirect status code %1 [%2] from %3").arg(status.toInt()).arg(reply->attribute(QNetworkRequest::HttpReasonPhraseAttribute).toString()).arg(downloadUrl.toString());
-        //qDebug() << QTime::currentTime().toString() << this << PV << "finishreply" << errorString;
+        qCDebug(archiveSF) << QTime::currentTime().toString() << this << PV << "finishreply" << errorString;
         QByteArray header = reply->rawHeader("location");
         qCDebug(archiveSF) << "location" << header;
         finished = true;
@@ -196,7 +196,7 @@ void sfRetrieval::finishReply(QNetworkReply *reply)
 
     if(status.toInt() != 200) {
         errorString = tr("unexpected http status code %1 [%2] from %3").arg(status.toInt()).arg(reply->attribute(QNetworkRequest::HttpReasonPhraseAttribute).toString()).arg(downloadUrl.toString());
-        //qDebug() << QTime::currentTime().toString() << this << PV << "finishreply" << errorString;
+        qCDebug(archiveSF) << QTime::currentTime().toString() << this << PV << "finishreply" << errorString;
         emit requestFinished();
         reply->deleteLater();
         return;
@@ -204,14 +204,14 @@ void sfRetrieval::finishReply(QNetworkReply *reply)
 
     if(reply->error()) {
         errorString = tr("%1: %2").arg(parseError(reply->error())).arg(downloadUrl.toString());
-        //qDebug() << QTime::currentTime().toString() << this << PV << "finishreply" << errorString;
+        qCDebug(archiveSF) << QTime::currentTime().toString() << this << PV << "finishreply" << errorString;
         emit requestFinished();
         reply->deleteLater();
         return;
     }
 
     QString out = QString(reply->readAll());
-    //qDebug() << "received Data in archiveSF";
+    qCDebug(archiveSF) << "received Data in archiveSF";
     reply->deleteLater();
 
     errorString = "";
@@ -270,12 +270,12 @@ void sfRetrieval::finishReply(QNetworkReply *reply)
 
     JSONValue *value = JSON::Parse(qasc(out));
 
-    //printf("\n\nout: %s\n\n", qasc(out));
+    qCDebug(archiveSF) << "\n\nout:" << out << "\n";
 
     // Did it go wrong?
     if (value == Q_NULLPTR) {
         errorString = tr("could not parse json string left=%1 right=%2").arg(out.left(20)).arg(out.right(20));
-        //qDebug() << QTime::currentTime().toString() << this << PV << "finishreply" << errorString;
+        qCDebug(archiveSF) << QTime::currentTime().toString() << this << PV << "finishreply" << errorString;
         emit requestFinished();
         return;
     } else {
@@ -448,7 +448,7 @@ void sfRetrieval::finishReply(QNetworkReply *reply)
     }
 
     totalCount = count;
-    //qDebug() << QTime::currentTime().toString() << this << PV << "finishreply totalcount =" << count << reply;
+    qCDebug(archiveSF) << QTime::currentTime().toString() << this << PV << "finishreply totalcount =" << count << reply;
 
 #endif
 

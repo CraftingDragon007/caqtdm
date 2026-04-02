@@ -53,7 +53,7 @@ QString Epics3Plugin::pluginName()
 
 Epics3Plugin::Epics3Plugin()
 {
-    qCDebug(epics3) << "Create";
+    qCInfo(epics3) << "Epics3: Create";
 }
 
 int Epics3Plugin::initCommunicationLayer(MutexKnobData *data, MessageWindow *messageWindow, QMap<QString, QString> options)
@@ -72,7 +72,7 @@ int Epics3Plugin::initCommunicationLayer(MutexKnobData *data, MessageWindow *mes
 }
 
 int Epics3Plugin::pvAddMonitor(int index, knobData *kData, int rate, int skip) {
-    //qDebug() << "Epics3Plugin:pvAddMonitor" << kData->pv;
+    qCDebug(epics3) << "Epics3Plugin:pvAddMonitor" << kData->pv;
     if (!Channelcache.contains(kData->pv,index)){
         //qDebug() << "Epics3Plugin:first" << kData->pv << kData;
         Channelcache.insert(kData->pv,index);
@@ -84,7 +84,7 @@ int Epics3Plugin::pvAddMonitor(int index, knobData *kData, int rate, int skip) {
 }
 
 int Epics3Plugin::pvClearMonitor(knobData *kData) {
-    //qDebug() << "Epics3Plugin:pvClearMonitor" << kData->pv;
+    qCDebug(epics3) << "Epics3Plugin:pvClearMonitor" << kData->pv;
     Channelcache.remove(kData->pv,kData->index);
     ClearMonitor(kData);
     return true;
@@ -92,7 +92,7 @@ int Epics3Plugin::pvClearMonitor(knobData *kData) {
 
 int Epics3Plugin::pvFreeAllocatedData(knobData *kData)
 {
-    //qDebug() << "Epics3Plugin:pvFreeAllocatedData";
+    qCDebug(epics3) << "Epics3Plugin:pvFreeAllocatedData";
     QMutexLocker locker((QMutex *)kData->mutex);
     if (kData->edata.info != (void *) Q_NULLPTR) {
         free(kData->edata.info);
@@ -108,7 +108,7 @@ int Epics3Plugin::pvFreeAllocatedData(knobData *kData)
 
 int Epics3Plugin::pvSetValue(char *pv, double rdata, int32_t idata, char *sdata, char *object, char *errmess, int forceType) {
 
-    //qDebug() << "Epics3Plugin:pvSetValue";
+    qCDebug(epics3) << "Epics3Plugin:pvSetValue";
     if (Channelcache.contains(pv)){
         //qDebug() << "CacheEntry Found" << pv;
         QMultiMap<QString, int>::iterator i = Channelcache.find(pv);
@@ -116,12 +116,12 @@ int Epics3Plugin::pvSetValue(char *pv, double rdata, int32_t idata, char *sdata,
 
             knobData kData=mutexKnobdataPtr->GetMutexKnobData(i.value());
 
-            //qDebug() << "CacheEntry Found" << kData.pv;
+            qCDebug(epics3) << "CacheEntry Found" << kData.pv;
             if (kData.edata.connected){
                 if (kData.edata.info){
                     chid ch=((connectInfo *)kData.edata.info)->ch;
                     if (ch){
-                        //qDebug() << "Epics3Plugin:use cached Ch" << pv <<":"<< kData.pv <<":"<< kData.edata.connected ;
+                        qCDebug(epics3) << "Epics3Plugin:use cached Ch" << pv << ":" << kData.pv << ":" << kData.edata.connected;
                         return EpicsSetValue_Connected(ch, pv, rdata, idata, sdata, object, errmess, forceType);
                     }
                 }
@@ -133,21 +133,21 @@ int Epics3Plugin::pvSetValue(char *pv, double rdata, int32_t idata, char *sdata,
 }
 
 int Epics3Plugin::pvSetWave(char *pv, float *fdata, double *ddata, int16_t *data16, int32_t *data32, char *sdata, int nelm, char *object, char *errmess) {
-    //qDebug() << "Epics3Plugin:pvSetWave";
+    qCDebug(epics3) << "Epics3Plugin:pvSetWave";
 
     if (Channelcache.contains(pv)){
-        //qDebug() << "CacheEntry Found" << pv;
+        qCDebug(epics3) << "CacheEntry Found" << pv;
         QMultiMap<QString, int>::iterator i = Channelcache.find(pv);
         while (i != Channelcache.end() && i.key() == pv) {
 
             knobData kData=mutexKnobdataPtr->GetMutexKnobData(i.value());
 
-            //qDebug() << "CacheEntry Found" << kData.pv;
+            qCDebug(epics3) << "CacheEntry Found" << kData.pv;
             if (kData.edata.connected){
                 if (kData.edata.info){
                     chid ch=((connectInfo *)kData.edata.info)->ch;
                     if (ch){
-                        //qDebug() << "Epics3Plugin:use cached Ch" << pv <<":"<< kData.pv <<":"<< kData.edata.connected ;
+                        qCDebug(epics3) << "Epics3Plugin:use cached Ch" << pv << ":" << kData.pv << ":" << kData.edata.connected;
                         return EpicsSetWave_Connected(ch, pv, fdata, ddata, data16, data32, sdata, nelm, object, errmess);
                     }
                 }
@@ -159,20 +159,20 @@ int Epics3Plugin::pvSetWave(char *pv, float *fdata, double *ddata, int16_t *data
 }
 
 int Epics3Plugin::pvGetTimeStamp(char *pv, char *timestamp) {
-    //qDebug() << "Epics3Plugin:pvgetTimeStamp";
+    qCDebug(epics3) << "Epics3Plugin:pvgetTimeStamp";
     if (Channelcache.contains(pv)){
-        //qDebug() << "CacheEntry Found" << pv;
+        qCDebug(epics3) << "CacheEntry Found" << pv;
         QMultiMap<QString, int>::iterator i = Channelcache.find(pv);
         while (i != Channelcache.end() && i.key() == pv) {
 
             knobData kData=mutexKnobdataPtr->GetMutexKnobData(i.value());
 
-            //qDebug() << "CacheEntry Found" << kData.pv;
+            qCDebug(epics3) << "CacheEntry Found" << kData.pv;
             if (kData.edata.connected){
                 if (kData.edata.info){
                     chid ch=((connectInfo *)kData.edata.info)->ch;
                     if (ch){
-                        //qDebug() << "Epics3Plugin:use cached Ch" << pv <<":"<< kData.pv <<":"<< kData.edata.connected ;
+                        qCDebug(epics3) << "Epics3Plugin:use cached Ch" << pv << ":" << kData.pv << ":" << kData.edata.connected;
                         return EpicsGetTimeStamp_Connected(ch, pv, timestamp);
                     }
                 }
@@ -184,42 +184,42 @@ int Epics3Plugin::pvGetTimeStamp(char *pv, char *timestamp) {
 }
 
 int Epics3Plugin::pvGetDescription(char *pv, char *description) {
-    //qDebug() << "Epics3Plugin:pvGetDescription";
+    qCDebug(epics3) << "Epics3Plugin:pvGetDescription";
     return EpicsGetDescription(pv, description);
 }
 
 int Epics3Plugin::pvClearEvent(void * ptr) {
-    //qDebug() << "Epics3Plugin:pvClearEvent";
+    qCDebug(epics3) << "Epics3Plugin:pvClearEvent";
     clearEvent(ptr);
     return true;
 }
 
 int Epics3Plugin::pvAddEvent(void * ptr) {
-    //qDebug() << "Epics3Plugin:pvAddEvent";
+    qCDebug(epics3) << "Epics3Plugin:pvAddEvent";
     addEvent(ptr);
     return true;
 }
 
 int Epics3Plugin::pvReconnect(knobData *kData) {
-    //qDebug() << "Epics3Plugin:pvReconnect";
+    qCDebug(epics3) << "Epics3Plugin:pvReconnect";
     EpicsReconnect(kData);
     return true;
 }
 
 int Epics3Plugin::pvDisconnect(knobData *kData) {
-    //qDebug() << "Epics3Plugin:pvDisconnect";
+    qCDebug(epics3) << "Epics3Plugin:pvDisconnect";
     EpicsDisconnect(kData);
     return true;
 }
 
 int Epics3Plugin::FlushIO() {
-    //qDebug() << "Epics3Plugin:FlushIO";
+    qCDebug(epics3) << "Epics3Plugin:FlushIO";
     EpicsFlushIO();
     return true;
 }
 
 int Epics3Plugin::TerminateIO() {
-    //qDebug() << "Epics3Plugin:TerminateIO";
+    qCDebug(epics3) << "Epics3Plugin:TerminateIO";
     TerminateDeviceIO();
     return true;
 }

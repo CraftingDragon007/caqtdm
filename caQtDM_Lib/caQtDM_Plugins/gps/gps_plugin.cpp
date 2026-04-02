@@ -26,6 +26,9 @@
 #include <QThread>
 
 #include "gps_plugin.h"
+#include "loggingcategories.h"
+
+Q_LOGGING_CATEGORY(gps, "caqtdm.plugins.gps");
 
 // as defined in knobDefines.h
 //caType {caSTRING	= 0, caINT = 1, caFLOAT = 2, caENUM = 3, caCHAR = 4, caLONG = 5, caDOUBLE = 6};
@@ -39,7 +42,7 @@ QString gpsPlugin::pluginName()
 // constructor
 gpsPlugin::gpsPlugin()
 {
-    qDebug() << "gpsPlugin: Create";
+    qCInfo(gps) << "GPS: Create";
     enable_gps_readout=false;
 }
 
@@ -79,7 +82,7 @@ void gpsPlugin::updateInterface()
 
 void gpsPlugin::positionUpdated(const QGeoPositionInfo &info)
 {
-     // qDebug() << "Position updated:" << info;
+     qCDebug(gps) << "Position updated:" << info;
      QMutexLocker locker(&mutex);
      if (!enable_gps_readout) return;
      if (info.isValid()){
@@ -146,7 +149,7 @@ void gpsPlugin::updateValues()
 // initialize our communicationlayer with everything you need
 int gpsPlugin::initCommunicationLayer(MutexKnobData *data, MessageWindow *messageWindow, QMap<QString, QString> options)
 {
-    qDebug() << "gpsPlugin: InitCommunicationLayer with options" << options;
+    qCDebug(gps) << "gpsPlugin: InitCommunicationLayer with options" << options;
 
     mutexknobdataP = data;
     messagewindowP = messageWindow;
@@ -177,7 +180,7 @@ int gpsPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip) {
     QMutexLocker locker(&mutex);
     QString key = kData->pv;
 
-    qDebug() << "gpsPlugin:pvAddMonitor" << kData->pv << kData->index;
+    qCDebug(gps) << "gpsPlugin:pvAddMonitor" << kData->pv << kData->index;
     bool validkey=false;
     bool writeable=false;
 
@@ -234,7 +237,7 @@ int gpsPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip) {
 int gpsPlugin::pvClearMonitor(knobData *kData) {
     QMutexLocker locker(&mutex);
 
-    qDebug() << "gpsPlugin:pvClearMonitor" << kData->pv << kData->index;
+    qCDebug(gps) << "gpsPlugin:pvClearMonitor" << kData->pv << kData->index;
     QString key = kData->pv;
     if(!listOfDoubles.contains(key)) listOfDoubles.remove(key);
     listOfIndexes.removeAll(kData->index);
@@ -245,7 +248,7 @@ int gpsPlugin::pvClearMonitor(knobData *kData) {
 int gpsPlugin::pvFreeAllocatedData(knobData *kData)
 {
     QMutexLocker locker(&mutex);
-    //qDebug() << "gpsPlugin:pvFreeAllocatedData";
+    qCDebug(gps) << "gpsPlugin:pvFreeAllocatedData";
     if (kData->edata.info != (void *) Q_NULLPTR) {
         free(kData->edata.info);
         kData->edata.info = (void*) Q_NULLPTR;
@@ -295,7 +298,7 @@ int gpsPlugin::pvSetWave(char *pv, float *fdata, double *ddata, int16_t *data16,
 int gpsPlugin::pvGetTimeStamp(char *pv, char *timestamp) {
     Q_UNUSED(pv);
     Q_UNUSED(timestamp);
-    qDebug() << "gpsPlugin:pvgetTimeStamp";
+    qCDebug(gps) << "gpsPlugin:pvgetTimeStamp";
     strcpy(timestamp, "timestamp in epics format");
     return true;
 }
@@ -304,7 +307,7 @@ int gpsPlugin::pvGetTimeStamp(char *pv, char *timestamp) {
 int gpsPlugin::pvGetDescription(char *pv, char *description) {
     Q_UNUSED(pv);
     Q_UNUSED(description);
-    qDebug() << "gpsPlugin:pvGetDescription";
+    qCDebug(gps) << "gpsPlugin:pvGetDescription";
 
     QString data=pos_data_source->sourceName();
     data="Datasource: "+data;
@@ -315,22 +318,22 @@ int gpsPlugin::pvGetDescription(char *pv, char *description) {
 // next two routines are used to stop and restart the monitoring (used in case of tabWidgets in the display)
 int gpsPlugin::pvClearEvent(void * ptr) {
     Q_UNUSED(ptr);
-    qDebug() << "gpsPlugin:pvClearEvent";
+    qCDebug(gps) << "gpsPlugin:pvClearEvent";
     return true;
 }
 
 int gpsPlugin::pvAddEvent(void * ptr) {
     Q_UNUSED(ptr);
-    qDebug() << "gpsPlugin:pvAddEvent";
+    qCDebug(gps) << "gpsPlugin:pvAddEvent";
     return true;
 }
 
 // next two routines are used to connect and disconnect monitors when the application gest suspended and reactivated
 int gpsPlugin::pvReconnect(knobData *kData) {
     Q_UNUSED(kData);
-    qDebug() << "gpsPlugin:pvReconnect";
+    qCDebug(gps) << "gpsPlugin:pvReconnect";
     if(!enable_gps_readout){
-        qDebug() << "gpsPlugin:startUpdates";
+        qCDebug(gps) << "gpsPlugin:startUpdates";
         pos_data_source->startUpdates();
         enable_gps_readout=true;
     }
@@ -340,14 +343,14 @@ int gpsPlugin::pvReconnect(knobData *kData) {
 
 int gpsPlugin::pvDisconnect(knobData *kData) {
     Q_UNUSED(kData);
-    qDebug() << "gpsPlugin:pvDisconnect";
+    qCDebug(gps) << "gpsPlugin:pvDisconnect";
     return true;
 }
 
 // flush any io is periodically called (1s timer) in order to flush the disconnection and reconnection
 // used for pv's that will be hidden and shown in case of tabwidgets
 int gpsPlugin::FlushIO() {
-    //qDebug() << "gpsPlugin:FlushIO";
+    qCDebug(gps) << "gpsPlugin:FlushIO";
     return true;
 }
 
@@ -355,10 +358,10 @@ int gpsPlugin::FlushIO() {
 // otherwise probably no meaning; in this gps, we stop the simulation, however it will not be reactivated
 // any more (you may do that through pvReconnect)
 int gpsPlugin::TerminateIO() {
-    qDebug() << "gpsPlugin:TerminateIO";
+    qCDebug(gps) << "gpsPlugin:TerminateIO";
 
     if(enable_gps_readout){
-        qDebug() << "gpsPlugin:stopUpdates";
+        qCDebug(gps) << "gpsPlugin:stopUpdates";
         pos_data_source->stopUpdates();
         enable_gps_readout=false;
     }

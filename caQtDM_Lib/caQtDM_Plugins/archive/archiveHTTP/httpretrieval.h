@@ -41,14 +41,6 @@
 #include <QJsonObject>
 #include <QJsonValue>
 
-// Used for debugging on Linux
-#define PRINTFLUSH(...) \
-    do { \
-        printf(__VA_ARGS__); \
-        printf("\n"); \
-        std::fflush(stdout); \
-    } while (0)
-
 class HttpRetrieval:public QObject
 {
     Q_OBJECT

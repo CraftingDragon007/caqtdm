@@ -28,12 +28,13 @@ using namespace std;
 
 
 #include "epics4_callbackThread.h"
+#include "loggingcategories.h"
 
 namespace epics { namespace pvData {
 
 epics4_CallbackThread::~epics4_CallbackThread()
 {
-cout << "CallbackThread::~CallbackThread()\n";
+    qCDebug(epics4) << "CallbackThread::~CallbackThread()";
 }
 
 void epics4_CallbackThread::run()

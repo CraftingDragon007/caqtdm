@@ -44,7 +44,7 @@ QString environmentPlugin::pluginName()
 // constructor
 environmentPlugin::environmentPlugin()
 {
-    qCDebug(environment) << "Create";
+    qCInfo(environment) << "Environment: Create";
 
     mutexknobdataP = Q_NULLPTR;
     connect(qApp, SIGNAL(aboutToQuit()), this, SLOT(closeEvent()));
@@ -117,7 +117,7 @@ int environmentPlugin::pvAddMonitor(int index, knobData *kData, int rate, int sk
     QString value = (QString)  qgetenv(qasc(datapv));
     if (!value.isEmpty()){
         dataSize= value.length();
-        //qDebug() <<"PV:" << datapv << value;
+        qCDebug(environment) << "PV:" << datapv << value;
         if(dataSize != kData->edata.dataSize) {
            if(kData->edata.dataB != (void*) Q_NULLPTR) free(kData->edata.dataB);
             kData->edata.dataB = (void*) malloc((size_t) dataSize*sizeof(char)+5);
@@ -155,7 +155,7 @@ int environmentPlugin::pvClearMonitor(knobData *kData) {
 }
 int environmentPlugin::pvFreeAllocatedData(knobData *kData)
 {
-    //qDebug() << "DemoPlugin:pvFreeAllocatedData";
+    qCDebug(environment) << "DemoPlugin:pvFreeAllocatedData";
     if (kData->edata.info != (void *) Q_NULLPTR) {
         free(kData->edata.info);
         kData->edata.info = (void*) Q_NULLPTR;
@@ -178,7 +178,7 @@ int environmentPlugin::pvSetValue(char *pv, double rdata, int32_t idata, char *s
     Q_UNUSED(errmess)
     Q_UNUSED(object)
     QMutexLocker locker(&mutex);
-    //qDebug() << "environmentPlugin:pvSetValue" << pv << rdata << idata << sdata;
+    qCDebug(environment) << "environmentPlugin:pvSetValue" << pv << rdata << idata << sdata;
     return 0;
 }
 
@@ -236,20 +236,20 @@ int environmentPlugin::pvDisconnect(knobData *kData) {
 
 // flush any io
 int environmentPlugin::FlushIO() {
-    //qDebug() << "environmentPlugin:FlushIO";
+    qCDebug(environment) << "environmentPlugin:FlushIO";
     return true;
 }
 
 // termination
 int environmentPlugin::TerminateIO() {
-    //qDebug() << "environmentPlugin:TerminateIO";
+    qCDebug(environment) << "environmentPlugin:TerminateIO";
     //timerValues->stop();
     //timer->stop();
     return true;
 }
 
 void environmentPlugin::closeEvent(){
-    //qDebug() << "environmentPlugin:closeEvent ";
+    qCDebug(environment) << "environmentPlugin:closeEvent";
     emit closeSignal();
 
 }
