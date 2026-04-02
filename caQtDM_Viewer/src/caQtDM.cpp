@@ -77,7 +77,7 @@
 #include <QStyleFactory>
 #endif
 
-Q_LOGGING_CATEGORY(viewer, "viewer");
+Q_LOGGING_CATEGORY(viewer, "caqtdm.viewer");
 
 static void unixSignalHandler(int signum) {
 

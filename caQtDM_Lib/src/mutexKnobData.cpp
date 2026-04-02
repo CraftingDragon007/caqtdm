@@ -35,7 +35,7 @@
 #include <QPair>
 #include "QtControls"
 
-Q_LOGGING_CATEGORY(mutexKnobData, "lib.mutexknobdata");
+Q_LOGGING_CATEGORY(mutexKnobData, "caqtdm.lib.mutexknobdata");
 
 /**
  * this routine (re)allocates memory and copies the old data to the new memory

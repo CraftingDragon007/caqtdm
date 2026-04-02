@@ -40,7 +40,7 @@
 
 #define qasc(x) x.toLatin1().constData()
 
-Q_LOGGING_CATEGORY(archiveHTTP, "plugins.archive.http")
+Q_LOGGING_CATEGORY(archiveHTTP, "caqtdm.plugins.archive.http")
 
 ArchiveHTTP_Plugin::ArchiveHTTP_Plugin()
 {

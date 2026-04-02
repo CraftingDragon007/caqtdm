@@ -33,7 +33,7 @@
 #include "plotHelperClasses.h"
 #include <QtCore>
 
-Q_LOGGING_CATEGORY(caCartesianPlotW, "widgets.cacartesianplot");
+Q_LOGGING_CATEGORY(caCartesianPlotW, "caqtdm.widgets.cacartesianplot");
 
 caCartesianPlot::caCartesianPlot(QWidget *parent) : QwtPlot(parent)
 {

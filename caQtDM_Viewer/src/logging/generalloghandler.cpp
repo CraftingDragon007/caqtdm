@@ -21,7 +21,7 @@ QList<AbstractLogHandler *> GeneralLogHandler::s_logHandlers;
 QThread *GeneralLogHandler::s_logHandlersThread = Q_NULLPTR;
 qint64 GeneralLogHandler::s_processId = -1;
 
-Q_LOGGING_CATEGORY(generalLogHandler, "logging.general");
+Q_LOGGING_CATEGORY(generalLogHandler, "caqtdm.logging.general");
 
 QtMessageHandler GeneralLogHandler::initialize()
 {

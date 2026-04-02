@@ -33,7 +33,7 @@
 //caType {caSTRING	= 0, caINT = 1, caFLOAT = 2, caENUM = 3, caCHAR = 4, caLONG = 5, caDOUBLE = 6};
 #define qasc(x) x.toLatin1().constData()
 
-Q_LOGGING_CATEGORY(environment, "plugins.environment");
+Q_LOGGING_CATEGORY(environment, "caqtdm.plugins.environment");
 
 // gives the plugin name back
 QString environmentPlugin::pluginName()

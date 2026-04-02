@@ -311,8 +311,8 @@ double CaQtDM_Lib::rTime()
 }
 #endif
 
-Q_LOGGING_CATEGORY(caQtDMLib, "lib.lib");
-Q_LOGGING_CATEGORY(caCartesianPlotW, "widgets.cacartesianplot");
+Q_LOGGING_CATEGORY(caQtDMLib, "caqtdm.lib.lib");
+Q_LOGGING_CATEGORY(caCartesianPlotW, "caqtdm.widgets.cacartesianplot");
 
 QList<QSharedPointer<caHMIConfigTransferItem>> CaQtDM_Lib::externalHmiConfigList;
 QReadWriteLock CaQtDM_Lib::externalHmiConfigListLock;

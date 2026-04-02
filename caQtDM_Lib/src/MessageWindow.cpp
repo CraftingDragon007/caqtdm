@@ -50,7 +50,7 @@
 const char* MessageWindow::WINDOW_TITLE = "caQtDM Messages";
 MessageWindow* MessageWindow::MsgHandler = Q_NULLPTR;
 
-Q_LOGGING_CATEGORY(externC, "extern.c");
+Q_LOGGING_CATEGORY(externC, "caqtdm.extern.c");
 
 MessageWindow::MessageWindow(QWidget* parent) : QDockWidget(parent)
 {

@@ -32,7 +32,7 @@
 
 #define qasc(x) x.toLatin1().constData()
 
-Q_LOGGING_CATEGORY(archiveSF, "plugins.archive.SF");
+Q_LOGGING_CATEGORY(archiveSF, "caqtdm.plugins.archive.SF");
 
 // gives the plugin name back
 QString ArchiveSF_Plugin::pluginName()

@@ -10,7 +10,7 @@
 #define ENV_BUFFER_TIMEOUT "CAQTDM_LOGGING_FILE_BUFFER_TIMEOUT"
 #define ENV_BUFFER_SIZE "CAQTDM_LOGGING_FILE_BUFFER_SIZE"
 
-Q_LOGGING_CATEGORY(fileLogHandler, "logging.file");
+Q_LOGGING_CATEGORY(fileLogHandler, "caqtdm.logging.file");
 
 FileLogHandler::FileLogHandler(QObject *parent)
     : QObject(parent)
