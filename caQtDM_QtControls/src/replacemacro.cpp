@@ -29,6 +29,8 @@
 #include <QMouseEvent>
 #include <QToolTip>
 
+Q_LOGGING_CATEGORY(replaceMacroLog, "caqtdm.widgets.replacemacro");
+
 replaceMacro::replaceMacro(QWidget *parent) : QWidget(parent)
 {
     setStyleSheet("");
@@ -132,14 +134,14 @@ void replaceMacro::setMacroname(QString const &newMacro) {
 void replaceMacro::setMacrovalue(QString const &newValue) {
     setMacroValue(newValue);
     if(thisMacroValues.indexOf(newValue) == -1) {
-       //printf("counts %d %d\n", thisMacroValues.count(), thisMacroValuesListCount);
-       if(thisMacroValues.count() == thisMacroValuesListCount) {
-            //printf("add an item\n");
+        qCDebug(replaceMacroLog) << "counts" << thisMacroValues.count() << thisMacroValuesListCount;
+        if(thisMacroValues.count() == thisMacroValuesListCount) {
+             qCDebug(replaceMacroLog) << "add an item";
             macroValueListCombo->addItem(newValue);
             thisMacroValues.append(newValue);
 
        } else {
-           //printf("replace item at %d\n", thisMacroValuesListCount);
+        qCDebug(replaceMacroLog) << "replace item at" << thisMacroValuesListCount;
            thisMacroValues.replace(thisMacroValuesListCount, newValue);
            macroValueListCombo->setItemText(thisMacroValuesListCount, newValue);
            macroValueListCombo->setCurrentIndex(thisMacroValuesListCount);
@@ -167,7 +169,7 @@ void replaceMacro::setForm(Form form)
 {
     thisForm = form;
 
-    //printf("list %s\n", qasc(thisMacroValues.join(";")));
+    qCDebug(replaceMacroLog) << "list" << thisMacroValues.join(";");
 
     setPropertyVisible(macroValuesList, false);
     setPropertyVisible(macroValue, false);
@@ -263,7 +265,7 @@ void replaceMacro::updateCombo(QStringList keys, QStringList values)
 
         // when not in values list given at designer time, then add it anyway
         if((indx = thisMacroValues.indexOf(values.at(i))) == -1 && keys.at(i) == getMacroKey()) {
-            //printf("for %s value %s not in list of macrovalues\n", qasc(keys.at(i)), qasc(values.at(i)));
+            qCDebug(replaceMacroLog) << "for" << keys.at(i) << "value" << values.at(i) << "not in list of macrovalues";
             macroValueListCombo->addItem(values.at(i));
             macroValueListCombo->setCurrentIndex(macroValueListCombo->count()-1);
             thisMacroValues.append(values.at(i));
@@ -297,7 +299,7 @@ bool replaceMacro::eventFilter(QObject *obj, QEvent *event)
             // when return pressed, set text and reload
             if (ev->key() == Qt::Key_Return || ev->key() == Qt::Key_Enter) {
                 if (ev->isAutoRepeat()) {
-                    //printf("keyPressEvent ignore\n");
+                    qCDebug(replaceMacroLog) << "keyPressEvent ignore";
                     event->ignore();
                 }
                 else {
@@ -417,10 +419,10 @@ bool replaceMacro::event(QEvent *e)
           setStyleSheet("");
           QString c=  palette().color(QPalette::Base).name();
           defBackColor = QColor(c);
-          //printf("default back color %s %s\n", qasc(c), qasc(this->objectName()));
-          c=  palette().color(QPalette::Text).name();
+          qCDebug(replaceMacroLog) << "default back color" << c << this->objectName();
+          c = palette().color(QPalette::Text).name();
           defForeColor = QColor(c);
-          //printf("default fore color %s %s\n", qasc(c), qasc(this->objectName()));
+          qCDebug(replaceMacroLog) << "default fore color" << c << this->objectName();
 
           if(!defBackColor.isValid()) defBackColor = QColor(255, 248, 220, 255);
           if(!defForeColor.isValid()) defForeColor = Qt::black;

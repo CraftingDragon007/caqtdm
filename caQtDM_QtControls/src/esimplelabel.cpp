@@ -30,6 +30,8 @@
 #include <QEvent>
 #include <QResizeEvent>
 
+Q_LOGGING_CATEGORY(eSimpleLabelLog, "caqtdm.widgets.esimplelabel");
+
 ESimpleLabel::ESimpleLabel(QWidget *parent) : QLabel(parent), FontScalingWidget(this)
 {
   if(fontScaleMode() != None)
@@ -64,8 +66,8 @@ QSize ESimpleLabel::calculateTextSpace()
    d_savedTextSpace = contentsRect().size();
    d_savedTextSpace.setWidth(d_savedTextSpace.width() - 2 * frameWidth() - 2 * midLineWidth());
    d_savedTextSpace.setHeight(d_savedTextSpace.height()- 2 * frameWidth() - 2 * midLineWidth());
-   //printf("ESimpleLabel: contents rect %dx%d, text space %dx%d\n", contentsRect().width(), contentsRect().height(),
-   //              d_savedTextSpace.width(), d_savedTextSpace.height());
+   qCDebug(eSimpleLabelLog) << "ESimpleLabel: contents rect" << contentsRect().width() << "x" << contentsRect().height()
+                            << "text space" << d_savedTextSpace.width() << "x" << d_savedTextSpace.height();
   
   return d_savedTextSpace;
 }

@@ -42,9 +42,7 @@
 #include <functional>
 #endif
 
-
-
-
+Q_LOGGING_CATEGORY(qwtThermoMarkerLog, "caqtdm.widgets.qwtthermomarker");
 
 static inline void qwtDrawLine( QPainter *painter, int pos,
     const QColor &color, const QRect &pipeRect, const QRect &liquidRect,
@@ -260,7 +258,7 @@ void QwtThermoMarker::setValue( double value )
         d_data->value = value;
 
         if(d_data->orientation == Qt::Vertical && thisType == Pipe && getDecayOption()) {
-            //printf("%f %f\n ", prvValue, d_data->decayingValue);
+            qCDebug(qwtThermoMarkerLog) << prvValue << d_data->decayingValue;
             if(prvValue > d_data->decayingValue) {
                 d_data->prvValue = prvValue;
                 peakLevelChanged.start();
@@ -659,7 +657,7 @@ void QwtThermoMarker::redrawTimerExpired()
         // Decay the peak signal
         const int elapsedMs = (int)peakLevelChanged.elapsed();
         const qreal decayAmount = qAbs(d_data->maxValue - d_data->minValue) * elapsedMs / 9000.0 / decayTime;   // 1s for 1/10 of bar
-        //printf("value=%f elapsedMs=%d decayAmount=%lf prvValue=%lf\n", d_data->value, elapsedMs, decayAmount, d_data->prvValue);
+        qCDebug(qwtThermoMarkerLog) << "value=" << d_data->value << "elapsedMs=" << elapsedMs << "decayAmount=" << decayAmount << "prvValue=" << d_data->prvValue;
         if (decayAmount < d_data->prvValue) {
             d_data->decayingValue = d_data->prvValue - decayAmount;
         } else {
@@ -700,7 +698,7 @@ void QwtThermoMarker::drawLiquid(QPainter *painter, const QRect &pipeRect ) cons
     if(d_data->orientation == Qt::Vertical && thisType == Pipe && getDecayOption()) {
         decayingRect.setBottom( from + 1);
         decayingRect.setTop( from - 1);
-        //printf("drawliquid value=%lf d_data->decayingPrvValue=%lf y=%d\n", d_data->value, d_data->decayingValue, from);
+        qCDebug(qwtThermoMarkerLog) << "drawliquid value=" << d_data->value << "d_data->decayingPrvValue=" << d_data->decayingValue << "y=" << from;
         QBrush brush = palette().brush( QPalette::ButtonText );
         QColor color = brush.color();
         color = color.lighter();

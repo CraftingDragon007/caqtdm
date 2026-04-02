@@ -29,6 +29,8 @@
 #include <QtDebug>
 #include <math.h>
 
+Q_LOGGING_CATEGORY(eLedLog, "caqtdm.widgets.eled");
+
 ELed::ELed(QWidget *parent) : QWidget(parent), ledColor(Qt::gray)
 {
     setMinimumHeight(4);
@@ -153,12 +155,12 @@ void ELed::setAlphaChannel(int a)
 {
     if(a < 0)
     {
-        printf("alpha channel %d is not valid: it must be an integer between 0 and 255. Setting to 0", a);
+        qCWarning(eLedLog) << "alpha channel" << a << "is not valid: it must be an integer between 0 and 255. Setting to 0";
         d_alphaChannel = 0;
     }
     else if(a > 255)
     {
-        printf("alpha channel %d is not valid: it must be an integer between 0 and 255. Setting to 255", a);
+        qCWarning(eLedLog) << "alpha channel" << a << "is not valid: it must be an integer between 0 and 255. Setting to 255";
         d_alphaChannel = 255;
     }
     d_alphaChannel = a;

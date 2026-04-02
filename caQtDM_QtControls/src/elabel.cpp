@@ -27,6 +27,8 @@
 #include <QPainter>
 #include "elabel.h"
 
+Q_LOGGING_CATEGORY(eLabelLog, "caqtdm.widgets.elabel");
+
 ELabel::ELabel(QWidget *parent) : ESimpleLabel(parent)
 {
         m_falseColor = QColor(Qt::red);
@@ -54,7 +56,7 @@ void ELabel::setValue(QVariant v, bool ref)
 	if ((v.type() == last_val.type()) && (last_val == v))
 	{
 		//last_val = v;
-		qDebug() << "non aggiorno";
+        qCDebug(eLabelLog) << "not updated";
 		return;
 	}
 	else
@@ -150,7 +152,6 @@ void ELabel::display()
 		}
 		else
 		{
-//			qDebug() << "val.toBool() e` falso!";
 			if (palette.color(backgroundRole()) != m_falseColor || m_falseString != text())
 			{
 				palette.setColor(backgroundRole(), m_falseColor);
@@ -200,7 +201,7 @@ void ELabel::display()
 		}
 		setText(val.toString());
 	}
-	qDebug() << "text(): " << text() << "m_trueString: " << m_trueString << "m_falseString: " << m_falseString;
+    qCDebug(eLabelLog) << "text(): " << text() << "m_trueString: " << m_trueString << "m_falseString: " << m_falseString;
 //	QLabel::paintEvent(e);
 }
 

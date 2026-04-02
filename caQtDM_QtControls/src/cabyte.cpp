@@ -28,6 +28,8 @@
 #include <QGridLayout>
 #include <QtDebug>
 
+Q_LOGGING_CATEGORY(caByteLog, "caqtdm.widgets.cabyte");
+
 caByte::caByte(QWidget *parent) : QWidget(parent)
 {
     numRows = 32;
@@ -102,7 +104,7 @@ void caByte::drawByte(long lvalue, QColor trueColor, QColor falseColor)
 {
     if(thisDirection == Down || thisDirection == Right)  {
         for(int i=0; i<= thisEndBit - thisStartBit; i++) {
-            //printf("1 numcells=%d treat cell %d\n", numRows, i);
+            qCDebug(caByteLog) << "1 numcells=" << numRows << "treat cell" << i;
             if(bitState(lvalue, i + thisStartBit)) {
                 cells[i]->writeFG(trueColor);
             } else {
@@ -111,7 +113,7 @@ void caByte::drawByte(long lvalue, QColor trueColor, QColor falseColor)
         }
     } else {
         for(int i=0; i<= thisEndBit - thisStartBit; i++) {
-            //printf("2 numcells=%d treat cell %d\n", numRows, thisEndBit - thisStartBit - i);
+            qCDebug(caByteLog) << "2 numcells=" << numRows << "treat cell" << thisEndBit - thisStartBit - i;
             if(bitState(lvalue, i + thisStartBit)) {
                 cells[thisEndBit - thisStartBit  - i]->writeFG(trueColor);
             } else {

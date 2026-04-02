@@ -39,6 +39,7 @@
     #endif
 #endif
 
+Q_LOGGING_CATEGORY(caLineDrawLog, "caqtdm.widgets.calinedraw");
 
 caLineDraw::caLineDraw(QWidget *parent) : QWidget(parent), FontScalingWidget(this), caWidgetInterface()
 {
@@ -47,7 +48,7 @@ caLineDraw::caLineDraw(QWidget *parent) : QWidget(parent), FontScalingWidget(thi
     // if this font does not exist then try a next one
     QFontInfo info(font);
     QString family = info.family();
-    //printf("got font %s\n", qasc(family));
+    qCDebug(caLineDrawLog) << "got font " << family;
     if(!family.contains("Lucida Sans Typewriter")) {
         QFont  newfont("Monospace");   // not very nice, while a a dot inside the zero to distinguish from o
         newfont.setStyleHint(QFont::TypeWriter);
@@ -217,7 +218,7 @@ void caLineDraw::setAlarmColors(short status, double value, QColor bgAtInit, QCo
     switch (m_AlarmState) {
 
     case NO_ALARM:
-        //qDebug() << "no alarm" << kPtr->pv;
+        qCDebug(caLineDrawLog) << "no alarm";
         if(m_ColorMode == Alarm_Static || m_ColorMode == Alarm_Default) {
             c = AL_GREEN;
             if(m_AlarmHandling == onForeground) setForeAndBackground(c, bgAtInit);
@@ -228,7 +229,7 @@ void caLineDraw::setAlarmColors(short status, double value, QColor bgAtInit, QCo
         break;
 
     case MINOR_ALARM:
-        //qDebug() << "minor alarm";
+        qCDebug(caLineDrawLog) << "minor alarm";
         if(m_ColorMode == Alarm_Static || m_ColorMode == Alarm_Default) {
             c = AL_YELLOW;
             if(m_AlarmHandling == onForeground) setForeAndBackground(c, bgAtInit);
@@ -239,7 +240,7 @@ void caLineDraw::setAlarmColors(short status, double value, QColor bgAtInit, QCo
         break;
 
     case MAJOR_ALARM:
-        //qDebug() << "serious alarm" << kPtr->pv;
+        qCDebug(caLineDrawLog) << "serious alarm";
         if(m_ColorMode == Alarm_Static || m_ColorMode == Alarm_Default) {
             c = AL_RED;
             if(m_AlarmHandling == onForeground) setForeAndBackground(c, bgAtInit);
@@ -250,7 +251,7 @@ void caLineDraw::setAlarmColors(short status, double value, QColor bgAtInit, QCo
         break;
 
     case INVALID_ALARM:
-        //qDebug() << "invalid alarm";
+        qCDebug(caLineDrawLog) << "invalid alarm";
         if(m_ColorMode == Alarm_Static) {
             c =AL_WHITE;
             if(m_AlarmHandling == onForeground) setForeAndBackground(c, bgAtInit);
@@ -261,12 +262,12 @@ void caLineDraw::setAlarmColors(short status, double value, QColor bgAtInit, QCo
         break;
 
     case NOTCONNECTED:
-        //qDebug() << "no connection";
+        qCDebug(caLineDrawLog) << "no connection";
         forceForeAndBackground(AL_WHITE, AL_WHITE);
         break;
 
     default:
-        //qDebug() << "Alarm default" << status;
+        qCDebug(caLineDrawLog) << "Alarm default" << status;
         if(m_ColorMode == Alarm_Static) {
             c = AL_DEFAULT;
             if(m_AlarmHandling == onForeground) setForeAndBackground(c, bgAtInit);
@@ -348,10 +349,10 @@ void caLineDraw::mouseReleaseEvent(QMouseEvent *event){
     QString s = m_Text;
     if(s[s.length()-1] == QString(" ")){
         s.remove(s.length()-1,1);
-        //qDebug() << s;
+        qCDebug(caLineDrawLog) << s;
     }
 
-    qDebug() << this->thisPV << m_Text << s;
+    qCDebug(caLineDrawLog) << this->thisPV << m_Text << s;
     if(s != getMarkedText() && s.length() > 0){
         for(int i = 0; i <= lineDrawList.size() -1; i++){
            // lineDrawList[i]->resetMarking();
@@ -372,7 +373,7 @@ void caLineDraw::mouseMoveEvent(QMouseEvent *event){
 
         handleMarking(position);
         update();
-        // qDebug() << "POS:" << position;
+        qCDebug(caLineDrawLog) << "POS:" << position;
     }
 }
 
@@ -457,7 +458,7 @@ void caLineDraw::handleMarking(QPoint currentMousePosition){
         int  posVal = position.x();
 
 
-        // qDebug() << "F:"<< firstXVal << "L:" << lastXVal << "M:" << mouseVal << "P:" << posVal;
+        qCDebug(caLineDrawLog) << "F:"<< firstXVal << "L:" << lastXVal << "M:" << mouseVal << "P:" << posVal;
         if(startIndex < 0){
             // Is Starting Point Outside Left/Upper Bounds
             if(mouseVal < firstXVal || posVal < firstXVal){
@@ -565,7 +566,7 @@ QString caLineDraw::getMarkedText(){
     }
 
     markedText = markedText.trimmed();
-    // qDebug() << "MarkedText:" << markedText;
+    qCDebug(caLineDrawLog) << "MarkedText:" << markedText;
     return markedText;
 }
 
@@ -763,10 +764,10 @@ bool caLineDraw::event(QEvent *e)
         if(!m_IsShown) {
             QString c = palette().color(QPalette::Base).name();
             m_BackColorDefault = QColor(c);
-            //printf("default back color %s %s\n", qasc(c), qasc(this->objectName()));
+            qCDebug(caLineDrawLog) << "default back color" << c << this->objectName();
             c = palette().color(QPalette::Text).name();
             m_ForeColorDefault = QColor(c);
-            //printf("default fore color %s %s\n", qasc(c), qasc(this->objectName()));
+            qCDebug(caLineDrawLog) << "default fore color" << c << this->objectName();
             if(!m_BackColorDefault.isValid()) m_BackColorDefault = QColor(255, 248, 220, 255);
             if(!m_ForeColorDefault.isValid()) m_ForeColorDefault = Qt::black;
 
@@ -1164,7 +1165,7 @@ void caLineDraw::copy(){
     }
 
     if(markedCount == 1){
-        qDebug() << markedCount;
+        qCDebug(caLineDrawLog) << markedCount;
         copyString = copyString.split("\t")[1].replace("\n", QString(""));
     }
 

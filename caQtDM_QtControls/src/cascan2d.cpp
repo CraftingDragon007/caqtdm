@@ -28,6 +28,8 @@
 #include <QApplication>
 #include "cascan2d.h"
 
+Q_LOGGING_CATEGORY(caScan2DLog, "caqtdm.widgets.cascan2d");
+
 caScan2D::caScan2D(QWidget *parent) : QWidget(parent)
 {
     m_init = true;
@@ -583,14 +585,14 @@ void caScan2D::setColormap(colormap const &map)
 
 void caScan2D::setXCPT(int xcpt)
 {
-    //printf("caScan2D::setXCPT xpt=%d\n", xcpt);
+    qCDebug(caScan2DLog) << "caScan2D::setXCPT xpt=" <<  xcpt;
     m_xcpt = xcpt;
     m_xcptDefined = true;
 }
 
 void caScan2D::setYCPT(int ycpt)
 {
-    //printf("caScan2D::setYCPT ypt=%d\n", ycpt);
+    qCDebug(caScan2DLog) << "caScan2D::setYCPT ypt=" <<  ycpt;
     m_ycpt = ycpt;
     m_ycptDefined = true;
     if (m_init) attemptInitialPlot();
@@ -608,7 +610,7 @@ void caScan2D::setYNEWDATA(int ynewdata)
 
     // I get two calls per monitor event for some reason
     if (m_ynewdata == ynewdata) {
-        //printf("caScan2D::setYNEWDATA for pv %s %d (ignored)\n", qasc(getPV_Data()), ynewdata);
+        qCDebug(caScan2DLog) << "caScan2D::setYNEWDATA for pv" << getPV_Data() << ynewdata << "(ignored)";
         return;
     }
     m_ynewdata = ynewdata;
@@ -616,7 +618,7 @@ void caScan2D::setYNEWDATA(int ynewdata)
     if (!m_widthDefined || !m_heightDefined)
         return;
 
-    //printf("caScan2D::setYNEWDATA for pv %s %d\n", qasc(getPV_Data()), ynewdata);
+    qCDebug(caScan2DLog) << "caScan2D::setYNEWDATA for pv" << getPV_Data() << ynewdata;
     if (m_ynewdata == 0) {
         for (i=0; i<m_width*m_height; i++) xdata[i] = (float) 0.0;
         for (i=0; i<m_height; i++) haveY[i] = 0;
@@ -792,7 +794,7 @@ void caScan2D::newArray(int numDataBytes, float *data) {
     if(!m_widthDefined || !m_heightDefined ||  !m_ycptDefined) return;
 
     if (numDataPts > m_width) numDataPts = m_width;
-    //printf("caScan2D::newArray ypt=%d\n", m_ycpt);
+    qCDebug(caScan2DLog) << "caScan2D::newArray ypt=" << m_ycpt;
     // We're normally going to get new data before the outer scan has posted
     // the new CPT value, so it's useable directly as an array index even though
     // it really means the number of data points acquired.

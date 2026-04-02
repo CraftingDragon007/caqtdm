@@ -37,6 +37,8 @@
 #  include <unistd.h>
 #endif
 
+Q_LOGGING_CATEGORY(networkAccessLog, "caqtdm.widgets.networkaccess");
+
 NetworkAccess::NetworkAccess()
 {
     finished = false;
@@ -56,7 +58,7 @@ bool NetworkAccess::requestUrl(const QUrl url, const QString &file)
 {
     finished = false;
     thisFile = file;
-    //printf("caQtDM -- download %s\n", qasc(url.toString()));
+    qCDebug(networkAccessLog) << "caQtDM -- download" << url.toString();
     downloadUrl = url;
 
     QNetworkRequest request = QNetworkRequest(url);
@@ -97,7 +99,7 @@ int NetworkAccess::downloadFinished()
 
 void NetworkAccess::finishReply(QNetworkReply *reply)
 {
-    //printf("network reply completed! thisFile=%s\n",  qasc(thisFile));
+    qCDebug(networkAccessLog) << "network reply completed! thisFile=" << thisFile;
 
     QVariant status =  reply->attribute(QNetworkRequest::HttpStatusCodeAttribute);
     if(reply->error()) {

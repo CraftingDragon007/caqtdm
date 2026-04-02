@@ -25,6 +25,8 @@
 
 #include "specialFunctions.h"
 
+Q_LOGGING_CATEGORY(specialFunctionsLog, "caqtdm.widgets.specialfunctions");
+
 void Specials::setNewStyleSheet(QWidget* w, QSize size, int bigPtSize, int smallPtSize, QString myStyle, int pointSizeCorrection)
 {
     int pointSize;
@@ -46,6 +48,6 @@ void Specials::setNewStyleSheet(QWidget* w, QSize size, int bigPtSize, int small
 
     QString style = "font: %1pt; %2";
     style = style.arg(pointSize).arg(myStyle);
-    //printf("%s\n", qasc(style));
+    qCDebug(specialFunctionsLog) << style;
     w->setStyleSheet(style);
 }

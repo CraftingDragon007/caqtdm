@@ -27,9 +27,12 @@
 #include <math.h>
 #include "number_delegate.h"
 #include "dec_int_from_format.h"
+#include "qtcontrols_global.h"
 #include <stdio.h>
 
 #define qstoc(x) ""
+
+Q_LOGGING_CATEGORY(numberDelegateLog, "caqtdm.widgets.numberdelegate");
 
 NumberDelegate::NumberDelegate()
 {
@@ -51,7 +54,7 @@ bool NumberDelegate::configureNumber(const QString& format)
             d_decDigits = diff.numDecDigits();
     }
     else
-        printf("NumberDelegate: error decoding format \"%s\"", qstoc(format));
+        qCDebug(numberDelegateLog) << "NumberDelegate: error decoding format:" << format;
     return decodeOk;
 }
 
@@ -65,13 +68,10 @@ void NumberDelegate::configureNumber(const double min, const double max, const Q
     maxFromId = 1 + (int) log10(qMax(max, -min));
     if(maxFromId != d_intDigits)
     {
-        printf("maximum value %f has changed integer digits from %d (format) to %d",
-               max, d_intDigits, maxFromId);
+        qCDebug(numberDelegateLog) << "maximum value" << max << "has changed integer digits from" << d_intDigits << "(format) to" << maxFromId;
         d_intDigits = maxFromId;
     }
     else
-        printf("NumberDelegate configureNumber: integer digits unchanged");
-
-
+        qCDebug(numberDelegateLog) << "NumberDelegate configureNumber: integer digits unchanged";
 }
 

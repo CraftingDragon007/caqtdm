@@ -8,15 +8,16 @@
 #include "mda-load.h"
 #include "mdaReader.h"
 #include "qtdefinitions.h"
+#include "qtcontrols_global.h"
 
-#define PRINT(x)
+Q_LOGGING_CATEGORY(mdaReaderLog, "caqtdm.widgets.mdareader");
 
 void mdaReaderThread(const char *dataFile, int y_cpy);
 struct mda_file *mdaData = NULL;
 
 void mdaReader_RegisterPV(QString pvName) {
     Q_UNUSED(pvName); // not clean but not well solvable with preprocessor
-    PRINT(printf("Somebody registered %s\n", qasc(pvName)));
+    qCDebug(mdaReaderLog) << "Somebody registered" << pvName;
 	return;
 }
 
@@ -29,18 +30,18 @@ int mdaReader_gimmeYerData(QString QS_dataFile, QString QS_pvName, float *data, 
 	detNum = atol(&(pvName[strlen(pvName)-4]));
 	detNum--; // convert from pvName number 01..70 to array index 0..69
 	if (detNum < 0) {
-		PRINT(printf("mdaReader_gimmeYerData: '%s' not found in pv name\n", pvName));
+        qCDebug(mdaReaderLog) << "mdaReader_gimmeYerData: '" << pvName << "' not found in pv name";
 		return(-1);
 	}
-	PRINT(printf("Somebody requested data for %s (detNum=%d), y_cpt=%d\n", pvName, detNum, y_cpt));
-	
+    qCDebug(mdaReaderLog) << "Somebody requested data for" << pvName << "(detNum=" << detNum << "), y_cpt=" << y_cpt;
+
 	// This should be a message to a reader thread.  For now, we just read the whole file.
     mdaReaderThread(qasc(QS_dataFile), y_cpt);
 	if (!mdaData) {
 		return(-1);
 	}
 
-	PRINT(printf("top-level scan name %s\n", mdaData->scan->name));
+    qCDebug(mdaReaderLog) << "top-level scan name" << mdaData->scan->name;
 	if (strncmp(mdaData->scan->name, pvName, strlen(mdaData->scan->name))) {
 		if (mdaData->scan->scan_rank < 2) {
 			return(-1);
@@ -51,29 +52,29 @@ int mdaReader_gimmeYerData(QString QS_dataFile, QString QS_pvName, float *data, 
 			if (detNum == thisScan->detectors[index]->number) break;
 		}
 		if (index == thisScan->number_detectors) {
-			PRINT(printf("detNum %d does not occur in data file\n", detNum));
+            qCDebug(mdaReaderLog) << "detNum" << detNum << "does not occur in data file";
 			for (i=0; i<ny; i++) {
 				for (j=0; j<nx; j++) data[i*nx+j] = 0.;
 			}
 			return(-1);
 		}
-		PRINT(printf("2D data from %s\n", mdaData->scan->sub_scans[0]->name));
+        qCDebug(mdaReaderLog) << "2D data from" << mdaData->scan->sub_scans[0]->name;
 		// last_point is the number of data points acquired
 		ycpt = mdaData->scan->last_point;
 		if (mdaData->scan->sub_scans == NULL) {
-			PRINT(printf("Expected 2D data not found\n"));
+            qCDebug(mdaReaderLog) << "Expected 2D data not found";
 			return(-1);
 		}
 		for (i=0; i<ycpt; i++) {
 			thisScan = mdaData->scan->sub_scans[i];
 			if (thisScan == NULL) {
-				PRINT(printf("Expected 2D data (sub_scans[%d]) not found\n", i));
+                qCDebug(mdaReaderLog) << "Expected 2D data (sub_scans[" << i << "]) not found";
 				for (j=0; j<nx; j++) data[i*nx+j] = 0.;
 				continue;
 			}
 			xcpt = thisScan->last_point;
 			if (thisScan->detectors_data[index] == NULL) {
-				PRINT(printf("Expected 2D data (detectors_data[%d]) not found\n", index));
+                qCDebug(mdaReaderLog) << "Expected 2D data (detectors_data[" << index << "]) not found";
 				for (j=0; j<nx; j++) data[i*nx+j] = 0.;
 				continue;
 			}
@@ -127,5 +128,5 @@ void mdaReaderThread(const char *dataFile, int y_cpt) {
 	}
 	fp = fopen(fname, "rb");
 	if (fp) mdaData = mda_load(fp);
-	PRINT(printf("mdaReaderThread: read '%s'\n", fname));
+    qCDebug(mdaReaderLog) << "mdaReaderThread: read" << fname;
 }

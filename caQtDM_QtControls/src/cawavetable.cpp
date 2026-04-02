@@ -47,6 +47,8 @@
     #endif
 #endif
 
+Q_LOGGING_CATEGORY(caWavetableLog, "caqtdm.widgets.cawavetable");
+
 caWaveTable::caWaveTable(QWidget *parent) : QTableWidget(parent)
 {
     thisFormatC[0] = '\0';
@@ -85,13 +87,13 @@ caWaveTable::caWaveTable(QWidget *parent) : QTableWidget(parent)
     bool canSetStyle = true;
     for(QWidget *checkWidget = this;checkWidget->parentWidget();checkWidget = checkWidget->parentWidget()){
         if (!(checkWidget->styleSheet().isEmpty())){
-            //qDebug().noquote()<<QString("Style for a child widget of %1 is NOT set by object, preferring Style from designer").arg(this->parentWidget()->objectName());
+            qCDebug(caWavetableLog).noquote() << QString("Style for a child widget of %1 is NOT set by object, preferring Style from designer").arg(this->parentWidget()->objectName());
             canSetStyle = false;
             break;
         }
     }
     if (canSetStyle){
-        //qDebug().noquote()<<QString("Style for a child widget of %1 is set by object").arg(this->parentWidget()->objectName());
+        qCDebug(caWavetableLog).noquote() << QString("Style for a child widget of %1 is set by object").arg(this->parentWidget()->objectName());
         QPalette p = QPalette();
         p.setColor(QPalette::AlternateBase, QColor(233, 231, 227));
         setPalette(p);
@@ -384,11 +386,11 @@ bool caWaveTable::eventFilter(QObject *obj, QEvent *event)
         if (ev != (QKeyEvent *)0) {
             if (ev->key() == Qt::Key_Return || ev->key() == Qt::Key_Enter) {
                 if (ev->isAutoRepeat()) {
-                    //printf("keyPressEvent ignore\n");
+                    qCDebug(caWavetableLog) << "keyPressEvent ignore";
                     event->ignore();
                 }
                 else {
-                    //printf("keyPressEvent accept\n");
+                    qCDebug(caWavetableLog) << "keyPressEvent accept";
                     event->accept();
                 }
             }
@@ -405,7 +407,7 @@ bool caWaveTable::eventFilter(QObject *obj, QEvent *event)
         QApplication::restoreOverrideCursor();
         clearFocus();
     } else if(event->type() == QEvent::FocusOut) {
-        //printf("focus out\n");
+        qCDebug(caWavetableLog) << "focus out";
     }
     return QObject::eventFilter(obj, event);
 }
@@ -760,7 +762,7 @@ void caWaveTable::copy()
         }
 
         if(i==0) {
-            //printf("no rows were selected\n");
+            qCDebug(caWavetableLog) << "no rows were selected";
             QModelIndexList cols = select->selectedColumns();
             foreach (QModelIndex Col, cols) {
                 if (i > 0) str += "\n";

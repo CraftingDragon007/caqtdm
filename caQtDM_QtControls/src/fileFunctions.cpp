@@ -28,6 +28,8 @@
 #include "searchfile.h"
 #include "specialFunctions.h"
 
+Q_LOGGING_CATEGORY(fileFunctionsLog, "caqtdm.widgets.filefunctions");
+
 fileFunctions::fileFunctions()
 {
 }
@@ -50,18 +52,17 @@ int fileFunctions::checkFileAndDownload(const QString &fileName, const QString &
     errorString = "";
     infoString = "";
 
-    //QString Path = (QString)  qgetenv("CAQTDM_DISPLAY_PATH");
-    //printf("<%s>\n", qasc(Path));
-    //printf("checkFileAndDownload <%s>\n", qasc(fileName));
+    qCDebug(fileFunctionsLog) << qgetenv("CAQTDM_DISPLAY_PATH");
+    qCDebug(fileFunctionsLog) << "checkFileAndDownload: " << fileName;
 
     searchFile *s = new searchFile(fileName);
     QString fileNameFound = s->findFile();
     if(!fileNameFound.isNull()) {
-        //printf("checkFileAndDownload file <%s> locally found\n", qasc(fileName));
+        qCDebug(fileFunctionsLog) << "checkFileAndDownload file <" << fileName << ">locally found";
         s->deleteLater();
         return true;
     } else {
-        //printf("checkFileAndDownload file <%s> not locally found\n", qasc(fileName));
+        qCDebug(fileFunctionsLog) << "checkFileAndDownload file <" << fileName << "> not locally found";
     }
     s->deleteLater();
 
@@ -75,7 +76,7 @@ int fileFunctions::checkFileAndDownload(const QString &fileName, const QString &
 
     if(displayPath.length() < 1) return false;
 
-    //printf("filename to download %s\n", qasc(fileName));
+    qCDebug(fileFunctionsLog) << "filename to download" << fileName;
 
     displayPath.append("/");
     displayPath.append(fileName);
@@ -107,7 +108,7 @@ bool fileFunctions::removeFilesInTree(const QString &dirName)
                 else {
                     QString suffix = info.suffix();
                     if(fileFilter.contains(suffix)) {
-                        //printf("remove %s\n", qasc(info.absoluteFilePath()));
+                        qCDebug(fileFunctionsLog) << "remove" << info.absoluteFilePath();
                         QFile::remove(info.absoluteFilePath());
                     }
                 }

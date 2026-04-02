@@ -29,6 +29,8 @@
 #include <QPainter>
 //#include <QElapsedTimer>
 
+Q_LOGGING_CATEGORY(caImageLog, "caqtdm.widgets.caimage");
+
 caImage::caImage(QWidget* parent) : QWidget(parent)
 {
     messagequeue = new messageQueue();
@@ -70,13 +72,13 @@ void caImage::init(const QString& filename) {
     if(!success) {
         if(filefunction.lastError().length() > 0) messagequeue->enqueue(filefunction.lastError());
         messagequeue->enqueue(tr("Info: could not find or download file %1, however continue").arg(filename));
-        printf("caimage: %s\n", qasc(tr("Info: could not find or download file %1, however continue; %2").arg(filename).arg(qasc(filefunction.lastInfo()))));
+        qCWarning(caImageLog) << "caimage:" << tr("Info: could not find or download file %1, however continue; %2").arg(filename).arg(qasc(filefunction.lastInfo()));
     }
 
     searchFile *s = new searchFile(filename);
     QString fileNameFound = s->findFile();
     if(fileNameFound.isNull()) {
-        qDebug() << "file" << filename << "does not exist";
+        qCCritical(caImageLog) << "file" << filename << "does not exist";
         delete s;
         return;
     }
