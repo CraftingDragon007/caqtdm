@@ -59,6 +59,11 @@ function normalizeRelativePath(input) {
 
   path = path.replace(/\/+/g, '/');
 
+  const fileName = path.slice(path.lastIndexOf('/') + 1);
+  if (fileName.lastIndexOf('.') <= 0) {
+    path = `${path}.ui`;
+  }
+
   if (!/^[A-Za-z0-9._\-/ ]+$/.test(path)) {
     return { ok: false, error: 'File path contains unsupported characters.' };
   }

@@ -38,6 +38,7 @@ import { parseLogMarkup, formatDateTime } from './modules/utils/Logger.js';
   const menuLogsButton = document.getElementById('menu-logs');
   const menuUrlBuilderButton = document.getElementById('menu-url-builder');
   const menuVersion = document.getElementById('menu-version');
+  const menuInteractive = document.getElementById('menu-interactive');
   const usersCount = document.getElementById('users-count');
   const logWindow = document.getElementById('log-window');
   const logContent = document.getElementById('log-content');
@@ -252,6 +253,10 @@ import { parseLogMarkup, formatDateTime } from './modules/utils/Logger.js';
       handleVersion(data.slice(8));
       return;
     }
+    if (data.startsWith('INTERACTIVE|')) {
+      handleInteractive(data.slice(12));
+      return;
+    }
     if (data.startsWith('OPEN_URL|')) {
       handleOpenUrl(data.slice(9).trim());
       return;
@@ -350,6 +355,26 @@ import { parseLogMarkup, formatDateTime } from './modules/utils/Logger.js';
     if (!menuVersion) return;
     const text = String(versionText || '').trim();
     menuVersion.textContent = text;
+  }
+
+  function handleInteractive(interactiveText) {
+    if (!menuInteractive) return;
+    const mode = String(interactiveText || '').trim().toLowerCase();
+    menuInteractive.classList.remove('rw', 'ro');
+    if (mode === 'true') {
+      menuInteractive.textContent = 'RW';
+      menuInteractive.title = 'Server is read/write. You can interact with the panel.';
+      menuInteractive.classList.add('rw');
+      return;
+    }
+    if (mode === 'false') {
+      menuInteractive.textContent = 'RO';
+      menuInteractive.title = "Server is read-only. You can't interact with the panel.";
+      menuInteractive.classList.add('ro');
+      return;
+    }
+    menuInteractive.textContent = '';
+    menuInteractive.title = 'Server access mode';
   }
 
   function handleInstance(payload) {

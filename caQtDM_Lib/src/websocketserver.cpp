@@ -88,6 +88,8 @@ void WebSocketServer::onNewConnection()
     sendUserCountUpdate(count);
 
     sendLauncherInfo(pSocket);
+
+    pSocket->sendTextMessage("INTERACTIVE|" + QVariant(!CaQtDM_Lib::noVncReadonly).toString());
 }
 
 void WebSocketServer::processTextMessage(const QString &message)
