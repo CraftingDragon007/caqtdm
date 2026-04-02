@@ -24,6 +24,21 @@ import { parseLogMarkup, formatDateTime } from './modules/utils/Logger.js';
 
   const basePath = resolveBasePath();
 
+  function derivePanelName(pathValue) {
+    const raw = String(pathValue || '').trim();
+    if (raw === '' || /^[0-9]+$/.test(raw)) return '';
+    const normalized = raw.replace(/\\/g, '/').split('?')[0].split('#')[0];
+    const parts = normalized.split('/').filter(Boolean);
+    const fileName = parts.length > 0 ? parts[parts.length - 1] : normalized;
+    const decoded = decodeURIComponent(fileName);
+    return decoded.replace(/\.[^.]+$/, '');
+  }
+
+  function updateDocumentTitle(pathValue) {
+    const panelName = derivePanelName(pathValue);
+    document.title = panelName ? 'caQtDM Web - ' + panelName : 'caQtDM Web';
+  }
+
   function withBasePath(path) {
     const normalized = path.startsWith('/') ? path : '/' + path;
     return basePath ? basePath + normalized : normalized;
@@ -46,6 +61,8 @@ import { parseLogMarkup, formatDateTime } from './modules/utils/Logger.js';
   const launcherSelectionButton = document.getElementById('launcher-selection');
 
   if (launcherSelectionButton) launcherSelectionButton.style.display = 'none';
+
+  updateDocumentTitle(controlPath);
 
   // App State
   let failedOnce = false;
