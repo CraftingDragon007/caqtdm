@@ -1,5 +1,8 @@
 FROM alpine:latest AS builder
 
+RUN apk update
+RUN apk upgrade
+
 # Install build tools and dependencies
 RUN apk add --no-cache \
     build-base \
@@ -81,6 +84,10 @@ RUN cmake -B build -S . -DCMAKE_INSTALL_PREFIX=/usr && \
 
 
 FROM alpine:latest
+
+RUN apk update
+RUN apk upgrade
+
 # Install runtime dependencies
 RUN apk add --no-cache \
     qt6-qtbase \

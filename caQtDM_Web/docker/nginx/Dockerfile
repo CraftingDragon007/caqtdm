@@ -1,5 +1,7 @@
 FROM nginx:mainline-alpine
 
+RUN apk update
+RUN apk upgrade
 RUN apk add --no-cache openssl apache2-utils
 
 ENV INSTALL_HOSTNAME=localhost

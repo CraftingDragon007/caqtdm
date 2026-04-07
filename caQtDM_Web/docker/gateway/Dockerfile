@@ -1,6 +1,7 @@
 FROM debian:bookworm-slim AS builder
 
 RUN apt update
+RUN apt upgrade -y
 RUN apt install -y \
     build-essential \
     git \
@@ -37,7 +38,9 @@ LABEL maintainer="Julian Houba" \
       version="7.0.10-gateway" \
       description="EPICS CA Gateway"
 
-RUN apt update && apt install -y \
+RUN apt update
+RUN apt upgrade -y
+RUN apt install -y \
     libreadline8 \
     perl \
     ca-certificates \
