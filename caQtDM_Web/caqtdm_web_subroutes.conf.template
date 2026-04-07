@@ -3,6 +3,11 @@ map $request_uri $caqtdm_backend {
     ${CAQTDM_PATH_MAP}
 }
 
+map $request_uri $caqtdm_auth_file {
+    default /etc/nginx/.htpasswd;
+    ${CAQTDM_AUTH_FILE_MAP}
+}
+
 # Server Block for Plain HTTP Traffic (port 80)
 server {
     listen 80;
@@ -93,7 +98,17 @@ server {
     }
 
     location = / {
-        return 302 $scheme://$http_host/instance1/;
+        root /var/www/caqtdm_web/static;
+        try_files /index.html =404;
+    }
+
+    location = /static {
+        return 301 /static/;
+    }
+
+    location ^~ /static/ {
+        alias /var/www/caqtdm_web/static/;
+        try_files $uri $uri/ =404;
     }
 
     location / {
@@ -199,7 +214,17 @@ server {
     }
 
     location = / {
-        return 302 $scheme://$http_host/instance1/;
+        root /var/www/caqtdm_web/static;
+        try_files /index.html =404;
+    }
+
+    location = /static {
+        return 301 /static/;
+    }
+
+    location ^~ /static/ {
+        alias /var/www/caqtdm_web/static/;
+        try_files $uri $uri/ =404;
     }
 
     location / {
