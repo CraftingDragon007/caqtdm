@@ -120,8 +120,8 @@ function normalizeMacros(input) {
 }
 
 function buildUrl(pathValue, macrosValue) {
-  const base = window.location.origin;
-  let url = `${base}/?path=${pathValue}`;
+  const base = new URL('.', window.location.href).pathname;
+  let url = `${base}?path=${pathValue}`;
   if (macrosValue) url += `&macros=${macrosValue}`;
   return url;
 }
