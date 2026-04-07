@@ -31,7 +31,7 @@ if [ -n "$per_route_map" ]; then
         [ -z "$route_pass" ] && continue
 
         auth_file_map="${auth_file_map}    ${pattern} /etc/nginx/.htpasswd-${key};\n"
-        auth_realm_map="${auth_realm_map}    ${pattern} Restricted;\n"
+        auth_realm_map="${auth_realm_map}    ${pattern} Restricted_${key};\n"
         has_per_route_auth=1
     done <<EOF
 $per_route_map
