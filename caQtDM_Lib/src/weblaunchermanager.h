@@ -27,10 +27,10 @@ class CAQTDM_LIBSHARED_EXPORT WebLauncherManager : public QObject
 public:
     static WebLauncherManager& instance();
 
-    bool setup(const QString fileName);
+    bool setup(const QString& fileName);
     bool isInitialized() const;
     QJsonValue getExpandedLauncherJson() const;
-    QJsonValue getLauncherFromUserChoice(QString choice);
+    QJsonValue getLauncherFromUserChoice(const QString& choice);
     QString getRootFile() const;
 
 private:
@@ -45,7 +45,7 @@ private:
     QMap<QString, FileChoice> m_fileChoices;
 
     QSet<QString> m_visitedFiles;
-    QJsonValue loadAndExpand(QString fileName, bool loadFileChoices);
+    QJsonValue loadAndExpand(const QString& fileName, bool loadFileChoices);
     QString resolveFilePath(const QString& inputPath);
     void processFileChoices(QJsonObject& obj);
     QJsonDocument parseJsonFile(const QString& fileName);

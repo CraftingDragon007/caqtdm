@@ -28,7 +28,7 @@ QString WebLauncherManager::getRootFile() const {
     return this->m_rootFile;
 }
 
-bool WebLauncherManager::setup(const QString fileName) {
+bool WebLauncherManager::setup(const QString& fileName) {
     m_rootFile = fileName;
 
     QWriteLocker locker(&m_visitedFilesLock);
@@ -45,29 +45,46 @@ bool WebLauncherManager::setup(const QString fileName) {
     return true;
 }
 
-QJsonValue WebLauncherManager::loadAndExpand(QString fileName, bool loadFileChoices) {
-    fileName = resolveFilePath(fileName);
-    if (fileName.isEmpty() || m_visitedFiles.contains(fileName)) {
-        if (!fileName.isEmpty()) qWarning() << "caQtDM_Web_Launcher -- Circular dependency:" << fileName;
+QJsonValue WebLauncherManager::loadAndExpand(const QString& fileName, bool loadFileChoices) {
+    QString resolvedPath = resolveFilePath(fileName);
+
+    if (resolvedPath.isEmpty()) {
+        qWarning() << "caQtDM_Web_Launcher -- [File Error] Could not find or resolve path for:" << fileName;
         return QJsonValue();
     }
 
-    QJsonDocument doc = parseJsonFile(fileName);
-    if (doc.isNull()) return QJsonValue();
+    if (m_visitedFiles.contains(resolvedPath)) {
+        qWarning() << "caQtDM_Web_Launcher -- [Recursion Error] Circular dependency blocked for:" << resolvedPath;
+        return QJsonValue();
+    }
 
-    m_visitedFiles.insert(fileName);
+    qDebug() << "caQtDM_Web_Launcher -- [Info] Expanding file:" << resolvedPath;
 
+    m_visitedFiles.insert(resolvedPath);
+
+    QJsonDocument doc = parseJsonFile(resolvedPath);
+    if (doc.isNull()) {
+        qWarning() << "caQtDM_Web_Launcher -- [JSON Error] Failed to parse or empty file:" << resolvedPath;
+        m_visitedFiles.remove(resolvedPath);
+        return QJsonValue();
+    }
+
+    QJsonValue result;
     if (doc.isObject()) {
         QJsonObject obj = doc.object();
         if (loadFileChoices && obj.contains("file-choice")) {
             processFileChoices(obj);
-        } else {
-            obj.remove("file-choice");
         }
-        return expandObject(obj);
+        result = expandObject(obj);
+    } else if (doc.isArray()) {
+        result = expandArray(doc.array());
     }
 
-    return doc.isArray() ? expandArray(doc.array()) : QJsonValue();
+    // Important: remove from visited list after processing children
+    // to allow other branches to use this file if needed.
+    m_visitedFiles.remove(resolvedPath);
+
+    return result;
 }
 
 QString WebLauncherManager::resolveFilePath(const QString& inputPath) {
@@ -91,14 +108,14 @@ QString WebLauncherManager::resolveFilePath(const QString& inputPath) {
 QJsonDocument WebLauncherManager::parseJsonFile(const QString& fileName) {
     QFile file(fileName);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        qWarning() << "caQtDM_Web_Launcher -- Cannot open:" << fileName;
+        qWarning() << "caQtDM_Web_Launcher -- [IO Error] Cannot open file for reading:" << fileName;
         return QJsonDocument();
     }
 
     QJsonParseError error;
     QJsonDocument doc = QJsonDocument::fromJson(file.readAll(), &error);
     if (error.error != QJsonParseError::NoError) {
-        qWarning() << "JSON Parse Error in" << fileName << ":" << error.errorString();
+        qWarning() << "caQtDM_Web_Launcher -- [Syntax Error] in" << fileName << ":" << error.errorString() << "at offset" << error.offset;
     }
     return doc;
 }
@@ -137,7 +154,7 @@ void WebLauncherManager::processFileChoices(QJsonObject& obj) {
     obj.insert("file-choice", newChoices);
 }
 
-QJsonValue WebLauncherManager::getLauncherFromUserChoice(QString choice) {
+QJsonValue WebLauncherManager::getLauncherFromUserChoice(const QString& choice) {
     FileChoice choiceItem;
     if (choice == "root") {
         return m_expandedLauncherJson;
@@ -147,7 +164,7 @@ QJsonValue WebLauncherManager::getLauncherFromUserChoice(QString choice) {
         QReadLocker locker(&m_fileChoiceLock);
         if (choice.isEmpty() || !m_fileChoices.contains(choice)) return QJsonValue();
 
-        choiceItem = m_fileChoices[choice];
+        choiceItem = m_fileChoices.value(choice);
     }
 
     {
@@ -168,6 +185,7 @@ QString WebLauncherManager::getLastElementFromAnywhere(QString input) {
 }
 
 QJsonValue WebLauncherManager::expandObject(QJsonObject obj) {
+    // If this object has a menu array, expand the items within that array
     if (obj.contains("menu") && obj["menu"].isArray()) {
         obj["menu"] = expandArray(obj["menu"].toArray());
     }
@@ -183,16 +201,27 @@ QJsonArray WebLauncherManager::expandArray(const QJsonArray &arr) {
         }
 
         QJsonObject item = val.toObject();
+
+        // Check if this item is a sub-menu reference
         if (item["type"].toString() == "menu" && item.contains("file")) {
             QString subPath = item["file"].toString();
+
+            qDebug() << "caQtDM_Web_Launcher -- [Info] Item '" << item["text"].toString() << "' pulls from:" << subPath;
+
             QJsonValue subContent = loadAndExpand(subPath, false);
 
             if (!subContent.isNull() && subContent.isObject()) {
                 QJsonObject subObj = subContent.toObject();
+
                 if (subObj.contains("menu") && subObj["menu"].isArray()) {
                     item["menu"] = subObj["menu"].toArray();
                     item.remove("file");
+                    qDebug() << "caQtDM_Web_Launcher -- [Info] Successfully merged" << subPath << "into menu.";
+                } else {
+                    qWarning() << "caQtDM_Web_Launcher -- [Structure Error] File" << subPath << "loaded but contains no 'menu' array.";
                 }
+            } else {
+                qWarning().noquote().nospace() << "caQtDM_Web_Launcher -- [Expansion Failed] Sub-menu item '" << item["text"].toString() << "' could not be populated from: " << subPath;
             }
         }
         result.append(item);
