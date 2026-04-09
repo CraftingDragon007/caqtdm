@@ -48,6 +48,22 @@ RUN apt install -y \
 
 RUN apt clean && rm -rf /var/lib/apt/lists/*
 
+RUN cat > /usr/local/bin/entrypoint.sh <<'EOF'
+#!/bin/sh
+set -eu
+
+if [ -z "${EPICS_HOST_ARCH:-}" ]; then
+    EPICS_HOST_ARCH="$(basename "$(find /usr/local/epics/base/bin -mindepth 1 -maxdepth 1 -type d | head -n 1)")"
+fi
+
+export EPICS_HOST_ARCH
+export LD_LIBRARY_PATH="/usr/local/epics/base/lib/${EPICS_HOST_ARCH}${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+export PATH="/usr/local/epics/base/bin/${EPICS_HOST_ARCH}:/usr/local/epics/extensions/ca-gateway/bin/${EPICS_HOST_ARCH}:/usr/local/bin:${PATH}"
+
+exec gateway "$@"
+EOF
+
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
 RUN groupadd -r epics && useradd -r -g epics epics
 USER epics
@@ -56,8 +72,6 @@ WORKDIR /app
 COPY --from=builder --chown=epics:epics /usr/local/epics /usr/local/epics
 
 ENV EPICS_BASE=/usr/local/epics/base
-ENV LD_LIBRARY_PATH=/usr/local/epics/base/lib/linux-x86_64
-ENV PATH="/usr/local/epics/base/bin/linux-x86_64:/usr/local/epics/extensions/ca-gateway/bin/linux-x86_64:/usr/local/bin:${PATH}"
 
-ENTRYPOINT ["gateway"]
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["-help"]

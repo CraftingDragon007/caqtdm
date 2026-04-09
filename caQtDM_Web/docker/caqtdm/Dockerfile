@@ -106,7 +106,8 @@ RUN apk add --no-cache \
     readline \
     perl \
     zlib \
-    ttf-dejavu
+    ttf-dejavu \
+    fontconfig
 
 COPY caQtDM_Tests/ /opt/caqtdm/caqtdm_tests/
 
@@ -115,6 +116,10 @@ COPY --from=builder /opt/epics /opt/epics
 COPY --from=builder /usr/lib/qt6/plugins/platforms/libqnovnc.so /usr/lib/qt6/plugins/platforms/libqnovnc.so
 
 RUN mkdir -p /app/caqtdm_display_path
+
+RUN mkdir -p /usr/share/fonts/lucida
+COPY caQtDM_Viewer/lucida-sans-typewriter.ttf /usr/share/fonts/lucida/lucida-sans-typewriter.ttf
+RUN fc-cache -f -v
 
 ENV CAQTDM_DISPLAY_PATH=/app/caqtdm_display_path:/opt/caqtdm/caqtdm_tests
 ENV EPICS_CA_ADDR_LIST=
