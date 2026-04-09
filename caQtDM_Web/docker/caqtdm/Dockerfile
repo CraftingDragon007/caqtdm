@@ -85,8 +85,8 @@ RUN cmake -B build -S . -DCMAKE_INSTALL_PREFIX=/usr && \
 
 FROM alpine:latest
 
-RUN apk update
-RUN apk upgrade
+RUN apk --no-cache update
+RUN apk --no-cache upgrade
 
 # Install runtime dependencies
 RUN apk add --no-cache \
