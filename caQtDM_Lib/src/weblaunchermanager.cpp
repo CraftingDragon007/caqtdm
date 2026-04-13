@@ -206,7 +206,7 @@ QJsonArray WebLauncherManager::expandArray(const QJsonArray &arr) {
         if (item["type"].toString() == "menu" && item.contains("file")) {
             QString subPath = item["file"].toString();
 
-            qDebug() << "caQtDM_Web_Launcher -- [Info] Item '" << item["text"].toString() << "' pulls from:" << subPath;
+            qDebug().noquote().nospace() << "caQtDM_Web_Launcher -- [Info] Item '" << item["text"].toString() << "' pulls from: " << subPath;
 
             QJsonValue subContent = loadAndExpand(subPath, false);
 
