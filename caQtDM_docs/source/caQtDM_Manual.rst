@@ -3455,6 +3455,8 @@ caQtDM uses the following environment variables:
 +------------------------------------------+-----------------------------------------------+
 |``CAQTDM_LOGGING_LOGSTASH_BUFFER_SIZE``   | Same as for file-logging                      |
 +------------------------------------------+-----------------------------------------------+
+|``CAQTDM_LOGGING_INCLUDE_MESSAGEWINDOW``  | If not empty, message window logs are debugged|
++------------------------------------------+-----------------------------------------------+
 |``CAQTDM_NO_CUSTOM_LOGHANDLER``           | Build: disables building of custom logging.   |
 +------------------------------------------+-----------------------------------------------+
 

@@ -50,10 +50,12 @@
 const char* MessageWindow::WINDOW_TITLE = "caQtDM Messages";
 MessageWindow* MessageWindow::MsgHandler = Q_NULLPTR;
 
+Q_LOGGING_CATEGORY(messageWindowLog, "caqtdm.lib.messagewindow");
 Q_LOGGING_CATEGORY(externCLog, "caqtdm.extern.c");
 
 MessageWindow::MessageWindow(QWidget* parent) : QDockWidget(parent)
 {
+    m_logMessageEvents = !qEnvironmentVariableIsEmpty("CAQTDM_LOGGING_INCLUDE_MESSAGEWINDOW");
 
     QFont font("Monospace");
     font.setStyleHint(QFont::TypeWriter);
@@ -173,6 +175,11 @@ void MessageWindow::postMsgEvent(QtMsgType type, char* msg)
 {
     QString qmsg = MessageWindow::QtMsgToQString(type, msg);
 
+    if (m_logMessageEvents) {
+        // In addition to displaying the message in the message window, trigger a QtLogging message
+        qt_message_output(type, QMessageLogContext("", 0, "", messageWindowLog().categoryName()), msg);
+    }
+
     switch (type) {
 #if QT_VERSION > QT_VERSION_CHECK(5, 0, 0)
     case QtInfoMsg:
@@ -219,25 +226,25 @@ extern "C" MessageWindow* C_postMsgEvent(MessageWindow* p, int type, char* msg)
 {
     QtMsgType msgType;
 
-    // Map QtMsgType and call corresponding logging macro, since C cannot do that itself
+    // Map QtMsgType
     switch (type) {
     case 0:
         msgType = QtDebugMsg;
-        qCDebug(externCLog) << msg;
         break;
     case 1:
         msgType = QtWarningMsg;
-        qCWarning(externCLog) << msg;
         break;
     case 2:
     case 3:
         msgType = QtCriticalMsg;
-        qCCritical(externCLog) << msg;
         break;
     default:
         return p;
         break;
     }
+
+    // Trigger a QtLogging message since C cannot call QtLogging macros itself
+    qt_message_output(msgType, QMessageLogContext("", 0, "", externCLog().categoryName()), msg);
 
     if(p == 0) return p;
 

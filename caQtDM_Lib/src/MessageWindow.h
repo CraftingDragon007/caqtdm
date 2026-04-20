@@ -76,6 +76,7 @@ private:
 
     QString m_normalTextColorHex;
     QString m_debugTextColorHex;
+    bool m_logMessageEvents;
     void redrawText(const QString& oldNormalTextColorHex, const QString& oldDebugTextColorHex);
 protected:
 
