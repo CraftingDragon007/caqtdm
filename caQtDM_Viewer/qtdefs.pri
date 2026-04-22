@@ -1,4 +1,4 @@
-CAQTDM_VERSION = V4.6.0
+CAQTDM_VERSION = V4.6.1
 
 exists(../.git) {
   GIT_VERSION = $$system(git --version)
@@ -309,7 +309,7 @@ DEFINES += TARGET_COPYRIGHT=\"\\\"$${TARGET_COPYRIGHT}\\\"\"
 DEFINES += TARGET_INTERNALNAME=\"\\\"$${TARGET_INTERNALNAME}\\\"\"
 DEFINES += TARGET_VERSION_STR=\"\\\"$${CAQTDM_VERSION}\\\"\"
 
-# 4.6.0
+# 4.6.1
 # update fix for unconnected Channels
 # %read command for cainclude and caRelatedDisplay
 # old files cleanup
