@@ -10800,7 +10800,7 @@ extern "C"  {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
             qCFatal(caQtDMLibLog) << "file" << FileName << "could not be loaded -> exit";
 #else
-            qFatal(qasc(QString("file " + FileName + "could not be loaded -> exit")));
+            qFatal("%s", qasc(QString("file " + FileName + " could not be loaded -> exit")));
 #endif
         } else {
             qCInfo(caQtDMLibLog) << "file" << FileName << "will be loaded";
