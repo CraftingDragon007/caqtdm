@@ -1533,7 +1533,6 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
         // any error messages for this object?
         while(imageWidget->anyMessages()) {
-            qCDebug(caImageLog) << imageWidget->getMessages();
             QString message = imageWidget->getMessages();
             if(message.contains("Info:")) postMessage(QtWarningMsg, (char*) qasc(message));
             else postMessage(QtCriticalMsg, (char*) qasc(message));
