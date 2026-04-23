@@ -31,7 +31,7 @@ The latest version of caQtDM has build and installation procedure working for se
 
   3. all the environment variables used for the installation will be defined in the script caQtDM_Env. When some of the variables are already defined in your environment, the script will use them, otherwise they will be defined. It is up to you to edit this file and adapt the variables to your environment.
 
-  4. the script caQtDM_BuildAll will build you the package now into the directory ./caQtDM_Binaries. You should obtain there adl2ui, caQtDM, libqtcontrols.so and libcaQtDM_Lib.so as well as a designer directory containing 3 files `libqtcontrols*_plugin.so`. If you encounter a problem when building due to some environment variable problem or while not everything was installed before, you may correct your problem and run the script again. In case you want to cleanup you use the script caQtDM_CleanAll, which will also delete the resulting binaries.
+  4. the script caQtDM_BuildAll will build you the package now into the directory ./caQtDM_Binaries. You should obtain there adl2ui, caQtDM, libqtcontrols.so and libcaQtDM_Lib.so as well as a designer directory containing 4 files `libqtcontrols*_plugin.so`. If you encounter a problem when building due to some environment variable problem or while not everything was installed before, you may correct your problem and run the script again. In case you want to cleanup you use the script caQtDM_CleanAll, which will also delete the resulting binaries.
 
   5. you may try to install the package: the package should normally be installed in the EPICS extensions and the environment variables are pointing to them.
 
