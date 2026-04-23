@@ -74,7 +74,7 @@ int Epics3Plugin::initCommunicationLayer(MutexKnobData *data, MessageWindow *mes
 int Epics3Plugin::pvAddMonitor(int index, knobData *kData, int rate, int skip) {
     qCDebug(epics3Log) << "Epics3Plugin:pvAddMonitor" << kData->pv;
     if (!Channelcache.contains(kData->pv,index)){
-        //qDebug() << "Epics3Plugin:first" << kData->pv << kData;
+        qCDebug(epics3Log) << "Epics3Plugin:first" << kData->pv << kData;
         Channelcache.insert(kData->pv,index);
     }else{
         qCDebug(epics3Log) << "duplicated: " << kData->pv << Channelcache.value(kData->pv) ;
@@ -110,7 +110,7 @@ int Epics3Plugin::pvSetValue(char *pv, double rdata, int32_t idata, char *sdata,
 
     qCDebug(epics3Log) << "Epics3Plugin:pvSetValue";
     if (Channelcache.contains(pv)){
-        //qDebug() << "CacheEntry Found" << pv;
+        qCDebug(epics3Log) << "CacheEntry Found" << pv;
         QMultiMap<QString, int>::iterator i = Channelcache.find(pv);
         while (i != Channelcache.end() && i.key() == pv) {
 
