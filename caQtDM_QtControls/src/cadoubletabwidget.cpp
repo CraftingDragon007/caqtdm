@@ -29,7 +29,7 @@
 #include <QToolTip>
 #include "cadoubletabwidget.h"
 
-Q_LOGGING_CATEGORY(caDoubleTabWidgetLog, "caqtdm.widgets.cadoubletapwidget")
+Q_LOGGING_CATEGORY(caDoubleTabWidgetLog, "caqtdm.widgets.cadoubletabwidget")
 
 caDoubleTabWidget::caDoubleTabWidget(QWidget *parent) : QWidget(parent)
 
@@ -115,7 +115,7 @@ int caDoubleTabWidget::lookupArrayIndex(int row, int col)
     QMapIterator<int, twoInts> j(lookup);
     while (j.hasNext()) {
         j.next();
-        qCDebug(caDoubleTabWidgetLog) << "viewportIndex" << j.key() << "in array row=" << j.value().r << "col=" << j.value().c; j.key();
+        qCDebug(caDoubleTabWidgetLog) << "viewportIndex" << j.key() << "in array row=" << j.value().r << "col=" << j.value().c;
 
     }
     qCDebug(caDoubleTabWidgetLog) << "number of viewport pages =" << count();
