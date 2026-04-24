@@ -30,7 +30,7 @@
 #include <QEvent>
 #include <QResizeEvent>
 
-Q_LOGGING_CATEGORY(eSimpleLabelLog, "caqtdm.widgets.esimplelabel");
+Q_LOGGING_CATEGORY(eSimpleLabelLog, "caqtdm.widgets.esimplelabel")
 
 ESimpleLabel::ESimpleLabel(QWidget *parent) : QLabel(parent), FontScalingWidget(this)
 {

@@ -28,7 +28,7 @@
   #define snprintf _snprintf
 #endif
 
-Q_LOGGING_CATEGORY(caCalcLog, "caqtdm.widgets.cacalc");
+Q_LOGGING_CATEGORY(caCalcLog, "caqtdm.widgets.cacalc")
 
 caCalc::caCalc( QWidget *parent ) :  ESimpleLabel(parent)
 {

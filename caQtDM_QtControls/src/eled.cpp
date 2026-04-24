@@ -29,7 +29,7 @@
 #include <QtDebug>
 #include <math.h>
 
-Q_LOGGING_CATEGORY(eLedLog, "caqtdm.widgets.eled");
+Q_LOGGING_CATEGORY(eLedLog, "caqtdm.widgets.eled")
 
 ELed::ELed(QWidget *parent) : QWidget(parent), ledColor(Qt::gray)
 {

@@ -47,7 +47,7 @@
 #define MIN_FONT_SIZE 3
 #define MAX_FONT_SIZE 20
 
-Q_LOGGING_CATEGORY(caThermoLog, "caqtdm.widgets.cathermo");
+Q_LOGGING_CATEGORY(caThermoLog, "caqtdm.widgets.cathermo")
 
 // I need to overload the scaleengine of qwt in order to get the upper and lower scale ticks drawn
 class myThermoScaleEngine: public QwtLinearScaleEngine

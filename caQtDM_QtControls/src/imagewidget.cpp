@@ -31,7 +31,7 @@
 #include <math.h>
 #include "imagewidget.h"
 
-Q_LOGGING_CATEGORY(imageWidgetLog, "caqtdm.widgets.imagewidget");
+Q_LOGGING_CATEGORY(imageWidgetLog, "caqtdm.widgets.imagewidget")
 
 ImageWidget::ImageWidget(QWidget *parent) : QWidget(parent)
 {

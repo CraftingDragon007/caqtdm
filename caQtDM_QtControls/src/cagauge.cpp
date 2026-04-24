@@ -31,7 +31,7 @@
 
 #define MIN_FONT_SIZE 3
 
-Q_LOGGING_CATEGORY(caGaugeLog, "caqtdm.widgets.cagauge");
+Q_LOGGING_CATEGORY(caGaugeLog, "caqtdm.widgets.cagauge")
 
 caAbstractGauge::caAbstractGauge(QWidget *parent) : EAbstractGauge(parent)
 {

@@ -30,7 +30,7 @@
 
 #include "qwtplotcurvenan.h"
 
-Q_LOGGING_CATEGORY(qwtPlotIntervalCurveNaNLog, "caqtdm.widgets.qwtplotintervalcurvenan");
+Q_LOGGING_CATEGORY(qwtPlotIntervalCurveNaNLog, "caqtdm.widgets.qwtplotintervalcurvenan")
 
 QwtPlotCurveNaN::QwtPlotCurveNaN(const QString& title)
 {

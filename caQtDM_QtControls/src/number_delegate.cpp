@@ -32,7 +32,7 @@
 
 #define qstoc(x) ""
 
-Q_LOGGING_CATEGORY(numberDelegateLog, "caqtdm.widgets.numberdelegate");
+Q_LOGGING_CATEGORY(numberDelegateLog, "caqtdm.widgets.numberdelegate")
 
 NumberDelegate::NumberDelegate()
 {

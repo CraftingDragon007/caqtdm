@@ -34,7 +34,7 @@
 
 #include <math.h>
 
-Q_LOGGING_CATEGORY(caChoiceLog, "caqtdm.widgets.cachoice");
+Q_LOGGING_CATEGORY(caChoiceLog, "caqtdm.widgets.cachoice")
 
 caChoice::caChoice(QWidget *parent) : QWidget(parent)
 {

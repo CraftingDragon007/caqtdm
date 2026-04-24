@@ -10,7 +10,7 @@
 #include "qtdefinitions.h"
 #include "qtcontrols_global.h"
 
-Q_LOGGING_CATEGORY(mdaReaderLog, "caqtdm.widgets.mdareader");
+Q_LOGGING_CATEGORY(mdaReaderLog, "caqtdm.widgets.mdareader")
 
 void mdaReaderThread(const char *dataFile, int y_cpy);
 struct mda_file *mdaData = NULL;

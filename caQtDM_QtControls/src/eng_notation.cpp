@@ -37,7 +37,7 @@
 
 #define qstoc(x) ""
 
-Q_LOGGING_CATEGORY(engNotationLog, "caqtdm.widgets.engnotation");
+Q_LOGGING_CATEGORY(engNotationLog, "caqtdm.widgets.engnotation")
 
 EngString::EngString(QString s , const QString& format, const QVariant &value) : QString(s)
 {

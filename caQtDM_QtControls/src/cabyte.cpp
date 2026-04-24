@@ -28,7 +28,7 @@
 #include <QGridLayout>
 #include <QtDebug>
 
-Q_LOGGING_CATEGORY(caByteLog, "caqtdm.widgets.cabyte");
+Q_LOGGING_CATEGORY(caByteLog, "caqtdm.widgets.cabyte")
 
 caByte::caByte(QWidget *parent) : QWidget(parent)
 {

@@ -151,7 +151,7 @@ Q_IMPORT_PLUGIN(ArchivePRO_Plugin);
 
 #endif
 
-Q_LOGGING_CATEGORY(fileOpenWindowLog, "caqtdm.viewer.fileopenwindow");
+Q_LOGGING_CATEGORY(fileOpenWindowLog, "caqtdm.viewer.fileopenwindow")
 
 
 #if QT_VERSION > 0x050000

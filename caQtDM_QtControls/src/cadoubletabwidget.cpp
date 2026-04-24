@@ -29,7 +29,7 @@
 #include <QToolTip>
 #include "cadoubletabwidget.h"
 
-Q_LOGGING_CATEGORY(caDoubleTabWidgetLog, "caqtdm.widgets.cadoubletapwidget");
+Q_LOGGING_CATEGORY(caDoubleTabWidgetLog, "caqtdm.widgets.cadoubletapwidget")
 
 caDoubleTabWidget::caDoubleTabWidget(QWidget *parent) : QWidget(parent)
 

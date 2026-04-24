@@ -26,7 +26,7 @@
 #include "searchfile.h"
 #include "pathdefinitions.h"
 
-Q_LOGGING_CATEGORY(searchFileLog, "caqtdm.widgets.searchfile");
+Q_LOGGING_CATEGORY(searchFileLog, "caqtdm.widgets.searchfile")
 
 searchFile::searchFile(QString filename)
 {

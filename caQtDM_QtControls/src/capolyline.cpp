@@ -28,7 +28,7 @@
 #include "capolyline.h"
 #include "alarmdefs.h"
 
-Q_LOGGING_CATEGORY(caPolyLineLog, "caqtdm.widgets.capolyline");
+Q_LOGGING_CATEGORY(caPolyLineLog, "caqtdm.widgets.capolyline")
 
 caPolyLine::caPolyLine(QWidget *parent): QWidget(parent)
 {

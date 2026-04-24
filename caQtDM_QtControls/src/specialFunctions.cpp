@@ -25,7 +25,7 @@
 
 #include "specialFunctions.h"
 
-Q_LOGGING_CATEGORY(specialFunctionsLog, "caqtdm.widgets.specialfunctions");
+Q_LOGGING_CATEGORY(specialFunctionsLog, "caqtdm.widgets.specialfunctions")
 
 void Specials::setNewStyleSheet(QWidget* w, QSize size, int bigPtSize, int smallPtSize, QString myStyle, int pointSizeCorrection)
 {

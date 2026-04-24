@@ -18,7 +18,7 @@
 #endif
 
 #include <QLoggingCategory>
-Q_DECLARE_LOGGING_CATEGORY(logstashLogHandlerLog);
+Q_DECLARE_LOGGING_CATEGORY(logstashLogHandlerLog)
 
 class LogstashLogHandler : public QObject, public AbstractLogHandler
 {

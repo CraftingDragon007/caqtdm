@@ -28,7 +28,7 @@
 #include <QApplication>
 #include "cascan2d.h"
 
-Q_LOGGING_CATEGORY(caScan2DLog, "caqtdm.widgets.cascan2d");
+Q_LOGGING_CATEGORY(caScan2DLog, "caqtdm.widgets.cascan2d")
 
 caScan2D::caScan2D(QWidget *parent) : QWidget(parent)
 {

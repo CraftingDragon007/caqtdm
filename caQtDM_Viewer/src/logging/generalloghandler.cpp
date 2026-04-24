@@ -13,7 +13,6 @@
 
 #include <QCoreApplication>
 
-#define ENV_LOG_LEVEL "CAQTDM_LOGGING_LEVEL"
 #define ENV_LOG_HANDLERS "CAQTDM_LOGGING_HANDLERS"
 
 QMutex GeneralLogHandler::s_mutex;
@@ -21,7 +20,7 @@ QList<AbstractLogHandler *> GeneralLogHandler::s_logHandlers;
 QThread *GeneralLogHandler::s_logHandlersThread = Q_NULLPTR;
 qint64 GeneralLogHandler::s_processId = -1;
 
-Q_LOGGING_CATEGORY(generalLogHandlerLog, "caqtdm.logging.general");
+Q_LOGGING_CATEGORY(generalLogHandlerLog, "caqtdm.logging.general")
 
 QtMessageHandler GeneralLogHandler::initialize()
 {

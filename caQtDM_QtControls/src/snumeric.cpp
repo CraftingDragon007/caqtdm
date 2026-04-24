@@ -45,7 +45,7 @@
 extern int round (double x);
 #endif
 
-Q_LOGGING_CATEGORY(sNumericLog, "caqtdm.widgets.snumeric");
+Q_LOGGING_CATEGORY(sNumericLog, "caqtdm.widgets.snumeric")
 
 SNumeric::SNumeric(QWidget *parent, int id, int dd) : QFrame(parent), FloatDelegate()
 {

@@ -43,7 +43,7 @@
     #endif
 #endif
 
-Q_LOGGING_CATEGORY(caLineEditLog, "caqtdm.widgets.calineedit");
+Q_LOGGING_CATEGORY(caLineEditLog, "caqtdm.widgets.calineedit")
 
 caLineEdit::caLineEdit(QWidget *parent) : QLineEdit(parent), FontScalingWidget(this)
 {

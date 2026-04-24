@@ -52,7 +52,7 @@ int round (double x) {
 }
 #endif
 
-Q_LOGGING_CATEGORY(eNumericLog, "caqtdm.widgets.enumeric");
+Q_LOGGING_CATEGORY(eNumericLog, "caqtdm.widgets.enumeric")
 
 ENumeric::ENumeric(QWidget *parent, int id, int dd) : QFrame(parent), FloatDelegate()
 {

@@ -29,7 +29,7 @@
 #include <ESimpleLabel>
 #include <QResizeEvent>
 
-Q_LOGGING_CATEGORY(eApplyNumericLog, "caqtdm.widgets.eapplynumeric");
+Q_LOGGING_CATEGORY(eApplyNumericLog, "caqtdm.widgets.eapplynumeric")
 
 EApplyNumeric::EApplyNumeric(QWidget *parent, int i, int d, Qt::Orientation pos) : QWidget(parent), FloatDelegate()
 {

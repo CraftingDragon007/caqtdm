@@ -29,7 +29,7 @@
 #include <QMessageBox>
 #include <QtDebug>
 
-Q_LOGGING_CATEGORY(myQProcessLog, "caqtdm.lib.myqprocess");
+Q_LOGGING_CATEGORY(myQProcessLog, "caqtdm.lib.myqprocess")
 
 myQProcess::myQProcess(QObject *parent) : QObject(parent), started(false)
 {

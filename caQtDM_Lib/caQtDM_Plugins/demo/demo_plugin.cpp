@@ -35,7 +35,7 @@
 // at the epics3 plugin
 
 // This needs to be done ONLY once per Plugin.
-Q_LOGGING_CATEGORY(demoLog, "caqtdm.plugins.demo");
+Q_LOGGING_CATEGORY(demoLog, "caqtdm.plugins.demo")
 
 // gives the plugin name back
 QString DemoPlugin::pluginName()

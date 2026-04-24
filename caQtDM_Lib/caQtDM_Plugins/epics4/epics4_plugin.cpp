@@ -33,7 +33,7 @@
 #include <epicsThread.h>
 #include "loggingcategories.h"
 
-Q_LOGGING_CATEGORY(epics4Log, "caqtdm.plugins.epics.4");
+Q_LOGGING_CATEGORY(epics4Log, "caqtdm.plugins.epics.4")
 
 using namespace std;
 using namespace epics::pvData;

@@ -25,7 +25,7 @@
 
 #include "processWindow.h"
 
-Q_LOGGING_CATEGORY(processWindowLog, "caqtdm.lib.processwindow");
+Q_LOGGING_CATEGORY(processWindowLog, "caqtdm.lib.processwindow")
 
 processWindow::processWindow(QWidget *parent, bool display, bool CloseExit0, QWidget *caller): QMainWindow(parent)
 {

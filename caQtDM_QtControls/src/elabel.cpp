@@ -27,7 +27,7 @@
 #include <QPainter>
 #include "elabel.h"
 
-Q_LOGGING_CATEGORY(eLabelLog, "caqtdm.widgets.elabel");
+Q_LOGGING_CATEGORY(eLabelLog, "caqtdm.widgets.elabel")
 
 ELabel::ELabel(QWidget *parent) : ESimpleLabel(parent)
 {

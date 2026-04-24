@@ -36,7 +36,7 @@
     #endif
 #endif
 
-Q_LOGGING_CATEGORY(caTableLog, "caqtdm.widgets.catable");
+Q_LOGGING_CATEGORY(caTableLog, "caqtdm.widgets.catable")
 
 caTable::caTable(QWidget *parent) : QTableWidget(parent)
 {

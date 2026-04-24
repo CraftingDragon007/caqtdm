@@ -26,7 +26,7 @@
 #include "wmsignalpropagator.h"
 #include "cainclude.h"
 
-Q_LOGGING_CATEGORY(wmSignalPropagatorLog, "caqtdm.widgets.wmsignalpropagator");
+Q_LOGGING_CATEGORY(wmSignalPropagatorLog, "caqtdm.widgets.wmsignalpropagator")
 
 wmSignalPropagator::wmSignalPropagator( QWidget *parent ) : ESimpleLabel(parent)
 {

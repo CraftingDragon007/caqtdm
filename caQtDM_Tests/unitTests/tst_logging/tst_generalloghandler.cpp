@@ -10,7 +10,6 @@
 
 #include <QTest>
 
-#define ENV_LOG_LEVEL "CAQTDM_LOGGING_LEVEL"
 #define ENV_LOG_HANDLERS "CAQTDM_LOGGING_HANDLERS"
 
 static void mockMessageHandler(QtMsgType, const QMessageLogContext &, const QString &) {}
@@ -39,7 +38,6 @@ void TestGeneralLogHandler::init()
 {
     // code to be executed before each test function
 
-    qunsetenv(ENV_LOG_LEVEL);
     qunsetenv(ENV_LOG_HANDLERS);
 }
 

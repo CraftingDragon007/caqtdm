@@ -27,7 +27,7 @@
 #include <math.h>
 #include "parseotherfile.h"
 
-Q_LOGGING_CATEGORY(parseOtherFileLog, "caqtdm.widgets.parseotherfile");
+Q_LOGGING_CATEGORY(parseOtherFileLog, "caqtdm.widgets.parseotherfile")
 
 ParseOtherFile::ParseOtherFile(QString fileName, bool &ok, QString &errorString)
 {

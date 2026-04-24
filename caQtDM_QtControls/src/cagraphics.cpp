@@ -31,7 +31,7 @@
 #include <math.h>
 #include "cagraphics.h"
 
-Q_LOGGING_CATEGORY(caGraphicsLog, "caqtdm.widgets.cagraphics");
+Q_LOGGING_CATEGORY(caGraphicsLog, "caqtdm.widgets.cagraphics")
 
 caGraphics::caGraphics( QWidget *parent) :  QWidget(parent)
 {

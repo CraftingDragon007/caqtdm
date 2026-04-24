@@ -40,7 +40,7 @@
 
 #define ORANGE QColor(243, 186, 7)
 
-Q_LOGGING_CATEGORY(eGaugeLog, "caqtdm.widgets.egauge");
+Q_LOGGING_CATEGORY(eGaugeLog, "caqtdm.widgets.egauge")
 
 EAbstractGauge::EAbstractGauge(QWidget *parent) : QWidget(parent),
     m_colorMode(COLORBAR),
@@ -87,7 +87,7 @@ double EAbstractGauge::logarithm(double v)
 	logar = log10(v);
   else
   {
-    qCDebug(eGaugeLog) << "Gauge logarithmic scale but value %.2f <= 0", v;
+    qCDebug(eGaugeLog) << "Gauge logarithmic scale but value" << v << "<= 0";
 	logar = 0;
   }
   return logar;

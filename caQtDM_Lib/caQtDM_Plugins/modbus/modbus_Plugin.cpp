@@ -32,7 +32,7 @@
 #include "fileFunctions.h"
 #include "loggingcategories.h"
 
-Q_LOGGING_CATEGORY(modbusLog, "caqtdm.plugins.modbus");
+Q_LOGGING_CATEGORY(modbusLog, "caqtdm.plugins.modbus")
 
 // as defined in knobDefines.h
 //caType {caSTRING	= 0, caINT = 1, caFLOAT = 2, caENUM = 3, caCHAR = 4, caLONG = 5, caDOUBLE = 6};

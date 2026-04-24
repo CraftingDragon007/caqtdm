@@ -59,7 +59,7 @@
 
 //#include "ittnotify.h"
 
-Q_LOGGING_CATEGORY(caCameraLog, "caqtdm.widgets.cacamera");
+Q_LOGGING_CATEGORY(caCameraLog, "caqtdm.widgets.cacamera")
 
 char caTypeStr[7][20] = {"caSTRING", "caINT", "caFLOAT", "caENUM", "caCHAR", "caLONG", "caDOUBLE"};
 

@@ -29,7 +29,7 @@
 #include <QMouseEvent>
 #include <QToolTip>
 
-Q_LOGGING_CATEGORY(replaceMacroLog, "caqtdm.widgets.replacemacro");
+Q_LOGGING_CATEGORY(replaceMacroLog, "caqtdm.widgets.replacemacro")
 
 replaceMacro::replaceMacro(QWidget *parent) : QWidget(parent)
 {

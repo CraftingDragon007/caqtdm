@@ -11,7 +11,7 @@
 #define ENV_BUFFER_SIZE "CAQTDM_LOGGING_LOGSTASH_BUFFER_SIZE"
 #define ENV_LOGSTASH_URL "CAQTDM_LOGGING_LOGSTASH_URL"
 
-Q_LOGGING_CATEGORY(logstashLogHandlerLog, "caqtdm.logging.logstash");
+Q_LOGGING_CATEGORY(logstashLogHandlerLog, "caqtdm.logging.logstash")
 
 LogstashLogHandler::LogstashLogHandler(QObject *parent)
     : QObject(parent)

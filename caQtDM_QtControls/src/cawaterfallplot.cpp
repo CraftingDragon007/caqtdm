@@ -29,7 +29,7 @@
 
 #include "cawaterfallplot.h"
 
-Q_LOGGING_CATEGORY(caWaterfallPlotLog, "caqtdm.widgets.cawaterfallplot");
+Q_LOGGING_CATEGORY(caWaterfallPlotLog, "caqtdm.widgets.cawaterfallplot")
 
 __inline double gauss(double x)
 {

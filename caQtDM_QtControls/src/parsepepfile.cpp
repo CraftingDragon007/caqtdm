@@ -27,7 +27,7 @@
 #include <math.h>
 #include "parsepepfile.h"
 
-Q_LOGGING_CATEGORY(parsePepFileLog, "caqtdm.widgets.parsepepfile");
+Q_LOGGING_CATEGORY(parsePepFileLog, "caqtdm.widgets.parsepepfile")
 
 ParsePepFile::ParsePepFile(QString filename, bool willprint)
 {

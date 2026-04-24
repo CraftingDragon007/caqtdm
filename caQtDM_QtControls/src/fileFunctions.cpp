@@ -28,7 +28,7 @@
 #include "searchfile.h"
 #include "specialFunctions.h"
 
-Q_LOGGING_CATEGORY(fileFunctionsLog, "caqtdm.widgets.filefunctions");
+Q_LOGGING_CATEGORY(fileFunctionsLog, "caqtdm.widgets.filefunctions")
 
 fileFunctions::fileFunctions()
 {

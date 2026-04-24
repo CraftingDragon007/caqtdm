@@ -60,7 +60,7 @@
 #define MAXIMUMSIZE 5000
 #define SOMEMORE 500
 
-Q_LOGGING_CATEGORY(caStripPlotLog, "caqtdm.widgets.castripplot");
+Q_LOGGING_CATEGORY(caStripPlotLog, "caqtdm.widgets.castripplot")
 
 caStripPlot::~caStripPlot() {
 

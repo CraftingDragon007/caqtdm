@@ -34,7 +34,7 @@
 #define FONT_SIZE_TOLERANCE_MARGIN 	3 /* pixel */
 #define MIN_FONT_SIZE 			4
 
-Q_LOGGING_CATEGORY(fontScalingWidgetLog, "caqtdm.widgets.fontscalingwidget");
+Q_LOGGING_CATEGORY(fontScalingWidgetLog, "caqtdm.widgets.fontscalingwidget")
 
 FontScalingWidget::FontScalingWidget(QWidget *parent)
 {

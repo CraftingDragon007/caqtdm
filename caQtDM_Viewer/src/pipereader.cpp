@@ -26,7 +26,7 @@
 #include <pipereader.h>
 #include <loggingcategories.h>
 
-Q_LOGGING_CATEGORY(pipeReaderLog, "caqtdm.viewer.pipereader");
+Q_LOGGING_CATEGORY(pipeReaderLog, "caqtdm.viewer.pipereader")
 
 PipeReader::PipeReader(QEventLoop *loop, QObject *parent) : QObject(parent)
 {

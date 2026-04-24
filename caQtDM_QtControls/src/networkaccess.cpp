@@ -37,7 +37,7 @@
 #  include <unistd.h>
 #endif
 
-Q_LOGGING_CATEGORY(networkAccessLog, "caqtdm.widgets.networkaccess");
+Q_LOGGING_CATEGORY(networkAccessLog, "caqtdm.widgets.networkaccess")
 
 NetworkAccess::NetworkAccess()
 {

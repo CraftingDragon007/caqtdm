@@ -42,7 +42,7 @@
 #include <functional>
 #endif
 
-Q_LOGGING_CATEGORY(qwtThermoMarkerLog, "caqtdm.widgets.qwtthermomarker");
+Q_LOGGING_CATEGORY(qwtThermoMarkerLog, "caqtdm.widgets.qwtthermomarker")
 
 static inline void qwtDrawLine( QPainter *painter, int pos,
     const QColor &color, const QRect &pipeRect, const QRect &liquidRect,

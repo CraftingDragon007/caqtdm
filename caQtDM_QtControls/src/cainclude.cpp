@@ -39,7 +39,7 @@
 #endif
 #define MACROCLEANUP "(?<!\\%\\(read)\\s";
 
-Q_LOGGING_CATEGORY(caIncludeLog, "caqtdm.widgets.cainclude");
+Q_LOGGING_CATEGORY(caIncludeLog, "caqtdm.widgets.cainclude")
 
 caInclude::caInclude(QWidget *parent) : QWidget(parent)
 {

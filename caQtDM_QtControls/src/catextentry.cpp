@@ -28,7 +28,7 @@
 #include <QMouseEvent>
 #include <QMimeData>
 
-Q_LOGGING_CATEGORY(caTextEntryLog, "caqtdm.widgets.catextentry");
+Q_LOGGING_CATEGORY(caTextEntryLog, "caqtdm.widgets.catextentry")
 
 caTextEntry::caTextEntry(QWidget *parent) : caLineEdit(parent)
 {

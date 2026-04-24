@@ -47,7 +47,7 @@
     #endif
 #endif
 
-Q_LOGGING_CATEGORY(caWaveTableLog, "caqtdm.widgets.cawavetable");
+Q_LOGGING_CATEGORY(caWaveTableLog, "caqtdm.widgets.cawavetable")
 
 caWaveTable::caWaveTable(QWidget *parent) : QTableWidget(parent)
 {

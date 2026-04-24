@@ -28,7 +28,7 @@
 #include <QStyle>
 #include <QtDebug>
 
-Q_LOGGING_CATEGORY(ePushButtonLog, "caqtdm.widgets.epushbutton");
+Q_LOGGING_CATEGORY(ePushButtonLog, "caqtdm.widgets.epushbutton")
 
 EPushButton::EPushButton(const QString &text, QWidget * parent) : QPushButton(text, parent), FontScalingWidget(this)
 {

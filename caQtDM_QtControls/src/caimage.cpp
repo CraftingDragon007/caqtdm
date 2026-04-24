@@ -29,7 +29,7 @@
 #include <QPainter>
 //#include <QElapsedTimer>
 
-Q_LOGGING_CATEGORY(caImageLog, "caqtdm.widgets.caimage");
+Q_LOGGING_CATEGORY(caImageLog, "caqtdm.widgets.caimage")
 
 caImage::caImage(QWidget* parent) : QWidget(parent)
 {

@@ -13,7 +13,7 @@
 #define DEFAULT_BUFFER_SIZE 20
 
 #include <QLoggingCategory>
-Q_DECLARE_LOGGING_CATEGORY(fileLogHandlerLog);
+Q_DECLARE_LOGGING_CATEGORY(fileLogHandlerLog)
 
 class FileLogHandler : public QObject, public AbstractLogHandler
 {

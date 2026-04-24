@@ -39,7 +39,7 @@
     #endif
 #endif
 
-Q_LOGGING_CATEGORY(caLineDrawLog, "caqtdm.widgets.calinedraw");
+Q_LOGGING_CATEGORY(caLineDrawLog, "caqtdm.widgets.calinedraw")
 
 caLineDraw::caLineDraw(QWidget *parent) : QWidget(parent), FontScalingWidget(this), caWidgetInterface()
 {

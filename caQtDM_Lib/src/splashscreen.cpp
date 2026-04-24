@@ -49,7 +49,7 @@
 
 #define PROGRESS_BAR_AREA_HEIGHT 50
 
-Q_LOGGING_CATEGORY(splashScreenLog, "caqtdm.lib.spashscreen");
+Q_LOGGING_CATEGORY(splashScreenLog, "caqtdm.lib.spashscreen")
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 SplashScreen::SplashScreen(QWidget *parent) : QSplashScreen(parent), m_progress(0)

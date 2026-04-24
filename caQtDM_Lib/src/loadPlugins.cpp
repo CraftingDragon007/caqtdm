@@ -29,7 +29,7 @@
 #include "pathdefinitions.h"
 #include "caQtDM_Lib_global.h"
 
-Q_LOGGING_CATEGORY(loadPluginsLog, "caqtdm.lib.loadplugins");
+Q_LOGGING_CATEGORY(loadPluginsLog, "caqtdm.lib.loadplugins")
 
 loadPlugins::loadPlugins()
 {

@@ -33,7 +33,7 @@
 // as defined in knobDefines.h
 //caType {caSTRING	= 0, caINT = 1, caFLOAT = 2, caENUM = 3, caCHAR = 4, caLONG = 5, caDOUBLE = 6};
 
-Q_LOGGING_CATEGORY(bsreadLog, "caqtdm.plugins.bsread");
+Q_LOGGING_CATEGORY(bsreadLog, "caqtdm.plugins.bsread")
 
 // gives the plugin name back
 QString bsreadPlugin::pluginName()

@@ -11,7 +11,7 @@
 #include <unistd.h>
 #endif
 
-Q_LOGGING_CATEGORY(caUserIdLog, "caqtdm.lib.causerid");
+Q_LOGGING_CATEGORY(caUserIdLog, "caqtdm.lib.causerid")
 
 QString getUniqueUserId()
 {
