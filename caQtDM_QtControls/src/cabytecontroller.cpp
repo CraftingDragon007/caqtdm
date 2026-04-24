@@ -27,7 +27,7 @@
 #include "alarmdefs.h"
 #include <QGridLayout>
 
-Q_LOGGING_CATEGORY((caByteControllerLog, "caqtdm.widgets.cabytecontroller");)
+Q_LOGGING_CATEGORY(caByteControllerLog, "caqtdm.widgets.cabytecontroller");
 
 caByteController::caByteController(QWidget *parent) : QWidget(parent)
 {
