@@ -58,6 +58,7 @@ BuildRequires: qt6-qtsvg-devel
 BuildRequires: qt6-qtserialbus-devel
 BuildRequires: qt6-qt5compat-devel
 BuildRequires: qt6-qtlocation-devel
+BuildRequires: qt6-qtopcua-devel
 BuildRequires: qwt-qt6-devel
 BuildRequires: libXext-devel cppzmq-devel
 BuildRequires: python3-devel
@@ -182,6 +183,7 @@ Requires: epics-base%{EPICS_TARGET_VERSION}
 Requires: qt6-qt5compat
 Requires: qt6-qtlocation
 Requires: qt6-qtimageformats
+Requires: qt6-qtopcua
 Requires: python3
 %endif
 
@@ -208,7 +210,9 @@ mkdir -p %{_builddir}/%{name}-%{version}/build/opt/caqtdm/lib/qt5
 export CAQTDM_MODBUS=1
 export CAQTDM_GPS=1
 export CAQTDM_COLLECT=%{_builddir}/%{name}-%{version}/build/opt/caqtdm/lib/qt5
+%if %{no_rpath} != 1
 export QTDM_RPATH=/opt/caqtdm/lib/qt5
+%endif
 export QTCONTROLS_LIBS=%{_builddir}/%{name}-%{version}/build/opt/caqtdm/lib/qt5
 export QTBASE=%{_builddir}/%{name}-%{version}/build/opt/caqtdm/lib/qt5
 export QTHOME=/usr
@@ -293,7 +297,9 @@ mkdir -p %{_builddir}/%{name}-%{version}/build/opt/caqtdm/lib/qt6
 export CAQTDM_MODBUS=1
 export CAQTDM_GPS=1
 export CAQTDM_COLLECT=%{_builddir}/%{name}-%{version}/build/opt/caqtdm/lib/qt6
+%if %{no_rpath} != 1
 export QTDM_RPATH=/opt/caqtdm/lib/qt6
+%endif
 export QTCONTROLS_LIBS=%{_builddir}/%{name}-%{version}/build/opt/caqtdm/lib/qt6
 export QTBASE=%{_builddir}/%{name}-%{version}/build/opt/caqtdm/lib/qt6
 export QTHOME=/usr

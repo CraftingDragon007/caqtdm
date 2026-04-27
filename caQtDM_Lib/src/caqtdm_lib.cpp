@@ -128,7 +128,9 @@
 #define INPUTDIALOG 	"Input Dialog"
 #define FILEDIALOG      "File Dialog"
 #define CHANGELIMITS 	"Change Limits/Precision"
-
+#define COPYIMAGE       "Copy Image"
+#define COPYDATACSV     "Copy Data as CSV"
+#define PASTEDATACSV     "Paste Data as CSV"
 
 #define POPUPDEFENITION "popup.ui"
 
@@ -282,6 +284,7 @@
 Q_DECLARE_METATYPE(QList<int>)
 Q_DECLARE_METATYPE(QTabWidget*)
 Q_DECLARE_METATYPE(QStackedWidget*)
+Q_DECLARE_METATYPE(QtMsgType)
 
 // this sleep will not block the GUI and QThread::msleep is protected in Qt4.8 (so do not use that)
 class Sleep
@@ -6255,7 +6258,11 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
                     if(ptr != (knobData *) Q_NULLPTR) {
                         // when connected
                         if(ptr->edata.connected) {
-                            valueArray[i] = ptr->edata.rvalue;
+                            if (ptr->edata.fieldtype == caINT) {
+                                valueArray[i] = ptr->edata.ivalue;
+                            } else {
+                                valueArray[i] = ptr->edata.rvalue;
+                            }
                         } else {
                             valueArray[i] = 0.0;
                         }
@@ -6351,6 +6358,8 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
                  if(data.edata.ivalue < list.count()) wavetableWidget->setDataType(list.at(data.edata.ivalue));
                 }
             }
+
+            wavetableWidget->setAccessW(data.edata.accessW);
 
         } else if(data.specData[0] == 0){
             QStringList list;
@@ -6767,6 +6776,10 @@ void CaQtDM_Lib::getStatesToggleAndLed(QWidget *widget, const knobData &data, co
             if(falseString.compare(str) == 0) state = Qt::Unchecked;
         }
     }
+}
+
+void CaQtDM_Lib::messageWindowOutput(const QtMsgType type, const QString &message) {
+    postMessage(type, message.toLatin1().data());
 }
 
 void CaQtDM_Lib::Callback_CaCalc(double value)
@@ -7661,6 +7674,13 @@ void CaQtDM_Lib::closeEvent(QCloseEvent* ce)
 {
     Q_UNUSED(ce);
 
+    QString thisFileName =  property("fileString").toString().section('/',-1);
+    QString launchFile = (QString) qgetenv("CAQTDM_LAUNCHFILE");
+    bool doIosExit = false;
+    if(thisFileName.contains(launchFile)) {
+        doIosExit = true;
+    }
+
     killTimer(loopTimerID);
 
     AllowsUpdate = false;
@@ -7709,9 +7729,7 @@ void CaQtDM_Lib::closeEvent(QCloseEvent* ce)
     mutexKnobDataP->initHighestCountPV();
 
     // in case of network launcher, close the application when launcher window is closed
-    QString thisFileName =  property("fileString").toString().section('/',-1);
-    QString launchFile = (QString)  qgetenv("CAQTDM_LAUNCHFILE");
-    if(thisFileName.contains(launchFile)) {
+    if(doIosExit) {
         emit Signal_IosExit();
     }
 }
@@ -7926,9 +7944,6 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
         if((thermoWidget->getColorMode() == caThermo::Alarm_Default) || (thermoWidget->getColorMode() == caThermo::Alarm_Static)) strcpy(colMode, "Alarm");
         else strcpy(colMode, "Static");
 
-    } else if(caWaveTable* wavetableWidget = qobject_cast<caWaveTable *>(w)) {
-        wavetableWidget->clearSelection();
-
     } else if(caByte* byteWidget = qobject_cast<caByte *>(w)) {
         if(byteWidget->getColorMode() == caByte::Alarm) strcpy(colMode, "Alarm");
         else strcpy(colMode, "Static");
@@ -7993,6 +8008,14 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
         myMenu.addAction(GETINFO);
         myMenu.addAction(CHANGEVALUE);
 
+    } else if(caWaveTable* wavetableWidget = qobject_cast<caWaveTable *>(w)) {
+        wavetableWidget->clearSelection();
+        myMenu.addAction(GETINFO);
+        myMenu.addAction(COPYDATACSV);
+        if (wavetableWidget->getAccessW()) {
+            myMenu.addAction(PASTEDATACSV);
+        }
+
         // all other widgets
     } else if(!onMain){
         // construct info for the pv we are pointing at
@@ -8011,6 +8034,7 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
         myMenu.addAction(CHANGEAXIS);
         myMenu.addAction(QWhatsThis::createAction());
         myMenu.addAction(RESETZOOM);
+        myMenu.addAction(COPYIMAGE);
     }
 
     // for catextentry add filedialog
@@ -8497,7 +8521,18 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
         } else if(selectedItem->text().contains(CHANGELIMITS)) {
             limitsDialog dialog(w, mutexKnobDataP, "Limits/Precision change", this);
             dialog.exec();
-
+        } else if(selectedItem->text().contains(COPYIMAGE)) {
+            if(caCartesianPlot* cartesianplotWidget = qobject_cast<caCartesianPlot *>(w)) {
+                cartesianplotWidget->copyImage();
+            }
+        } else if(selectedItem->text().contains(COPYDATACSV)) {
+            if(caWaveTable* wavetableWidget = qobject_cast<caWaveTable *>(w)) {
+                wavetableWidget->copyDataCSV();
+            }
+        } else if(selectedItem->text().contains(PASTEDATACSV)) {
+            if(caWaveTable* wavetableWidget = qobject_cast<caWaveTable *>(w)) {
+                wavetableWidget->pasteDataCSV();
+            }
         } else {
             // any action from environment ?
             if(validExecListItems) {
@@ -8510,8 +8545,13 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
                                 dataIndex = MonitorList.at(1).toInt();
                                 knobData *kPtr =  mutexKnobDataP->GetMutexKnobDataPtr(dataIndex);
                                 if(kPtr != (knobData *) 0) command.replace("&P", kPtr->pv);
-                                command.replace(".X", "");  // this is only to get rid of our pseudo extensions .X or .Y for the archive cartesian plot
-                                command.replace(".Y", "");  // this is only to get rid of our pseudo extensions .X or .Y for the archive cartesian plot
+                                // Remove internal pseudo-extensions used by caCartesianPlots with archived channels
+                                command.replace(".X", "");
+                                command.replace(".Y", "");
+                                command.replace(".minX", "");
+                                command.replace(".maxX", "");
+                                command.replace(".minY", "");
+                                command.replace(".maxY", "");
                             }
                             shellCommand(command);
                         }
@@ -9020,12 +9060,20 @@ void CaQtDM_Lib::TreatOrdinaryValue(QString pvo, double value, int32_t idata,  Q
 long CaQtDM_Lib::getLongValueFromString(char *textValue, FormatType fType, char **end)
 {
     if(fType == octal) {
+        // Internally we represent octal values with 'O' prefix, but C-Standard is '0'
+        if(strlen(textValue) > (size_t) 1 && textValue[0] == 'O') {
+            textValue[0] = '0';
+        }
         return strtoul(textValue, end, 8);
     } else if(fType == hexadecimal) {
         return strtoul(textValue, end, 16);
     } else {
         if((strlen(textValue) > (size_t) 2) && (textValue[0] == '0') && (textValue[1] == 'x' || textValue[1] == 'X')) {
             return strtoul(textValue, end, 16);
+        } else if(strlen(textValue) > (size_t) 1 && textValue[0] == 'O') {
+            // Same as for regular octal conversion
+            textValue[0] = '0';
+            return strtoul(textValue, end, 8);
         } else {
             return strtol(textValue, end, 10);
         }
