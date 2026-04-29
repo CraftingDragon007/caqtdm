@@ -5,7 +5,7 @@ on: [push]
 jobs:
   build:
     name: Build DEB package
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: self-hosted
     strategy:
       fail-fast: false
 
