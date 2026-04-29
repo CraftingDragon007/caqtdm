@@ -28,10 +28,6 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y build-essential devscripts dh-make debhelper
     
-    - uses: actions/setup-python@v6
-      with:
-         python-version: '3.13' 
-
     - name: Install dependencies
       run: |
         sudo apt-get install -y \
