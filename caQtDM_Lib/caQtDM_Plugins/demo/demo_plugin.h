@@ -52,6 +52,7 @@ class Q_DECL_EXPORT DemoPlugin : public QObject, ControlsInterface
 public:
     QString pluginName();
     DemoPlugin();
+    ~DemoPlugin();
 
     int initCommunicationLayer(MutexKnobData *data, MessageWindow *messageWindow, QMap<QString, QString> options);
     int pvAddMonitor(int index, knobData *kData, int rate, int skip);

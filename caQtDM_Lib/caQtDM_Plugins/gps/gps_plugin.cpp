@@ -44,6 +44,14 @@ gpsPlugin::gpsPlugin()
 {
     qCInfo(gpsLog) << "GPS: Create";
     enable_gps_readout=false;
+    timerValues = Q_NULLPTR;
+}
+
+gpsPlugin::~gpsPlugin()
+{
+    if (timerValues) {
+        timerValues->deleteLater();
+    }
 }
 
 // in this gps we update our interface here; normally you should update in from your controlsystem
@@ -141,8 +149,6 @@ void gpsPlugin::updateValues()
 {
     QMutexLocker locker(&mutex);
     if (!enable_gps_readout) return;
-
-
 }
 
 
@@ -157,7 +163,7 @@ int gpsPlugin::initCommunicationLayer(MutexKnobData *data, MessageWindow *messag
     initValue = 0.0;
 
     // we want to update our internal doubles every second
-    timerValues = new QTimer(this);
+    timerValues = new QTimer();
     connect(timerValues, SIGNAL(timeout()), this, SLOT(updateValues()));
     timerValues->start(500);
 
