@@ -33,6 +33,10 @@ private:
 #endif
     bool m_flushEachLog;
     bool m_verboseOutput;
+
+#ifdef Q_OS_WIN
+    bool m_isDebuggerPresent;
+#endif
 };
 
 #endif // CONSOLELOGHANDLER_H
