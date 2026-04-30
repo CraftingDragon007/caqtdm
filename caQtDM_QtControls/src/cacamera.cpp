@@ -59,6 +59,8 @@
 
 //#include "ittnotify.h"
 
+Q_LOGGING_CATEGORY(caCameraLog, "caqtdm.widgets.cacamera")
+
 char caTypeStr[7][20] = {"caSTRING", "caINT", "caFLOAT", "caENUM", "caCHAR", "caLONG", "caDOUBLE"};
 
 caCamera::caCamera(QWidget *parent) : QWidget(parent)
@@ -166,7 +168,7 @@ void caCamera::setCompressionModeStrings()
 void caCamera::setDecodemodeStr(QString mode)
 {
     if(mode.length() == 0) return;
-    //printf("colormodeset with %s\n", qasc(mode));
+    qCDebug(caCameraLog) << "colormodeset with" << mode;
     for(int i = 0; i< colorModeString.count(); i++) {
         if(mode == colorModeString.at(i)) {
             thisColormode = (colormode) i;
@@ -179,7 +181,7 @@ void caCamera::setDecodemodeStr(QString mode)
 bool caCamera::testDecodemodeStr(QString mode)
 {
     if(mode.length() == 0) return false;
-    //printf("colormodeset with %s\n", qasc(mode));
+    qCDebug(caCameraLog) << "colormodeset with" << mode;
     for(int i = 0; i< colorModeString.count(); i++) {
         if(mode == colorModeString.at(i)) {
             return true;
@@ -191,7 +193,7 @@ bool caCamera::testDecodemodeStr(QString mode)
 void caCamera::setPackingmodeStr(QString mode)
 {
     if(mode.length() == 0) return;
-    //printf("Packingmodeset with %s\n", qasc(mode));
+    qCDebug(caCameraLog) << "Packingmodeset with" << mode;
     for(int i = 0; i< packingModeString.count(); i++) {
         if(mode == packingModeString.at(i)) {
             thisPackingmode = (packingmode) i;
@@ -203,7 +205,7 @@ void caCamera::setPackingmodeStr(QString mode)
 bool caCamera::testPackingmodeStr(QString mode)
 {
     if(mode.length() == 0) return false;
-    //printf("Packingmodeset with %s\n", qasc(mode));
+    qCDebug(caCameraLog) << "Packingmodeset with" << mode;
     for(int i = 0; i< packingModeString.count(); i++) {
         if(mode == packingModeString.at(i)) {
             return true;
@@ -215,7 +217,7 @@ bool caCamera::testPackingmodeStr(QString mode)
 void caCamera::setCompressionmodeStr(QString mode)
 {
     if(mode.length() == 0) return;
-    //printf("Packingmodeset with %s\n", qasc(mode));
+    qCDebug(caCameraLog) << "Packingmodeset with" << mode;
     for(int i = 0; i< compressionModeString.count(); i++) {
         if(mode == compressionModeString.at(i)) {
             thisCompressionmode = (compressionmode) i;
@@ -227,7 +229,7 @@ void caCamera::setCompressionmodeStr(QString mode)
 bool caCamera::testCompressionmodeStr(QString mode)
 {
     if(mode.length() == 0) return false;
-    //printf("Packingmodeset with %s\n", qasc(mode));
+    qCDebug(caCameraLog) << "Packingmodeset with" << mode;
     for(int i = 0; i< compressionModeString.count(); i++) {
         if(mode == compressionModeString.at(i)) {
             return true;
@@ -238,7 +240,7 @@ bool caCamera::testCompressionmodeStr(QString mode)
 
 void caCamera::setDecodemodeNum(int mode)
 {
-    //printf("colormodeset with %d\n", mode);
+    qCDebug(caCameraLog) << "colormodeset with" << mode;
     m_init = true;
     thisColormode = (colormode) mode;
     if(colormodeCombo != (QComboBox*)Q_NULLPTR) colormodeCombo->setCurrentIndex(thisColormode);
@@ -246,7 +248,7 @@ void caCamera::setDecodemodeNum(int mode)
 
 void caCamera::setDecodemodeNum(double mode)
 {
-    //printf("colormodeset with %d\n", (int) mode);
+    qCDebug(caCameraLog) << "colormodeset with" << (int)mode;
     int intermed = (int)mode;
     m_init = true;
     thisColormode = (colormode) intermed; // direct not allowed on Windows (C2440)
@@ -257,14 +259,14 @@ void caCamera::setDecodemodeNum(double mode)
 
 void caCamera::setPackingmodeNum(int mode)
 {
-    //printf("packingmodeset with %d\n", mode);
+    qCDebug(caCameraLog) << "packingmodeset with" << mode;
     thisPackingmode = (packingmode) mode;
     if(packingmodeCombo != (QComboBox*)Q_NULLPTR) packingmodeCombo->setCurrentIndex(thisPackingmode);
 }
 
 void caCamera::setPackingmodeNum(double mode)
 {
-    //printf("packingmodeset with %d\n", (int) mode);
+    qCDebug(caCameraLog) << "packingmodeset with" << (int) mode;
     int intermed = (int)mode;
     thisPackingmode = (packingmode) intermed;// direct not allowed on Windows (C2440)
     if(packingmodeCombo != (QComboBox*)Q_NULLPTR)
@@ -274,7 +276,7 @@ void caCamera::setPackingmodeNum(double mode)
 
 void caCamera::setCompressionmodeNum(int mode)
 {
-    //printf("compressionmodeset with %d\n", mode);
+    qCDebug(caCameraLog) << "compressionmodeset with" << mode;
     thisCompressionmode = (compressionmode) mode;
     if(compressionmodeCombo != (QComboBox*)Q_NULLPTR)
         if (compressionmodeCombo->count()<thisCompressionmode)
@@ -283,7 +285,7 @@ void caCamera::setCompressionmodeNum(int mode)
 
 void caCamera::setCompressionmodeNum(double mode)
 {
-    //printf("compressionmodeset with %d\n", (int) mode);
+    qCDebug(caCameraLog) << "compressionmodeset with" << (int) mode;
     int intermed = (int)mode;
     thisCompressionmode = (compressionmode) intermed;
     if(compressionmodeCombo != (QComboBox*)Q_NULLPTR)
@@ -804,7 +806,7 @@ void caCamera::setAutoLevel(bool enable){
 void caCamera::setZoomSlider(int zoom){
    if (zoom!=m_zoom_value){
     m_zoom_value=zoom;
-    printf("setZoomSlider(int zoom)");
+    qCDebug(caCameraLog) << "setZoomSlider(int zoom)";
     fflush(stdout);
     if(zoomSlider != (QSlider *) Q_NULLPTR ) {
         if (zoomSlider->value()!=m_zoom_value) {
@@ -1218,7 +1220,7 @@ template <typename pureData> void caCamera::calcImage (pureData *ptr,  colormode
     float greencoeff = correction * thisGreenCoefficient;
     float bluecoeff = correction * thisBlueCoefficient;
 
-    //printf("width=%d height=%d datasize=%d\n", resultSize.width(), yend, datasize);
+    qCDebug(caCameraLog) << "width=" << resultSize.width() << "height=" << yend << "datasize=" << datasize;
 
     if(thisColormap == as_is || thisColormap > color_to_mono) {
         for (int y = ystart; y < yend; ++y) {
@@ -1283,12 +1285,15 @@ void caCamera::CameraDataConvert(int sector, int sectorcount, SyncMinMax* MinMax
             if(SizeToTreat > datasize) {
                 yend -= 10;
                 if(yend < ystart) {
-                    printf("caCamera -- something really wrong between datasize and image width and height\n");
+                    qCCritical(caCameraLog) <<"caCamera -- something really wrong between datasize and image width and height";
                     free (LineData);
                     return;
                 }
                 if(writeIt) {
-                    printf("caCamera -- something wrong between datasize=%d and image width=%d and height=%d, trying to match\n", datasize, resultSize.width(), resultSize.height());
+                    qCCritical(caCameraLog)
+                        << "caCamera -- something wrong between datasize=" << datasize
+                        << "and image width=" << resultSize.width()
+                        << "and height=" << resultSize.height() << ", trying to match";
                     writeIt = false;
                     fflush(stdout);
                 }
@@ -1340,7 +1345,7 @@ void caCamera::CameraDataConvert(int sector, int sectorcount, SyncMinMax* MinMax
             calcImageMono ((double*) savedData, LineData, i, ystart, yend, correction, datasize/elementSize, resultSize, Max, Min);
             break;
         default:
-            printf("caCamera -- data format not supported\n");
+            qCCritical(caCameraLog) << "caCamera -- data format not supported";
         }
 
         MinMaxImageLockBlock(LineData, ystart, yend, resultSize, MinMax);
@@ -1373,7 +1378,7 @@ void caCamera::CameraDataConvert(int sector, int sectorcount, SyncMinMax* MinMax
             calcImage ((double*) savedData, thisColormode, LineData, i, ystart, yend, correction, datasize/elementSize, resultSize, MinMax, Max, Min);
             break;
         default:
-            printf("caCamera -- data format not supported\n");
+            qCCritical(caCameraLog) << "caCamera -- data format not supported";
         }
 
         MinMaxLock(MinMax, Max, Min);
@@ -1408,7 +1413,7 @@ template <typename pureData> void caCamera::FilterBayer(pureData *bayer, uint *r
     int i, iinc, imax;
 
     if ((tile > BAYER_COLORFILTER_MAX) || (tile < BAYER_COLORFILTER_MIN)) {
-        printf("caCamera -- bayer, invalid filter\n");
+        qCCritical(caCameraLog) << "caCamera -- bayer, invalid filter";
         return;
     }
 
@@ -1712,7 +1717,9 @@ void caCamera::PROC_YUV444(uchar *YUV, uint *rgb, int sx, int sy, int datasize) 
 
 void caCamera::PROC_UVY444(uchar *YUV, uint *rgb, int sx, int sy, int datasize)  // 3 bytes for 1 pixels
 {
-    //printf("datatype=PROC_UVY444 colormode=%d %s (%x)(%x) %i %i\n", thisColormode, qasc(colorModeString.at(thisColormode)),(long)YUV,(long)rgb,sx, sy);
+    qCDebug(caCameraLog) << "datatype=PROC_UVY444 colormode=" << thisColormode
+                         << colorModeString.at(thisColormode) << "(" << (long) YUV << ")("
+                         << (long) rgb << ")" << sx << sy;
     long max_data=(long)YUV + datasize;
 
     if ((sx==0)||(sy==0)) return;
@@ -1914,7 +1921,7 @@ QImage *caCamera::showImageCalc(int datasize, char *data, short datatype)
             ZLIB_ULONG newsize=expectedSize;
             int error = uncompress((ZLIB_BYTE *)decompressedData.constData(),&newsize,(ZLIB_BYTE *)data2,datasize-4);
             if (error != Z_OK) {
-                qDebug() << "caCamera: error uncompressing image data, code:" << error;
+                qCCritical(caCameraLog) << "caCamera: error uncompressing image data, code:" << error;
             }
 
             //decompressedData=qUncompress((uchar*)data, datasize);
@@ -1922,7 +1929,7 @@ QImage *caCamera::showImageCalc(int datasize, char *data, short datatype)
 
             data=(char*)decompressedData.constData();
             savedData = data;
-            //printf("datasize=%d:%d (%i)\n",datasize,decompressedData.size(),error);
+            qCDebug(caCameraLog) << "datasize=" << datasize << ":" << decompressedData.size() << "(" << error << ")";
             datasize=(int)newsize;//decompressedData.size();
         }else{
             datasize=0;
@@ -1946,7 +1953,7 @@ QImage *caCamera::showImageCalc(int datasize, char *data, short datatype)
             decompressedData.resize(jimage->byteCount());
             memcpy((void*)decompressedData.constData(),(void*)jimage->constBits(),jimage->byteCount());
             datasize=jimage->byteCount();
-            //printf("datasize=%d:%d:%d (%i)\n",datasize,decompressedData.size(),jimage->byteCount(),jimage->format());
+            qCDebug(caCameraLog) << "datasize=" << datasize << ":" << decompressedData.size() << ":" << jimage->byteCount() << "(" << jimage->format() << ")";
 #else
             decompressedData.resize(jimage->sizeInBytes());
             memcpy((void*)decompressedData.constData(),(void*)jimage->constBits(),jimage->sizeInBytes());
@@ -1982,7 +1989,7 @@ QImage *caCamera::showImageCalc(int datasize, char *data, short datatype)
 
         reallocate_central_image();
 
-        //printf("datasize=%d\n",datasize);
+        qCDebug(caCameraLog) << "datasize)" << datasize;
 
         m_init = false;
         minvalue = 0;
@@ -1993,8 +2000,8 @@ QImage *caCamera::showImageCalc(int datasize, char *data, short datatype)
         ulong rgbsize = 3*m_width*m_height*sizeof(uint);
         rgb = (uint *) malloc(rgbsize);
 
-        //printf("rgb(%x) size now define to %d uints => %d chars, received %d chars\n",rgb, 3*m_width*m_height, rgbsize, datasize);
-        //fflush(stdout);
+        qCDebug(caCameraLog) << "rgb(" << rgb << ") size now define to" << 3 * m_width * m_height
+                             << "uints =>" << rgbsize << "chars, received" << datasize << "chars";
 
         // force resize
         QResizeEvent *re = new QResizeEvent(size(), size());
@@ -2008,7 +2015,7 @@ QImage *caCamera::showImageCalc(int datasize, char *data, short datatype)
     if(data == (void*)Q_NULLPTR) return (QImage *) Q_NULLPTR;
     if(datasize == 0) return (QImage *) Q_NULLPTR;
     if(rgb == (uint *)Q_NULLPTR) {
-        printf("caCamera -- could not allocate rgb buffer\n");
+        qCCritical(caCameraLog) << "caCamera -- could not allocate rgb buffer";
         return (QImage *) Q_NULLPTR;
     }
 
@@ -2028,9 +2035,8 @@ QImage *caCamera::showImageCalc(int datasize, char *data, short datatype)
 
     void (caCamera::*CameraDataConvert) (int sector, int sectorcount, SyncMinMax* MinMax, QSize resultSize, int datasize) = NULL;
 
-    //printf("datatype=%d %s colormode=%d %s\n", datatype, caTypeStr[datatype], thisColormode, qasc(colorModeString.at(thisColormode)));
-   // printf("thisColormode %i\n",thisColormode);
-    fflush(stdout);
+    qCDebug(caCameraLog) << "datatype=" << datatype << caTypeStr[datatype] << "colormode=" << thisColormode << qasc(colorModeString.at(thisColormode));
+    qCDebug(caCameraLog) << "thisColormode" << thisColormode;
 
     switch (thisColormode) {
     case Mono:
@@ -2111,8 +2117,8 @@ QImage *caCamera::showImageCalc(int datasize, char *data, short datatype)
         thisColormode = RGB1_CA;
         m_datatype = caLONG;
 
-        //printf("bitsperlement=%d datasize=%d sx=%d sy=%d\n",bitsPerElement,  datasize, sx, sy);
-        //fflush(stdout);
+        qCDebug(caCameraLog) << "bitsperlement=" << bitsPerElement << "datasize=" << datasize << "sx=" << sx << "sy=" << sy;
+
         if(bitsPerElement == 8) {
             FilterBayer((uchar *) data, rgb, sx, sy, tile,datasize);
         } else if((bitsPerElement == 12) && (thisPackingmode == packNo)) {
@@ -2190,7 +2196,7 @@ QImage *caCamera::showImageCalc(int datasize, char *data, short datatype)
     case YUV421:
     default:
         savedData = data;
-        //printf("not yet supported colormode = %s\n", qasc(colorModeString.at(thisColormode)));
+        qCDebug(caCameraLog) << "not yet supported colormode =" << qasc(colorModeString.at(thisColormode));
         QPainter painter(image);
         QBrush brush(QColor(200,200,200,255), Qt::SolidPattern);
         painter.setRenderHint(QPainter::Antialiasing);

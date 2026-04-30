@@ -30,6 +30,8 @@
 
 #include "qwtplotcurvenan.h"
 
+Q_LOGGING_CATEGORY(qwtPlotIntervalCurveNaNLog, "caqtdm.widgets.qwtplotintervalcurvenan")
+
 QwtPlotCurveNaN::QwtPlotCurveNaN(const QString& title)
 {
     setTitle(title);
@@ -62,7 +64,7 @@ void QwtPlotCurveNaN::drawSeries(QPainter *painter, const QwtScaleMap &xMap,cons
 
         //nbCount++;
     }
-    //printf("plotted 1 = %d\n", nbCount);
+    //qCDebug(qwtPlotIntervalCurveNaNLog) << "plotted 1 =" << nbCount;
 }
 
 void QwtPlotCurveNaN::setInterval(curvType type, double interval)

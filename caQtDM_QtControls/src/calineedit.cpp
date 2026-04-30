@@ -43,6 +43,7 @@
     #endif
 #endif
 
+Q_LOGGING_CATEGORY(caLineEditLog, "caqtdm.widgets.calineedit")
 
 caLineEdit::caLineEdit(QWidget *parent) : QLineEdit(parent), FontScalingWidget(this)
 {
@@ -56,7 +57,7 @@ caLineEdit::caLineEdit(QWidget *parent) : QLineEdit(parent), FontScalingWidget(t
     QFontInfo info(font);
     //font.setStyleStrategy(QFont::NoAntialias);
     QString family = info.family();
-    //printf("got font %s\n", qasc(family));
+    qCDebug(caLineEditLog) << "got font" << family;
     if(!family.contains("Lucida Sans Typewriter")) {
         QFont  newfont("Monospace");   // not very nice, while a a dot inside the zero to distinguish from o
         newfont.setStyleHint(QFont::TypeWriter);
@@ -346,10 +347,10 @@ bool caLineEdit::event(QEvent *e)
           setStyleSheet("");
           QString c=  palette().color(QPalette::Base).name();
           defBackColor = QColor(c);
-          //printf("default back color %s %s\n", qasc(c), qasc(this->objectName()));
+          qCDebug(caLineEditLog) << "default back color" << c << this->objectName();
           c=  palette().color(QPalette::Text).name();
           defForeColor = QColor(c);
-          //printf("default fore color %s %s\n", qasc(c), qasc(this->objectName()));
+          qCDebug(caLineEditLog) << "default fore color" << c << this->objectName();
 
           if(!defBackColor.isValid()) defBackColor = QColor(255, 248, 220, 255);
           if(!defForeColor.isValid()) defForeColor = Qt::black;
@@ -627,7 +628,7 @@ void caLineEdit::setAlarmColors(short status, double value, QColor bgAtInit, QCo
     switch (Alarm) {
 
     case NO_ALARM:
-        //qDebug() << "no alarm" << kPtr->pv;
+        qCDebug(caLineEditLog) << "no alarm";
         if(thisColorMode == Alarm_Static || thisColorMode == Alarm_Default) {
             c = AL_GREEN;
             if(thisAlarmHandling == onForeground) setForeAndBackground(c, bgAtInit, thisFrameColor);
@@ -638,7 +639,7 @@ void caLineEdit::setAlarmColors(short status, double value, QColor bgAtInit, QCo
         break;
 
     case MINOR_ALARM:
-        //qDebug() << "minor alarm";
+        qCDebug(caLineEditLog) << "minor alarm";
         if(thisColorMode == Alarm_Static || thisColorMode == Alarm_Default) {
             c = AL_YELLOW;
             if(thisAlarmHandling == onForeground) setForeAndBackground(c, bgAtInit, thisFrameColor);
@@ -649,7 +650,7 @@ void caLineEdit::setAlarmColors(short status, double value, QColor bgAtInit, QCo
         break;
 
     case MAJOR_ALARM:
-        //qDebug() << "serious alarm" << kPtr->pv;
+        qCDebug(caLineEditLog) << "serious alarm";
         if(thisColorMode == Alarm_Static || thisColorMode == Alarm_Default) {
             c = AL_RED;
             if(thisAlarmHandling == onForeground) setForeAndBackground(c, bgAtInit, thisFrameColor);
@@ -660,7 +661,7 @@ void caLineEdit::setAlarmColors(short status, double value, QColor bgAtInit, QCo
         break;
 
     case INVALID_ALARM:
-        //qDebug() << "invalid alarm";
+        qCDebug(caLineEditLog) << "invalid alarm";
         if(thisColorMode == Alarm_Static) {
             c =AL_WHITE;
             if(thisAlarmHandling == onForeground) setForeAndBackground(c, bgAtInit, thisFrameColor);
@@ -671,12 +672,12 @@ void caLineEdit::setAlarmColors(short status, double value, QColor bgAtInit, QCo
         break;
 
     case NOTCONNECTED:
-        //qDebug() << "no connection";
+        qCDebug(caLineEditLog) << "no connection";
         forceForeAndBackground(AL_WHITE, AL_WHITE, thisFrameColor);
         break;
 
     default:
-        //qDebug() << "Alarm default" << status;
+        qCDebug(caLineEditLog) << "Alarm default" << status;
         if(thisColorMode == Alarm_Static) {
             c = AL_DEFAULT;
             if(thisAlarmHandling == onForeground) setForeAndBackground(c, bgAtInit, thisFrameColor);
@@ -707,7 +708,7 @@ void caLineEdit::setTextLine(const QString &txt)
     }
     pos = cursorPosition();
 
-    //printf("settext: %s <%s> <%s> cursor@%d\n", qasc(thisPV),  qasc(txt), qasc(keepText), pos);
+    qCDebug(caLineEditLog) << "settext:" << thisPV << "<" << txt << ">" << "<" << keepText << ">" << "cursor@" << pos;
 
     if(keepText.size() != txt.size()) {
        FontScalingWidget::rescaleFont(txt, d_savedTextSpace);
@@ -718,7 +719,7 @@ void caLineEdit::setTextLine(const QString &txt)
     }
 
     keepText = txt;
-    //printf("settext: %s <%s> <%s> cursor@%d\n", qasc(thisPV),  qasc(txt), pos);
+    qCDebug(caLineEditLog) << "settext:" << thisPV << "<" << txt << ">" << "<" << keepText << ">" << "cursor@" << pos;
 }
 
 /* attempt to improve performance
@@ -766,7 +767,7 @@ QSize caLineEdit::sizeHint() const
     int w = QMETRIC_QT456_FONT_WIDTH(fm,text());
     int h = QMETRIC_QT456_FONT_HEIGHT(fm,text());
     QSize size(w, h);
-    //printf("ESimpleLabel \e[1;33msizeHint\e[0m \"%s\" returning size w %d h %d\n", objectName(), size.width(), size.height());
+    qCDebug(caLineEditLog) << "ESimpleLabel \e[1;33msizeHint\e[0m \"" << objectName() << "\" returning size w" << size.width() << "h" << size.height();
     return size;
 }
 
@@ -777,7 +778,8 @@ QSize caLineEdit::minimumSizeHint() const
         size = QLineEdit::minimumSizeHint();
     else
         size = sizeHint();
-    //printf("ESimpleLabel \e[0;33mminimumSizeHint\e[0m \"%s\" returning size w %d h %d\n", objectName(), size.width(), size.height());
+    qCDebug(caLineEditLog) << "ESimpleLabel \e[1;33mminimumsizeHint\e[0m \"" << objectName() << "\" returning size w" << size.width() << "h" << size.height();
+
     return size;
 }
 

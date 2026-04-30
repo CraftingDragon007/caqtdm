@@ -31,6 +31,8 @@
 #include <math.h>
 #include "imagewidget.h"
 
+Q_LOGGING_CATEGORY(imageWidgetLog, "caqtdm.widgets.imagewidget")
+
 ImageWidget::ImageWidget(QWidget *parent) : QWidget(parent)
 {
     imageOffset.setX(0);
@@ -149,15 +151,15 @@ void ImageWidget::paintEvent(QPaintEvent * event)
              Max[(XL[i] > Max[1])] =  (float) XL[i];
              Min[(XL[i] < Min[1])] =  (float) XL[i];
          }
-        //printf("%d %d %d %d\n", exposedRect.x(), exposedRect.y(), exposedRect.width(), exposedRect.height());
+        qCDebug(imageWidgetLog) << exposedRect.x() << exposedRect.y() << exposedRect.width() << exposedRect.height();
 
-        // calculate world values to positions
+         // calculate world values to positions
         painter.setCompositionMode(QPainter::RasterOp_SourceAndNotDestination);
         painter.setPen(QPen(Qt::white, 0, Qt::SolidLine));
         double range = Max[1] - Min[1];
         double correction = qAbs(exposedRect.height() * 0.2 / range);
 
-        //printf("%d %d %d %d\n", exposedRect.x(), exposedRect.y(), exposedRect.width(), exposedRect.height());
+        qCDebug(imageWidgetLog) << exposedRect.x() << exposedRect.y() << exposedRect.width() << exposedRect.height();
 
         for(int i=0; i< XL.size(); i++) {
             pointsX[i].setY(i);
@@ -178,7 +180,7 @@ void ImageWidget::paintEvent(QPaintEvent * event)
              Max[(YL[i] > Max[1])] =  (float) YL[i];
              Min[(YL[i] < Min[1])] =  (float) YL[i];
          }
-        //printf("%d %d %d %d\n", exposedRect.x(), exposedRect.y(), exposedRect.width(), exposedRect.height());
+        qCDebug(imageWidgetLog) << exposedRect.x() << exposedRect.y() << exposedRect.width() << exposedRect.height();
 
         // calculate world values to positions
         painter.setCompositionMode(QPainter::RasterOp_SourceAndNotDestination);

@@ -366,6 +366,7 @@ private:
     bool reaffectText(QMap<QString, QString> map, QString *text, QWidget *w);
     int InitVisibility(QWidget* widget, knobData *kData, QMap<QString, QString> map,  int *specData, QString info);
     void postMessage(QtMsgType type, char *msg);
+    void postMessageAndLog(QtMsgType type, char *msg, QMessageLogger::CategoryFunction category);
     int Execute(char *command);
 
     void TreatRequestedWave(QString pv, QString text, caWaveTable::FormatType fType, int index, QWidget *w);

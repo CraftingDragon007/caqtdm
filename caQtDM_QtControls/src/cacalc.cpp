@@ -28,7 +28,7 @@
   #define snprintf _snprintf
 #endif
 
-
+Q_LOGGING_CATEGORY(caCalcLog, "caqtdm.widgets.cacalc")
 
 caCalc::caCalc( QWidget *parent ) :  ESimpleLabel(parent)
 {
@@ -91,7 +91,7 @@ void caCalc::setValue(double value)
         emit emitSignal(value);
 
         if (fabs(checkSignal_value_double-value)>std::numeric_limits<double>::epsilon()*10){
-            //qDebug()<<"reduced_emitSignal"<<checkSignal_value_double<<value<< this ;
+            qCDebug(caCalcLog) << "reduced_emitSignal" << checkSignal_value_double << value << this ;
             checkSignal_value_double=value;
             emit reduced_emitSignal(value);
 
@@ -120,7 +120,7 @@ void caCalc::setValue(double value)
         }
     }
     thisValue =value;
-    //printf("%s emit change value %f\n", qasc(objectName()), value);
+    qCDebug(caCalcLog) << objectName() << "emit change value" << value;
     // only in case of a change where no calculation takes places, will we update
     // the data container with the actual value
     if(thisCalc.trimmed().size() == 0)
@@ -250,7 +250,7 @@ void caCalc::setTextLine(const QString &txt)
     if(keepText == txt) {  // accelerate things
         return;
     }
-    //printf("set qstring=%s old=%s\n", qasc(txt), qasc(keepText));
+    qCDebug(caCalcLog) << "set QString=" << txt << "old=" << keepText;
     setText(txt);
     keepText = txt;
 }

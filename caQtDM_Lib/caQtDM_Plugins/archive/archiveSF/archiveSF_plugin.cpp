@@ -26,10 +26,13 @@
 #include <QApplication>
 
 #include "archiveSF_plugin.h"
+#include "loggingcategories.h"
 #include "archiverCommon.h"
 #include "caQtDM_Lib_global.h"
 
 #define qasc(x) x.toLatin1().constData()
+
+Q_LOGGING_CATEGORY(archiveSFLog, "caqtdm.plugins.archive.SF")
 
 // gives the plugin name back
 QString ArchiveSF_Plugin::pluginName()
@@ -40,11 +43,12 @@ QString ArchiveSF_Plugin::pluginName()
 // constructor
 ArchiveSF_Plugin::ArchiveSF_Plugin()
 {
+    qCInfo(archiveSFLog) << "ArchiveSF: Create";
+
     suspend = false;
     qRegisterMetaType<indexes>("indexes");
     qRegisterMetaType<QVector<double> >("QVector<double>");
 
-    qDebug() << "ArchiveSF_Plugin: Create (http-retrieval)";
     archiverCommon = new ArchiverCommon();
 
     connect(archiverCommon, SIGNAL(Signal_UpdateInterface(QMap<QString, indexes>)), this,SLOT(Callback_UpdateInterface(QMap<QString, indexes>)));
@@ -55,11 +59,11 @@ ArchiveSF_Plugin::ArchiveSF_Plugin()
 
 ArchiveSF_Plugin:: ~ArchiveSF_Plugin() {
     delete archiverCommon;
-    //qDebug() << "ArchiveSF_Plugin::~ArchiveSF_Plugin()";
+    qCDebug(archiveSFLog) << "ArchiveSF_Plugin::~ArchiveSF_Plugin()";
 }
 
 void ArchiveSF_Plugin::closeEvent(){
-   //qDebug() << "ArchiveSF_Plugin::closeEvent ";
+   qCDebug(archiveSFLog) << "ArchiveSF_Plugin::closeEvent ";
    emit Signal_StopUpdateInterface();
 }
 
@@ -74,7 +78,7 @@ int ArchiveSF_Plugin::initCommunicationLayer(MutexKnobData *data, MessageWindow 
 void ArchiveSF_Plugin::Callback_AbortOutstandingRequests(QString key)
 {
     suspend = true;
-    //qDebug()  << "Callback_AbortOutstandingRequests for key" << key;
+    qCDebug(archiveSFLog)  << "Callback_AbortOutstandingRequests for key" << key;
     
     WorkerSfThread *tmpThread = (WorkerSfThread *) Q_NULLPTR;
     QMap<QString, WorkerSfThread *>::iterator j = listOfThreads.find(key);
@@ -84,7 +88,7 @@ void ArchiveSF_Plugin::Callback_AbortOutstandingRequests(QString key)
             sfRetrieval *retrieval = tmpThread->getArchive();
             tmpThread->quit();
             if(retrieval != (sfRetrieval *) Q_NULLPTR){
-                //qDebug()  << "retrieval->cancelDownload()"<< retrieval;
+                qCDebug(archiveSFLog)  << "retrieval->cancelDownload()"<< retrieval;
                 retrieval->cancelDownload();
                 retrieval->deleteLater();
             }
@@ -106,7 +110,7 @@ void ArchiveSF_Plugin::Callback_UpdateInterface( QMap<QString, indexes> listOfIn
     // Index name (url)
     QString index_name =  "https://data-api.psi.ch/sf/query";
 
-    //qDebug() << "====================== ArchiveSF_Plugin::Callback_UpdateInterface";
+    qCDebug(archiveSFLog) << "====================== ArchiveSF_Plugin::Callback_UpdateInterface";
 
     QMap<QString, indexes>::const_iterator i = listOfIndexes.constBegin();
 
@@ -114,7 +118,7 @@ void ArchiveSF_Plugin::Callback_UpdateInterface( QMap<QString, indexes> listOfIn
         
         WorkerSfThread *tmpThread = (WorkerSfThread *) Q_NULLPTR;
         indexes indexNew = i.value();
-        //qDebug() <<" -------------" << i.key() << ": " << indexNew.indexX << indexNew.indexY << indexNew.pv << indexNew.w;
+        qCDebug(archiveSFLog) <<" -------------" << i.key() << ": " << indexNew.indexX << indexNew.indexY << indexNew.pv << indexNew.w;
         
         QMap<QString, WorkerSfThread *>::iterator j = listOfThreads.find(indexNew.key);
         while (j !=listOfThreads.end() && j.key() == indexNew.key) {
@@ -123,7 +127,7 @@ void ArchiveSF_Plugin::Callback_UpdateInterface( QMap<QString, indexes> listOfIn
         }
         
         if((tmpThread != (WorkerSfThread *) Q_NULLPTR) && tmpThread->isRunning()) {
-            //qDebug() << "thread is running" << tmpThread << tmpThread->isRunning();
+            qCDebug(archiveSFLog) << "thread is running" << tmpThread << tmpThread->isRunning();
 
         } else {
 
@@ -162,7 +166,7 @@ void ArchiveSF_Plugin::Callback_UpdateInterface( QMap<QString, indexes> listOfIn
                 QString url = (QString)  qgetenv("CAQTDM_ARCHIVERSF_URL");
                 if(url.size() == 0 ||(!w->property("archiverIndex").toString().isEmpty())) {
                     var = w->property("archiverIndex");
-                    //qDebug() << "Check URL: " <<var;
+                    qCDebug(archiveSFLog) << "Check URL: " <<var;
                     if(!var.isNull()) {
                         QString indexName = var.toString();
                         index_name = qasc(indexName);
@@ -185,7 +189,7 @@ void ArchiveSF_Plugin::Callback_UpdateInterface( QMap<QString, indexes> listOfIn
 
             WorkerSF *worker = new WorkerSF;
             WorkerSfThread *tmpThread = new WorkerSfThread(worker);
-            //qDebug() << "tmpThread new" << tmpThread;
+            qCDebug(archiveSFLog) << "tmpThread new" << tmpThread;
             listOfThreads.insert(i.key(), tmpThread);;
 
             worker->moveToThread(tmpThread);
@@ -205,23 +209,22 @@ void ArchiveSF_Plugin::Callback_UpdateInterface( QMap<QString, indexes> listOfIn
 
         ++i;
     }
-    //qDebug() << "====================== ArchiveSF_Plugin::Callback_UpdateInterface finished";
+    qCDebug(archiveSFLog) << "====================== ArchiveSF_Plugin::Callback_UpdateInterface finished";
 }
 
 void ArchiveSF_Plugin::handleResults(indexes indexNew, int nbVal, QVector<double> TimerN, QVector<double> YValsN, QString backend)
 {
-    //QThread *thread = QThread::currentThread();
-    //qDebug() << "in sf handle results" << nbVal << TimerN.count() << indexNew.indexX << indexNew.indexY << thread;
+    qCDebug(archiveSFLog) << "in sf handle results" << nbVal << TimerN.count() << indexNew.indexX << indexNew.indexY << QThread::currentThread();
 
     TimerN.resize(nbVal);
     YValsN.resize(nbVal);
 
-    //qDebug() << "handle cartesian";
+    qCDebug(archiveSFLog) << "handle cartesian";
     if(nbVal > 0) archiverCommon->updateCartesian(nbVal, indexNew, TimerN, YValsN, backend);
     TimerN.resize(0);
     YValsN.resize(0);
 
-    //qDebug() << "handle cartesian fisnished";
+    qCDebug(archiveSFLog) << "handle cartesian fisnished";
     QList<QString> removeKeys;
     removeKeys.clear();
     
@@ -230,7 +233,7 @@ void ArchiveSF_Plugin::handleResults(indexes indexNew, int nbVal, QVector<double
         WorkerSfThread *tmpThread = (WorkerSfThread*) j.value();
         tmpThread->quit();
         removeKeys.append(indexNew.key);
-        //qDebug() << tmpThread << "sf quit";
+        qCDebug(archiveSFLog) << tmpThread << "sf quit";
         ++j;
     }
 
@@ -241,7 +244,7 @@ void ArchiveSF_Plugin::handleResults(indexes indexNew, int nbVal, QVector<double
     if(nbVal == 0) archiverCommon->updateSecondsPast(indexNew, false);
     else archiverCommon->updateSecondsPast(indexNew, true);
 
-    //qDebug() << "in sf handle results finished";
+    qCDebug(archiveSFLog) << "in sf handle results finished";
 }
 
 // define data to be called

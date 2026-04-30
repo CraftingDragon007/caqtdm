@@ -28,6 +28,8 @@
 #include "capolyline.h"
 #include "alarmdefs.h"
 
+Q_LOGGING_CATEGORY(caPolyLineLog, "caqtdm.widgets.capolyline")
+
 caPolyLine::caPolyLine(QWidget *parent): QWidget(parent)
 {
     QSizePolicy policy( QSizePolicy::Expanding, QSizePolicy::Expanding );
@@ -294,7 +296,7 @@ void caPolyLine::setActualSize(QSize size)
     actualWidth = size.width();
     actualHeight = size.height();
     initialize = false;
-    //printf("set actual size %d %d\n", actualWidth, actualHeight);
+    qCDebug(caPolyLineLog) << "set actual size" << actualWidth <<actualHeight;
 }
 
 void caPolyLine::resizeEvent(QResizeEvent *e)
@@ -302,16 +304,16 @@ void caPolyLine::resizeEvent(QResizeEvent *e)
     if(initialize && inDesigner) {
         actualWidth= width();
         actualHeight = height();
-        //printf("first resize of polyline %d %d\n", width(), height());
+        qCDebug(caPolyLineLog) << "first resize of polyline" << width() << height();
         initialize = false;
     } else if(initialize) {
         actualWidth= width();
         actualHeight = height();
-        //printf("first resize of polyline %d %d\n", width(), height());
+        qCDebug(caPolyLineLog) << "first resize of polyline %d %d\n" << width() << height();
         initialize = false;
     }
 
-    //printf("resize of polyline %d %d\n", e->size().width(), e->size().height());
+    qCDebug(caPolyLineLog) << "resize of polyline" << e->size().width() << e->size().height();
 
     double resizeX = (double) e->size().width() / (double) actualWidth;
     double resizeY = (double) e->size().height() / (double) actualHeight;
