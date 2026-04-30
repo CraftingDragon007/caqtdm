@@ -57,19 +57,19 @@ jobs:
         sudo dpkg -i *.deb
 
     - name: Upload Qt OPC UA package as artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: qtopcua_deb-package-ubuntu
         path: caQtDM_Viewer/package/debian/qtopcua/*.deb
 
     - name: Upload epics-base package as artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: epics-base_deb-package-ubuntu
         path: caQtDM_Viewer/package/debian/epics-base/*.deb
 
     - name: Upload DEB package as artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: caqtdm_deb-package-ubuntu
         path: caQtDM_Viewer/package/debian/caqtdm_qt5/*.deb
