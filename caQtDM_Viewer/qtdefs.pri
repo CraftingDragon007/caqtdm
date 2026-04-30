@@ -164,6 +164,19 @@ else {
       message( "Configuring build for GPS plugin" )
     }
 }
+# Unittests at the moment not in the homebrew build
+_HOMEBREWMAKEJOBS = $$(HOMEBREW_MAKE_JOBS)
+isEmpty(_HOMEBREWMAKEJOBS) {
+    message("caQtDM will be build with unit tests")
+    CONFIG += caqtdm_with_tests
+}
+else {
+    message( "caQtDM will be build without unit tests" )
+}
+
+
+
+
 
 _CAQTDM_NORPATH = $$(CAQTDM_NORPATH)
 isEmpty(_CAQTDM_NORPATH) {
