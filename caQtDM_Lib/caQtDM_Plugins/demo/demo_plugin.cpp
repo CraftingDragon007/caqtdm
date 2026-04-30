@@ -48,6 +48,17 @@ DemoPlugin::DemoPlugin()
 {
     // Logging this way, there is no need to manually specify information about where this log is from etc.
     qCInfo(demoLog) << "Demo: Create";
+    timer = timerValues = Q_NULLPTR;
+}
+
+DemoPlugin::~DemoPlugin()
+{
+    if (timer) {
+        timer->deleteLater();
+    }
+    if (timerValues) {
+        timerValues->deleteLater();
+    }
 }
 
 // in this demo we update our interface here; normally you should update in from your controlsystem
@@ -115,12 +126,12 @@ int DemoPlugin::initCommunicationLayer(MutexKnobData *data, MessageWindow *messa
     initValue = 0.0;
 
     // we want to update our internal doubles every second
-    timerValues = new QTimer(this);
+    timerValues = new QTimer();
     connect(timerValues, SIGNAL(timeout()), this, SLOT(updateValues()));
     timerValues->start(1000);
 
     // we want to update the interface every 2 seconds
-    timer = new QTimer(this);
+    timer = new QTimer();
     connect(timer, SIGNAL(timeout()), this, SLOT(updateInterface()));
     timer->start(2000);
 
