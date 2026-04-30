@@ -331,7 +331,7 @@ OpcUaCore::OpcUaCore(QObject *parent)
             }
 
             errorMessage += " for: " + m_currentEndpointDescription.endpointUrl();
-            qCCritical(opcuaLog) << errorMessage)
+            qCCritical(opcuaLog) << errorMessage;
         });
 
     // This prevents 'lost' connections leading to sessions staying open on the server, which can lead to denial of service if the server limits the amount of concurrent sessions.
@@ -996,7 +996,7 @@ bool OpcUaCore::writeValues(const QString &nodeId,
 
         if (!ref.canConvert<QVariantList>()) {
             qCCritical(opcuaLog) <<
-                "Tried writing array data to a variable that didn't return an array last time");
+                "Tried writing array data to a variable that didn't return an array last time";
             qstrcpy(errmess,
                     "Tried writing array data to a variable that didn't return an array last time");
             return values;
