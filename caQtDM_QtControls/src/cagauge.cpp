@@ -31,6 +31,8 @@
 
 #define MIN_FONT_SIZE 3
 
+Q_LOGGING_CATEGORY(caGaugeLog, "caqtdm.widgets.cagauge")
+
 caAbstractGauge::caAbstractGauge(QWidget *parent) : EAbstractGauge(parent)
 {
 
@@ -435,7 +437,7 @@ caCircularGauge::caCircularGauge(QWidget *parent) : caAbstractGauge(parent),
 
     QFont f = this->font();
     f.setFamily("FreeSans"); /* Free sans scales ugly */
-    // 	printf("Circular gauge font family %s\n", qstoc(f.family()));
+    qCDebug(caGaugeLog) << "Circular gauge font family" << f.family();
     setFont(f);
 }
 

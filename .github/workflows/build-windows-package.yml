@@ -150,7 +150,7 @@ jobs:
         shell: pwsh
         run: |
           choco feature enable -n=allowGlobalConfirmation
-          choco install openssl  -y --no-progress
+          choco install openssl --version=3.6.2 -y --no-progress
           Write-Host "OPENSSL_ROOT: $env:OPENSSL_ROOT"
           $defaultPaths = @(
             "C:\Program Files\OpenSSL-Win64",

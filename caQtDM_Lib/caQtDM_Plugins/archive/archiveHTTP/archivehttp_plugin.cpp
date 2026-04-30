@@ -28,6 +28,7 @@
 #include <QThreadPool>
 
 #include "archivehttp_plugin.h"
+#include "loggingcategories.h"
 #include "archiverGeneral.h"
 #include <QMetaType>
 
@@ -39,8 +40,12 @@
 
 #define qasc(x) x.toLatin1().constData()
 
+Q_LOGGING_CATEGORY(archiveHTTPLog, "caqtdm.plugins.archive.http")
+
 ArchiveHTTP_Plugin::ArchiveHTTP_Plugin()
 {
+    qCInfo(archiveHTTPLog) << "ArchiveHTTP: Create";
+
     m_IsSuspended = false;
     qRegisterMetaType<indexes>("indexes");
     qRegisterMetaType<QVector<double> >("QVector<double>");
@@ -338,7 +343,7 @@ void ArchiveHTTP_Plugin::updateCartesianAppended(int numberOfValues,
         kDataX.edata.dataB = (void *) realloc(kDataX.edata.dataB, kDataX.edata.dataSize);
         if (kDataX.edata.dataB == NULL) {
             // Uhhhhhm, no this should not happen
-            printf("Realloc failed to allocate memory, maybe the system ran out of memory...\n");
+            qCCritical(archiveHTTPLog) << "Realloc failed to allocate memory, maybe the system ran out of memory...";
             throw std::bad_alloc();
         }
 
@@ -372,7 +377,7 @@ void ArchiveHTTP_Plugin::updateCartesianAppended(int numberOfValues,
         kDataY.edata.dataB = (void *) realloc(kDataY.edata.dataB, kDataY.edata.dataSize);
         if (kDataY.edata.dataB == NULL) {
             // Uhhhhhm, no this should not happen
-            printf("Realloc failed to allocate memory, maybe the system ran out of memory...\n");
+            qCCritical(archiveHTTPLog) << "Realloc failed to allocate memory, maybe the system ran out of memory...";
             throw std::bad_alloc();
         }
 

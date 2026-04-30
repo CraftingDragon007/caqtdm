@@ -325,6 +325,8 @@ DEFINES += TARGET_COPYRIGHT=\"\\\"$${TARGET_COPYRIGHT}\\\"\"
 DEFINES += TARGET_INTERNALNAME=\"\\\"$${TARGET_INTERNALNAME}\\\"\"
 DEFINES += TARGET_VERSION_STR=\"\\\"$${CAQTDM_VERSION}\\\"\"
 
+DEFINES += QT_MESSAGELOGCONTEXT
+
 # 4.6.0
 # update fix for unconnected Channels
 # %read command for cainclude and caRelatedDisplay

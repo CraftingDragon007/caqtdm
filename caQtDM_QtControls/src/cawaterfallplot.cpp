@@ -29,6 +29,8 @@
 
 #include "cawaterfallplot.h"
 
+Q_LOGGING_CATEGORY(caWaterfallPlotLog, "caqtdm.widgets.cawaterfallplot")
+
 __inline double gauss(double x)
 {
     return exp(-0.5*x*x);
@@ -167,7 +169,7 @@ void caWaterfallPlot::setCountPV(QString const &newPV)  {
     if(thisCountPV.trimmed().length() > 0) {
         thisCountNumber = thisCountPV.toInt(&isNumber);
         if(!isNumber) {
-            //printf("however not a number\n");
+            qCDebug(caWaterfallPlotLog) << "however not a number";
             thisCountNumber=0;
         }
     }
@@ -244,7 +246,7 @@ template <typename pureData> void caWaterfallPlot::CompressAndkeepArray(pureData
 
 void caWaterfallPlot::setData(double *array, int size)
 {
-    //printf("size=%d count=%d\n", size, thisCountNumber);
+    qCDebug(caWaterfallPlotLog) << "size=" << size << "count=" << thisCountNumber;
     int newSize = size;
 
     if(thisCountNumber > 0) {
@@ -266,7 +268,7 @@ void caWaterfallPlot::setData(double *array, int size)
 
 void caWaterfallPlot::setData(float *array, int size)
 {
-    //printf("size=%d count=%d\n", size, thisCountNumber);
+    qCDebug(caWaterfallPlotLog) << "size=" << size << "count=" << thisCountNumber;
     int newSize = size;
 
     if(thisCountNumber > 0) {
@@ -288,7 +290,7 @@ void caWaterfallPlot::setData(float *array, int size)
 
 void caWaterfallPlot::setData(int16_t *array, int size)
 {
-    //printf("size=%d count=%d\n", size, thisCountNumber);
+    qCDebug(caWaterfallPlotLog) << "size=" << size << "count=" << thisCountNumber;
     int newSize = size;
 
     if(thisCountNumber > 0) {
@@ -310,7 +312,7 @@ void caWaterfallPlot::setData(int16_t *array, int size)
 
 void caWaterfallPlot::setData(int32_t *array, int size)
 {
-     //printf("size=%d count=%d\n", size, thisCountNumber);
+     qCDebug(caWaterfallPlotLog) << "size=" << size << "count=" << thisCountNumber;
      int newSize = size;
 
      if(thisCountNumber > 0) {
@@ -358,7 +360,7 @@ void caWaterfallPlot::defineTimerUpdate(units unit, double period)
     } else if(unit == Minute) {
         INTERVAL = (int) (1000.0 * period * 60);
     } else {
-        //printf("\nunknown unit\n");
+        qCWarning(caWaterfallPlotLog) << "unknown unit";
         INTERVAL = (int) period;
     }
     if(INTERVAL < 100) INTERVAL = 100;

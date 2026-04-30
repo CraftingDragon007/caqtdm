@@ -15,8 +15,8 @@ bool FontScalingEventFilter::eventFilter(QObject *obj, QEvent *event)
   if(event->type() == QEvent::Resize)
   {
 	QResizeEvent *re = static_cast<QResizeEvent *>(event);
-	qDebug() << "resize event for " << obj << "old size " << re->oldSize() << "new size " << re->size();
-	qDebug() << "spontaneous " << event->spontaneous();
+    qCDebug(fontScalingWidgetLog) << "resize event for " << obj << "old size " << re->oldSize() << "new size " << re->size();
+    qCDebug(fontScalingWidgetLog) << "spontaneous " << event->spontaneous();
 	d_scalingWidget->rescaleFont(re->size());
   }
   else if(event->type() == QEvent::Show)

@@ -1,6 +1,7 @@
 #include <QSysInfo>
 #include "bsread_wfhandling.h"
 #include "bsread_wfconverter.h"
+#include "loggingcategories.h"
 
 void bsread_wfhandling::process()
 {
@@ -18,7 +19,6 @@ void bsread_wfhandling::wfconvert()
             break;
         }
         case bs_float32:{
-            //for (int x=0;x<10;x++)  qDebug() << ((float *)bsreadPVP->bsdata.wf_data)[x];
             bsread_wfConverter<float,float> *converter=new bsread_wfConverter<float,float>(kDataP,bsreadPVP,BlockPoolP);
             converter->setPrecision(QDataStream::SinglePrecision);
             converter->wfconvert();
@@ -62,7 +62,6 @@ void bsread_wfhandling::wfconvert()
             break;
         }
         case bs_uint16:{
-            //qDebug() << "<quint16,int>";
             bsread_wfConverter<quint16,unsigned short> *converter=new bsread_wfConverter<quint16,unsigned short>(kDataP,bsreadPVP,BlockPoolP);
             if ((bsreadPVP->endianess==bs_little)&&(QSysInfo::ByteOrder==QSysInfo::LittleEndian)){
                 converter->usememcpy();
@@ -82,7 +81,7 @@ void bsread_wfhandling::wfconvert()
         }
         case bs_string:
         case bs_bool:{
-          printf("bool and string not yet handled as waveform");
+          qCWarning(bsreadLog) << "bool and string not yet handled as waveform";
           break;
         }
 

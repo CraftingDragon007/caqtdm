@@ -23,7 +23,7 @@ INCLUDEPATH    += ../
 INCLUDEPATH    += ../../src
 INCLUDEPATH    += ../../../caQtDM_QtControls/src
 
-HEADERS         = ../controlsinterface.h \
+HEADERS         = ../controlsinterface.h ../loggingcategories.h \
     opcua_plugin.h opcua_core.h
 SOURCES         = \
     opcua_plugin.cpp opcua_core.cpp

@@ -50,6 +50,8 @@
  #endif
 #endif
 
+Q_LOGGING_CATEGORY(caSliderLog, "caqtdm.widgets.caslider")
+
 // I need to overload the scaleengine of qwt in order to get the upper and lower scale ticks drawn
 class mySliderScaleEngine: public QwtLinearScaleEngine
 {
@@ -258,7 +260,7 @@ void caSlider::setMinValue(double const &minim){
 
 void caSlider::setSliderValue(double const &value){
     thisValue = value;
-    //qDebug() <<"setSliderValue"<<value<< this;
+    qCDebug(caSliderLog) << "setSliderValue" << value << this;
     setValue(value);
 
 }
@@ -271,7 +273,7 @@ void caSlider::set_Max_Value(int max)
 void caSlider::set_Max_Value(double max)
 {
     if (fabs(thisMaximum-max)>std::numeric_limits<double>::epsilon()*10){
-        //qDebug()<< "Max:"<< max;
+        qCDebug(caSliderLog) << "Max:" << max;
         thisMaximum=max;
 #if QWT_VERSION < 0x060100
         setRange(thisMinimum, thisMaximum, thisIncrement, 1);

@@ -22,7 +22,7 @@ INCLUDEPATH    += .
 INCLUDEPATH    += ../
 INCLUDEPATH    += ../../src
 
-HEADERS         = epics4_plugin.h ../controlsinterface.h   
+HEADERS         = epics4_plugin.h ../controlsinterface.h ../loggingcategories.h
 SOURCES         = epics4_plugin.cpp
 TARGET          = epics4_plugin
 

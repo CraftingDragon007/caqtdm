@@ -37,12 +37,13 @@
 
 #define qstoc(x) ""
 
+Q_LOGGING_CATEGORY(engNotationLog, "caqtdm.widgets.engnotation")
+
 EngString::EngString(QString s , const QString& format, const QVariant &value) : QString(s)
 {
   suffixes << "y" << "z" << "a" << "f" << "p" << "n" << MICRO << "m" << "" <<
 	"k" << "M" << "G" << "T" << "P" << "E" << "Z" << "Y";
 
-//   printf("\e[1;33mprefix size : %d sizeof(char *) %d\n", sizeof(prefix), sizeof(char *));
   /* Smallest power of then for which there is a prefix defined.
    * If the set of prefixes will be extended, change this constant
    * and update the table "prefix".
@@ -58,7 +59,7 @@ EngString::EngString(QString s , const QString& format, const QVariant &value) :
 	int digits = d_significantDigits;
 	bool ok;
 	double d = value.toDouble(&ok);
-// 	printf("value to double %f - significant digits: %d\n", d, digits);
+    qCDebug(engNotationLog) << "value to double" << d << "- significant digits:" << digits;
 	if(ok && d != 0)
 	{
 	  double absVal = fabs(d);
@@ -78,7 +79,7 @@ EngString::EngString(QString s , const QString& format, const QVariant &value) :
          digits -= 2;
       else if(absVal >= 10.0)
          digits -= 1;
-// 	  printf("looking for suffix at pos %d (value to double %f)\n", (expof10 - d_prefixStart)/3, d);
+      qCDebug(engNotationLog) << "looking for suffix at pos" << (expof10 - d_prefixStart)/3 << "(value to double" << d << ")";
 	  if(/*numeric || */(expof10 < d_prefixStart) ||
                     (expof10 > d_prefixEnd))
 
@@ -118,7 +119,7 @@ EngString::EngString(QString s , const QString& format, const QVariant &value) :
   else if(format.isEmpty())
   {
 	bool ok;
-    //printf("EngString format is empty to represent variant \"%s\"", qstoc(value.toString()));
+    qCDebug(engNotationLog) << "EngString format is empty to represent variant: " << value.toString();
 	if(value.toDouble(&ok) && ok)
 	  setNum(value.toDouble());
 	else
@@ -142,7 +143,7 @@ int EngString::extractSignificantDigits(const QString &fmt)
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     QRegExp re(pattern);
     int pos = re.indexIn(fmt);
-    //printf("looking for pattern \"%s\" in \"%s\" : pos %d\n", qstoc(pattern), qstoc(fmt), pos);
+    qCDebug(engNotationLog) << "looking for pattern" << "\"" << qstoc(pattern) << "\"" << "in" << "\"" << qstoc(fmt) << "\"" << ": pos" << pos;
     if(pos > -1)
     {
       QStringList captures = re.capturedTexts();

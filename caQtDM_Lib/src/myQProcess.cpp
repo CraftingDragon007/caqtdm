@@ -29,6 +29,8 @@
 #include <QMessageBox>
 #include <QtDebug>
 
+Q_LOGGING_CATEGORY(myQProcessLog, "caqtdm.lib.myqprocess")
+
 myQProcess::myQProcess(QObject *parent) : QObject(parent), started(false)
 {
     process = new QProcess(this);
@@ -53,7 +55,7 @@ void myQProcess::start(QString program, QIODevice::OpenMode mode)
       process->startCommand(program, mode);
 #endif
 
-    //qDebug() << process->readAllStandardOutput();
+    qCDebug(myQProcessLog) << process->readAllStandardOutput();
 }
 
 void myQProcess::error(QProcess::ProcessError err)
