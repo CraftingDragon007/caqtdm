@@ -855,6 +855,8 @@ void MutexKnobData::SetMutexKnobDataConnected(int index, int connected)
     if (tmp != (connectInfoShort *) Q_NULLPTR) tmp->connected = connected;
 #endif
 
+    locker.unlock();
+
     if(!connected) {
         UpdateWidget(index, (QWidget*)KnobData[index].dispW, (char*) " ", (char*) " ",  (char*) " ", KnobData[index]);
     }

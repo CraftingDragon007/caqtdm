@@ -507,6 +507,9 @@ private:
     QString handle_Macro_Constants(QString Text);
     QStringList treat_read_MacroCommand(QStringList args);
 
+public slots:
+    void messageWindowOutput(const QtMsgType type, const QString &message);
+
 private slots:
     void Callback_CaCalc(double value) ;
     void Callback_UndefinedMacrowindowExit();

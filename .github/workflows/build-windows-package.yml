@@ -16,6 +16,10 @@ env:
   EPICS_BASE_DIR: ${{ github.workspace }}\deps\epics-base
   CAQTDM_DIR: ${{ github.workspace }}\caqtdm
 
+  OPENSSL_ROOT: C:\Program Files\OpenSSL
+
+  CAQTDM_OPCUA: 1
+
 jobs:
   build:
     name: Build windows package
@@ -39,7 +43,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           path: caqtdm
 
@@ -55,7 +59,7 @@ jobs:
 
       - name: Cache Qwt
         id: cache-qwt
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ env.QWT_INSTALL_DIR }}
           key: qwt-${{ matrix.qwt-version }}-qt${{ matrix.qt-version }}-${{ matrix.windows-version }}-${{ runner.arch }}
@@ -64,7 +68,7 @@ jobs:
 
       - name: Cache ZeroMQ
         id: cache-zeromq
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ env.ZEROMQ_INSTALL_DIR }}
           key: zeromq-${{ matrix.zeromq-version }}-${{ matrix.windows-version }}-${{ runner.arch }}
@@ -73,7 +77,7 @@ jobs:
 
       - name: Cache EPICS Base
         id: cache-epics
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ env.EPICS_BASE_DIR }}
           key: epics-${{ matrix.epics-version }}-${{ matrix.windows-version }}-${{ runner.arch }}
@@ -82,7 +86,7 @@ jobs:
 
       - name: Cache JOM
         id: cache-jom
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ github.workspace }}\jom
           key: jom-1.1.4-${{ runner.os }}
@@ -141,6 +145,46 @@ jobs:
 
       - name: Create dependencies install directory
         run: if not exist ${{ env.DEPS_INSTALL_ROOT }} mkdir ${{ env.DEPS_INSTALL_ROOT }}
+
+      - name: Install openssl for qt opcua
+        shell: pwsh
+        run: |
+          choco feature enable -n=allowGlobalConfirmation
+          choco install openssl  -y --no-progress
+          Write-Host "OPENSSL_ROOT: $env:OPENSSL_ROOT"
+          $defaultPaths = @(
+            "C:\Program Files\OpenSSL-Win64",
+            "C:\Program Files (x86)\OpenSSL-Win32"
+          )
+          foreach ($path in $defaultPaths) {
+            if (Test-Path $path) {
+              Write-Host "OpenSSL installation detected at: $path"
+            }
+          }
+          
+          Get-Command openssl.exe | ForEach-Object {
+            Write-Host "openssl.exe found at: $($_.Source)"
+            & $_.Source version
+          }
+
+      - name: Clone and build Qt OPC UA 
+        shell: cmd
+        run: |
+          setlocal
+          set QT6_DIR=%QT_ROOT_DIR%\lib\cmake\Qt6
+          set CMAKE_PREFIX_PATH=%QT_ROOT_DIR%
+      
+          set QTOPCUA_SRC=%GITHUB_WORKSPACE%\qtopcua-src
+          if exist "%QTOPCUA_SRC%" rmdir /s /q "%QTOPCUA_SRC%"
+          git clone https://code.qt.io/qt/qtopcua.git "%QTOPCUA_SRC%"
+          cd "%QTOPCUA_SRC%"
+          git checkout v${{ matrix.qt-version }}
+      
+          mkdir build
+          cd build
+          cmake .. -G "Ninja" -DQt6_DIR=%QT6_DIR% -DOPENSSL_ROOT_DIR="%OPENSSL_ROOT%" -DCMAKE_INSTALL_PREFIX=%QT_ROOT_DIR%
+          cmake --build . --config Release --target install
+          endlocal
 
       - name: Clone Qwt
         if: steps.cache-qwt.outputs.cache-hit != 'true'
@@ -304,6 +348,10 @@ jobs:
           echo ZMQ=${{ env.ZEROMQ_INSTALL_DIR }}\lib>> %GITHUB_ENV%
           echo ZMQLIB=${{ env.ZEROMQ_INSTALL_DIR }}\lib>> %GITHUB_ENV%
           echo ZMQBIN=${{ env.ZEROMQ_INSTALL_DIR }}\bin>> %GITHUB_ENV%
+          echo SSLBIN=${{ env.OPENSSL_ROOT }}\bin>> %GITHUB_ENV%
+          echo LIBSSL=libssl-3-x64.dll>> %GITHUB_ENV%
+          echo LIBCRYPTO=libcrypto-3-x64.dll>> %GITHUB_ENV%
+
 
       - name: Create caQtDM Windows package
         working-directory: ${{ env.CAQTDM_DIR }}\caQtDM_Viewer\package\windows

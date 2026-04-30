@@ -1,19 +1,13 @@
-name: caQtDM DEB Package Build
+name: caQtDM DEB Package Build Debug
 
-on:
-  workflow_dispatch:
-  pull_request:
-  schedule: # Daily at 2am
-    - cron: '0 2 * * *'
+on: [push]
 
 jobs:
   build:
     name: Build DEB package
-    runs-on: ${{ matrix.ubuntu-version }}
+    runs-on: self-hosted
     strategy:
       fail-fast: false
-      matrix:
-        ubuntu-version: [ubuntu-22.04, ubuntu-24.04, ubuntu-latest]
 
     permissions:
       contents: read
@@ -65,19 +59,19 @@ jobs:
     - name: Upload Qt OPC UA package as artifact
       uses: actions/upload-artifact@v4
       with:
-        name: qtopcua_deb-package-${{ matrix.ubuntu-version }}
+        name: qtopcua_deb-package-ubuntu
         path: caQtDM_Viewer/package/debian/qtopcua/*.deb
 
     - name: Upload epics-base package as artifact
       uses: actions/upload-artifact@v4
       with:
-        name: epics-base_deb-package-${{ matrix.ubuntu-version }}
+        name: epics-base_deb-package-ubuntu
         path: caQtDM_Viewer/package/debian/epics-base/*.deb
 
     - name: Upload DEB package as artifact
       uses: actions/upload-artifact@v4
       with:
-        name: caqtdm_deb-package-${{ matrix.ubuntu-version }}
+        name: caqtdm_deb-package-ubuntu
         path: caQtDM_Viewer/package/debian/caqtdm_qt5/*.deb
 
     - name: Verify caQtDM installation

@@ -1641,6 +1641,9 @@ curves
 
       The above behaviour still has to be tested thoroughly. It appeared
       already that perhaps Count must be twice the value described above?
+      
+      You can also copy the current image of a caCartesianPlot (pixmap -> png)
+      using the context menu.
 
 --------------
 
@@ -2868,6 +2871,238 @@ back to a font called "Monospace". However the "Lucida" font is really
 the appropriated font to display numbers and it is warmly advised to
 have this font installed.
 
+Plugins
+----------------------
+
+There are several plugins pre-built into caQtDM. These are meant to enable various data sources.
+Each channel in a ``.ui`` file has an associated plugin, which is dynamically used for the channel. 
+A plugin is used by defining the channel as ``pluginname://channel`` . By default, ``epics3`` is used for ``pluginname``.
+This can be overwritten by specifying the launch option: ``cs``, so e.g. ``caQtDM -cs opcua somefile.ui``
+starts ``somefile.ui`` with caQtDM, and each channel that does not have an explicit plugin will be
+associated with the opcua plugin. Since not all plugins are built on all platforms, their availability
+may vary. In the beginning, when caQtDM starts up, all initialized plugins are shown in the message window.
+
+Below are available plugins and how to use them.
+
+.. _archiveHTTP:
+Archive HTTP Plugin
+~~~~~~~~~~~~~~~~~~~~~
+
+Usage: ``archiveHTTP://CHANNEL``
+
+Using this plugin you can access archived data from archivers available through the data api. <https://data-api.psi.ch/api/4/docs/index.html>
+
+The plugin fetches data for a certain interval, trying to fetch all of it at once. If that fails, it refetches the missing data.
+It always refetches in a certain interval, and if any previously fetched data is still in the current timeframe, it is kept, as to reduce duplication.
+
+Building:
+	This plugin is always built. It has no additional dependencies. SSL is activated if Qt supports it and the ``CAQTDM_SSL_IGNORE`` environment variable is not defined.
+Channel Handling:
+	The plugin is meant to serve data that is a mapping between time and values. Thus, the returned data can be retrieved using virtual channels.
+	So instead of simply using ``archiveHTTP://CHANNEL`` you can do e.g. ``archiveHTTP://CHANNEL.X`` to get a one-dimensional array of the x-values. 
+	Virtual channels are not fetched separately, only the base channel is. Available are:
+	
+	- .X: ``archiveHTTP://CHANNEL.X`` - The timestamps
+	- .Y: ``archiveHTTP://CHANNEL.Y`` - the values (averages in case of binned data)
+	- .minY: ``archiveHTTP://CHANNEL.minY`` - in case of binned data: the minimum values for each bin
+	- .maxY: ``archiveHTTP://CHANNEL.maxY`` - in case of binned data: the maximum values for each bin
+
+Usage in caCartesianPlot:
+	The plugin is primarily meant to be used in combination with the caCartesianPlot widget.
+	To use it there, simply specify both virtual channels (as described above) in the channelList, first .X, then .Y/.minY/.maxY.
+	An example would be: archiveHTTP://SGE-CCOL-01787:VALVEPOSITION.X;archiveHTTP://SGE-CCOL-01787:VALVEPOSITION.Y
+	If you want to map Y-values not to time, but to their increasing indices, you can leave the first channel empty. In the designer, this is simply an empty entry in the channelList.
+
+Configuration:
+	The plugin is mainly configured using dynamic properties, as listed below. All dynamic properties, no matter the content, are default string values.
+	
+	- backend: The backend name given to the data api when fetching the channel. Has to correspond to one of these: <https://data-api.psi.ch/api/4/backend/list>
+	- nrOfBins: The desired number of bins. The actual number might be different, but data api tries to get as close as possible, while keeping some constraints for optimization/alignment purposes. To request raw data, don't specify this or set it to -1.
+	- secondsPast: The time interval that should be requested, in seconds. So if you want to display 10 minutes of data, set this to 600
+	- secondsUpdate: The interval, in which new data should be requested, so the fetch interval. If you want to request new data all 2 minutes, set this to 120. Cannot be lower than 10 seconds.
+	- archiverIndex: Allows for overriding the hostname to use for data-api. Should generally not be changed unless you know exactly what you are doing.
+	
+	Also have a look at the :ref:`environment variables <env.var>` for additional options.
+
+
+.. _bsread:
+BSREAD Plugin
+~~~~~~~~~~~~~~~~~~~~~
+
+Usage: ``bsread://CHANNEL``
+
+TBD
+
+.. _environment:
+Environment Plugin
+~~~~~~~~~~~~~~~~~~~~~
+
+Usage: ``environment://CHANNEL``
+
+There is an environment plugin which allows to get environment variables just like PVs.
+To use this plugin, the value of "channel" in the designer has to be set to "environment://yourEnvironmentVar"
+Then caQtDM will get the environment variable after "environment://", in this case "yourEnvironmentVar" and return it just like any other PV.
+
+.. _epics3:
+Epics 3 Plugin
+~~~~~~~~~~~~~~~~~~~~~
+
+Usage: ``epics3://CHANNEL``
+
+TBD
+
+.. _epics4:
+Epics 4 Plugin
+~~~~~~~~~~~~~~~~~~~~~
+
+Usage: ``epics4://CHANNEL``
+
+TBD
+
+.. _gps:
+GPS Plugin
+~~~~~~~~~~~~~~~~~~~~~
+
+Usage: ``gps://CHANNEL``
+
+TBD
+
+.. _modbus:
+Modbus Plugin
+~~~~~~~~~~~~~~~~~~~~~
+
+Usage: ``modbus://CHANNEL``
+
+TBD
+
+.. _opcua:
+OPC UA Plugin
+~~~~~~~~~~~~~~~~~~~~~
+
+Usage: ``opcua://CHANNEL``
+
+This plugin allows for direct access to OPC UA endpoints from your client.
+
+For a channel, you may use any OPC UA connection string (for the node you want to access), it should include the protocol (This must be ``opc.tcp://``),  hostname and port.
+The first part after the port needs to be either ``/ns=`` or ``/i=``.
+So including the plugin prefix, this is e.g. ``opcua://opc.tcp://localhost:4840/ns=10;i=12345``
+Since most OPC UA connection strings include a semicolon, which is used by caQtDM as a string separator, widgets that allow for multiple channels in a field don't work.
+So you cannot use regular connection strings in a caCartesianPlot, for example. To work around this, you could URL-encode the connection string. But that is difficult to maintain.
+As an alternative to this, you have the ability to use a translation table. This way, you can use simple identifiers in your UI-file, which dynamically maps to a complex connection string using said translation table.
+To use this, you have to create a text file and give its path to caQtDM using the environment variable ``CAQTDM_OPCUA_DATABASE``. You can also use the caQtDM option ``OPCUA_DATABASE``. You can specify multiple files by separating the paths with a comma.
+In this file, each line represents one mapping of a simple identifier to a connection string. Lines that start with a # are ignored, so you can comment lines out like this.
+Each line first has the simple identifier, then an equal sign, followed by the connection string. The strings should not include the plugin prefix. 
+An example would be: ``someOpcUaVariable=opc.tcp://localhost:4840/ns=10;i=12345``.
+Now, in your UI-file you simply write: ``opcua://someOpcUaVariable``.
+You can also utilize this to have dynamic resolutions based on different translation tables, or using macros. Macros are resolved before the UI-identifier reaches the OPC UA Plugin.
+This means you can use macros to construct the simple identifier, which is then checked for in the translation table, but you cannot use macros in the resolution specified in the resolution table.
+All loaded OPC UA translations are displayed in the caQtDM message window upon startup. Those translations are **ONLY** loaded upon caQtDM launch. Reloads have no effect.
+
+Building:
+	This plugin is NOT built by default. It is built only if the ``CAQTDM_OPCUA`` environment variable is set to be not empty. When building, make sure Qt has the QtOpcUa module available.
+	For it to build with encryption, it is neccessary that the QtOpcUa module was built with encryption. You can check this by searching for X509* headers (They exist = QtOpcUa was built with encryption). This is also how caQtDM detects at build-time whether or not to include the encryption stuff.
+	Since by default QtOpcUa with encryption has a dependency on the dynamic loading of openssl libraries, make sure these are also available at runtime. In the GitHub pipelines, as well as the packaging scripts, you can see what needs to be available. For this, especially qopensslbackend needs to be active in the TLS module, as well as libcrypto and libssl from openssl v3+.
+
+Certificate Creation:
+	In Qt-6 the certificate (and other pki stuff) is generated when caQtDM is started without such a configuration already existing. In Qt-5 it is not possible to auto-generate a certificate, thus secure communication as described below is impossible.
+	You can, however, generate your own certificate using the bash script provided in ``caQtDM_Lib/caQtDM_Plugins/opcua/create_certificate.sh``. This requires OpenSSL to be available on your system to run.
+	After generating the certificate (and key), simply place both files in the local appdata directory under ``/pki/own/[cert/private]``, respectively. caQtDM will automatically use this certificate next time.
+	CAUTION: Qt-5 does also not show very good errors, so if you see weird errors or simply a ``BadConnectionClosed``, it may be that your client certificate needs to be trusted first by the server. Qt-6 has dedicated error handling for that.
+
+Secure Communication using Signing / Encryption:
+	If your client was built with an encryption-enabled plugin, and the environment variable ``CAQTDM_OPCUA_ENABLE_CERTIFICATE`` is not empty, it will try to establish a secure connection first. If an endpoint or your client doesn't support a secure connection, a regular one will be used.
+	Generally speaking, the client will go through all available endpoints, choosing the one with the highest security to establish a connection.
+	Encryption & signing keys are generated the first time the plugin is loaded and stored in your local app data location. For signing, you may have to trust the client's certificate on the server first. For that, see the ``Certificate Authentication`` section below.
+	Due to a limitation in Qt-OpcUa, connections are currently only possible to endpoints supporting SecurityPolicy#None. This is because QtOpcUa always uses that SecurityPolicy for the initial connection, while discovering available endpoints. So even if it's required, the actual communication won't use that SecurityPolicy, if another is available.
+	It may be worth to implement a workaround in the future, allowing for a hardcoded endpoint description (skipping the discovery forcing SecurityPolicy#None). Feel free to open an issue if that is the case.
+	CAUTION: While Qt-6 prompts you to accept / reject unknown server certificates (unless overwritten via envs), Qt-5 doesn't do that. So you have no guarantee that the server you are connecting to has a trusted certificate.
+
+Authentication:
+	If you need to connect to an endpoint that is secured with authentication, this is also possible.
+	
+	- Username / Password | May be insecure, not recommended.
+		This can be useful, but depending on your configuration, it can be insecure, as the password may be sent in plain text, so everyone sniffing the network could read it.
+		If you want to test it, use Wireshark, it has an OPCUA filter, which will correctly decode it if its not encrypted.
+		To use a username and password, you can use the environment variables: ``CAQTDM_OPCUA_USERNAME_PLAIN`` and ``CAQTDM_OPCUA_PASSWORD_PLAIN``. Careful: This will be sent to every host you connect to, which might also lead to a compromise.
+		You can also specify the username and password using caQtDM widgets, to have it runtime-only. For this, you can use the channels ``opcua://username`` and ``opcua://password``.
+		These are writeable like regular channels, and the username is readable. The password channel won't show it's value in the UI. The written value will be saved, but a placeholder displayed on the UI. These channels are only accessible to the local caQtDM process.
+		If those channels are updated, all hosts that don't have host-specific credentials will have all their connections refreshed. This also means that every host you connect to will be given those credentials.
+		To specify credentials only for one specific host, add it (EXCLUDING protocol &  INCLUDING port) before ``/username`` or ``/password``. so e.g. ``opcua://localhost:4840/username`` and ``opcua://localhost:4840/password``.
+		This way, you can input credentials at runtime, which will only be used for a specific host, others won't see it. But again, it may be transmitted in plain text.
+	- Certificate Authentication | The recommended way.
+		DISCLAIMER: Certificate authentication in the sense of OPC UA isn't officially supported, as none of the test systems supported it, so it wasn't tested. It might not work due to QtOpcUa appearing to lack some functionality required, but feel free to try it. If you can test it, please send us the results!
+		DISCLAIMER: The section below is how it should work and how it does work for regular secure communication (but anonymous / username/password access).
+		To be safe, prefer certificate authentication, if possible. 
+		If encryption is available for your plugin version, it will automatically create a PKI configuration. So if you are connecting to a host that supports certificate authentication, it will try to connect using your config.
+		You can either find the certificate in your local app data directory (``QStandardPaths::AppLocalDataLocation``) or in most OPC UA servers it will show attempted certificates in the settings, so you can simply try to connect once, then add the certificate to the server allow-list and retry the connection.
+		The private key is encrypted by default using a placeholder password (You can find it in the source code). If you want added security, you can use the environment variable ``CAQTDM_OPCUA_PEM_PASSWORD`` to specify a password to use for encrypting your private key.
+		You can also set the PEM password at runtime, using the channel ``opcua://pem_password``. Updating the value does not automatically re-decrypt the certificate, reloading the window should trigger such a re-decrypt, though.
+		In case you forgot the PEM password you once set, you can always reset your PKI configuration (careful, this means caQtDM creates a new key & certificate, so you'll have to reauthenticate those everywhere) by setting the environment variable: ``CAQTDM_OPCUA_RESET_PKI_CONFIG`` to something non-empty.
+		**IMPORTANT** Resetting the PKI-config is done for each host and potentially on each reload. This is bad, so if you use this reset option, you should close it again after the first connection has been established, then unset the environment variable and continue without it. Using caQtDM while ``CAQTDM_OPCUA_RESET_PKI_CONFIG`` is set is not advised.
+		The certificate will be self-signed. Certificate and key are generated using QtOpcUa Classes and functions. Take a look at the source code if your concerned about it's security. Take a look at the Certificate-Creation-section to see how to generate it yourself.
+		
+Special Fields:
+	The EPICS-Extension fields .NELM and .FTVL are also supported and populated with the most-closely matching value from OPC UA. Due to differences in supported data-types .FTVL can differ from the actual value. .NELM is 1 for simple variables and the array-length for arrays.
+
+Supported OPC UA data types:
+	OPC UA offers many data types, not all are supported by the plugin. Here is a list of Qt-datatypes that are supported and what EPICS-datatypes they map to.
+	
+	- For simple values:
+		+-----------------------+----------+
+		| QMetaType::Double     | caDOUBLE |
+		+-----------------------+----------+
+		| QMetaType::Float      | caFLOAT  |
+		+-----------------------+----------+
+		| QMetaType::Int        | caLONG   |
+		+-----------------------+----------+
+		| QMetaType::UInt       | caLONG   |
+		+-----------------------+----------+
+		| QMetaType::LongLong   | caLONG   |
+		+-----------------------+----------+
+		| QMetaType::ULongLong  | caLONG   |
+		+-----------------------+----------+
+		| QMetaType::Long       | caLONG   |
+		+-----------------------+----------+
+		| QMetaType::ULong      | caLONG   |
+		+-----------------------+----------+
+		| QMetaType::Short      | caINT    |
+		+-----------------------+----------+
+		| QMetaType::UShort     | caINT    |
+		+-----------------------+----------+
+		| QMetaType::Bool       | caINT    |
+		+-----------------------+----------+
+		| QMetaType::QString    | caSTRING |
+		+-----------------------+----------+
+	- For arrays:
+		All 1-dimensional arrays consisting of exactly one type that is supported for simple values are also supported. If the Qt-Type is ``QOpcUaMultiDimensionalArray``, so a multidimensional array, it will be flattened into a 1-D array. Writing back such flattened arrays will probably fail.
+
+Mappings:
+	Description and Timestamp (shown by ``Get Info`` dialog) are mapped from ``QOpcUa::NodeAttribute::Description`` and the server-timestamp returned by ``QOpcUaNode::serverTimestamp()``, respectively.
+	Access levels (read and write) are parsed from ``QOpcUa::NodeAttribute::UserAccessLevel``.
+
+Error handling:
+	If an attribute got a faulty value back from its monitor, that will be shown in the caQtDM message window. Failed connections will do the same. Connection Errors are shown separately, also in the message window.
+	You may find additional info produced via ``qDebug``s, which usually goes either to your terminal or system log-handler (e.g. in KDE).
+
+Connection:
+	Besides negotiating for the highest security that both the client and the server support, the plugin also scans hosts for the quickest endpoint. If no endpoints respond within a certain threshold, the connection is seen as a failure. Use ``CAQTDM_OPCUA_MAX_LATENCY`` (ms) to control this.
+	The default is 500ms. This only affects the initial establishment of a connection, and has no effect during the connection.
+	In Qt-6, you can also specify ``CAQTDM_OPCUA_SESSION_TIMEOUT`` (ms) to define how long a session should be kept open if no data changes occur. Beware: this is only a suggestion to the server, it may respond with a different timeout instead.
+	If this timeout is reached, so no monitored variable of a host changed its value within this time, and also no data was written by the client, the connection is closed. However, this immediately triggers a reconnect, as described below, so you should be fine.
+	Do NOT force-kill caQtDM unless absolutely necessary when OPC UA connections are open, since caQtDM usually won't have time to inform the server then. This leads to dangling connections that stay open until the timeout is reached. (Default is one hour)
+	So while longer timeouts may be more suitable in long-term monitoring use-cases, short timeouts are safer if you force-kill caQtDM every now and then.
+	The secure channel, as per OPC UA specs, is automatically renewed by Qt.
+
+Reconnect:
+	If the plugin cannot connect to a host, or an ongoing connection suddenly stops, it will try reconnecting with an increasing interval.
+	Reloading a panel unsubscribes from all variables in the panel (and disconnects from the hosts if no subscriptions are left) and reconnects them.
+	From Qt-6 onwards, reconnects apply a timeout of 2 * ``CAQTDM_OPCUA_MAX_LATENCY`` (ms).
+
+Configuration:
+	Look at the :ref:`environment variables <env.var>` for a look at possible configuration options.
+	Important: To use certificate operations, such as encryption via SSL, you need to explicitely set ``CAQTDM_OPCUA_ENABLE_CERTIFICATE`` to not be empty.
+	This is because then you will have to (for most OPCUA servers) add your certificate to the trusted list before being able to open a connection.
+
 General Properties
 ----------------------
 
@@ -3259,13 +3494,6 @@ By pressing the right mouse button on the background of your synoptic
 display you can get a context menu with the item "Print". Normally you
 should get a print dialog.
 
-Environment Plugin
-~~~~~~~~~~~~~~~~~~
-
-There is an environment plugin which allows to get environment variables just like PVs.
-To use this plugin, the value of "channel" in the designer has to be set to "environment://yourEnvironmentVar"
-Then caQtDM will get the environment variable after "environment://", in this case "yourEnvironmentVar" and return it just like any other PV.
-
 Unit Replacements
 ~~~~~~~~~~~~~~~~~
 
@@ -3358,6 +3586,21 @@ When no industry standard is available, caQtDM uses the Combination ``Ctrl+Alt``
 +------------------+-----------------------------------------------------+
 | ``Ctrl+P``       | Print                                               |
 +------------------+-----------------------------------------------------+
+
+**CSV Copy and Paste**
+
+In caWaveTable, it is possible to copy and paste the contained data as CSV, using the context menu.
+Paste is only available if write-access is available. Pasting works with the same format as returned by copying.
+Pasting internally does the same as if you manually updated each cell and input the new value.
+
+By default, the column separator is a comma (,) and the row separator is a newline (\n).
+The separator can be changed by defining the environment variable ``CAQTDM_CSV_SEPARATOR``. It may only be a single char.
+
+If a custom header row is present (specified in the UI-File), then it will be added to the copied output, as the first line.
+Pasting a header is not possible. When pasted text has a first row that is detected to be a header row, that row is discarded.
+A row is detected to be a header row, when:
+- It is equivalent to the already present header row
+- It's first value cannot be converted to the same datatype as the first value of the second row
 
 .. _logging:
 Logging
@@ -3501,6 +3744,8 @@ caQtDM uses the following environment variables:
 |                                          | character codes, seperated by (,) , (=)       |
 |                                          | and (;).                                      |
 +------------------------------------------+-----------------------------------------------+
+| ``CAQTDM_CSV_SEPARATOR``                 | The CSV Separator used in certain operations. | 
++------------------------------------------+-----------------------------------------------+
 | ``CAQTDM_SCREENSHOT_NAME``               | If caQtDM was started with -print this will   |
 |                                          | specify the name of the screenshot file       |
 +------------------------------------------+-----------------------------------------------+
@@ -3572,6 +3817,29 @@ caQtDM uses the following environment variables:
 |                                       | backends. Needs to be in the format: /path/to/backend/list|
 +---------------------------------------+-----------------------------------------------------------+
 | ``CAQTDM_ARCHIVEHTTP_NO_TIMEOUT``     | If this is set, errors will not create a timeout.         |
++---------------------------------------+-----------------------------------------------------------+
+| ``CAQTDM_OPCUA_DATABASE``             | File with translations for opcua channels. To use e.g.    |
+|                                       | opcua://CHANNEL specify CHANNEL=opc.tcp://restofuri       |
+|                                       | Each line in the file is a translation.                   |
++---------------------------------------+-----------------------------------------------------------+
+| ``CAQTDM_OPCUA_ENABLE_CERTIFICATE``   | If empty, endpoints with signing / encryption are ignored |
++---------------------------------------+-----------------------------------------------------------+
+| ``CAQTDM_OPCUA_MAX_LATENCY``          | Max latency (ms) endpoints may have when trying to connect|
++---------------------------------------+-----------------------------------------------------------+
+| ``CAQTDM_OPCUA_PASSWORD_PLAIN``       | Password to use for all endpoints: MAYBE SENT UNENCRYPTED!|
++---------------------------------------+-----------------------------------------------------------+
+| ``CAQTDM_OPCUA_PEM_PASSWORD``         | Password to use to unlock PEM for certificate auth.       |
++---------------------------------------+-----------------------------------------------------------+
+| ``CAQTDM_OPCUA_RESET_PKI_CONFIG``     | If set, caQtDM recreates entire PEM config, incl. PEM pwd |
++---------------------------------------+-----------------------------------------------------------+
+| ``CAQTDM_OPCUA_SESSION_TIMEOUT``      | Session timeout  (ms) for opcua connections.              |
++---------------------------------------+-----------------------------------------------------------+
+| ``CAQTDM_OPCUA_USERNAME_PLAIN``       | Username to use for all endpoints: MAYBE SENT UNENCRYPTED!|
++---------------------------------------+-----------------------------------------------------------+
+| ``CAQTDM_OPCUA_IGNORE_UNTRUSTED_CERT``| If not empty, caQtDM auto-connects to untrusted servers   |
++---------------------------------------+-----------------------------------------------------------+
+| ``CAQTDM_OPCUA_REJECT_UNTRUSTED_CERT``| If not empty, caQtDM won't connect to untrusted servers,  |
+|                                       | but there will also be no prompt to trust the server cert |
 +---------------------------------------+-----------------------------------------------------------+
 | ``CAQTDM_OPTIMIZE_EPICS3CONNECTIONS`` | Disable Epics3 connections when tabwidget is not active   |
 |                                       | Set to "TRUE" to activate                                 |

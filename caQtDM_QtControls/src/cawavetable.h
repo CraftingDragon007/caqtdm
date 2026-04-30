@@ -144,6 +144,8 @@ public:
     int getVerticalOffset() const;
     void setVerticalOffset(int newVerticalOffset);
 
+    QString getHeaderCSV();
+
 public slots:
     void animation(QRect p) {
 #include "animationcode.h"
@@ -154,6 +156,16 @@ public slots:
     }
     void vscrollbarControl(int scrollvalue);
     void hscrollbarControl(int scrollvalue);
+
+    /**
+     * @brief copies the displayed tabular data to the clipboard in csv format, without headers. String values are ignored / don't work.
+     * Uses american format with <csvSeparator> as separators and \n as newlines
+     */
+    void copyDataCSV();
+    /**
+     * @brief pastes data from the clipboard (in CSV format) into the table. Format should be exactly as the output from copyDataCSV, so <csvSeparator> as separators and \n as newlines.
+     */
+    void pasteDataCSV();
 
 private slots:
     void dataInput(int, int);
@@ -177,6 +189,7 @@ signals:
     void verticalScrollbarChanged(int);
     void horizontalScrollbarChanged(int);
 
+    void messageWindowOutput(const QtMsgType type, const QString &message);
 
 private:
     bool eventFilter(QObject *obj, QEvent *event);
@@ -228,6 +241,7 @@ private:
     int horizontalOffset;
     int verticalOffset;
 
+    QChar csvSeparator;
 };
 
 #endif
