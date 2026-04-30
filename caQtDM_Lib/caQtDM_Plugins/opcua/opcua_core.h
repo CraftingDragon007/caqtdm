@@ -44,8 +44,6 @@
 #include "certificatedialog.h"
 #endif
 
-#define VERBOSELOG(msg) qDebug().nospace() << "[" << __FUNCTION__ << "]: " << msg
-
 typedef struct
 {
     QString nodeid;

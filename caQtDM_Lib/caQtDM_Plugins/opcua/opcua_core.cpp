@@ -29,6 +29,7 @@
 #include <QOpcUaErrorState>
 #include <QStandardPaths>
 #include <QTimer>
+#include "loggingcategories.h"
 #include "qdir.h"
 #include "qmetaobject.h"
 #include "qopcuaauthenticationinformation.h"
@@ -109,7 +110,7 @@ OpcUaCore::OpcUaCore(QObject *parent)
         if (!qgetenv("CAQTDM_OPCUA_RESET_PKI_CONFIG").isEmpty()) {
             // This should only be done once.
             qunsetenv("CAQTDM_OPCUA_RESET_PKI_CONFIG");
-            VERBOSELOG("Resetting PKI Config.");
+            qCInfo(opcuaLog) << "Resetting PKI Config.";
             clearPkiConfig();
         }
 
@@ -128,15 +129,16 @@ OpcUaCore::OpcUaCore(QObject *parent)
                          if (previousTryWasInvalid) {
                              if (*password != NOPASS_PLACEHOLDER) {
                                  // Maybe the user specified a password but this pki config was created without one
-                                 VERBOSELOG(
-                                     "Failed to decrypt private key with given password, trying "
-                                     "default. To reset, specify CAQTDM_OPCUA_RESET_PKI_CONFIG.");
+                                 qCWarning(opcuaLog)
+                                     << "Failed to decrypt private key with given password, trying "
+                                        "default. To reset, specify CAQTDM_OPCUA_RESET_PKI_CONFIG.";
                                  *password = NOPASS_PLACEHOLDER;
                                  return;
                              }
-                             VERBOSELOG("Failed to decrypt private key, have you specified a "
-                                        "password when initializing it via environment variable? "
-                                        "To reset, specify CAQTDM_OPCUA_RESET_PKI_CONFIG.");
+                             qCWarning(opcuaLog)
+                                 << "Failed to decrypt private key, have you specified a "
+                                    "password when initializing it via environment variable? "
+                                    "To reset, specify CAQTDM_OPCUA_RESET_PKI_CONFIG.";
                              *password = "";
                              return;
                          }
@@ -144,8 +146,8 @@ OpcUaCore::OpcUaCore(QObject *parent)
                          // Try runtime-provided PEM password
                          if (!m_pemPassword.isEmpty()) {
                              *password = m_pemPassword;
-                             VERBOSELOG("Using explicitely provided password via "
-                                        "opcua://pem_password for decrypting pem.");
+                             qCInfo(opcuaLog) << "Using explicitely provided password via "
+                                                 "opcua://pem_password for decrypting pem.";
                              return;
                          }
 
@@ -262,7 +264,7 @@ OpcUaCore::OpcUaCore(QObject *parent)
                                + QString::number(static_cast<quint64>(state->connectionStep()))
                                + ", isClientSideError: "
                                + (state->isClientSideError() ? "yes" : "no");
-        VERBOSELOG(errorMessage);
+        qCCritical(opcuaLog) << errorMessage;
 
         if (state->errorCode() == QOpcUa::UaStatusCode::BadSecurityChecksFailed) {
             errorMessage
@@ -329,7 +331,7 @@ OpcUaCore::OpcUaCore(QObject *parent)
             }
 
             errorMessage += " for: " + m_currentEndpointDescription.endpointUrl();
-            VERBOSELOG(errorMessage);
+            qCCritical(opcuaLog) << errorMessage)
         });
 
     // This prevents 'lost' connections leading to sessions staying open on the server, which can lead to denial of service if the server limits the amount of concurrent sessions.
@@ -364,9 +366,10 @@ void OpcUaCore::clearPkiConfig()
     const QString pkiPath = defaultPkiPath();
     if (QDir().exists(pkiPath)) {
         if (!QDir(pkiPath).removeRecursively()) {
-            emit userMessage(QtCriticalMsg,
+            emit userMessage(
+                QtCriticalMsg,
                 "Failed to delete files for resetting PKI config, please check and unlock/delete "
-                + pkiPath + ". After that, restart caQtDM.");
+                    + pkiPath + ". After that, restart caQtDM.");
         }
     }
 }
@@ -390,7 +393,7 @@ void OpcUaCore::setupPkiConfig()
                                   pkiPath + "/own/private"};
     for (const QString &dir : toCreate) {
         if (!QDir().mkpath(dir)) {
-            VERBOSELOG("Could not create directory" << dir);
+            qCCritical(opcuaLog) << "Could not create directory" << dir;
         }
     }
 
@@ -405,20 +408,21 @@ void OpcUaCore::setupPkiConfig()
     // Qt 5 has an incorrect certificate generation, which at best fails completly
     // and worst case generates a bad certificate which produces misterious runtime errors as it doesnt match the OPC UA specificiation.
     if (createCertificate) {
-        VERBOSELOG("Certificate generation is not possible in Qt-5. If neccessary, create a "
-                   "certificate yourself using the script in "
-                   "caQtDM_Lib/caQtDM_Plugins/opcua/create_certificate.sh (see sourcecode)");
+        qCCritical(opcuaLog)
+            << "Certificate generation is not possible in Qt-5. If neccessary, create a "
+               "certificate yourself using the script in "
+               "caQtDM_Lib/caQtDM_Plugins/opcua/create_certificate.sh (see sourcecode)";
         return;
     }
 #endif
 
 #ifdef QT_OPCUA_X509
     if (createCertificate && !X509Certificate::createCertificate(pkiPath)) {
-        VERBOSELOG("Could not create certificate at: " << pkiPath);
+        qCCritical(opcuaLog) << "Could not create certificate at: " << pkiPath;
     }
 #else
     if (createCertificate) {
-        VERBOSELOG("Could not create certificate, not X509 capabilities");
+        qCCritical(opcuaLog) << "Could not create certificate, no X509 capabilities";
         return;
     }
 #endif
@@ -513,7 +517,8 @@ QOpcUaEndpointDescription OpcUaCore::chooseEndpointDescription(
     QVector<QOpcUaEndpointDescription> anonymousEndpoints;
 
     bool isCertificateSupported = false;
-    if (!qgetenv("CAQTDM_OPCUA_ENABLE_CERTIFICATE").isEmpty() && m_client->pkiConfiguration().isPkiValid()) {
+    if (!qgetenv("CAQTDM_OPCUA_ENABLE_CERTIFICATE").isEmpty()
+        && m_client->pkiConfiguration().isPkiValid()) {
         isCertificateSupported = true;
     }
     bool isUsernamePasswordSupported = m_client->authenticationInformation().authenticationType()
@@ -561,10 +566,10 @@ QOpcUaEndpointDescription OpcUaCore::chooseEndpointDescription(
          {&certificateEndpoints, &usernamePasswordEndpoints, &anonymousEndpoints}) {
         if (!endpointList->isEmpty()
             && !std::any_of(endpointList->constBegin(),
-                           endpointList->constEnd(),
-                           [&fallbackUrl](const QOpcUaEndpointDescription &ep) {
-                               return ep.endpointUrl() == fallbackUrl.toString();
-                           })) {
+                            endpointList->constEnd(),
+                            [&fallbackUrl](const QOpcUaEndpointDescription &ep) {
+                                return ep.endpointUrl() == fallbackUrl.toString();
+                            })) {
             QOpcUaEndpointDescription cloneWithFallbackUrl = endpointList->first();
             cloneWithFallbackUrl.setEndpointUrl(fallbackUrl.toString());
             endpointList->append(cloneWithFallbackUrl);
@@ -594,7 +599,7 @@ QOpcUaEndpointDescription OpcUaCore::chooseEndpointDescription(
 bool OpcUaCore::connectOpc(const QString &url)
 {
     if (!m_client) {
-        VERBOSELOG("Client is not initialized.");
+        qCWarning(opcuaLog) << "Client is not initialized.";
         return false;
     }
     m_latestEndpoint = url;
@@ -615,12 +620,12 @@ bool OpcUaCore::connectOpc(const QString &url)
             // If no endpoints are returned at all, there is something fundamentally wrong with the server.
             // Thus, not even the fallbackEndpoint is checked from the pv, and we error out here.
             if (returnedEndpoints.isEmpty()) {
-                VERBOSELOG("No endpoints received.");
+                qCWarning(opcuaLog) << "No endpoints received.";
                 return;
             }
 
             if (status != QOpcUa::UaStatusCode::Good) {
-                VERBOSELOG("Received status not good: " << status);
+                qCWarning(opcuaLog) << "Received status not good: " << status;
                 return;
             }
 
@@ -628,7 +633,7 @@ bool OpcUaCore::connectOpc(const QString &url)
                                                                                  url);
 
             if (chosenEndpoint.endpointUrl().isEmpty()) {
-                VERBOSELOG("No reachable endpoint hosts.");
+                qCWarning(opcuaLog) << "No reachable endpoint hosts.";
                 return;
             }
 
@@ -653,12 +658,12 @@ void OpcUaCore::disconnectOpc()
 {
     QMutexLocker locker(&m_mutex);
     if (m_client && m_client->state() != QOpcUaClient::ClientState::Disconnected) {
-        VERBOSELOG("Disconnecting from OPC UA Server....");
+        qCDebug(opcuaLog) << "Disconnecting from OPC UA Server....";
         // This next disconnect should not be reconnnected
         m_ignoreNextDisconnect = true;
         m_client->disconnectFromEndpoint();
     } else {
-        VERBOSELOG("Client not connected or already disconnected.");
+        qCDebug(opcuaLog) << "Client not connected or already disconnected.";
     }
     m_currentEndpointDescription.setEndpointUrl("");
 }
@@ -669,7 +674,7 @@ void OpcUaCore::subscribeToNode(const SubscriptionSettings &subscriptionSettings
     int intervalMs = subscriptionSettings.samplingIntervalMs;
 
     if (!isClientConnected()) {
-        VERBOSELOG("Client is not connected.");
+        qCWarning(opcuaLog) << "Client is not connected.";
         return;
     }
 
@@ -684,7 +689,7 @@ void OpcUaCore::subscribeToNode(const SubscriptionSettings &subscriptionSettings
 
     QOpcUaNode *node = m_client->node(nodeId);
     if (!node) {
-        VERBOSELOG("Failed to create node object for subscription: " << nodeId);
+        qCCritical(opcuaLog) << "Failed to create node object for subscription: " << nodeId;
         return;
     }
     m_subscriptionNodes.insert(nodeId, node);
@@ -725,7 +730,7 @@ void OpcUaCore::startMonitoringOfNode(QOpcUaNode *node)
               }
 
               if (!attrs.testFlag(QOpcUa::NodeAttribute::NodeClass)) {
-                  VERBOSELOG("Failed to read NodeClass for node: " << nodeId);
+                  qCCritical(opcuaLog) << "Failed to read NodeClass for node: " << nodeId;
                   node->deleteLater();
                   m_subscriptionNodes.remove(nodeId);
                   m_activelyMonitoredNodes.remove(nodeId);
@@ -735,7 +740,8 @@ void OpcUaCore::startMonitoringOfNode(QOpcUaNode *node)
               auto nodeClass = static_cast<QOpcUa::NodeClass>(
                   node->attribute(QOpcUa::NodeAttribute::NodeClass).toInt());
               if (nodeClass != QOpcUa::NodeClass::Variable) {
-                  VERBOSELOG("Node " << nodeId << " is not a Variable. Subscription aborted.");
+                  qCCritical(opcuaLog)
+                      << "Node " << nodeId << " is not a Variable. Subscription aborted.";
                   node->deleteLater();
                   m_subscriptionNodes.remove(nodeId);
                   m_activelyMonitoredNodes.remove(nodeId);
@@ -749,7 +755,7 @@ void OpcUaCore::startMonitoringOfNode(QOpcUaNode *node)
               params.setSubscriptionType(QOpcUaMonitoringParameters::SubscriptionType::Shared);
 
               if (!node->enableMonitoring(QOpcUa::NodeAttribute::Value, params)) {
-                  VERBOSELOG("Failed to enable monitoring for node: " << nodeId);
+                  qCCritical(opcuaLog) << "Failed to enable monitoring for node: " << nodeId;
                   node->deleteLater();
                   m_subscriptionNodes.remove(nodeId);
                   m_activelyMonitoredNodes.remove(nodeId);
@@ -769,7 +775,7 @@ void OpcUaCore::startMonitoringOfNode(QOpcUaNode *node)
                                    }
                                });
 
-              VERBOSELOG("Subscribed successfully to:" << nodeId);
+              qCDebug(opcuaLog) << "Subscribed successfully to:" << nodeId;
 
               QVariant accessLevel = node->attribute(QOpcUa::NodeAttribute::UserAccessLevel);
 
@@ -799,7 +805,7 @@ void OpcUaCore::disableMonitoringForNode(const QString &nodeId)
 
 void OpcUaCore::clearAllSubscriptions()
 {
-    const QList<QOpcUaNode*> toUnsubscribe = m_subscriptionNodes.values();
+    const QList<QOpcUaNode *> toUnsubscribe = m_subscriptionNodes.values();
     for (auto node : toUnsubscribe) {
         if (node) {
             node->disableMonitoring(QOpcUa::NodeAttribute::Value);
@@ -809,7 +815,7 @@ void OpcUaCore::clearAllSubscriptions()
     }
 
     m_subscriptionNodes.clear();
-    VERBOSELOG("All OPC UA subscriptions have been cleared.");
+    qCDebug(opcuaLog) << "All OPC UA subscriptions have been cleared.";
 }
 
 bool OpcUaCore::isClientConnected() const
@@ -860,7 +866,7 @@ bool OpcUaCore::writeDataDynamically(QOpcUaNode *node,
     auto doWrite = [&](const QVariant &ref) {
         QVariant valueToWrite = makeValue(ref);
         if (!valueToWrite.isValid()) {
-            VERBOSELOG("Unsupported type" << QT_VARIANT_TYPE(ref));
+            qCCritical(opcuaLog) << "Unsupported type" << QT_VARIANT_TYPE(ref);
             return;
         }
 
@@ -874,8 +880,8 @@ bool OpcUaCore::writeDataDynamically(QOpcUaNode *node,
                                      delete conn;
                                      if (attr == QOpcUa::NodeAttribute::Value
                                          && status != QOpcUa::Good) {
-                                         VERBOSELOG(
-                                             "Write failed: " << QOpcUa::statusToString(status));
+                                         qCCritical(opcuaLog)
+                                             << "Write failed: " << QOpcUa::statusToString(status);
                                      }
                                  });
 
@@ -899,7 +905,7 @@ bool OpcUaCore::writeDataDynamically(QOpcUaNode *node,
                                  QObject::disconnect(*conn);
                                  delete conn;
                                  if (!attrs.testFlag(QOpcUa::NodeAttribute::Value)) {
-                                     VERBOSELOG("Value not readable");
+                                     qCCritical(opcuaLog) << "Value not readable";
                                      return;
                                  }
                                  QVariant existingValue = node->attribute(
@@ -920,14 +926,14 @@ bool OpcUaCore::writeValue(
     const QString &nodeId, double rdata, int32_t idata, char *sdata, char *errmess)
 {
     if (!m_subscriptionNodes.contains(nodeId)) {
-        VERBOSELOG("Node not found");
+        qCCritical(opcuaLog) << "Node not found";
         qstrcpy(errmess, "Node not found");
         return false;
     }
 
     QOpcUaNode *node = m_subscriptionNodes[nodeId];
     if (!node) {
-        VERBOSELOG("Node is null");
+        qCCritical(opcuaLog) << "Node is null";
         qstrcpy(errmess, "Node is null");
         return false;
     }
@@ -972,14 +978,14 @@ bool OpcUaCore::writeValues(const QString &nodeId,
                             char *errmess)
 {
     if (!m_subscriptionNodes.contains(nodeId)) {
-        VERBOSELOG("Node not found");
+        qCCritical(opcuaLog) << "Node not found";
         qstrcpy(errmess, "Node not found");
         return false;
     }
 
     QOpcUaNode *node = m_subscriptionNodes[nodeId];
     if (!node) {
-        VERBOSELOG("Node is null");
+        qCCritical(opcuaLog) << "Node is null";
         qstrcpy(errmess, "Node is null");
         return false;
     }
@@ -989,7 +995,7 @@ bool OpcUaCore::writeValues(const QString &nodeId,
         QList<QVariant> values;
 
         if (!ref.canConvert<QVariantList>()) {
-            VERBOSELOG(
+            qCCritical(opcuaLog) <<
                 "Tried writing array data to a variable that didn't return an array last time");
             qstrcpy(errmess,
                     "Tried writing array data to a variable that didn't return an array last time");
@@ -1047,7 +1053,7 @@ QString OpcUaCore::getDescription(const QString &nodeId) const
 {
     QOpcUaNode *node = m_subscriptionNodes[nodeId];
     if (!node) {
-        VERBOSELOG("Node is null");
+        qCCritical(opcuaLog) << "Node is null";
         return "Node is null";
     }
     return node->attribute(QOpcUa::NodeAttribute::Description).value<QOpcUaLocalizedText>().text();
@@ -1057,7 +1063,7 @@ QString OpcUaCore::getTimestamp(const QString &nodeId) const
 {
     QOpcUaNode *node = m_subscriptionNodes[nodeId];
     if (!node) {
-        VERBOSELOG("Node is null");
+        qCCritical(opcuaLog) << "Node is null";
         return "Node is null";
     }
     QDateTime timestamp = node->serverTimestamp(QOpcUa::NodeAttribute::Value);

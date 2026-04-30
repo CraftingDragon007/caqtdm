@@ -31,18 +31,20 @@
 #include <QtConcurrent/QtConcurrent>
 #include "alarmdefs.h"
 #include "fileFunctions.h"
+#include "loggingcategories.h"
 #include "opcua_core.h"
 #include "searchfile.h"
-#include <memory>
 
 #define PASSWORD_PLACEHOLDER "[HIDDEN]"
 #define PLUGIN_PREFIX "opcua://"
 #define PROTOCOL_PREFIX "opc.tcp://"
 
+Q_LOGGING_CATEGORY(opcuaLog, "caqtdm.plugins.opcua")
+
 OPCUAPlugin::OPCUAPlugin()
     : m_generalPasswordCredentials({"", ""})
 {
-    VERBOSELOG("Create");
+    qCInfo(opcuaLog) << "OPCUAPlugin: Create";
     QLoggingCategory::setFilterRules("qt.opcua.plugins.open62541*=false");
     m_mutexKnobDataP = Q_NULLPTR;
     m_messageWindowP = Q_NULLPTR;
@@ -61,7 +63,7 @@ int OPCUAPlugin::initCommunicationLayer(MutexKnobData *data,
                                         MessageWindow *messageWindow,
                                         QMap<QString, QString> options)
 {
-    VERBOSELOG("Initialized with num options: " << options.size());
+    qCDebug(opcuaLog) << "Initialized with num options: " << options.size();
 
     m_mutexKnobDataP = data;
     m_messageWindowP = messageWindow;
@@ -384,7 +386,8 @@ int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
                                      int idx = it.value();
                                      knobData kData = m_mutexKnobDataP->GetMutexKnobData(idx);
 
-                                     VERBOSELOG("nodeId: " << nodeId << " got error: " << errorMsg);
+                                     qCCritical(opcuaLog)
+                                         << "nodeId: " << nodeId << " got error: " << errorMsg;
 
                                      kData.edata.severity = INVALID_ALARM;
                                      kData.edata.status = 1; // READ_ALARM
@@ -393,11 +396,14 @@ int OPCUAPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
                                  }
                              });
 
-            QObject::connect(core, &OpcUaCore::userMessage, this, [&](QtMsgType type, const QString &message){
-                if (m_messageWindowP) {
-                    m_messageWindowP->postMsgEvent(type, message.toUtf8().data());
-                }
-            });
+            QObject::connect(core,
+                             &OpcUaCore::userMessage,
+                             this,
+                             [&](QtMsgType type, const QString &message) {
+                                 if (m_messageWindowP) {
+                                     m_messageWindowP->postMsgEvent(type, message.toUtf8().data());
+                                 }
+                             });
         } else {
             core = m_cores[endpoint];
         }
@@ -890,7 +896,7 @@ int OPCUAPlugin::pvDisconnect(knobData *kData)
     if (m_cores.contains(endpoint)) {
         m_cores[endpoint]->disconnectOpc();
         m_connectionState[endpoint] = ConnectionState::NotConnected;
-        VERBOSELOG("Disconnected from" << endpoint);
+        qCDebug(opcuaLog) << "Disconnected from" << endpoint;
     }
     return true;
 }
@@ -926,8 +932,8 @@ bool OPCUAPlugin::resolveConnectionString(char *pv, QString &endpoint, QString &
 
     if (plainKey.endsWith(".FTVL") || plainKey.endsWith(".NELM")
         || isGeneralUsernamePassword(plainKey) || isSpecificUsernamePassword(plainKey)) {
-        VERBOSELOG(
-            "Invalid connection string, cannot write opcua to EPICS extensions: " << plainKey);
+        qCWarning(opcuaLog) << "Invalid connection string, cannot write opcua to EPICS extensions: "
+                            << plainKey;
         return false;
     }
 
@@ -942,7 +948,7 @@ bool OPCUAPlugin::resolveConnectionString(char *pv, QString &endpoint, QString &
     QString raw = fullConnection.remove(PLUGIN_PREFIX);
 
     if (!raw.startsWith(PROTOCOL_PREFIX)) {
-        VERBOSELOG("Invalid connection string: " << fullConnection);
+        qCWarning(opcuaLog) << "Invalid connection string: " << fullConnection;
         return false;
     }
 
@@ -950,7 +956,7 @@ bool OPCUAPlugin::resolveConnectionString(char *pv, QString &endpoint, QString &
     if (splitPos < 0) {
         splitPos = raw.lastIndexOf("/i=");
         if (splitPos < 0) {
-            VERBOSELOG("Invalid connection string: " << fullConnection);
+            qCWarning(opcuaLog) << "Invalid connection string: " << fullConnection;
             return false;
         }
     }
