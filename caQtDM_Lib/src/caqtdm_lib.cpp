@@ -654,7 +654,6 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
 #endif
 
     level=0;
-    // cainclude_path="";
 
     // Using just path here since it should work better with URLs than converting to abs path
     //cainclude_path = fi.absolutePath() + "/";
@@ -1604,7 +1603,6 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         text = relatedWidget->getFiles();
         // must use bitwise OR to not short-circuit
         if(reaffectText(map, &text, w1) | fixFileListRelative(cainclude_path, &text)) relatedWidget->setFiles(text);
-        //qDebug() << "RelatedDisplay files: " << text << fixFileListRelative(cainclude_path, text) << relatedWidget->getFiles();
 
         text = relatedWidget->getLabel();
         if(reaffectText(map, &text, w1))  relatedWidget->setLabel(text);
@@ -2518,17 +2516,10 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
         // define the file to use
         QString providedFileName = includeWidget->getFileName().trimmed();
-        // postMessage(QtDebugMsg, (char*) qasc(tr("file check A: %1").arg(providedFileName)));
-        //qDebug() << "filename A: " << providedFileName ;
-        //qDebug() << "filename cainclude_path: " << cainclude_path;
 
         if (QFileInfo(providedFileName).isRelative()){
           providedFileName = cainclude_path + providedFileName;
         }
-
-        // postMessage(QtDebugMsg, (char*) qasc(tr("file check B: %1").arg(providedFileName)));
-        // qDebug() << "filename B: " << providedFileName ;
-
 
         reaffectText(map, &providedFileName, w1);
         QString fileName = providedFileName;
@@ -2821,12 +2812,6 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
                     // Using just path here since it should work better with URLs than converting to abs path
                     //cainclude_path = fi.absolutePath() + "/";
                     cainclude_path = fi.path() + "/";
-                    // // take into account recursive use of directories (bug fix of 6.9.2016)
-                      // if(includeWidget->getFileName().trimmed().contains("/")) {
-                      //     QStringList pathcomponents=includeWidget->getFileName().trimmed().split("/");
-                      //     pathcomponents.erase(pathcomponents.end()-1);
-                      //     cainclude_path=cainclude_path+pathcomponents.join("/")+"/";
-                      // }
 
                     // RECURSE TO LOWER WIDGETS
                     scanWidgets(thisW->findChildren<QWidget *>(), macroS);
