@@ -37,67 +37,8 @@
 #include <QtDesigner/QtDesigner>
 #endif
 #include <QtPlugin>
-
 #include "designerPluginTexts.h"
-
-typedef char strng[40];
-typedef char longtext[500];
-
-static QString XmlFunc(const char *clss, const char *name, int x, int y, int w, int h,
-                strng *propertyname, strng* propertytype, longtext *propertytext, int nb)
-{
-#ifndef DESIGNER_TOOLTIP_DESCRIPTIONS
-    Q_UNUSED(propertytext);
-#endif
-    QString mess = "";
-    QString strng1 = "";
-    QString strng2 = "";
-
-    mess = "<ui language=\"c++\"><widget class=\"%1\" name=\"%2\">\
-            <property name=\"geometry\">\
-            <rect>\
-            <x>%3</x>\
-            <y>%4</y>\
-            <width>%5</width>\
-            <height>%6</height>\
-            </rect>\
-            </property>\
-            </widget>";
-
-            mess = mess.arg(clss).arg(name).arg(x).arg(y).arg(w).arg(h);
-
-    if(nb > 0) {
-        strng1 = " <customwidgets><customwidget><class>%1</class><propertyspecifications>";
-        strng1 = strng1.arg(clss);
-        for(int i=0; i<nb; i++) {
-#ifdef DESIGNER_TOOLTIP_DESCRIPTIONS
-            QString strng3 = "<tooltip name=\"%1\">%2</tooltip>";
-            strng3 = strng3.arg(propertyname[i]).arg(propertytext[i]);
-            strng1.append(strng3);
-#endif
-            if(strstr(propertytype[i], "multiline") != (char*) Q_NULLPTR) {
-                strng2 = " <stringpropertyspecification name=\"%1\" notr=\"true\" type=\"%2\"/>";
-                strng2 = strng2.arg(propertyname[i]).arg(propertytype[i]);
-            }
-            strng1.append(strng2);
-        }
-        strng1.append(" </propertyspecifications></customwidget></customwidgets>");
-
-    }
-    mess.append(strng1);
-    mess.append("</ui>");
-
-    //control output in formatted xml format */
-/*
-    QString formattedOutput;
-    QDomDocument doc;
-    doc.setContent(mess, false);
-    QTextStream writer(&formattedOutput);
-    doc.save(writer, 4);
-    qDebug() << formattedOutput;
-*/
-    return mess;
-}
+#include "plugin_xml_helper.h"
 CustomWidgetInterface_Utilities::CustomWidgetInterface_Utilities(QObject *parent): QObject(parent), d_isInitialized(false)
 {
 }
@@ -241,7 +182,51 @@ QWidget *caMimeDisplayInterface::createWidget(QWidget *parent)
 {
     return new caMimeDisplay(parent);
 }
+#ifdef CAHMI
+caHMIConfigInterface::caHMIConfigInterface(QObject *parent): CustomWidgetInterface_Utilities(parent)
+{
+    strng name[5], type[5] = {"", "", "", "", ""};
+    longtext text[5] = {"", "", "", "", ""};
 
+    qstrncpy(name[0], "shortcut", sizeof(name[0]));
+    qstrncpy(name[1], "channel", sizeof(name[1]));
+    qstrncpy(name[2], "valueOrCalc", sizeof(name[2]));
+    qstrncpy(text[2], "Either the value to set or a calc string, can be configured by setting calculationType", sizeof(text[2]));
+    qstrncpy(name[3], "calculationType", sizeof(name[3]));
+    qstrncpy(name[4], "captureType", sizeof(name[4]));
+
+    d_domXml = XmlFunc("caHMIConfig", "cahmiconfig", 0, 0, 100, 22, name, type, text, 5);
+    d_toolTip = "[Configures capture of certain user input]";
+    d_name = "caHMIConfig";
+    d_include = "caHMIConfig";
+    QPixmap qpixmap = QPixmap(":pixmaps/input.png");
+    d_icon = qpixmap.scaled(70, 70, Qt::IgnoreAspectRatio, Qt::FastTransformation);
+}
+
+QWidget *caHMIConfigInterface::createWidget(QWidget *parent){
+    return new caHMIConfig(parent);
+}
+#endif
+
+wmSignalRescaleInterface::wmSignalRescaleInterface(QObject *parent): CustomWidgetInterface_Utilities(parent)
+{
+    strng name[2], type[2] = {"", ""};
+    longtext text[2] = {"", ""};
+
+    qstrncpy(name[0], "softChannelA", sizeof(name[0]));
+    qstrncpy(name[1], "softChannelB", sizeof(name[1]));
+
+    d_domXml = XmlFunc("wmSignalRescale", "wmsignalrescale", 0, 0, 110, 22, name, type, text, 2);
+    d_toolTip = "[Receive notice of rescaling]";
+    d_name = "wmSignalRescale";
+    d_include = "wmSignalRescale";
+    QPixmap qpixmap = QPixmap(":pixmaps/wmrescale.png");
+    d_icon = qpixmap.scaled(70, 70, Qt::IgnoreAspectRatio, Qt::FastTransformation);
+}
+
+QWidget *wmSignalRescaleInterface::createWidget(QWidget *parent) {
+    return new wmSignalRescale(parent);
+}
 
 CustomWidgetCollectionInterface_Utilities::CustomWidgetCollectionInterface_Utilities(QObject *parent): QObject(parent)
 {
@@ -250,13 +235,15 @@ CustomWidgetCollectionInterface_Utilities::CustomWidgetCollectionInterface_Utili
     d_plugins.append(new caShellCommandInterface(this));
     d_plugins.append(new caScriptButtonInterface(this));
     d_plugins.append(new caMimeDisplayInterface(this));
+    d_plugins.append(new caHMIConfigInterface(this));
+    d_plugins.append(new wmSignalRescaleInterface(this));
 }
 
 QList<QDesignerCustomWidgetInterface*> CustomWidgetCollectionInterface_Utilities::customWidgets(void) const
 {
     return d_plugins;
 }
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0) 
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
 #else
 Q_EXPORT_PLUGIN2(QtControls, CustomWidgetCollectionInterface_Utilities)
 #endif

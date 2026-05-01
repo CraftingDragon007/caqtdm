@@ -134,6 +134,8 @@ public:
     void setAlarmColors(short status, double value, QColor bgAtInit, QColor fgAtInit);
     void updateAlarmColors();
     void setColors(QColor bg, QColor fg, QColor fr, int lineWidth);
+    void copy();
+    void clearSelection();
 
 public slots:
     void animation(QRect p) {
@@ -146,13 +148,12 @@ public slots:
 
 private slots:
     void rescaleFont(const QString& newText);
-    void copy();
 
 protected:
-      virtual bool event(QEvent *);
-      virtual QSize sizeHint() const;
-      virtual QSize minimumSizeHint() const;
-      QSize calculateTextSpace();
+      virtual bool event(QEvent *) override;
+      virtual QSize sizeHint() const override;
+      virtual QSize minimumSizeHint() const override;
+      QSize calculateTextSpace() override;
 
 private:
     QString thisPV;

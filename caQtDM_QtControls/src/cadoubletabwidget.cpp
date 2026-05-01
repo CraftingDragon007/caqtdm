@@ -29,7 +29,7 @@
 #include <QToolTip>
 #include "cadoubletabwidget.h"
 
-#define PRINT(x)
+Q_LOGGING_CATEGORY(caDoubleTabWidgetLog, "caqtdm.widgets.cadoubletabwidget")
 
 caDoubleTabWidget::caDoubleTabWidget(QWidget *parent) : QWidget(parent)
 
@@ -79,9 +79,7 @@ caDoubleTabWidget::caDoubleTabWidget(QWidget *parent) : QWidget(parent)
     addPages = false;
 
     // colorize horizontal bar
-    QPalette pal = hTabBar->palette();
-    pal.setColor(QPalette::Base, QColor(255, 0, 255));
-    hTabBar->setPalette(pal);
+    setFont(0);
 
     setRow(0);
     setCol(0);
@@ -105,6 +103,10 @@ bool caDoubleTabWidget::eventFilter(QObject *obj, QEvent *event)
             }
         }
     }
+
+    if(event->type() == QEvent::Polish){
+        editStyleSheet(this->styleSheet());
+    }
     return QWidget::event(event);
 }
 
@@ -113,9 +115,10 @@ int caDoubleTabWidget::lookupArrayIndex(int row, int col)
     QMapIterator<int, twoInts> j(lookup);
     while (j.hasNext()) {
         j.next();
-        PRINT(printf("viewportIndex %d in array row=%d col=%d\n", j.key(), j.value().r, j.value().c));
+        qCDebug(caDoubleTabWidgetLog) << "viewportIndex" << j.key() << "in array row=" << j.value().r << "col=" << j.value().c;
+
     }
-    PRINT(printf("number of viewport pages = %d\n", count()));
+    qCDebug(caDoubleTabWidgetLog) << "number of viewport pages =" << count();
 
 
     QMapIterator<int, twoInts> i(lookup);
@@ -130,7 +133,7 @@ int caDoubleTabWidget::lookupArrayIndex(int row, int col)
 
 void  caDoubleTabWidget::storeArrayIndex(int pageIndex, int row, int col)
 {
-    PRINT(printf("store in array row=%d col=%d index of viewport=%d\n", row, col, pageIndex));
+    qCDebug(caDoubleTabWidgetLog) << "store in array row=" << row << "col=" << col << "index of viewport=" << pageIndex;
     twoInts item;
     item.r = row;
     item.c = col;
@@ -139,7 +142,7 @@ void  caDoubleTabWidget::storeArrayIndex(int pageIndex, int row, int col)
 
 void  caDoubleTabWidget::deleteArrayIndex(int pageIndex)
 {
-    PRINT(printf("delete in array row=%d col=%d index of viewport=%d\n", row, col, pageIndex));
+    qCDebug(caDoubleTabWidgetLog) << "delete in array row=" << row << "col=" << col << "index of viewport=" << pageIndex;
     lookup.remove(pageIndex);
 }
 
@@ -147,7 +150,7 @@ void  caDoubleTabWidget::deleteArrayIndex(int pageIndex)
 // add page
 void caDoubleTabWidget::addPage(QWidget *page)
 {
-    PRINT(printf("add a new page %s\n", qasc(page->objectName())));
+    qCDebug(caDoubleTabWidgetLog) << "add a new page" << page->objectName();
     QStringList stringlist = page->objectName().split( "_");
     if(stringlist.count() > 1 ) {
         row= stringlist[1].toInt();
@@ -167,13 +170,13 @@ void caDoubleTabWidget::addPage(QWidget *page)
 void caDoubleTabWidget::removePage(int index)
 {
     int pageIndex = 0;
-    PRINT(printf("we have to remove the page from array for row=%d col=%d\n", row, col));
+    qCDebug(caDoubleTabWidgetLog) << "we have to remove the page from array for row=" << row << "col=" << col;
     if((pageIndex =lookupArrayIndex(row, col)) != -1) {
 
         // delete this stackwidget page from the array
         deleteArrayIndex(pageIndex);
         QWidget *widget = viewPort->widget(index);
-        PRINT(printf("remove widget at stacked widget index=%d with name=%s\n", index, qasc(widget->objectName())));
+        qCDebug(caDoubleTabWidgetLog) << "remove widget at stacked widget index=" << index << "with name=" << widget->objectName();
         viewPort->removeWidget(widget);
         setRow(row);
         setCol(col);
@@ -198,7 +201,7 @@ void caDoubleTabWidget::removePage(int index)
         lookupNew.detach();
 
     } else {
-        PRINT(printf("page not found, return\n"));
+        qCDebug(caDoubleTabWidgetLog) << "page not found, return";
         return;
     }
 }
@@ -210,17 +213,17 @@ void caDoubleTabWidget::insertPage(int index, QWidget *page)
     page->setParent(viewPort);
     page->activateWindow();
 
-    PRINT(printf("insert page for actual row=%d column=%d\n", row, col));
+    qCDebug(caDoubleTabWidgetLog) << "insert page for actual row=" << row << "column=" <<col;
     if(lookupArrayIndex(row, col) == -1 || addPages) {
         int viewPortIndex = viewPort->insertWidget((count()), page);
-        PRINT(printf("stored with viewIndex=%d\n", viewPortIndex));
+       qCDebug(caDoubleTabWidgetLog) << "stored with viewIndex=" << viewPortIndex;
         storeArrayIndex(viewPortIndex, row, col);
     } else {
-        PRINT(printf("already done, return\n"));
+        qCDebug(caDoubleTabWidgetLog) << "already done, return";
         return;
     }
     QString title = tr("Page_%1_%2").arg(row).arg(col);
-    PRINT(printf("set page title to %s\n", qasc(title)));
+    qCDebug(caDoubleTabWidgetLog) << "set page title to" << title;
     page->setObjectName(title);
     page->setAutoFillBackground(true);
     QString style = "QWidget#%1 { background-color : rgb(255,255,200); }";
@@ -312,11 +315,11 @@ void caDoubleTabWidget::setCurrentIndex(int pageIndex)
     tableIndex->setText(title);
 
     if((Index = lookupArrayIndex(row, col)) != -1) {
-        PRINT(printf("found %d\n", Index));
+        qCDebug(caDoubleTabWidgetLog) << "found" << Index;
         viewPort->setCurrentIndex(Index);
         emit currentIndexChanged(Index);
     } else {
-        PRINT(printf("not found\n"));
+        qCDebug(caDoubleTabWidgetLog) << "not found";
     }
 }
 
@@ -366,7 +369,7 @@ void caDoubleTabWidget::fontChange(const QFont & oldFont) {
     style.append("} ");
     hTabBar->setStyleSheet(style);
 
-    setFont(1);
+//    setFont(1);
 }
 
 void caDoubleTabWidget::setItemsPadding(QString const &padding) {
@@ -410,12 +413,19 @@ void caDoubleTabWidget::setFont(int dir)
 
         style.append(tr("text-align: left; padding-left: %1px;").arg(padding[i]));
         style.append("} ");
-        style.append("QPushButton:checked {background-color: magenta;}");
-        style.append("QPushButton:default {border-color: navy; }");
-        button->setStyleSheet(style);
+
+        QString pushbtnColor = QString("QPushButton:checked {background-color: rgb( 255, 0, 255);}");
+        style.append(pushbtnColor);
+
+         style.append("QPushButton:default {border-color: navy; }");
+        style.append("QTabBar::tab  {background-color: rgb( 255, 0, 255);}");
+         this->setStyleSheet(style);
     }
 #ifdef _MSC_VER
     delete[] padding;
 #endif
 }
 
+void caDoubleTabWidget::editStyleSheet(QString styleSheet){
+    this->setStyleSheet(styleSheet);
+}

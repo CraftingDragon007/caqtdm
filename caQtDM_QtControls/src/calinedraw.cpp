@@ -25,16 +25,21 @@
 
 #include "calinedraw.h"
 #include "alarmdefs.h"
+#include "qevent.h"
 
 #include <QPainter>
 #include <qnumeric.h>
 #include <QDebug>
+#include <QApplication>
+#include <QClipboard>
+#include <QtMath>
 #if defined(_MSC_VER)
     #ifndef snprintf
      #define snprintf _snprintf
     #endif
 #endif
 
+Q_LOGGING_CATEGORY(caLineDrawLog, "caqtdm.widgets.calinedraw")
 
 caLineDraw::caLineDraw(QWidget *parent) : QWidget(parent), FontScalingWidget(this), caWidgetInterface()
 {
@@ -43,7 +48,7 @@ caLineDraw::caLineDraw(QWidget *parent) : QWidget(parent), FontScalingWidget(thi
     // if this font does not exist then try a next one
     QFontInfo info(font);
     QString family = info.family();
-    //printf("got font %s\n", qasc(family));
+    qCDebug(caLineDrawLog) << "got font " << family;
     if(!family.contains("Lucida Sans Typewriter")) {
         QFont  newfont("Monospace");   // not very nice, while a a dot inside the zero to distinguish from o
         newfont.setStyleHint(QFont::TypeWriter);
@@ -84,6 +89,7 @@ caLineDraw::caLineDraw(QWidget *parent) : QWidget(parent), FontScalingWidget(thi
     setDirection(Horizontal);
 
     m_AlarmState = 0;
+    m_markAllText = false;
 
     brush = QBrush(m_BackColor);
     setText(" ");
@@ -212,7 +218,7 @@ void caLineDraw::setAlarmColors(short status, double value, QColor bgAtInit, QCo
     switch (m_AlarmState) {
 
     case NO_ALARM:
-        //qDebug() << "no alarm" << kPtr->pv;
+        qCDebug(caLineDrawLog) << "no alarm";
         if(m_ColorMode == Alarm_Static || m_ColorMode == Alarm_Default) {
             c = AL_GREEN;
             if(m_AlarmHandling == onForeground) setForeAndBackground(c, bgAtInit);
@@ -223,7 +229,7 @@ void caLineDraw::setAlarmColors(short status, double value, QColor bgAtInit, QCo
         break;
 
     case MINOR_ALARM:
-        //qDebug() << "minor alarm";
+        qCDebug(caLineDrawLog) << "minor alarm";
         if(m_ColorMode == Alarm_Static || m_ColorMode == Alarm_Default) {
             c = AL_YELLOW;
             if(m_AlarmHandling == onForeground) setForeAndBackground(c, bgAtInit);
@@ -234,7 +240,7 @@ void caLineDraw::setAlarmColors(short status, double value, QColor bgAtInit, QCo
         break;
 
     case MAJOR_ALARM:
-        //qDebug() << "serious alarm" << kPtr->pv;
+        qCDebug(caLineDrawLog) << "serious alarm";
         if(m_ColorMode == Alarm_Static || m_ColorMode == Alarm_Default) {
             c = AL_RED;
             if(m_AlarmHandling == onForeground) setForeAndBackground(c, bgAtInit);
@@ -245,7 +251,7 @@ void caLineDraw::setAlarmColors(short status, double value, QColor bgAtInit, QCo
         break;
 
     case INVALID_ALARM:
-        //qDebug() << "invalid alarm";
+        qCDebug(caLineDrawLog) << "invalid alarm";
         if(m_ColorMode == Alarm_Static) {
             c =AL_WHITE;
             if(m_AlarmHandling == onForeground) setForeAndBackground(c, bgAtInit);
@@ -256,12 +262,12 @@ void caLineDraw::setAlarmColors(short status, double value, QColor bgAtInit, QCo
         break;
 
     case NOTCONNECTED:
-        //qDebug() << "no connection";
+        qCDebug(caLineDrawLog) << "no connection";
         forceForeAndBackground(AL_WHITE, AL_WHITE);
         break;
 
     default:
-        //qDebug() << "Alarm default" << status;
+        qCDebug(caLineDrawLog) << "Alarm default" << status;
         if(m_ColorMode == Alarm_Static) {
             c = AL_DEFAULT;
             if(m_AlarmHandling == onForeground) setForeAndBackground(c, bgAtInit);
@@ -308,6 +314,315 @@ bool caLineDraw::rotateText(float degrees)
     return false;
 }
 
+void caLineDraw::clearSelection(){
+    m_LetterMarkedList.clear();
+    m_LettersBoundingRects.clear();
+    m_markAllText = false;
+    if(m_Text.size() > 0){
+        for(int i = 0; i <= m_Text.size() ; i++){
+            m_LetterMarkedList << false;
+        }
+    }
+    update();
+}
+
+void caLineDraw::mousePressEvent(QMouseEvent *event)
+{
+    if(event->buttons() == Qt::LeftButton){
+
+        m_MouseClickPosition = calculateCoordinates(event->pos());
+        // Reset Marking
+        clearSelection();
+    }
+
+    if(event->buttons() == Qt::LeftButton || event->buttons() == Qt::RightButton){
+        setFocus();
+    }
+}
+
+void caLineDraw::mouseReleaseEvent(QMouseEvent *event){
+    QList<caLineDraw *> lineDrawList = (parent()->findChildren<caLineDraw *>());
+
+    // Remove currently Marked Instance from list
+    lineDrawList.removeAt(lineDrawList.indexOf(this));
+
+    QString s = m_Text;
+    if(s[s.length()-1] == QString(" ")){
+        s.remove(s.length()-1,1);
+        qCDebug(caLineDrawLog) << s;
+    }
+
+    qCDebug(caLineDrawLog) << this->thisPV << m_Text << s;
+    if(s != getMarkedText() && s.length() > 0){
+        for(int i = 0; i <= lineDrawList.size() -1; i++){
+           // lineDrawList[i]->resetMarking();
+        }
+        update();
+    }
+}
+
+void caLineDraw::mouseDoubleClickEvent(QMouseEvent *event){
+    m_markAllText = true;
+    update();
+}
+
+void caLineDraw::mouseMoveEvent(QMouseEvent *event){
+    if(event->buttons() == Qt::LeftButton){
+
+        QPoint position = event->pos();
+
+        handleMarking(position);
+        update();
+        qCDebug(caLineDrawLog) << "POS:" << position;
+    }
+}
+
+void caLineDraw::keyPressEvent(QKeyEvent *event){
+    int keyPressed = event->key();
+    int event_modifier = event->modifiers();
+
+    if(event_modifier == Qt::ControlModifier){
+        switch(keyPressed){
+        // CTRL + A
+        case Qt::Key_A:
+            m_markAllText = true;
+            update();
+            break;
+        }
+    }
+
+    if(keyPressed == Qt::Key_Escape){
+        QList<caLineDraw *> lineDrawList = (parent()->findChildren<caLineDraw *>());
+        for(int i = 0; i <= lineDrawList.size() -1; i++){
+            lineDrawList[i]->clearSelection();
+        }
+    }
+
+}
+
+void caLineDraw::handleMarking(QPoint currentMousePosition){
+
+    // Reset Marking-List
+    for(int i = 0; i < m_LetterMarkedList.size(); i++){
+        m_LetterMarkedList[i] = false;
+    }
+
+    if(m_LettersBoundingRects.size() > 0){
+        QPoint position = calculateCoordinates(currentMousePosition);
+
+        // Ignore Y-Axis for Marking
+        int rectY = m_caLineDrawRectangle.y();
+        position.setY(rectY);
+
+
+        // This Function calculates indexes of the text based on the position where the mouse is clicked and
+        // where the mouse currently is. This indexes are then used to color in the marking.
+        int mouseClickIndex = getIndexofTextRectangle(m_MouseClickPosition);
+        int currentMouseIndex = getIndexofTextRectangle(position);
+
+
+        // If the starting point is outside the text it is not marked. If both are outside the starting point, but on either side of the text (one to the left and one to the right),
+        // the text inbetween ist marked.         *
+        bool isTextBetweenIndexes = (m_MouseClickPosition.x() < m_LettersBoundingRects[0].x() && position.x() > m_LettersBoundingRects[m_Text.size()-1].right()) || (m_MouseClickPosition.x() > m_LettersBoundingRects[0].x() && position.x() < m_LettersBoundingRects[m_Text.size()-1].right());
+        int startIndex = 0;
+        int endIndex = 0;
+
+        // Set order that smaller index is first (simpler to loop through)
+        if(mouseClickIndex < currentMouseIndex)
+        {
+            startIndex = mouseClickIndex;
+            endIndex = currentMouseIndex;
+        }else if(mouseClickIndex >= currentMouseIndex){
+            startIndex = currentMouseIndex;
+            endIndex = mouseClickIndex;
+        }
+
+        int lastTextIndex = m_Text.size()-1;
+        if(startIndex < 0 && endIndex < 0){
+            if(isTextBetweenIndexes){
+                startIndex = 0;
+                endIndex = lastTextIndex;
+            }else {
+                for(int j = 0; j < m_LetterMarkedList.size(); j++){
+                    m_LetterMarkedList[j] = false;
+                }
+                return;
+            }
+        }
+
+        // Depending on the position, one point may be outside the text and one on text. In case of this, depending on the location, the index is chosen appropriately.
+        // The Index is chosen based on the index it would hit first, when it would be moved towards the text.
+        int  firstXVal = m_LettersBoundingRects[0].x();
+        int  lastXVal = m_LettersBoundingRects[lastTextIndex].x();
+        int  mouseVal = m_MouseClickPosition.x();
+        int  posVal = position.x();
+
+
+        qCDebug(caLineDrawLog) << "F:"<< firstXVal << "L:" << lastXVal << "M:" << mouseVal << "P:" << posVal;
+        if(startIndex < 0){
+            // Is Starting Point Outside Left/Upper Bounds
+            if(mouseVal < firstXVal || posVal < firstXVal){
+                startIndex = 0;
+            }
+            // Outside Right/Lower Bounds
+            else if(mouseVal > lastXVal || posVal > lastXVal){
+                startIndex = lastTextIndex;
+            }
+        }else if(endIndex < 0){
+            // Outside Left/Upper Bounds)
+            if(mouseVal < firstXVal || mouseVal < firstXVal){
+                endIndex = 0;
+            }
+            // Outside Lower/Right Bounds
+            else if(posVal > lastXVal || mouseVal > lastXVal){
+                endIndex = lastTextIndex;
+            }
+        }
+
+        // Ensure that the startindex is smaller than the endIndex
+        if(startIndex > endIndex){
+            int changeIndx = startIndex;
+            startIndex = endIndex;
+            endIndex = changeIndx;
+        }
+
+        // With CTRL+A, all Text can be selected, regardless of its past, current or future length.
+        // For that, the "m_markAllText"-Flag is used.
+        if(m_markAllText){
+            startIndex = 0;
+            endIndex = m_Text.size()-1;
+        }
+
+        // Mark all Indexes within the range, and unmark all those not.
+        for(int j = startIndex; j <= endIndex; j++){
+            if((startIndex >= 0 && endIndex >= 0)){
+                m_LetterMarkedList[j] = true;
+            }else{
+                m_LetterMarkedList[j] = false;
+            }
+        }
+    }
+}
+
+int caLineDraw::getIndexofTextRectangle(QPoint currentMousePosition){
+    int index = -1;
+
+    for(int i = 0; i <= m_LettersBoundingRects.size()-1; i++){
+        if(m_LettersBoundingRects[i].contains(currentMousePosition)){
+            index = i;
+            break;
+        }
+    }
+
+    return index++;
+}
+
+/*
+ * @brief Returns Direction of Mouse
+ * @return difference -> Direction is returned as difference of distance
+ *
+ *  IF diff > 0 -> RIGHT
+ *  IF diff < 0 -> LEFT
+ *  IF diff = 0 -> VERTICAL or NONE
+ */
+int caLineDraw::getDirectionOfMouseMove(QPoint startPosition, QPoint endPosition){
+    int endLocation = 0;
+    int startLocation = 0;
+
+    // Since the Coordinates are tilted along direction, a different parameter must be used to always get the same direction
+    switch(m_Direction){
+    case Down:
+        startLocation = startPosition.y();
+        endLocation = endPosition.y();
+        break;
+    case Up:
+        endLocation = startPosition.y();
+        startLocation = endPosition.y();
+        break;
+    case Horizontal:
+        startLocation = startPosition.x();
+        endLocation = endPosition.x();
+        break;
+    }
+
+    int difference = endLocation - startLocation;
+
+    return difference;
+}
+
+QString caLineDraw::getMarkedText(){
+    QString markedText;
+
+    if(m_markAllText){
+        markedText = m_Text;
+    } else if(!m_markAllText){
+        if(m_LetterMarkedList.size() > 0){
+            for(int i = 0; i < m_Text.size(); i++){
+                if(m_LetterMarkedList[i]){
+                    markedText += m_Text[(i % (m_Text.size() + 1))];
+                }
+            }
+        }
+    }
+
+    markedText = markedText.trimmed();
+    qCDebug(caLineDrawLog) << "MarkedText:" << markedText;
+    return markedText;
+}
+
+/**
+ * @brief Converts coordinates of a point to same kind of coordinates across all directions
+ * @param point -> The Point whose X and Y Coordinates will be transformed
+ * @return Returns Point with new calculated Coordinates
+ */
+QPoint caLineDraw::calculateCoordinates(QPoint point){
+    /*
+     * Depending of the direction of a field, the system of coordinates is flipped too - making calculations etc. difficult
+     * This function converts them all, so they act the same as the horizontal ones
+     * It is needed to correctly track the mouse and subsequently the position of the marking.
+    */
+    int xCoord;
+    int yCoord;
+    switch(m_Direction){
+    case Up:
+        xCoord = (-point.y() + m_caLineDrawRectangle.right());
+        yCoord = point.x();
+        break;
+    case Down:
+        xCoord = point.y();
+        yCoord = (-point.x() + m_caLineDrawRectangle.height());
+        break;
+    case Horizontal:
+    default:
+        xCoord = point.x();
+        yCoord = point.y();
+        break;
+    }
+    return QPoint(xCoord, yCoord);
+}
+
+int caLineDraw::calculateSumOfStartingCoordinates(QList<int> list, int calculateUntilIndex)
+{
+    // Calculate entire, if default
+    if(calculateUntilIndex == -1){
+        calculateUntilIndex = list.size();
+    }else{
+        calculateUntilIndex += 1;
+    }
+    // Return Sum of Coordinates to get Beginning Point for the Rectangles
+    int sumCoordinates = 0;
+    for(int i = 0; i < calculateUntilIndex; i++){
+        sumCoordinates += list[i];
+    }
+    return sumCoordinates;
+}
+
+
+QColor caLineDraw::invertColor(QColor color){
+    // Flips Color to opposite on color wheel
+    return QColor(255 - color.red(), 255 - color.green(), 255 - color.blue());
+}
+
 void caLineDraw::paintEvent(QPaintEvent *)
 {
     QPainter painter(this);
@@ -338,6 +653,11 @@ void caLineDraw::paintEvent(QPaintEvent *)
         painter.rotate(rotation);
     }
 
+    // Set the Width of the calinedraw-Rectangle without text to get an accurate starting point
+    int widthTextLess = 0;
+    const QFontMetrics fm = painter.fontMetrics();
+
+
     //Now that textrect and rotation/translation is set, draw the text aligned correctly
     switch (m_Alignment) {
     case Left:
@@ -345,12 +665,83 @@ void caLineDraw::paintEvent(QPaintEvent *)
         break;
     case Right:
         painter.drawText(textRect, Qt::AlignRight | Qt::AlignVCenter, m_Text);
+        widthTextLess = textRect.width() - fm.horizontalAdvance(m_Text);
         break;
     case Center:
     default:
         painter.drawText(textRect, Qt::AlignCenter | Qt::AlignVCenter, m_Text);
+        widthTextLess = (textRect.width() / 2) - (fm.horizontalAdvance(m_Text)/2);
         break;
     }
+
+    // MARKING
+    QList<int> letterCoordinates;
+    letterCoordinates << widthTextLess;
+    m_caLineDrawRectangle = textRect;
+
+    int xCoordinate;
+    int yCoordinate;
+
+    switch(m_Direction){
+    case Horizontal:
+        yCoordinate = height();
+        break;
+    case Up:
+    case Down:
+        yCoordinate = width();
+        break;
+    }
+
+    painter.setPen(brush.color());
+
+    for(int i = 0; i <= m_Text.size() -1; i++){
+
+            QRect rectangleToDraw = fm.boundingRect(m_Text[i]);
+            xCoordinate = calculateSumOfStartingCoordinates(letterCoordinates) + (1 + m_FrameLineWidth);
+
+            // Get accurate width of bounding rectangle
+            int horizontalAdvance = fm.horizontalAdvance(m_Text[i]);
+
+
+            // Calculate and set Startingpoint from previous letters
+            letterCoordinates << horizontalAdvance;
+            rectangleToDraw.setX(xCoordinate);
+            rectangleToDraw.setY(yCoordinate);
+            rectangleToDraw.setHeight(-yCoordinate);
+            rectangleToDraw.setWidth(horizontalAdvance);
+            rectangleToDraw = rectangleToDraw.normalized();
+
+            painter.setPen(m_ForeColor);
+
+            if(m_LettersBoundingRects.size() <= m_Text.size()){
+                m_LettersBoundingRects << rectangleToDraw;
+            }
+
+            bool isLastEmpty = m_Text[i] == QString(" ") && i == (m_Text.size() -1);
+            bool isCurrentFieldMarked = false;
+            if(m_LetterMarkedList.size() > 0 && !isLastEmpty){
+                isCurrentFieldMarked = m_LetterMarkedList[i];
+            }
+
+            if(m_markAllText || isCurrentFieldMarked){
+                QColor invForeColor = invertColor(m_ForeColor);
+                QColor invBrushColor = invertColor(brush.color());
+
+                painter.setPen(invForeColor);
+                painter.setBackground(invBrushColor);
+                painter.setBackgroundMode(Qt::OpaqueMode);
+
+                painter.drawText(rectangleToDraw,Qt::AlignCenter | Qt::AlignVCenter,  QString(m_Text[i]));
+            }
+    }
+
+    if(m_Text == getMarkedText()){
+        m_markAllText = true;
+    }
+
+    painter.setPen(m_ForeColor);
+    painter.setBrush(brush);
+
 
     painter.restore();
 
@@ -373,10 +764,10 @@ bool caLineDraw::event(QEvent *e)
         if(!m_IsShown) {
             QString c = palette().color(QPalette::Base).name();
             m_BackColorDefault = QColor(c);
-            //printf("default back color %s %s\n", qasc(c), qasc(this->objectName()));
+            qCDebug(caLineDrawLog) << "default back color" << c << this->objectName();
             c = palette().color(QPalette::Text).name();
             m_ForeColorDefault = QColor(c);
-            //printf("default fore color %s %s\n", qasc(c), qasc(this->objectName()));
+            qCDebug(caLineDrawLog) << "default fore color" << c << this->objectName();
             if(!m_BackColorDefault.isValid()) m_BackColorDefault = QColor(255, 248, 220, 255);
             if(!m_ForeColorDefault.isValid()) m_ForeColorDefault = Qt::black;
 
@@ -461,8 +852,11 @@ void caLineDraw::setFormat(int prec)
         sprintf(m_FormatC, "%s.%dlf", "%", qAbs(precision));
         break;
     case exponential:
-    case engr_notation:
         sprintf(m_Format, "%s.%dle", "%", qAbs(precision));
+        break;
+    case engr_notation:
+        // this format is handled by a function
+        engr_notationPrecision = precision;
         break;
     case truncated:
     case enumeric:
@@ -492,6 +886,99 @@ void caLineDraw::setFormat(int prec)
 
     }
 }
+/**
+ * Converts a double to engineering notation and writes to a char array
+ *
+ * @param buffer    Destination char array
+ * @param bufferLen Size of the buffer (including space for null terminator)
+ * @param value     The double value to convert
+ * @param precision Number of digits after the decimal point
+ * @return          Number of characters written (excluding null), or -1 on error
+ */
+int caLineDraw::toEngineeringNotation(char* buffer, size_t bufferLen, double value, int eng_precision) {
+    // Validate inputs
+    if (buffer == nullptr || bufferLen == 0) {
+        return -1;
+    }
+
+    // Clamp precision to reasonable bounds
+    if (eng_precision < 0) eng_precision = 0;
+    if (eng_precision > 15) eng_precision = 15;
+
+    // Handle special cases
+    if (qIsNaN(value)) {
+        if (bufferLen < 4) { buffer[0] = '\0'; return -1; }
+        strncpy(buffer, "nan",bufferLen);
+        return 3;
+    }
+
+    if (qIsInf(value)) {
+        const char* result = (value > 0) ? "inf" : "-inf";
+        size_t len = strlen(result);
+        if (bufferLen <= len) { buffer[0] = '\0'; return -1; }
+        strncpy(buffer, result,bufferLen);
+        return static_cast<int>(len);
+    }
+
+    if (value == 0.0) {
+        int written = snprintf(buffer, bufferLen, " %.*fe+00", eng_precision, 0.0);
+        if (written < 0 || static_cast<size_t>(written) >= bufferLen) {
+            buffer[0] = '\0';
+            return -1;
+        }
+        return written;
+    }
+
+    // Handle negative numbers
+    bool negative = value < 0;
+    double absValue = qAbs(value);
+
+    // Calculate the exponent (power of 10)
+    int exponent = static_cast<int>(qFloor(log10(absValue)));
+
+    // Adjust exponent to be a multiple of 3
+    int engExponent;
+    if (exponent >= 0) {
+        engExponent = exponent - (exponent % 3);
+    } else {
+        // Handle negative exponents correctly
+        int mod = exponent % 3;
+        engExponent = (mod == 0) ? exponent : exponent - (3 + mod);
+    }
+
+    // Calculate the mantissa
+    double mantissa = absValue / qPow(10.0, engExponent);
+
+    // Handle floating point precision issues
+    // Mantissa should be in range [1, 1000)
+    if (mantissa >= 999.9999999999) {
+        mantissa /= 1000.0;
+        engExponent += 3;
+    } else if (mantissa < 1.0) {
+        mantissa *= 1000.0;
+        engExponent -= 3;
+    }
+    int written;
+
+    // Apply sign
+    // Format the output
+    // Format: [-]d.ddde±ee (sign + digits + decimal + precision + 'e' + sign + 2-3 digits)
+    if (negative) {
+        written = snprintf(buffer, bufferLen, "-%3.*fe%+03d",
+                           eng_precision - (exponent - engExponent), mantissa, engExponent);
+    }else{
+        written = snprintf(buffer, bufferLen, " %3.*fe%+03d",
+                           eng_precision - (exponent - engExponent), mantissa, engExponent);
+    }
+
+
+    if (written < 0 || static_cast<size_t>(written) >= bufferLen) {
+        buffer[0] = '\0';
+        return -1;
+    }
+
+    return written;
+}
 
 void caLineDraw::setValue(double value, const QString& units)
 {
@@ -502,6 +989,9 @@ void caLineDraw::setValue(double value, const QString& units)
         } else {
             snprintf(asc, MAX_STRING_LENGTH, m_Format, value);
         }
+    } else if(m_FormatType == engr_notation and thisDatatype == caDOUBLE)  {
+        // proper handling of engineering notation!
+        toEngineeringNotation(asc, MAX_STRING_LENGTH, value, engr_notationPrecision);
     } else if(m_FormatType == hexadecimal || m_FormatType == octal || m_FormatType == user_defined_format)  {
         if(thisDatatype == caDOUBLE) snprintf(asc, MAX_STRING_LENGTH, m_Format, (long long) value);
         else  snprintf(asc, MAX_STRING_LENGTH, m_Format, (int) value);
@@ -655,6 +1145,34 @@ void caLineDraw::getWidgetInfo(QString* pv, int& nbPV, int& limitsDefault, int& 
     else if(getColorMode() == Alarm_Static) strcpy(colMode, "Alarm");
     else strcpy(colMode, "Static");
 
+}
+
+void caLineDraw::copy(){
+    QClipboard *clipboard = QApplication::clipboard();
+    QList<caLineDraw *> lineDrawList = parent()->findChildren<caLineDraw *>();
+
+    QString copyString;
+    int markedCount = 0;
+
+    for(int i = 0; i <= lineDrawList.length() -1; i++){
+        if(lineDrawList[i]->getMarkedText().length() > 0){
+            if(lineDrawList[i]->getMarkAll() == true){
+                copyString +=  lineDrawList[i]->getPV() + "\t" + lineDrawList[i]->getMarkedText() + "\n";
+            }
+
+            markedCount++;
+        }
+    }
+
+    if(markedCount == 1){
+        qCDebug(caLineDrawLog) << markedCount;
+        copyString = copyString.split("\t")[1].replace("\n", QString(""));
+    }
+
+    // Copy to Clipboard
+    if(copyString.size() > 0){
+        clipboard->setText(copyString);
+    }
 }
 
 

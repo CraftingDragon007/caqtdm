@@ -1,0 +1,332 @@
+name: caQtDM CI Build
+
+on:
+  push:
+  pull_request:
+  # Allow manual triggering of the workflow
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build caQtDM
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux/archlinux:latest
+      options: --privileged
+    permissions:
+      contents: read
+      actions: write
+
+    steps:
+    - name: Set up build environment, create non-root user and install official repository dependencies
+      run: |
+        pacman-key --init
+        pacman-key --populate archlinux
+        pacman -Syu --noconfirm
+
+        # Install base-devel which covers make, gcc, patch, git
+        pacman -S --noconfirm base-devel sudo
+
+        # Install other specified dependencies and makedepends
+        # glibc, gcc-libs, bash are already preinstalled
+        # python is python3.
+        pacman -S --noconfirm \
+          qt6-base \
+          qt6-declarative \
+          qt6-tools \
+          openssl \
+          zeromq \
+          python \
+          qt6-5compat \
+          qt6-websockets \
+          git \
+          ncurses \
+          perl \
+          readline \
+          qt6-svg \
+          cmake \
+          ninja
+
+        echo "Creating non-root user 'builder' for makepkg..."
+        useradd -m -G wheel builder
+        echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+      shell: bash
+
+    - name: Checkout repository
+      uses: actions/checkout@v5
+
+    - name: Optimize makepkg.conf for parallel building
+      run: |
+        NUM_CORES=$(nproc)
+        echo "Detected ${NUM_CORES} CPU cores. Optimizing /etc/makepkg.conf..."
+
+        # Remove any existing MAKEFLAGS line
+        grep -v "^MAKEFLAGS=" /etc/makepkg.conf > /tmp/makepkg.conf.tmp
+
+        # Append the new MAKEFLAGS line with the actual number of cores
+        echo "MAKEFLAGS=\"-j${NUM_CORES}\"" >> /tmp/makepkg.conf.tmp
+
+        # Replace the original file
+        mv /tmp/makepkg.conf.tmp /etc/makepkg.conf
+
+        echo "Current MAKEFLAGS in /etc/makepkg.conf:"
+        grep "MAKEFLAGS" /etc/makepkg.conf
+      shell: bash
+
+    - name: Configure builder user environment and import GPG key
+      run: |
+        export AUR_DIR="$(pwd)/aur_packages"
+        mkdir -p "$AUR_DIR"
+        chown -R builder:builder "$AUR_DIR"
+
+        echo "Importing PGP key for epics-base as builder user..."
+        sudo -u builder bash -c "
+          export HOME=/home/builder
+          gpg --recv-keys 6C741EFAAE4AF616
+        "
+      shell: bash
+
+    - name: Install AUR dependencies (qwt-qt6, epics-base)
+      run: |
+        export AUR_DIR="$(pwd)/aur_packages"
+        mkdir -p "$AUR_DIR"
+
+        sudo -u builder bash -c "
+          export AUR_DIR='$AUR_DIR'
+          
+          # Function to clone an AUR package with a fallback to the GitHub mirror
+          git_clone_aur_with_fallback() {
+            local package_name=\"\$1\"
+            local primary_aur_url=\"https://aur.archlinux.org/\${package_name}.git\"
+            local github_mirror_url=\"https://github.com/archlinux/aur.git\"
+            local target_dir=\"\$(pwd)/\${package_name}\"
+
+            echo \"Attempting to clone '\${package_name}' from primary AUR...\"
+            if git clone --depth 1 \"\$primary_aur_url\" \"\$target_dir\" &> /dev/null; then
+              echo \"Successfully cloned '\${package_name}' from primary AUR.\"
+              return 0
+            else
+              echo \"Failed to clone '\${package_name}' from primary AUR. Trying GitHub mirror...\"
+              # Clean up incomplete directory from failed primary attempt
+              rm -rf \"\$target_dir\"
+
+              # Clone from GitHub mirror, using the package name as a branch
+              if git clone --depth 1 --branch \"\$package_name\" --single-branch \"\$github_mirror_url\" \"\$target_dir\" &> /dev/null; then
+                echo \"Successfully cloned '\${package_name}' from GitHub mirror.\"
+                return 0
+              else
+                echo \"Failed to clone '\${package_name}' from both primary AUR and GitHub mirror.\"
+                return 1
+              fi
+            fi
+          }
+
+          # Function to install a single AUR package
+          install_aur_package() {
+            local package_name=\"\$1\"
+            echo \"Installing '\${package_name}' from AUR as builder user...\"
+
+            # Ensure we are in the correct base directory ($AUR_DIR) before attempting to clone
+            cd \"\$AUR_DIR\" || { echo \"Error: Could not change to \$AUR_DIR.\"; exit 1; }
+
+            if git_clone_aur_with_fallback \"\$package_name\"; then
+              cd \"\$package_name\" || { echo \"Error: Could not change to \${package_name} directory.\"; exit 1; }
+              makepkg -si --noconfirm
+              # After building, return to the base AUR_DIR for the next package
+              cd \"\$AUR_DIR\" || { echo \"Error: Could not change back to \$AUR_DIR.\"; exit 1; }
+            else
+              echo \"Skipping '\${package_name}' due to cloning failure.\"
+            fi
+          }
+
+          cd \"\$AUR_DIR\" || { echo \"Error: Initial change to \$AUR_DIR failed.\"; exit 1; }
+          
+          if git_clone_aur_with_fallback qwt-qt6; then
+            cd qwt-qt6 || { echo \"Error: Could not change to qwt-qt6 directory.\"; exit 1; }
+            patch -p1 < ../../.github/workflows/qwt-makepkg.patch
+
+            makepkg -si --noconfirm
+            cd \"\$AUR_DIR\" || { echo \"Error: Could not change back to \$AUR_DIR.\"; exit 1; }
+          else
+            echo \"Skipping 'qwt-qt6' due to cloning failure.\"
+          fi
+
+          install_aur_package epics-base
+        "
+      shell: bash
+
+    - name: Build and install Qt OPC UA
+      run: |
+        set -e
+
+        SRC=/opt/qtopcua-src
+        rm -rf "$SRC"
+        git clone https://code.qt.io/qt/qtopcua.git "$SRC"
+        cd "$SRC"
+        QT_VERSION=$(qmake6 -query QT_VERSION)
+        git checkout "v$QT_VERSION"
+
+        mkdir build
+        cd build
+
+        cmake .. -G "Ninja" -DCMAKE_BUILD_TYPE=Release
+        cat config.summary
+        ninja
+        ninja install
+
+    - name: Set up caQtDM specific environment variables
+      run: |
+        # Define all variables as local shell variables first
+        local_srcdir="$(pwd)"
+        local_pythonversion="$(python --version 2>&1 | cut -d ' ' -f 2 | cut -d '.' -f 1-2)"
+        local_carch="$(uname -m)"
+
+        local_qwtnam="qwt-qt6"
+        local_qwtinc="/usr/include/qwt-qt6"
+        local_epicsbase="/usr/lib/epics"
+        local_zmq="/usr"
+        local_qtdmrpath="/opt/caqtdm/lib/qt6"
+        local_qthome="/usr"
+        local_qwthome="/usr"
+        local_qwtversion="6.1"
+
+        # Derive complex paths using local shell variables
+        local_zmqinc="${local_zmq}/include"
+        local_zmqlib="${local_zmq}/lib"
+        local_epics_host_arch="linux-${local_carch}"
+        local_qwtnamelib="${local_qwthome}/lib" # This was QWTLIB
+
+        local_epicsinclude="${local_epicsbase}/include"
+        local_epicslib="${local_epicsbase}/lib/${local_epics_host_arch}"
+        local_epicsextensions="${local_epicsbase}/extensions"
+
+        local_qtcontrols_libs="${local_srcdir}/binaries"
+        local_caqtdm_collect="${local_srcdir}/binaries"
+        local_qtdm_rpath="/opt/caqtdm/lib/qt6"
+
+        local_qtbase="${local_qtcontrols_libs}" # QTBASE depends on QTCONTROLS_LIBS
+
+        local_caqtdm_ca_archivelibs="${local_srcdir}/binaries/"
+        local_caqtdm_logging_archivelibs="${local_srcdir}/binaries"
+
+        local_qtdm_libinstall="${local_epicsextensions}/lib/${local_epics_host_arch}"
+        local_qtdm_bininstall="${local_epicsextensions}/bin/${local_epics_host_arch}"
+
+        local_pythoninclude="/usr/include/python${local_pythonversion}"
+        local_pythonlib="/usr/lib/"
+
+        # Echo all final values to $GITHUB_ENV to make them persistent in the next steps
+        echo "srcdir=${local_srcdir}" >> $GITHUB_ENV
+        echo "QWTLIBNAME=${local_qwtnam}" >> $GITHUB_ENV
+        echo "QWTINCLUDE=${local_qwtinc}" >> $GITHUB_ENV
+        echo "EPICS_BASE=${local_epicsbase}" >> $GITHUB_ENV
+        echo "PYTHONVERSION=${local_pythonversion}" >> $GITHUB_ENV
+        echo "ZMQ=${local_zmq}" >> $GITHUB_ENV
+        echo "ZMQINC=${local_zmqinc}" >> $GITHUB_ENV
+        echo "ZMQLIB=${local_zmqlib}" >> $GITHUB_ENV
+        echo "QTDM_RPATH=${local_qtdmrpath}" >> $GITHUB_ENV
+        echo "CARCH=${local_carch}" >> $GITHUB_ENV
+        echo "EPICS_HOST_ARCH=${local_epics_host_arch}" >> $GITHUB_ENV
+        echo "QTHOME=${local_qthome}" >> $GITHUB_ENV
+        echo "QWTHOME=${local_qwthome}" >> $GITHUB_ENV
+        echo "QWTLIB=${local_qwtnamelib}" >> $GITHUB_ENV
+        echo "QWTVERSION=${local_qwtversion}" >> $GITHUB_ENV
+        echo "EPICSINCLUDE=${local_epicsinclude}" >> $GITHUB_ENV
+        echo "EPICSLIB=${local_epicslib}" >> $GITHUB_ENV
+        echo "EPICSEXTENSIONS=${local_epicsextensions}" >> $GITHUB_ENV
+        echo "QTCONTROLS_LIBS=${local_qtcontrols_libs}" >> $GITHUB_ENV
+        echo "CAQTDM_COLLECT=${local_caqtdm_collect}" >> $GITHUB_ENV
+        echo "QTBASE=${local_qtbase}" >> $GITHUB_ENV
+        echo "CAQTDM_CA_ARCHIVELIBS=${local_caqtdm_ca_archivelibs}" >> $GITHUB_ENV
+        echo "CAQTDM_LOGGING_ARCHIVELIBS=${local_caqtdm_logging_archivelibs}" >> $GITHUB_ENV
+        echo "QTDM_LIBINSTALL=${local_qtdm_libinstall}" >> $GITHUB_ENV
+        echo "QTDM_BININSTALL=${local_qtdm_bininstall}" >> $GITHUB_ENV
+        echo "PYTHONINCLUDE=${local_pythoninclude}" >> $GITHUB_ENV
+        echo "PYTHONLIB=${local_pythonlib}" >> $GITHUB_ENV
+                     
+      shell: bash
+
+    - name: Debug environment variables
+      run: |
+        echo "QWTLIBNAME=${QWTLIBNAME}"
+        echo "QWTINCLUDE=${QWTINCLUDE}"
+        echo "EPICS_BASE=${EPICS_BASE}"
+        echo "PYTHONVERSION=${PYTHONVERSION}"
+        echo "ZMQ=${ZMQ}"
+        echo "ZMQINC=${ZMQINC}"
+        echo "ZMQLIB=${ZMQLIB}"
+        echo "QTDM_RPATH=${QTDM_RPATH}"
+        echo "CARCH=${CARCH}"
+        echo "EPICS_HOST_ARCH=${EPICS_HOST_ARCH}"
+        echo "QTHOME=${QTHOME}"
+        echo "QWTHOME=${QWTHOME}"
+        echo "QWTLIB=${QWTLIB}"
+        echo "QWTVERSION=${QWTVERSION}"
+        echo "EPICSINCLUDE=${EPICSINCLUDE}"
+        echo "EPICSLIB=${EPICSLIB}"
+        echo "EPICSEXTENSIONS=${EPICSEXTENSIONS}"
+        echo "QTCONTROLS_LIBS=${QTCONTROLS_LIBS}"
+        echo "CAQTDM_COLLECT=${CAQTDM_COLLECT}"
+        echo "QTBASE=${QTBASE}"
+        echo "CAQTDM_CA_ARCHIVELIBS=${CAQTDM_CA_ARCHIVELIBS}"
+        echo "CAQTDM_LOGGING_ARCHIVELIBS=${CAQTDM_LOGGING_ARCHIVELIBS}"
+        echo "QTDM_LIBINSTALL=${QTDM_LIBINSTALL}"
+        echo "QTDM_BININSTALL=${QTDM_BININSTALL}"
+        echo "PYTHONINCLUDE=${PYTHONINCLUDE}"
+        echo "PYTHONLIB=${PYTHONLIB}"
+
+
+    - name: Run build process
+      run: |
+        cd "$srcdir"
+
+        git config --global --add safe.directory $(pwd)
+
+        # Create make files
+        qmake6 ./all.pro
+
+        # Build the project. The output binaries, plugins, and custom shared libs
+        # are expected to be in ${srcdir}/binaries/
+        make -j $(nproc)
+      shell: bash
+
+    - name: Collect build artifacts (executables and libs)
+      run: |
+        export ARTIFACT_DIR="$(pwd)/caqtdm-build-output"
+        mkdir -p "$ARTIFACT_DIR"
+
+        echo "Collecting executables and shared libraries from ${srcdir}/binaries into output directory..."
+        # Copy all contents of the binaries directory, which should contain the built application and its plugins/libs
+        if [ -d "$srcdir/binaries" ]; then
+          cp -r "$srcdir/binaries/"* "$ARTIFACT_DIR/" || true
+        else
+          echo "Warning: No 'binaries' directory found at $srcdir. The build might not have produced expected outputs."
+        fi
+
+        if [ -d "$srcdir/caqtdm/caQtDM_QtControls/doc" ]; then
+            echo "Copying documentation from build directory into output..."
+            mkdir -p "$ARTIFACT_DIR/doc"
+            cp -r "$srcdir/caqtdm/caQtDM_QtControls/doc/"* "$ARTIFACT_DIR/doc/" || true
+        fi
+
+        echo "Collected artifacts are in $ARTIFACT_DIR"
+
+        # Display dynamic dependencies of the main executable for verification
+        # The 'caQtDM' executable is expected in the root of the 'binaries' output
+        if [ -f "$ARTIFACT_DIR/caQtDM" ]; then
+          echo ""
+          echo "--- Dynamic dependencies of caQtDM (via ldd) ---"
+          ldd "$ARTIFACT_DIR/caQtDM" || echo "ldd command failed or caQtDM not found/executable."
+          echo "------------------------------------------------"
+          echo "All dependencies (Qt, EPICS, QWT, ZeroMQ, glibc, etc.) are dynamically linked."
+        else
+          echo "Warning: 'caQtDM' executable not found in '$ARTIFACT_DIR' to run ldd. Check build output."
+        fi
+      shell: bash
+
+    - name: Upload caQtDM build output
+      uses: actions/upload-artifact@v4
+      with:
+        name: caqtdm-build-output-current
+        path: ./caqtdm-build-output
+        retention-days: 7

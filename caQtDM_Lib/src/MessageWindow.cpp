@@ -26,6 +26,7 @@
 
 #include "MessageWindow.h"
 #include "messageWindowWrapper.h"
+#include "qapplication.h"
 #include "qdatetime.h"
 #include <QCoreApplication>
 #include <QMutexLocker>
@@ -34,6 +35,7 @@
 #include <QFile>
 #include <QDebug>
 #include <QTextStream>
+#include <QScrollBar>
 #ifndef MOBILE_ANDROID
 #include <sys/timeb.h>
 #else
@@ -48,12 +50,21 @@
 const char* MessageWindow::WINDOW_TITLE = "caQtDM Messages";
 MessageWindow* MessageWindow::MsgHandler = Q_NULLPTR;
 
+Q_LOGGING_CATEGORY(messageWindowLog, "caqtdm.lib.messagewindow")
+Q_LOGGING_CATEGORY(externCLog, "caqtdm.extern.c")
+
 MessageWindow::MessageWindow(QWidget* parent) : QDockWidget(parent)
 {
+    m_logMessageEvents = !qEnvironmentVariableIsEmpty("CAQTDM_LOGGING_INCLUDE_MESSAGEWINDOW");
 
     QFont font("Monospace");
     font.setStyleHint(QFont::TypeWriter);
     msgTextEdit.setFont(font);
+
+    QApplication* guiApp = qobject_cast<QApplication*>(qApp);
+    QPalette palette = guiApp->palette();
+    m_normalTextColorHex = palette.color(QPalette::Active, QPalette::Text).name();
+    m_debugTextColorHex = palette.color(QPalette::Active, QPalette::Link).name();
 
     setFeatures(QDockWidget::NoDockWidgetFeatures);
     setWindowTitle(tr(WINDOW_TITLE));
@@ -65,19 +76,6 @@ MessageWindow::MessageWindow(QWidget* parent) : QDockWidget(parent)
     setWindowFlags(Qt::CustomizeWindowHint | Qt::WindowMinMaxButtonsHint);
     setContextMenuPolicy(Qt::CustomContextMenu);
     show();
-
-    QString createLogFile = qgetenv("CAQTDM_CREATE_LOGFILE");
-    if (createLogFile.toLower() == "true") {
-        QDateTime currentTime = QDateTime::currentDateTime();
-        QString logFileName = QString("caQtDM_Logfile_%1.txt").arg(currentTime.toLocalTime().toString("yyyy-dd-M--HH-mm-ss-zzz"));
-        QString logFilePath = qgetenv("CAQTDM_LOGFILE_PATH");
-        if (!logFilePath.isEmpty()) {
-            logFilePath += "/" + logFileName;
-            m_logFilePath = logFilePath;
-        } else {
-            m_logFilePath = logFileName;
-        }
-    }
 
     move(x(), 0);
 }
@@ -150,36 +148,47 @@ QString MessageWindow::getMessageBoxContents() {
     return msgTextEdit.toPlainText();
 }
 
-QString MessageWindow::getLogFilePath()
-{
-    return m_logFilePath;
+void MessageWindow::themeChanged() {
+    QApplication* guiApp = qobject_cast<QApplication*>(qApp);
+    QPalette palette = guiApp->palette();
+    QString oldColorNormalHex = m_normalTextColorHex;
+    QString oldColorDebugHex = m_debugTextColorHex;
+    m_normalTextColorHex = palette.color(QPalette::Active, QPalette::Text).name();
+    m_debugTextColorHex = palette.color(QPalette::Active, QPalette::Link).name();
+
+    if (oldColorNormalHex != m_normalTextColorHex || oldColorDebugHex != m_debugTextColorHex) {
+        redrawText(oldColorNormalHex, oldColorDebugHex);
+    }
+}
+
+void MessageWindow::redrawText(const QString& oldNormalTextColorHex, const QString& oldDebugTextColorHex) {
+    QString text = msgTextEdit.toHtml();
+    text = text.replace(oldNormalTextColorHex, m_normalTextColorHex).replace(oldDebugTextColorHex, m_debugTextColorHex);
+    msgTextEdit.setHtml(text);
+    QScrollBar *vScrollBar = msgTextEdit.verticalScrollBar();
+    if (vScrollBar) {
+        vScrollBar->setValue(vScrollBar->maximum());
+    }
 }
 
 void MessageWindow::postMsgEvent(QtMsgType type, char* msg)
 {
     QString qmsg = MessageWindow::QtMsgToQString(type, msg);
 
-    // Also write the message to a temporary logfile that gets permanent if the progam crashes.
-    if (!m_logFilePath.isEmpty()) {
-            QFile logFile(m_logFilePath);
-        if (logFile.open(QIODevice::Append | QIODevice::Text)) {
-            QTextStream textStream(&logFile);
-            textStream << qmsg.append("\n");
-            logFile.close();
-        } else {
-            qWarning() << "Failed to write to logfile";
-        }
+    if (m_logMessageEvents) {
+        // In addition to displaying the message in the message window, trigger a QtLogging message
+        qt_message_output(type, QMessageLogContext("", 0, "", messageWindowLog().categoryName()), msg);
     }
 
     switch (type) {
 #if QT_VERSION > QT_VERSION_CHECK(5, 0, 0)
     case QtInfoMsg:
-        qmsg.prepend("<FONT color=\"#000000\">");
+        qmsg.prepend(QString("<FONT color=\"%1\">").arg(m_normalTextColorHex));
         qmsg.append("</FONT>");
         break;
 #endif
     case QtDebugMsg:
-        qmsg.prepend("<FONT color=\"#0000FF\">");
+        qmsg.prepend(QString("<FONT color=\"%1\">").arg(m_debugTextColorHex));
         qmsg.append("</FONT>");
         break;
     case QtWarningMsg:
@@ -192,7 +201,7 @@ void MessageWindow::postMsgEvent(QtMsgType type, char* msg)
         qmsg.append("</FONT></B>");
         break;
     default:
-        qmsg.prepend("<FONT color=\"#000000\">");
+        qmsg.prepend(QString("<FONT color=\"%1\">").arg(m_normalTextColorHex));
         qmsg.append("</FONT>");
         break;
     }
@@ -215,11 +224,31 @@ void MessageWindow::postMsgEvent(QtMsgType type, char* msg)
 
 extern "C" MessageWindow* C_postMsgEvent(MessageWindow* p, int type, char* msg)
 {
+    QtMsgType msgType;
+
+    // Map QtMsgType
+    switch (type) {
+    case 0:
+        msgType = QtDebugMsg;
+        break;
+    case 1:
+        msgType = QtWarningMsg;
+        break;
+    case 2:
+    case 3:
+        msgType = QtCriticalMsg;
+        break;
+    default:
+        return p;
+        break;
+    }
+
+    // Trigger a QtLogging message since C cannot call QtLogging macros itself
+    qt_message_output(msgType, QMessageLogContext("", 0, "", externCLog().categoryName()), msg);
+
     if(p == 0) return p;
-    if(type == 0) p->postMsgEvent(QtDebugMsg, msg);
-    else if(type == 1) p->postMsgEvent(QtWarningMsg, msg);
-    else if(type == 2) p->postMsgEvent(QtCriticalMsg, msg);
-    else if(type == 3) p->postMsgEvent(QtCriticalMsg, msg);
+
+    p->postMsgEvent(msgType, msg);
     return p;
 }
 

@@ -37,6 +37,9 @@
 #else
     #include <QRegularExpression>
 #endif
+#define MACROCLEANUP "(?<!\\%\\(read)\\s";
+
+Q_LOGGING_CATEGORY(caIncludeLog, "caqtdm.widgets.cainclude")
 
 caInclude::caInclude(QWidget *parent) : QWidget(parent)
 {
@@ -194,7 +197,7 @@ void caInclude::setFileName(QString const &filename)
 
         maximumX = maximumY = 0;
 
-        //printf("cainclude -- setfilename %s for %s\n", qasc(filename), qasc(this->objectName()));
+        qCDebug(caIncludeLog) << "cainclude -- setfilename" << filename << "for" << this->objectName();
 
         if(newFileName.size() < 1) {
             removeIncludedWidgets();
@@ -338,10 +341,10 @@ void caInclude::setFileName(QString const &filename)
         }
 
         if(thisItemCount != prvItemCount) {
-            //printf("count modified\n");
+            qCDebug(caIncludeLog) << "count modified";
 
         } else if(!prvFileName.isNull() && !newFileName.isNull()) {
-            //printf("filename did not change->return\n");
+            qCDebug(caIncludeLog) << "filename did not change->return";
             int indx1 = prvFileName.indexOf(".");
             int indx2 = newFileName.indexOf(".");
             if(indx1 != -1 && indx2 != -1) {
@@ -393,12 +396,12 @@ void caInclude::setFileName(QString const &filename)
                 file->open(QFile::ReadOnly);
                 //symtomatic AFS check
                 if (!file->isOpen()){
-                    printf("can't open file %s\n",qasc(fileName));
+                    qCDebug(caIncludeLog) << "can't open file" << fileName;
                 }else{
                     if (file->size()==0){
-                        printf("file %s has size zero \n",qasc(fileName));
+                        qCWarning(caIncludeLog) << "file" << fileName << "has size zero";
                     }else{
-                        printf("effective load of file %s for widget %s\n", qasc(fileNameFound), qasc(this->objectName()));
+                        qCInfo(caIncludeLog) << "effective load of file" << fileNameFound << "for widget" << this->objectName();
                         tmp = loader.load(file, thisParent);
                     }
                 }
@@ -412,7 +415,7 @@ void caInclude::setFileName(QString const &filename)
                 // pep file
             } else {
                 ParsePepFile *parsefile = new ParsePepFile(fileNameFound);
-                printf("effective load of file %s for widget %s\n", qasc(fileNameFound), qasc(this->objectName()));
+                qCInfo(caIncludeLog) << "effective load of file" << fileNameFound << "for widget" << this->objectName();
                 QWidget *tmp= parsefile->load(thisParent);
                 if(tmp == (QWidget*) Q_NULLPTR) return;
                 thisLoadedWidgets.append(tmp);
@@ -503,13 +506,13 @@ void caInclude::setFileName(QString const &filename)
     }
 }
 void caInclude::update_position(QWidget* w,int x,int y){
-//qDebug()<<"update_position:"<<w<<x<<y;
+qCDebug(caIncludeLog) << "update_position:" << w << x << y;
 
 
 if (w){
     QVariant var=w->property("GeometryList");
     if (!var.isNull()){
-        //qDebug() << "!var.isNull()"<<this->objectName();
+        qCDebug(caIncludeLog) << "!var.isNull()" << this->objectName();
         QVariantList integerList = var.toList();
 
         integerList.replace(0, x);
@@ -534,7 +537,7 @@ void caInclude::update_geometrysave(){
             integerList.insert(2, l->geometry().width()*(1/thisXresizefactor));
             integerList.insert(3, l->geometry().height()*(1/thisYresizefactor));
             l->setProperty("GeometryList", integerList);
-        //qDebug() << className<< l->objectName() << integerList;
+            qCDebug(caIncludeLog) << className<< l->objectName() << integerList;
         }
     }
 
@@ -554,7 +557,7 @@ void caInclude::update_geometrysave(){
     integerList.insert(3, this->geometry().height()*(1/thisYresizefactor));
     if (frame) frame->setProperty("GeometryList", integerList);
 
-    //qDebug() << className << integerList;
+    qCDebug(caIncludeLog) << className << integerList;
 
 }
 QRect caInclude::scanChildsneededArea(){
@@ -594,22 +597,22 @@ void caInclude::childResizeCall(double factX,double factY){
     foreach(QWidget *l, this->findChildren<QWidget *>()){
         if (l){
             QString className(l->metaObject()->className());
-            //qDebug() << className;
+            qCDebug(caIncludeLog) << className;
             if(     className.contains("QMainWindow")||
 
                     className.contains("QWidget")  ){
 
                 QVariant var=l->property("GeometryList");
-                //qDebug() << var;
+                qCDebug(caIncludeLog) << var;
                 double x,y,width,height;
                 if (!var.isNull()){
-                    //qDebug() << "!var.isNull()"<<this->objectName();
+                    qCDebug(caIncludeLog) << "!var.isNull()" << this->objectName();
                     QVariantList list = var.toList();
                     x = (double) list.at(0).toInt() * factX;
                     y = (double) list.at(1).toInt() * factY;
                     width = (double) list.at(2).toInt() *factX;
                     height = (double) list.at(3).toInt() *factY;
-                    //qDebug()<<"childResizeCall:"<<factX<<factY<<list.at(0).toInt()<< list.at(1).toInt()<< list.at(2).toInt()<<list.at(3).toInt();
+                    qCDebug(caIncludeLog) << "childResizeCall:" << factX << factY << list.at(0).toInt() << list.at(1).toInt() << list.at(2).toInt() << list.at(3).toInt();
                 }else{
                     x = 0;//(double) l->x() * factX;
                     y = 0;//(double) l->y() * factY;
@@ -651,8 +654,18 @@ void caInclude::paintEvent( QPaintEvent *event)
 }
 
 void caInclude::setMacro(QString const &newMacro) {
+
+    const QString read_command=QString("%(read");
     QString Macro = newMacro.simplified();
-    Macro.replace(" ", "");
+
+    QString pattern=MACROCLEANUP;
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    QRegExp re(pattern);
+#else
+    QRegularExpression re(pattern);
+#endif
+
+    Macro.remove(re);
     QStringList splitted = Macro.split(";");
     setMacroAndPositionsFromMacroStringList(splitted);
 /*
@@ -673,9 +686,15 @@ void caInclude::setMacroAndPositionsFromMacroStringList(QStringList macroList) {
     for(int i=0; i<macroList.count(); i++) {
 
         QString Macro = macroList[i].simplified();
-        Macro.replace(" ", "");
-        //printf(" MacroOrg: %s\n",qasc(Macro));
-        QString pattern = QString("(?:,+|^)\\[([^,]*[^\\]]*)\\]");
+        QString pattern=MACROCLEANUP;
+    #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+        QRegExp re(pattern);
+    #else
+        QRegularExpression re(pattern);
+    #endif
+        Macro.remove(re);
+        qCDebug(caIncludeLog) << "MacroOrg:" << Macro;
+        pattern = QString("(?:,+|\\s*|^)\\[([^,]*[^\\]]*)\\]");
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
         QRegExp rx(pattern);
@@ -689,7 +708,7 @@ void caInclude::setMacroAndPositionsFromMacroStringList(QStringList macroList) {
            QStringList capTxt = match.capturedTexts();
 #endif
 
-         //printf(" capTxt(%d): %s\n",capTxt.count(),qasc(capTxt[1]));
+         qCDebug(caIncludeLog) << "capTxt(" << capTxt.count() << "):" << capTxt[1];
          //handle only the first one
          QStringList MacroPartPos = capTxt[1].split(",");
 
@@ -719,7 +738,7 @@ void caInclude::setMacroAndPositionsFromMacroStringList(QStringList macroList) {
                  }
              }
 
-             //printf("Remove Macro: %s\n",qasc(Macro));
+             qCDebug(caIncludeLog) << "Remove Macro:" << Macro;
          }else {
              XpositionsList.append("undef");
              YpositionsList.append("undef");
@@ -729,9 +748,8 @@ void caInclude::setMacroAndPositionsFromMacroStringList(QStringList macroList) {
             XpositionsList.append("undef");
             YpositionsList.append("undef");
         }
-        //printf(" Macro: %s\n",qasc(Macro));
+        qCDebug(caIncludeLog) << "Macro:" << Macro;
         thisMacro.append(Macro);
-        //fflush(stdout);
     }
     setXpositionsList(XpositionsList);
     setYpositionsList(YpositionsList);
@@ -789,7 +807,7 @@ void caInclude::updateYpositionsList(int pos, int value)
 
 bool caInclude::getXposition(int indx, int &posX, int width, QString &pos) {
     Q_UNUSED(width);
-    //qDebug()<< "thisXpositionsList: "<< thisXpositionsList;
+    qCDebug(caIncludeLog) << "thisXpositionsList: " << thisXpositionsList;
     if(indx < thisXpositionsList.count()) {
         bool ok;
         pos =  thisXpositionsList[indx];

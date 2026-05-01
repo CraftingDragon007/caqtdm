@@ -31,7 +31,11 @@
 
 #include "cacartesianplot.h"
 #include "plotHelperClasses.h"
+#include <QClipboard>
 #include <QtCore>
+#include <QGuiApplication>
+
+Q_LOGGING_CATEGORY(caCartesianPlotLog, "caqtdm.widgets.cacartesianplot")
 
 caCartesianPlot::caCartesianPlot(QWidget *parent) : QwtPlot(parent)
 {
@@ -80,7 +84,7 @@ caCartesianPlot::caCartesianPlot(QWidget *parent) : QwtPlot(parent)
     QwtPlotPanner *panner = new QwtPlotPanner(canvas());
 #else
 #ifdef QWT_USE_OPENGL
-    printf("caCartesianPlot uses opengl (zoomer works but no rubberband) ?\n");
+    qCDebug(caCartesianPlotLog) << "caCartesianPlot uses opengl (zoomer works but no rubberband)?";
     GLCanvas *canvas = new GLCanvas();
     canvas->setPalette( QColor( "khaki" ) );
     setCanvas(canvas);
@@ -236,6 +240,12 @@ void caCartesianPlot::resetZoom() {
     emit zoomHasReset();
 }
 
+void caCartesianPlot::copyImage() {
+    QImage image = this->grab().toImage();
+    QClipboard *clipboard = QGuiApplication::clipboard();
+    clipboard->setImage(image);
+}
+
 void caCartesianPlot::setZoom(const QRectF &newZoomRect)
 {
     QRectF zoomRect = zoomer->zoomRect();
@@ -274,7 +284,7 @@ void caCartesianPlot::setCountPV(QString const &newPV)  {
     if(thisCountPV.trimmed().length() > 0) {
         thisCountNumber = thisCountPV.toInt(&isNumber);
         if(!isNumber) {
-            //printf("however not a number\n");
+            qCDebug(caCartesianPlotLog) << "however not a number";
             thisCountNumber=0;
         }
     }
@@ -387,7 +397,7 @@ void caCartesianPlot::fillData(pureData *array, int size, int curvIndex, int cur
         // when triggering is specified, we will return here
         if(thisToBeTriggered) {
             thisTriggerNow = false;
-            //printf("we will return and show plot when trigger comes\n");
+            qCDebug(caCartesianPlotLog) << "we will return and show plot when trigger comes";
          }
     } else if(curvXY == CH_Trigger) {
 /*
@@ -406,7 +416,7 @@ void caCartesianPlot::displayData(int curvIndex, int curvType)
 {
     if(thisToBeTriggered) {
         if(!thisTriggerNow) {
-            //printf("display data return\n");
+            qCDebug(caCartesianPlotLog) << "display data return";
             return;
         } else {
             thisTriggerNow = false;
@@ -417,7 +427,7 @@ void caCartesianPlot::displayData(int curvIndex, int curvType)
 
         // x vector, y scalar
         if(X[curvIndex].size() > 1 && Y[curvIndex].size() == 1) {
-            //printf("x vector, y scalar\n");
+            qCDebug(caCartesianPlotLog) << "x vector, y scalar";
             int nbPoints = X[curvIndex].size();
 #if QT_VERSION < 0x040700
             double aux = Y[curvIndex][0];
@@ -432,7 +442,7 @@ void caCartesianPlot::displayData(int curvIndex, int curvType)
 
         // x scalar, y vector
         } else if(X[curvIndex].size() == 1 && Y[curvIndex].size() > 1) {
-            //printf("x scalar, y vector\n" );
+            qCDebug(caCartesianPlotLog) << "x scalar, y vector" ;
             int nbPoints = Y[curvIndex].size();
 #if QT_VERSION < 0x040700
             double aux = X[curvIndex][0];
@@ -447,7 +457,7 @@ void caCartesianPlot::displayData(int curvIndex, int curvType)
 
         // x scalar, y scalar
         } else if(X[curvIndex].size() == 1 && Y[curvIndex].size() == 1) {
-            //printf("x scalar, y scalar\n");
+            qCDebug(caCartesianPlotLog) << "x scalar, y scalar";
             // when no count is specified or count == 1 then yust plot the point
             if(thisCountNumber <= 1) {
                setSamplesData(curvIndex, X[curvIndex].data(), Y[curvIndex].data(), qMin(X[curvIndex].size(), Y[curvIndex].size()), true);
@@ -456,18 +466,18 @@ void caCartesianPlot::displayData(int curvIndex, int curvType)
             } else {
                 double *dataX, *dataY;
                 if(thisPlotMode == PlotNPointsAndStop) {
-                    //printf("when count reached then we stop plotting\n");
+                    qCDebug(caCartesianPlotLog) << "when count reached then we stop plotting";
 
                     if(accumulX[curvIndex].size() >= thisCountNumber) return;
                 } else {
-                    //printf("array size=%d wanted count=%d\n", accumulX[curvIndex].size(), thisCountNumber);
+                    qCDebug(caCartesianPlotLog) << "array size=" << accumulX[curvIndex].size() << "wanted count=" << thisCountNumber;
 
                     if(accumulX[curvIndex].size() > thisCountNumber) {
-                        //printf("it seems that the count number changed and is less than before?\n");
+                        qCDebug(caCartesianPlotLog) << "it seems that the count number changed and is less than before?";
                         accumulX[curvIndex].clear();
                         accumulY[curvIndex].clear();
                     }
-                    //printf("accumulate until count, then shift down and add point\n");
+                    qCDebug(caCartesianPlotLog) << "accumulate until count, then shift down and add point\n";
 
                     if(accumulX[curvIndex].size() >= thisCountNumber) {
                         dataX = accumulX[curvIndex].data();
@@ -521,7 +531,7 @@ void caCartesianPlot::displayData(int curvIndex, int curvType)
 
         // x vector, y vector
         } else {
-            //printf("x vector, y vector curv=%d\n", curvIndex);
+            qCDebug(caCartesianPlotLog) << "x vector, y vector curv" << curvIndex;
             int nbPoints = qMin(X[curvIndex].size(), Y[curvIndex].size());
             if(thisCountNumber > 0) nbPoints = qMin(thisCountNumber, nbPoints);
             setSamplesData(curvIndex, X[curvIndex].data(), Y[curvIndex].data(), nbPoints, true);
@@ -565,8 +575,7 @@ void caCartesianPlot::setSamplesData(int index, double *x, double *y, int size, 
                 emit getAutoScaleXMin(-10.0);
                 emit getAutoScaleXMax(10.0);
 
-                printf("caCartesianPlot::setSamplesData: infinite x value detected, scale set to -10 to 10\n");
-                fflush(stdout);
+                qCWarning(caCartesianPlotLog) << "caCartesianPlot::setSamplesData: infinite x value detected, scale set to -10 to 10";
                 break;
             }
             if((x[i] < lowX) && (x[i] > 0.0)) lowX = x[i];
@@ -588,8 +597,7 @@ void caCartesianPlot::setSamplesData(int index, double *x, double *y, int size, 
                 if(y[i] > BIGGEST) y[i] = BIGGEST;
                 emit getAutoScaleYMin(-10.0);
                 emit getAutoScaleYMax(10.0);
-                printf("caCartesianPlot::setSamplesData: ininite y value detected, scale set to -10 to 10\n");
-                fflush(stdout);
+                qCWarning(caCartesianPlotLog) << "caCartesianPlot::setSamplesData: ininite y value detected, scale set to -10 to 10";
                 break;
             }
             // for logarithmic scale
@@ -756,7 +764,7 @@ void caCartesianPlot::setGridsColor(QColor c)
     penGrid.setStyle(Qt::DashLine);
 
     plotGrid->setPen(penGrid);
-    plotGrid->setVisible(penGrid.style() != Qt::NoPen);
+    //plotGrid->setVisible(penGrid.style() != Qt::NoPen);
     replot();
 }
 
@@ -1178,8 +1186,7 @@ bool caCartesianPlot::eventFilter(QObject *obj, QEvent *event)
 void caCartesianPlot::setLegendAttribute(QColor c, QFont f, LegendAtttribute SW)
 {
     int i;
-
-    //printf("fontsize=%.1f %s\n", f.pointSizeF(), qasc(this->objectName()));
+    qCDebug(caCartesianPlotLog) << "fontsize=" << f.pointSizeF() << this->objectName();
     //when legend text gets to small, hide it (will give then space for plot)
     setProperty("legendfontsize", f.pointSizeF());
 
@@ -1289,7 +1296,7 @@ void caCartesianPlot::setMinXResize(double value){
             if (fabs(data_minX-value)>std::numeric_limits<double>::epsilon()*10){
                 data_minX=value;
                 setScaleX(data_minX, data_maxX);
-                //qDebug()<< "setMinXResize: "<< data_minX << data_maxX;
+                qCDebug(caCartesianPlotLog) << "setMinXResize: "<< data_minX << data_maxX;
             }
         }else{
            ignorefirst_MinX=false;
@@ -1311,7 +1318,7 @@ void caCartesianPlot::setMaxXResize(double value){
             if (fabs(data_maxX-value)>std::numeric_limits<double>::epsilon()*10){
                 data_maxX=value;
                 setScaleX(data_minX, data_maxX);
-                //qDebug()<< "setMaxXResize: "<< data_minX << data_maxX;
+                qCDebug(caCartesianPlotLog) << "setMaxXResize: "<< data_minX << data_maxX;
             }
         }else{
            ignorefirst_MaxX=false;
@@ -1334,7 +1341,7 @@ void caCartesianPlot::setMinYResize(double value){
             if (fabs(data_minY-value)>std::numeric_limits<double>::epsilon()*10){
                 data_minY=value;
                 setScaleY(data_minY, data_maxY);
-                //qDebug()<< "setMinYResize: "<< data_minY << data_maxY;
+                qCDebug(caCartesianPlotLog) << "setMinYResize: "<< data_minY << data_maxY;
             }
         }else{
            ignorefirst_MinY=false;
@@ -1356,7 +1363,7 @@ void caCartesianPlot::setMaxYResize(double value){
             if (fabs(data_maxY-value)>std::numeric_limits<double>::epsilon()*10){
                 data_maxY=value;
                 setScaleY(data_minY, data_maxY);
-                //qDebug()<< "setMaxYResize: "<< data_minY << data_maxY;
+                qCDebug(caCartesianPlotLog) << "setMaxYResize: "<< data_minY << data_maxY;
             }
         }else{
            ignorefirst_MaxY=false;
@@ -1364,6 +1371,6 @@ void caCartesianPlot::setMaxYResize(double value){
     }
 
 }
-
+//#ifndef MOBILE
 #include "moc_cacartesianplot.cpp"
-
+//#endif

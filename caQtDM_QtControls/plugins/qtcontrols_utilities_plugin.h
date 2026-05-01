@@ -26,7 +26,7 @@
 #ifndef QTCONTROLS_UTILITIES_PLUGIN_H
 #define QTCONTROLS_UTILITIES_PLUGIN_H
 
-#include <qglobal.h>
+#include <QtGlobal>
 #if QT_VERSION > 0x050400
     #include <QtUiPlugin/QDesignerCustomWidgetInterface>
 #else
@@ -137,5 +137,24 @@ public:
     virtual QWidget* createWidget(QWidget* parent);
 };
 
+class caHMIConfigInterface : public CustomWidgetInterface_Utilities
+{
+    Q_OBJECT
+    Q_INTERFACES(QDesignerCustomWidgetInterface)
+
+public:
+    caHMIConfigInterface(QObject* parent);
+    virtual QWidget* createWidget(QWidget* parent);
+};
+
+class wmSignalRescaleInterface : public CustomWidgetInterface_Utilities
+{
+    Q_OBJECT
+    Q_INTERFACES(QDesignerCustomWidgetInterface)
+
+public:
+    wmSignalRescaleInterface(QObject* parent);
+    virtual QWidget* createWidget(QWidget* parent);
+};
 
 #endif

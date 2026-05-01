@@ -32,9 +32,15 @@
 #include <QApplication>
 #include <eng_notation.h>
 
+#if defined(__FreeBSD__)
+	#include <cmath>
+#endif
+
 #include <QtDebug>
 
 #define ORANGE QColor(243, 186, 7)
+
+Q_LOGGING_CATEGORY(eGaugeLog, "caqtdm.widgets.egauge")
 
 EAbstractGauge::EAbstractGauge(QWidget *parent) : QWidget(parent),
     m_colorMode(COLORBAR),
@@ -81,7 +87,7 @@ double EAbstractGauge::logarithm(double v)
 	logar = log10(v);
   else
   {
-    //printf("Gauge logarithmic scale but value %.2f <= 0", v);
+    qCDebug(eGaugeLog) << "Gauge logarithmic scale but value" << v << "<= 0";
 	logar = 0;
   }
   return logar;
@@ -278,7 +284,7 @@ void EAbstractGauge::configure()
 	for (int i = 0; i < m_numMajorTicks; i++)
 	{
         double representedValue;
-#if defined(_MSC_VER)||defined(__APPLE__)||defined(__ANDROID__)
+#if defined(_MSC_VER)||defined(__APPLE__)||defined(__ANDROID__)||defined(__FreeBSD__)
 		d_logarithmicScale ? representedValue  = pow(10,val) : representedValue  = val;
 #else
 		d_logarithmicScale ? representedValue  = exp10(val) : representedValue  = val;

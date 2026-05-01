@@ -47,6 +47,7 @@
 #define MIN_FONT_SIZE 3
 #define MAX_FONT_SIZE 20
 
+Q_LOGGING_CATEGORY(caThermoLog, "caqtdm.widgets.cathermo")
 
 // I need to overload the scaleengine of qwt in order to get the upper and lower scale ticks drawn
 class myThermoScaleEngine: public QwtLinearScaleEngine
@@ -132,8 +133,8 @@ void caThermo::setColors(QColor bg, QColor fg, QColor textColor, colMode mode)
             if(!defaultBackColor.isValid() || !defaultForeColor.isValid()) return;
             QColor bgs = defaultBackColor.darker(125);
             bgs.setAlpha(bg.alpha());
-            //printf("default palette fg %d %d %d %s\n", defaultForeColor.red(), defaultForeColor.green(), defaultForeColor.blue(), qasc(objectName()));
-            //printf("default palette bg %d %d %d %s\n", defaultBackColor.red(), defaultBackColor.green(), defaultBackColor.blue(), qasc(objectName()));
+            qCDebug(caThermoLog) << "default palette fg" << defaultForeColor.red() << defaultForeColor.green() << defaultForeColor.blue() << objectName();
+            qCDebug(caThermoLog) << "default palette bg" << defaultBackColor.red() << defaultBackColor.green() << defaultBackColor.blue() << objectName();
             thisPalette.setColor(QPalette::ButtonText, defaultForeColor);
             thisPalette.setColor(QPalette::Text, textColor);
             thisPalette.setColor(QPalette::WindowText, textColor);
@@ -144,9 +145,9 @@ void caThermo::setColors(QColor bg, QColor fg, QColor textColor, colMode mode)
         } else if(thisColorMode == Static) {
             QColor bgs = bg.darker(125);
             bgs.setAlpha(bg.alpha());
-            //printf("static set palette fg  %d %d %d\n", fg.red(), fg.green(), fg.blue());
-            //printf("static set palette bg  %d %d %d\n", bgs.red(), bgs.green(), bgs.blue());
-            //printf("static set palette txt %d %d %d\n", textColor.red(), textColor.green(), textColor.blue());
+            qCDebug(caThermoLog) << "static set palette fg" << fg.red() << fg.green() << fg.blue();
+            qCDebug(caThermoLog) << "static set palette bg" << bgs.red() << bgs.green() << bgs.blue();
+            qCDebug(caThermoLog) << "static set palette txt" << textColor.red() << textColor.green() << textColor.blue();
             thisPalette.setColor(QPalette::ButtonText, fg);
             thisPalette.setColor(QPalette::Text, textColor);
             thisPalette.setColor(QPalette::WindowText, textColor);
@@ -157,7 +158,7 @@ void caThermo::setColors(QColor bg, QColor fg, QColor textColor, colMode mode)
         } else if(thisColorMode == Alarm_Static) {
             QColor bgs = bg.darker(125);
             bgs.setAlpha(bg.alpha());
-            //printf("alarm_static set palette %d %d %d\n", fg.red(), fg.green(), fg.blue());
+            qCDebug(caThermoLog) << "alarm_static set palette" << fg.red() << fg.green() << fg.blue();
             thisPalette.setColor(QPalette::ButtonText, fg);
             thisPalette.setColor(QPalette::Text, textColor);
             thisPalette.setColor(QPalette::WindowText, textColor);
@@ -169,7 +170,7 @@ void caThermo::setColors(QColor bg, QColor fg, QColor textColor, colMode mode)
             if(!defaultBackColor.isValid() || !defaultForeColor.isValid()) return;
             QColor bgs = defaultBackColor.darker(125);
             bgs.setAlpha(bg.alpha());
-            //printf("alarm_default palette %d %d %d\n", fg.red(), fg.green(), fg.blue());
+            qCDebug(caThermoLog) << "alarm_default palette" << fg.red() << fg.green() << fg.blue();
             thisPalette.setColor(QPalette::ButtonText, fg);
             thisPalette.setColor(QPalette::Text, textColor);
             thisPalette.setColor(QPalette::WindowText, textColor);
@@ -341,7 +342,7 @@ void caThermo::setUserAlarmColors(double val)
         thisValue = val;
     }
 
-    //printf("%lf %lf %lf %d\n", val, this->minValue(), this->maxValue(), thisDirection);
+    qCDebug(caThermoLog) << val << this->minValue() << this->maxValue() << thisDirection;
     switch (thisDirection) {
     case Up:
     case Right:
@@ -373,8 +374,8 @@ bool caThermo::event(QEvent *e)
             c =  palette().color(QPalette::Text).name();
             defaultForeColor = QColor(c);
 
-            //printf("default fore color %d %d %d valid=%d\n", defaultForeColor.red(), defaultForeColor.green(), defaultForeColor.blue(), defaultForeColor.isValid());
-            //printf("default back color %d %d %d valid=%d\n", defaultBackColor.red(), defaultBackColor.green(), defaultBackColor.blue(), defaultBackColor.isValid());
+            qCDebug(caThermoLog) << "default fore color" << defaultForeColor.red() << defaultForeColor.green() << defaultForeColor.blue() << "valid=" << defaultForeColor.isValid();
+            qCDebug(caThermoLog) << "default back color" << defaultBackColor.red() << defaultBackColor.green() << defaultBackColor.blue() << "valid=" << defaultBackColor.isValid();
 
             if(!defaultBackColor.isValid()) defaultBackColor = QColor(255, 248, 220, 255);
             if(!defaultForeColor.isValid()) defaultForeColor = Qt::black;

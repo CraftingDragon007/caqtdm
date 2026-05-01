@@ -1,12 +1,73 @@
+opcua_plugin {
+        CONFIG += Define_ControlsysTargetDir Define_Build_objDirs
+
+        unix:!macx:!ios:!android {
+		        message("opcua_plugin configuration unix:!macx:!ios:!android")
+                INCLUDEPATH   += $(EPICSINCLUDE)/os/Linux
+				LIBS += -L$(CAQTDM_COLLECT) -lcaQtDM_Lib
+				caqtdm_rpath {
+				    LIBS += -Wl,-rpath,$(QTDM_RPATH)
+				}
+                CONFIG += release
+        }
+
+        macx {
+		        message("opcua_plugin configuration macx")
+                INCLUDEPATH   += $(EPICSINCLUDE)/os/Linux
+                LIBS += $$(CAQTDM_COLLECT)/libcaQtDM_Lib.dylib
+                CONFIG += release
+        }
+
+        ios | android {
+		        message("opcua_plugin configuration : ios or android")
+                message( $$OUT_PWD )
+                CONFIG += staticlib
+                LIBS += $$OUT_PWD/../../libcaQtDM_Lib.a
+                android {
+                    INCLUDEPATH += $$OUT_PWD/../caQtDM_AndroidFunctions/src
+                }
+        }
+
+        win32 {
+		        message("opcua_plugin configuration win32")
+                INCLUDEPATH  += $$(EPICS_BASE)/include/os/win32
+
+                win32-msvc* || msvc{
+                        CONFIG += Define_Build_caQtDM_Lib Define_Build_epics_controls Define_Symbols
+                }
+
+                win32-g++ {
+                        EPICS_LIBS=$$(EPICS_BASE)/lib/win32-x86-mingw
+                        LIBS += ../caQtDM_Lib/release/libcaQtDM_Lib.a
+                }
+        }
+}
+
+#==========================================================================================================
+
+
 #==========================================================================================================
 archive_plugin {
         CONFIG += Define_ControlsysTargetDir Define_Build_objDirs
 
-        unix:!macx:!ios:!android {
-                message("archive_plugin configuration unix:!macx:!ios:!android")
-                LIBS += -L$(CAQTDM_COLLECT) -Wl,-rpath,$(QTDM_RPATH) -lcaQtDM_Lib
+        unix:!macx:!ios:!android:!freebsd {
+                message("archive_plugin configuration unix:!macx:!ios:!android:!freebsd")
+                LIBS += -L$(CAQTDM_COLLECT) -lcaQtDM_Lib
+                caqtdm_rpath {
+                    LIBS += -Wl,-rpath,$(QTDM_RPATH)
+                }
                 CONFIG += release
         }
+
+	freebsd {
+		message("archive_plugin configuration freebsd")
+                LIBS += -L$(CAQTDM_COLLECT) -lcaQtDM_Lib
+                caqtdm_rpath {
+                    LIBS += -Wl,-rpath,$(QTDM_RPATH)
+                }
+		LIBS += -lz
+                CONFIG += release
+	}
 
         macx {
                 message("archive_plugin configuration macx")
@@ -20,8 +81,15 @@ archive_plugin {
                 message("archive_plugin configuration : ios or android")
                 message( $$OUT_PWD )
                 CONFIG += staticlib
-                LIBS += $$OUT_PWD/../../../caQtDM_Lib/libcaQtDM_Lib.a
-                LIBS += $$OUT_PWD/../../../caQtDM_QtControls/libqtcontrols.a
+                android {
+                        LIBS += $$OUT_PWD/../../../caQtDM_Lib/libcaQtDM_Lib_$${QT_ARCH}.a
+                        LIBS += $$OUT_PWD/../../../caQtDM_QtControls/libqtcontrols_$${QT_ARCH}.a
+                }
+
+                ios {
+                        LIBS += $$OUT_PWD/../../../caQtDM_Lib/libcaQtDM_Lib.a
+                        LIBS += $$OUT_PWD/../../../caQtDM_QtControls/libqtcontrols.a
+                }
         }
 
         win32 {
@@ -44,7 +112,10 @@ demo_plugin {
         unix:!macx:!ios:!android {
                 message("demo_plugin configuration unix:!macx:!ios:!android")
  		INCLUDEPATH   += $(EPICSINCLUDE)/os/Linux
-                LIBS += -L$(CAQTDM_COLLECT) -Wl,-rpath,$(QTDM_RPATH) -lcaQtDM_Lib
+                LIBS += -L$(CAQTDM_COLLECT) -lcaQtDM_Lib
+                caqtdm_rpath {
+                    LIBS += -Wl,-rpath,$(QTDM_RPATH)
+                }
  		CONFIG += release
 	}
 
@@ -59,9 +130,12 @@ demo_plugin {
                 message("demo_plugin configuration : ios or android")
                 message( $$OUT_PWD )
                 CONFIG += staticlib
-                LIBS += $$OUT_PWD/../../libcaQtDM_Lib.a
                 android {
+                    LIBS += $$OUT_PWD/../../libcaQtDM_Lib_$${QT_ARCH}.a
                     INCLUDEPATH += $$OUT_PWD/../caQtDM_AndroidFunctions/src
+                }
+                ios {
+                    LIBS += $$OUT_PWD/../../libcaQtDM_Lib.a
                 }
         }
 
@@ -87,7 +161,10 @@ gps_plugin {
         unix:!macx:!ios:!android {
                 message("gps_plugin configuration unix:!macx:!ios:!android")
                 INCLUDEPATH   += $(EPICSINCLUDE)/os/Linux
-                LIBS += -L$(CAQTDM_COLLECT) -Wl,-rpath,$(QTDM_RPATH) -lcaQtDM_Lib
+                LIBS += -L$(CAQTDM_COLLECT) -lcaQtDM_Lib
+                caqtdm_norpath {
+                    LIBS += -Wl,-rpath,$(QTDM_RPATH)
+                }
                 CONFIG += release
         }
 
@@ -102,9 +179,12 @@ gps_plugin {
                 message("gps_plugin configuration : ios or android")
                 message( $$OUT_PWD )
                 CONFIG += staticlib
-                LIBS += $$OUT_PWD/../../libcaQtDM_Lib.a
                 android {
+                    LIBS += $$OUT_PWD/../../libcaQtDM_Lib_$${QT_ARCH}.a
                     INCLUDEPATH += $$OUT_PWD/../caQtDM_AndroidFunctions/src
+                }
+                ios {
+                    LIBS += $$OUT_PWD/../../libcaQtDM_Lib.a
                 }
         }
 
@@ -130,8 +210,11 @@ bsread_Plugin {
         unix:!macx:!ios:!android {
                 message(“bsread_plugin configuration unix:!macx:!ios:!android”)
  		INCLUDEPATH   += $(EPICSINCLUDE)/os/Linux
-                LIBS += -L$(CAQTDM_COLLECT) -Wl,-rpath,$(QTDM_RPATH) -lcaQtDM_Lib
- 		CONFIG += release
+                LIBS += -L$(CAQTDM_COLLECT) -lcaQtDM_Lib
+                caqtdm_rpath {
+                    LIBS += -Wl,-rpath,$(QTDM_RPATH)
+                }
+                CONFIG += release
 	}
 
         macx {
@@ -165,15 +248,32 @@ bsread_Plugin {
 epics3_plugin {
         CONFIG += Define_ControlsysTargetDir Define_Build_objDirs
 
-        unix:!macx:!ios:!android  {
-                message("epics3_plugin configuration unix:!macx:!ios:!android ")
+        unix:!macx:!ios:!android:!freebsd {
+                message("epics3_plugin configuration unix:!macx:!ios:!android:!freebsd")
  		INCLUDEPATH   += $(EPICSINCLUDE)/os/Linux
 #for epics 3.15 and gcc we need this
                 INCLUDEPATH   += $(EPICSINCLUDE)/compiler/gcc
-
-                LIBS += -L$(EPICSLIB) -Wl,-rpath,$(EPICSLIB) -lca -lCom
- 		LIBS += -L$(QTBASE) -Wl,-rpath,$(QTDM_RPATH) -lcaQtDM_Lib
+                LIBS += -L$(EPICSLIB)  -lca -lCom
+                LIBS += -L$(QTBASE)  -lcaQtDM_Lib
+                caqtdm_rpath {
+                    LIBS +=  -Wl,-rpath,$(EPICSLIB)
+                    LIBS += -Wl,-rpath,$(QTDM_RPATH)
+                }
  		CONFIG += release
+	}
+
+	freebsd {
+		message("epics3_plugin configuration freebsd ")
+		INCLUDEPATH += $(EPICSINCLUDE)/os/freebsd
+		INCLUDEPATH += $(EPICSINCLUDE)/compiler/clang
+		LIBS += -L$(EPICSLIB)  -lca -lCom
+                LIBS += -L$(QTBASE)  -lcaQtDM_Lib
+                caqtdm_rpath {
+                    LIBS +=  -Wl,-rpath,$(EPICSLIB)
+                    LIBS += -Wl,-rpath,$(QTDM_RPATH)
+                }
+                CONFIG += release
+
 	}
 
         macx {
@@ -189,13 +289,15 @@ epics3_plugin {
         ios | android {
                 message("epics3_plugin configuration : ios or android")
                 CONFIG += staticlib
-                LIBS += $$OUT_PWD/../../libcaQtDM_Lib.a
                 ios {
                         INCLUDEPATH += $(EPICSINCLUDE)/os/iOS
                         INCLUDEPATH   += $(EPICSINCLUDE)/compiler/clang
+                        LIBS += $$OUT_PWD/../../libcaQtDM_Lib.a
                 }
                 android {
                         INCLUDEPATH += $(EPICSINCLUDE)/os/android
+                        INCLUDEPATH += $(EPICSINCLUDE)/compiler/clang
+                        LIBS += $$OUT_PWD/../../libcaQtDM_Lib_$${QT_ARCH}.a
                         INCLUDEPATH += $$OUT_PWD/../caQtDM_AndroidFunctions/src
                 }
         }
@@ -227,7 +329,10 @@ environment_Plugin {
                 message(“environment_plugin configuration unix:!macx:!ios:!android”)
                 INCLUDEPATH   += $(EPICSINCLUDE)
                 INCLUDEPATH   += $(EPICSINCLUDE)/os/Linux
-                LIBS += -L$(QTBASE) -Wl,-rpath,$(QTDM_RPATH) -lcaQtDM_Lib
+                LIBS += -L$(QTBASE) -lcaQtDM_Lib
+                caqtdm_rpath {
+                    LIBS += -Wl,-rpath,$(QTDM_RPATH)
+                }
                 CONFIG += release
         }
 
@@ -235,9 +340,9 @@ environment_Plugin {
                 message(“environment_plugin configuration macx”)
                 INCLUDEPATH   += $(EPICSINCLUDE)
                 INCLUDEPATH   += $(EPICSINCLUDE)/os/Linux
-                LIBS += -L$(CAQTDM_COLLECT) -lqtcontrols
-		LIBS += -L$(QTBASE) -Wl,-rpath,$(QTDM_RPATH) -lcaQtDM_Lib
-		LIBS += $$(EPICSLIB)/libCom.dylib
+                LIBS += $$(CAQTDM_COLLECT)/libcaQtDM_Lib.dylib
+                LIBS += $$(CAQTDM_COLLECT)/libqtcontrols.dylib
+                LIBS += $$(EPICSLIB)/libCom.dylib
 
 
                 !modbus:!gps:{
@@ -260,14 +365,16 @@ environment_Plugin {
                 message("epics3_plugin configuration : ios or android")
                 CONFIG += staticlib
                 INCLUDEPATH   += $(EPICSINCLUDE)
-                LIBS += $$OUT_PWD/../../libcaQtDM_Lib.a
                 ios {
                         INCLUDEPATH += $(EPICSINCLUDE)/os/iOS
                         INCLUDEPATH   += $(EPICSINCLUDE)/compiler/clang
+                        LIBS += $$OUT_PWD/../../libcaQtDM_Lib.a
                 }
                 android {
                         INCLUDEPATH += $(EPICSINCLUDE)/os/android
-                        INCLUDEPATH += $$OUT_PWD/../caQtDM_AndroidFunctions/src
+                        INCLUDEPATH += $(EPICSINCLUDE)/compiler/clang
+                        INCLUDEPATH += $(ANDROIDFUNCTIONSINCLUDE)
+                        LIBS += $$OUT_PWD/../../libcaQtDM_Lib_$${QT_ARCH}.a
                 }
         }
 
@@ -290,10 +397,10 @@ environment_Plugin {
 epics4_plugin {
         CONFIG += Define_ControlsysTargetDir Define_Build_objDirs
 
-        unix:!macx:!ios:!android {
+        unix:!macx:!ios:!android:!freebsd {
 
         epics7 {
-                message("epics4_plugin (with epics version 7) configuration unix:!macx:!ios:!android")
+                message("epics4_plugin (with epics version 7) configuration unix:!macx:!ios:!android:!freebsd")
                 INCLUDEPATH   += $(EPICSINCLUDE)
                 INCLUDEPATH   += $(EPICSINCLUDE)/pv
                 INCLUDEPATH += $(EPICSINCLUDE)/os/Linux
@@ -302,8 +409,12 @@ epics4_plugin {
 
                 !EPICS4_STATICBUILD {
                    message( "epics4_plugin build with shared object libraries of epics4" )
-                   LIBS += -L$(EPICSLIB) -Wl,-rpath,$(EPICSLIB) -lca -lCom -lpvAccess -lpvAccessCA -lpvData -lpvaClient -lnt
-                   LIBS += -L$(QTBASE) -Wl,-rpath,$(QTDM_RPATH) -lcaQtDM_Lib
+                    LIBS += -L$(EPICSLIB) -lca -lCom -lpvAccess -lpvAccessCA -lpvData -lpvaClient -lnt
+                    LIBS += -L$(QTBASE) -lcaQtDM_Lib
+                    caqtdm_rpath {
+                       LIBS += -Wl,-rpath,$(EPICSLIB)
+                       LIBS += -Wl,-rpath,$(QTDM_RPATH)
+                    }
                 }
                 EPICS4_STATICBUILD  {
                    message( "epics4_plugin build with static libraries of epics4" )
@@ -311,7 +422,7 @@ epics4_plugin {
                    LIBS += $(EPICSLIB)/libpvData.a
                    LIBS += $(EPICSLIB)/libpvaClient.a
                    LIBS += $(EPICSLIB)/libnt.a
-                   LIBS += -L$(EPICSLIB) -Wl,-rpath,$(EPICSLIB) -lca -lCom
+                   LIBS += -L$(EPICSLIB) -lca -lCom
                 }
                 CONFIG += release
                 CAQTDM_PSI_SPECIAL_EPICS7_C11 {
@@ -329,6 +440,38 @@ epics4_plugin {
           }
 
 	}
+
+	freebsd {
+
+        epics7 {
+                message("epics4_plugin (with epics version 7) configuration freebsd")
+                INCLUDEPATH   += $(EPICSINCLUDE)
+                INCLUDEPATH   += $(EPICSINCLUDE)/pv
+                INCLUDEPATH += $(EPICSINCLUDE)/os/freebsd
+                INCLUDEPATH   += $(EPICSINCLUDE)/compiler/clang
+
+                !EPICS4_STATICBUILD {
+                   message( "epics4_plugin build with shared object libraries of epics4" )
+                    LIBS += -L$(EPICSLIB) -lca -lCom -lpvAccess -lpvAccessCA -lpvData -lpvaClient -lnt
+                    LIBS += -L$(QTBASE) -lcaQtDM_Lib
+                    caqtdm_rpath {
+                       LIBS += -Wl,-rpath,$(EPICSLIB)
+                       LIBS += -Wl,-rpath,$(QTDM_RPATH)
+                    }
+                }
+                EPICS4_STATICBUILD  {
+                   message( "epics4_plugin build with static libraries of epics4" )
+                   LIBS += $(EPICSLIB)/libpvAccess.a
+                   LIBS += $(EPICSLIB)/libpvData.a
+                   LIBS += $(EPICSLIB)/libpvaClient.a
+                   LIBS += $(EPICSLIB)/libnt.a
+                   LIBS += -L$(EPICSLIB) -lca -lCom
+                }
+                CONFIG += release
+        }
+
+        }
+
 	
         macx {
                 message("epics4_plugin configuration macx")
@@ -351,7 +494,7 @@ epics4_plugin {
                 #LIBS += $${EPICS4LOC3}/libpvaClient.a
                 #LIBS += $${EPICS4LOC4}/libnt.a
 
-        	LIBS += $(CAQTDM_COLLECT)/libcaQtDM_Lib.dylib
+
         	LIBS += $(CAQTDM_COLLECT)/libcaQtDM_Lib.dylib
         	LIBS += $$(EPICSLIB)/libca.dylib
         	LIBS += $$(EPICSLIB)/libCom.dylib
@@ -366,14 +509,18 @@ epics4_plugin {
         ios | android {
                 message("epics4_plugin configuration : ios or android")
                 CONFIG += staticlib
-                LIBS += $$OUT_PWD/../../libcaQtDM_Lib.a
+
                 INCLUDEPATH   += $(EPICSINCLUDE)
                 ios {
+                        LIBS += $$OUT_PWD/../../libcaQtDM_Lib.a
                         INCLUDEPATH += $(EPICSINCLUDE)/os/iOS
                         INCLUDEPATH   += $(EPICSINCLUDE)/compiler/clang
                 }
                 android {
                         INCLUDEPATH += $(EPICSINCLUDE)/os/android
+                        INCLUDEPATH += $(EPICSINCLUDE)/compiler/clang
+                        INCLUDEPATH += $(ANDROIDFUNCTIONSINCLUDE)
+                        LIBS += $$OUT_PWD/../../libcaQtDM_Lib_$${QT_ARCH}.a
                 }
         }
 
@@ -403,8 +550,11 @@ caQtDM_QtControls {
  		OBJECTS_DIR = obj
 		DESTDIR = $$(CAQTDM_COLLECT)
  		INCLUDEPATH += $$(QWTINCLUDE)
-                LIBS += -L$$(QWTLIB) -Wl,-rpath,$(QWTLIB) -l$$(QWTLIBNAME)
-  	}
+                LIBS += -L$$(QWTLIB) -l$$(QWTLIBNAME)
+                caqtdm_rpath {
+                    LIBS += -Wl,-rpath,$(QWTLIB)
+                }
+            }
 
         macx {
                 message("caQtDM_QtControls configuration : macx")
@@ -450,11 +600,15 @@ caQtDM_QtControls {
 
 #==========================================================================================================
 caQtDM_Lib {
-        unix:!macx:!ios:!android  {
-                message("caQtDM_Lib configuration : unix:!macx:!ios:!android")
-                LIBS += -L$(EPICSLIB) -Wl,-rpath,$(EPICSLIB) -lCom
-      		LIBS += -L$(CAQTDM_COLLECT) -Wl,-rpath,$(QTDM_RPATH) -lqtcontrols
-      		INCLUDEPATH += $(EPICSINCLUDE)/os/Linux
+        unix:!macx:!ios:!android:!freebsd  {
+                message("caQtDM_Lib configuration : unix:!macx:!ios:!android:!freebsd")
+                LIBS += -L$(EPICSLIB) -lCom
+                LIBS += -L$(CAQTDM_COLLECT) -lqtcontrols
+                caqtdm_rpath {
+                    LIBS += -Wl,-rpath,$(EPICSLIB)
+                    LIBS += -Wl,-rpath,$(QTDM_RPATH)
+                }
+                INCLUDEPATH += $(EPICSINCLUDE)/os/Linux
 #for epics 3.15 and gcc we need this
                 INCLUDEPATH   += $(EPICSINCLUDE)/compiler/gcc
 
@@ -464,6 +618,23 @@ caQtDM_Lib {
                 QMAKE_CFLAGS_RELEASE += "-g"
                 CONFIG += Define_Build_Python
    	}
+
+	freebsd {
+		message("caQtDM_Lib configuration : freebsd")
+		LIBS += -L$(EPICSLIB) -lCom
+		LIBS += -L$(CAQTDM_COLLECT) -lqtcontrols
+		caqtdm_rpath {
+			LIBS += -Wl,-rpath,$(EPICSLIB)
+			LIBS += -Wl,-rpath,$(QTDM_RPATH)
+		}
+		INCLUDEPATH += $(EPICSINCLUDE)/os/freebsd
+		INCLUDEPATH   += $(EPICSINCLUDE)/compiler/clang
+		OBJECTS_DIR = ./obj
+		DESTDIR = $(CAQTDM_COLLECT)
+		QMAKE_CXXFLAGS += "-g"
+		QMAKE_CFLAGS_RELEASE += "-g"
+		CONFIG += Define_Build_Python
+	}
 
         macx {
                 message("caQtDM_Lib configuration : macx")
@@ -479,7 +650,7 @@ caQtDM_Lib {
                 DESTDIR = $$(CAQTDM_COLLECT)
       		OBJECTS_DIR = ./obj
                 # removed no standard python under Mac
-                # CONFIG += Define_Build_Python
+                CONFIG += Define_Build_Python
 
    	}
 
@@ -500,7 +671,8 @@ caQtDM_Lib {
 		}
 
 		android {
-      			INCLUDEPATH += $(EPICSINCLUDE)/os/android
+                        INCLUDEPATH += $(EPICSINCLUDE)/os/android
+                        INCLUDEPATH += $(EPICSINCLUDE)/compiler/clang
                         DESTDIR = $(CAQTDM_COLLECT)
                 }
 	}
@@ -543,14 +715,18 @@ caQtDM_Viewer {
                 !ios:!android {
                         message("caQtDM_viewer configuration : !ios!android (all unixes + mac)")
                         DESTDIR = $(CAQTDM_COLLECT)
-                 !macx: {CONFIG += x11}
-                        LIBS += -L$(QTBASE) -Wl,-rpath,$(QTDM_RPATH) -lcaQtDM_Lib
-                        LIBS += -L$(QTBASE) -Wl,-rpath,$(QTDM_RPATH) -lqtcontrols
+                 !macx: {CONFIG += x11
+                        LIBS += -L$(QTBASE) -lcaQtDM_Lib
+                        LIBS += -L$(QTBASE) -lqtcontrols
                         ADL_EDL_FILES {
-                           LIBS += -L$(QTBASE) -Wl,-rpath,$(QTDM_RPATH) -ladlParser
-                           LIBS += -L$(QTBASE) -Wl,-rpath,$(QTDM_RPATH) -ledlParser
+                           LIBS += -L$(QTBASE) -ladlParser
+                           LIBS += -L$(QTBASE) -ledlParser
+                        }
+                        caqtdm_rpath {
+                            LIBS += -Wl,-rpath,$(QTDM_RPATH)
                         }
                         LIBS += -L$(CAQTDM_COLLECT) -L$(CAQTDM_COLLECT)/designer
+                    }
                 }
         }
         macx:!ios {
@@ -732,29 +908,30 @@ caQtDM_Viewer {
                     searchheader.value=NO
                     weakobjc.name=CLANG_ENABLE_OBJC_WEAK
                     weakobjc.value=YES
-                    QMAKE_MAC_XCODE_SETTINGS += assetIcon launchImage searchheader weakobjc
+                    platformdefenition.name=SUPPORTED_PLATFORMS
+                    platformdefenition.value=iphonesimulator iphoneos
+                    QMAKE_MAC_XCODE_SETTINGS += assetIcon launchImage searchheader weakobjc platformdefenition
 
                     QMAKE_INFO_PLIST += $$PWD/caQtDM_Viewer/src/IOS/Info.plist
                     QMAKE_ASSET_CATALOGS += $$PWD/caQtDM_Viewer/src/IOS/Assets.xcassets
                     QMAKE_IOS_LAUNCH_SCREEN += $$PWD/caQtDM_Viewer/src/IOS/LaunchScreen.storyboard
 #actually, I have a problem with ios, it seems that iphonesimulator is defined too and wants than the library of simlator
 # I comment it out now
-                    iphonesimulator {
+                    CONFIG(iphonesimulator,iphoneos|iphonesimulator): {
                          message("caQtDM_viewer configuration : iphonesimulator")
                          # when .dylib and .a in same directory, macos takes .dylib, so separate the libraries
-                         LIBS += $$(EPICSLIB)/libca.a
-                         LIBS += $$(EPICSLIB)/libCom.a
+                         LIBS += $$(EPICS_BASE)/lib/ios-x86/libca.a
+                         LIBS += $$(EPICS_BASE)/lib/ios-x86/libCom.a
                          LIBS += $$(QWTHOME)/lib/lib$$(QWTLIBNAME).a
                          #LIBS += $$(QWTHOME)/lib/lib$$(QWTLIBNAME)_iphonesimulator.a
                          # build simulator only for 32 bit
                          INCLUDEPATH += $$(QWTHOME)/src
                          QMAKE_LFLAGS += -all_load
                     }
-                    iphoneos {
+                    CONFIG(iphoneos,iphoneos|iphonesimulator): {
                         message("caQtDM_viewer configuration : iphoneos")
-
-                         LIBS += $$(EPICSLIB)/libca.a
-                         LIBS += $$(EPICSLIB)/libCom.a
+                         LIBS += $$(EPICS_BASE)/lib/ios-arm/libca.a
+                         LIBS += $$(EPICS_BASE)/lib/ios-arm/libCom.a
                          LIBS += $$(QWTHOME)/lib/lib$$(QWTLIBNAME).a
 
                          ###############################################################################
@@ -769,18 +946,19 @@ caQtDM_Viewer {
                          #bitcode_generator.value = bitcode
                          #QMAKE_MAC_XCODE_SETTINGS += bitcode_generator
 
-                         provisioning_profile_spec.name=PROVISIONING_PROFILE_SPECIFIER
-                         provisioning_profile_spec.value = caQtDM Distribution
-                         #provisioning_profile_spec.value = caQtDM Development
-                         QMAKE_MAC_XCODE_SETTINGS += provisioning_profile_spec
+                         #provisioning_profile_spec.name=PROVISIONING_PROFILE_SPECIFIER
+                         #provisioning_profile_spec.value = caQtDM Distribution
+                         #provisioning_profile_spec.value = caQtDM Provisioning Profile Development
+                         #QMAKE_MAC_XCODE_SETTINGS += provisioning_profile_spec
 
                          #signing_identity.name = CODE_SIGN_IDENTITY
                          #signing_identity.value = $$(CODE_SIGN_IDENTITY)
                          #QMAKE_MAC_XCODE_SETTINGS += signing_identity
 
-                         signing_identity.name = CODE_SIGN_IDENTITY
-                         signing_identity.value = Apple Distribution: Helge Brands (Q6CFPW364S)
-                         QMAKE_MAC_XCODE_SETTINGS += signing_identity
+                         #signing_identity.name = CODE_SIGN_IDENTITY
+                         #signing_identity.value = Apple Distribution: Helge Brands (Q6CFPW364S)
+                         #signing_identity.value = Apple Development: Helge Brands (8G5FY9T8QT)
+                         #QMAKE_MAC_XCODE_SETTINGS += signing_identity
 
 
 
@@ -803,6 +981,10 @@ caQtDM_Viewer {
                     archiveSF:{
                                     LIBS += $$OUT_PWD/../caQtDM_Lib/caQtDM_Plugins/archive/archiveSF/libarchiveSF_plugin.a
                     }
+                    archiveHTTP: {
+                            LIBS += $$OUT_PWD/../caQtDM_Lib/caQtDM_Plugins/archive/archiveHTTP/libarchiveHTTP_plugin.a
+                    }
+
         }
         android {
                         message("caQtDM_viewer configuration : android")
@@ -810,34 +992,48 @@ caQtDM_Viewer {
                         DESTDIR = $$(CAQTDM_COLLECT)
                         CONFIG += staticlib
                         CONFIG += console
-                        LIBS += $(CAQTDM_COLLECT)/designer/libqtcontrols_controllers_plugin.a
-                        LIBS += $(CAQTDM_COLLECT)/designer/libqtcontrols_monitors_plugin.a
-                        LIBS += $(CAQTDM_COLLECT)/designer/libqtcontrols_graphics_plugin.a
-                        LIBS += $(CAQTDM_COLLECT)/designer/libqtcontrols_utilities_plugin.a
-                        LIBS += $(CAQTDM_COLLECT)/controlsystems/libdemo_plugin.a
-                        LIBS += $(CAQTDM_COLLECT)/controlsystems/libepics3_plugin.a
-                        LIBS += $(CAQTDM_COLLECT)/libAndroidFunctions.a
-                epics4: {
-                                LIBS += $(CAQTDM_COLLECT)/controlsystems/libepics4_plugin.a
-                                }
-                archiveSF: {
-                                LIBS += $(CAQTDM_COLLECT)/controlsystems/libarchiveSF_plugin.a
-                        }
-
-                        LIBS += $(CAQTDM_COLLECT)/controlsystems/libenvironment_plugin.a
-
-                        modbus {
-                            LIBS += $(CAQTDM_COLLECT)/controlsystems/libmodbus_plugin.a
-                        }
-                        gps {
-                            LIBS += $(CAQTDM_COLLECT)/controlsystems/libgps_plugin.a
-                        }
-
-                        LIBS += $(CAQTDM_COLLECT)/libcaQtDM_Lib.a
-                        LIBS += $(CAQTDM_COLLECT)/libqtcontrols.a
-                        LIBS += $$(QWTHOME)/lib/lib$$(QWTLIBNAME).a
                         LIBS += $$(EPICSLIB)/libca.a
                         LIBS += $$(EPICSLIB)/libCom.a
+                        LIBS += $$(EPICSLIB)/libdbCore.a
+                        LIBS += $$(EPICSLIB)/libdbRecStd.a
+                        LIBS += $$(EPICSLIB)/libnt.a
+                        LIBS += $$(EPICSLIB)/libpvAccess.a
+                        LIBS += $$(EPICSLIB)/libpvAccessCA.a
+                        LIBS += $$(EPICSLIB)/libpvAccessIOC.a
+                        LIBS += $$(EPICSLIB)/libpvaClient.a
+                        LIBS += $$(EPICSLIB)/libpvData.a
+                        LIBS += $$(EPICSLIB)/libpvDatabase.a
+                        LIBS += $$(EPICSLIB)/libqsrv.a
+
+                        LIBS += $$(QWTLIB)/lib$$(QWTLIBNAME)_$${QT_ARCH}.a
+                        LIBS += $(CAQTDM_COLLECT)/libqtcontrols_$${QT_ARCH}.a
+                        LIBS += $(CAQTDM_COLLECT)/designer/libqtcontrols_controllers_plugin_$${QT_ARCH}.a
+                        LIBS += $(CAQTDM_COLLECT)/designer/libqtcontrols_monitors_plugin_$${QT_ARCH}.a
+                        LIBS += $(CAQTDM_COLLECT)/designer/libqtcontrols_graphics_plugin_$${QT_ARCH}.a
+                        LIBS += $(CAQTDM_COLLECT)/designer/libqtcontrols_utilities_plugin_$${QT_ARCH}.a
+                        LIBS += $(CAQTDM_COLLECT)/controlsystems/libdemo_plugin_$${QT_ARCH}.a
+                        LIBS += $(CAQTDM_COLLECT)/controlsystems/libepics3_plugin_$${QT_ARCH}.a
+                        LIBS += $(CAQTDM_COLLECT)/libAndroidFunctions_$${QT_ARCH}.a
+                        epics4: {
+                                LIBS += $(CAQTDM_COLLECT)/controlsystems/libepics4_plugin_$${QT_ARCH}.a
+                                }
+                        archiveSF: {
+                                LIBS += $(CAQTDM_COLLECT)/controlsystems/libarchiveSF_plugin_$${QT_ARCH}.a
+                        }
+                        archiveHTTP: {
+                                LIBS += $(CAQTDM_COLLECT)/controlsystems/libarchiveHTTP_plugin_$${QT_ARCH}.a
+                        }
+
+                        LIBS += $(CAQTDM_COLLECT)/controlsystems/libenvironment_plugin_$${QT_ARCH}.a
+
+                        modbus {
+                            LIBS += $(CAQTDM_COLLECT)/controlsystems/libmodbus_plugin_$${QT_ARCH}.a
+                        }
+                        gps {
+                            LIBS += $(CAQTDM_COLLECT)/controlsystems/libgps_plugin_$${QT_ARCH}.a
+                        }
+
+                        LIBS += $(CAQTDM_COLLECT)/libcaQtDM_Lib_$${QT_ARCH}.a
                         LOCAL_LDLIBS += -llog
 
                         ICON = $$PWD/caQtDM_Viewer/src/caQtDM.icns
@@ -859,6 +1055,12 @@ caQtDM_Viewer {
                         DISTFILES += /Users/mezger/Documents/Entwicklung/qt/caqtdm_project/caQtDM_Viewer/src/Android/AndroidManifest.xml
                         DISTFILES += src/Android/res/values/libs.xml src/Android/build.gradle
                         ANDROID_PACKAGE_SOURCE_DIR = $$PWD/caQtDM_Viewer/src/Android
+
+                        SSLLIB = $$(SSLLIB)
+
+                        ANDROID_EXTRA_LIBS = \
+                        $$SSLLIB/libcrypto.so \
+                        $$SSLLIB/libssl.so
                 }
 
         win32 {
@@ -972,7 +1174,10 @@ Define_ZMQ_Lib{
         }
 
         unix:!macx {
-                 LIBS += -L$$(ZMQLIB) -Wl,-rpath,$$(ZMQLIB) -lzmq
+                LIBS += -L$$(ZMQLIB)  -lzmq
+                caqtdm_rpath {
+                    LIBS += -Wl,-rpath,$$(ZMQLIB)
+                }
                  #LIBS += $$(ZMQLIB)/libzmq.a
 	}
         macx {
@@ -983,8 +1188,45 @@ Define_ZMQ_Lib{
                 LIBS += $$(ZMQLIB)/libzmq.lib
 	     }
 	    ReleaseBuild {
-                LIBS += $$(ZMQLIB)/libzmq.lib
-	    }
+                _ZMQ_CONSTRUCTED_LIB_NAME = ""
+                
+                ZMQ_VERSION = $$(ZMQ_VERSION)
+
+                isEmpty(ZMQ_VERSION) {
+                    ZMQ_VERSION = 4_3_5
+                }
+
+                _ZMQ_VERSION_PARTS = $$split(ZMQ_VERSION, ".")
+				ZMQ_VERSION = $$join(_ZMQ_VERSION_PARTS, "_")
+                message(ZeroMQ version: $${ZMQ_VERSION})
+
+                greaterThan(QMAKE_MSC_VER, 1929): \ 
+                win32 {
+                    _ZMQ_CONSTRUCTED_LIB_NAME = libzmq-v143-mt-$${ZMQ_VERSION}.lib
+                } else: greaterThan(QMAKE_MSC_VER, 1919): \
+                win32 {
+                    _ZMQ_CONSTRUCTED_LIB_NAME = libzmq-v142-mt-$${ZMQ_VERSION}.lib
+                }
+
+                message(Visual Studio version detected: $${_ZMQ_CONSTRUCTED_LIB_NAME})
+
+                ZMQ_LIB_SUFFIX = $$(ZMQ_LIB_SUFFIX)
+                !isEmpty(ZMQ_LIB_SUFFIX) {
+                    _ZMQ_CONSTRUCTED_LIB_NAME = libzmq-$$(ZMQ_LIB_SUFFIX)-$${ZMQ_VERSION}.lib
+                }
+                
+                isEmpty(_ZMQ_CONSTRUCTED_LIB_NAME): _ZMQ_CONSTRUCTED_LIB_NAME = libzmq-v142-mt-$${ZMQ_VERSION}.lib
+
+                _ZMQ_OVERRIDE_LIB_NAME = $$(ZMQ_LIB_NAME)
+                isEmpty(_ZMQ_OVERRIDE_LIB_NAME) {
+                    ZMQ_LIB_NAME = $${_ZMQ_CONSTRUCTED_LIB_NAME}
+                } else {
+                    ZMQ_LIB_NAME = $${_ZMQ_OVERRIDE_LIB_NAME}
+                }
+                
+                message(Using ZeroMQ library: $${ZMQ_LIB_NAME})
+                LIBS += $$(ZMQLIB)/$${ZMQ_LIB_NAME}
+            }
 	}
 }
 
@@ -996,17 +1238,21 @@ Define_Build_Python {
 	   unix:!macx {
 	      DEFINES += PYTHON
 	      INCLUDEPATH += $(PYTHONINCLUDE)
-	      LIBS += -L$(PYTHONLIB) -Wl,-rpath,$(PYTHONLIB) -lpython$(PYTHONVERSION)
+              LIBS += -L$(PYTHONLIB)  -lpython$(PYTHONVERSION)
+              caqtdm_rpath {
+                  LIBS += -Wl,-rpath,$(PYTHONLIB)
+              }
+
 	    }
 	    unix:macx {
-	       DEFINES += PYTHON
-               #INCLUDEPATH += /System/Library/Frameworks/Python.framework/Versions/$(PYTHONVERSION)/include/python$(PYTHONVERSION)/
-               #LIBS += -L/System/Library/Frameworks/Python.framework/Versions/$(PYTHONVERSION)/lib/ -lpython$(PYTHONVERSION)
-
-               #this has to be done in a better way, but works!
-               LIBS += -L/usr/local/Cellar/python/3.7.1/Frameworks/Python.framework/Versions/3.7/lib/ -lpython3.7
-               INCLUDEPATH += /usr/local/Cellar/python/3.7.1/Frameworks/Python.framework/Versions/3.7/include/python3.7m/
-	    }
+               _PYTHONINCLUDE=$$(PYTHONINCLUDE)
+               !isEmpty(_PYTHONINCLUDE){
+                    message("using MAC python settings")
+                    DEFINES += PYTHON
+                    LIBS += -L$(PYTHONLIB)  -lpython$(PYTHONVERSION)
+                    INCLUDEPATH += += $(PYTHONINCLUDE)
+                }
+            }
         }
         }
     }

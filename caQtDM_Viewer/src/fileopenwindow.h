@@ -68,7 +68,7 @@
         char blop[BlopSize];
     };
 
-#ifdef linux
+#if defined(linux) || defined(__FreeBSD__)
 #  include <unistd.h>
 #endif
 // this sleep will not block the GUI and QThread::msleep is protected in Qt4.8 (so do not use that)
@@ -117,7 +117,6 @@
 
 
      QString getStatusBarContents();
-     QString getLogFilePath();
 
 
      void MSQ_getPtrs(int &front, int &rear) {
@@ -255,15 +254,15 @@ public slots:
      void Callback_ReloadAllWindows();
 
 protected:
-#ifdef MOBILE
      virtual bool event(QEvent *);
-#endif
+
      virtual void timerEvent(QTimerEvent *e);
      Qt::GestureType fingerSwipeGestureType;
      bool eventFilter(QObject *obj, QEvent *event);
 
 signals:
    void messageAvailable(QString message);
+   void themeChanged();
 
 private:
    void setDirectUpdateTypeOnRestart(const QDateTime);
@@ -285,6 +284,8 @@ private:
      QMainWindow *pvWindow;
      QTableWidget* pvTable;
      QTimer *timer;
+
+     QTimer *heartBeatTimer;
 
      bool mustOpenFile;
 

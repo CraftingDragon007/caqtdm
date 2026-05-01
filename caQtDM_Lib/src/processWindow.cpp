@@ -25,12 +25,15 @@
 
 #include "processWindow.h"
 
-processWindow::processWindow(QWidget *parent, bool display, QWidget *caller): QMainWindow(parent)
+Q_LOGGING_CATEGORY(processWindowLog, "caqtdm.lib.processwindow")
+
+processWindow::processWindow(QWidget *parent, bool display, bool CloseExit0, QWidget *caller): QMainWindow(parent)
 {
     outputWindow = (QTextEdit *) Q_NULLPTR;
     debugWindow = (QTextEdit *) Q_NULLPTR;
     splitter = (QSplitter *) Q_NULLPTR;
     displayWindow = display;
+    m_CloseExit0 = CloseExit0;
     thisCaller = caller;
     thisPID =(Q_PID) Q_NULLPTR;
 
@@ -89,7 +92,7 @@ bool processWindow::tryTerminate()
         termProcess->terminate();
         termProcess->waitForFinished(500);
         if( termProcess->state() == QProcess::Running) {
-            qDebug() << "process still running, I will kill it";
+            qCInfo(processWindowLog) << "process still running, I will kill it";
             termProcess->kill();
         }
     }
@@ -101,11 +104,16 @@ bool processWindow::tryTerminate()
 void processWindow::closeEvent(QCloseEvent *e)
 {
     if (!tryTerminate()) {
-        qDebug() << "processWindow -- Warning: cannot terminate process";
+        qCInfo(processWindowLog) << "processWindow -- Warning: cannot terminate process";
     } else {
-        //qDebug() << "processWindow -- Process terminated";
+        qCDebug(processWindowLog) << "processWindow -- Process terminated";
     }
     e->accept();
+}
+
+void processWindow::setArguments(const QString &newArguments)
+{
+    arguments = newArguments;
 }
 
 
@@ -117,16 +125,26 @@ bool processWindow::isRunning()
 void processWindow::start(QString command)
 {
     connect(termProcess, SIGNAL(finished(int, QProcess::ExitStatus)), SLOT(processFinished()));
-    connect(termProcess, SIGNAL(started()), SLOT(processStarted()));
-    connect(termProcess, SIGNAL(error(QProcess::ProcessError)), SLOT(processError(QProcess::ProcessError)));
+    connect(termProcess, SIGNAL(started()),this,  SLOT(processStarted()));
 
+#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
+    connect(termProcess, SIGNAL(error(QProcess::ProcessError)),this, SLOT(processError(QProcess::ProcessError)));
+#else
+    connect(termProcess, SIGNAL(errorOccurred(QProcess::ProcessError )),this, SLOT(processError(QProcess::ProcessError)));
+#endif
     if(displayWindow) {
        connect(termProcess, SIGNAL(readyReadStandardError()), this, SLOT(updateError()));
        connect(termProcess, SIGNAL(readyReadStandardOutput()), this, SLOT(updateText()));
        debugWindow->setText(command);
     }
+    qCInfo(processWindowLog) << "command:" << command;
+    if (arguments.isEmpty()){
+        termProcess->start(command);
+    }else{
+        QStringList data=arguments.split(" ");
+        termProcess->start(command,data);
+    }
 
-    termProcess->start(command);
 }
 
 void processWindow::updateError()
@@ -165,6 +183,11 @@ void processWindow::processFinished()
     QTextCursor cursor = outputWindow->textCursor(); // retrieve  cursor
     cursor.movePosition(QTextCursor::End);           // move to the end of text
     outputWindow->setTextCursor(cursor);
+    if ( m_CloseExit0 && (termProcess->exitCode()==0)){
+        tryTerminate();
+    }
+
+
 }
 
 void processWindow::processStarted()

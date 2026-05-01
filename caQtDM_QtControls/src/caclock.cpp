@@ -162,4 +162,6 @@ void caClock::setAlarmColors(short status, bool force)
       setPalette( colorTheme( c) );
     }
 }
+//#ifndef MOBILE
 #include "moc_caclock.cpp"
+//#endif

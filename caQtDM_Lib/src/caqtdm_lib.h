@@ -42,7 +42,9 @@
 #include <QFile>
 #include <QMap>
 #include <QtGui>
+#ifndef MOBILE
 #include <QtUiTools>
+#endif
 #include <QWhatsThis>
 #include <QTextBrowser>
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -60,6 +62,8 @@
 #include <QPrinter>
 #include <QPrintDialog>
 #endif
+#include <cahmiconfigtransferitem.h>
+#include <hmiapplicationeventfilter.h>
 #include <QClipboard>
 
 #include <QUiLoader>
@@ -131,6 +135,12 @@ public:
     void UpdateGauge(EAbstractGauge *w, const knobData &data);
     ControlsInterface * getControlInterface(QString plugininterface);
 
+    static QList<QSharedPointer<caHMIConfigTransferItem>> externalHmiConfigList;
+    static QReadWriteLock externalHmiConfigListLock;
+
+    static QList<caHMIConfigTransferItem*> hmiConfigList;
+    static QReadWriteLock hmiConfigListLock;
+
     // interface implementation
     int addMonitor(QWidget *thisW, knobData *data, QString pv, QWidget *w, int *specData, QMap<QString, QString> map, QString *pvRep);
     knobData* GetMutexKnobDataPtr(int index);
@@ -144,7 +154,7 @@ public:
     void grabSwipeGesture(Qt::GestureType fingerSwipeGestureTypeID);
 #endif
 
-#ifdef linux
+#if defined(linux) || defined(__FreeBSD__)
     QString getDefaultPrinterFromSystem() {
         QProcess Process;
         QString exec = "lpstat";
@@ -194,11 +204,11 @@ public:
     void print()
     {
 #ifndef MOBILE
-#ifdef linux
+#if defined(linux) || defined(__FreeBSD__)
         QString defaultPrinter =  getDefaultPrinterFromSystem();
 #endif
         QPrinter *printer = new QPrinter;
-#ifdef linux
+#if defined(linux) || defined(__FreeBSD__)
         printer->setPrinterName(defaultPrinter);
         printer->setOutputFileName(0);
         printer->setPrintProgram("lpr");
@@ -212,7 +222,7 @@ public:
         printer->setOutputFormat(QPrinter::NativeFormat);
         QPrintDialog *printDialog = new QPrintDialog(printer, this);
 
-#ifdef linux
+#if defined(linux) || defined(__FreeBSD__)
         QList<QWidget*> childWidgets = printDialog->findChildren<QWidget*>(QLatin1String("printers"));
         if (childWidgets.count() == 1) {
             QComboBox* comboBox(qobject_cast<QComboBox*>(childWidgets.at(0)));
@@ -356,6 +366,7 @@ private:
     bool reaffectText(QMap<QString, QString> map, QString *text, QWidget *w);
     int InitVisibility(QWidget* widget, knobData *kData, QMap<QString, QString> map,  int *specData, QString info);
     void postMessage(QtMsgType type, char *msg);
+    void postMessageAndLog(QtMsgType type, char *msg, QMessageLogger::CategoryFunction category);
     int Execute(char *command);
 
     void TreatRequestedWave(QString pv, QString text, caWaveTable::FormatType fType, int index, QWidget *w);
@@ -385,6 +396,7 @@ private:
     qreal fontResize(double factX, double factY, QVariantList list, int usedIndex);
     ControlsInterface *getPluginInterface(QWidget *w);
     void UndefinedMacrosWindow();
+    void GlobalShortcutWindow();
 
 #ifdef MOBILE
     bool eventFilter(QObject *obj, QEvent *event);
@@ -413,11 +425,16 @@ private:
     QTableWidget* macroTable;
     QDialog *macroWindow;
 
+    QDialog *shortcutWindow;
+
     int level;
     QString cainclude_path;
     // 50 levels of includes should do it
     QString savedMacro[CAQTDM_MAX_INCLUDE_LEVEL];
     QString savedFile[CAQTDM_MAX_INCLUDE_LEVEL];
+
+    QString m_normalTextColorHex;
+    QString m_debugTextColorHex;
 
 #ifndef MOBILE
     myQProcess *proc;
@@ -463,6 +480,23 @@ private:
 
     QMap<int, caStripPlot*> stripList;          // list of stripplots with key group
     QList<int> stripGroupList;                  // group numbers found
+
+    bool hasCommonParent(QObject *origin, QObject *target);
+
+    bool containsShortcut(const QKeySequence& sequence, Qt::Key qtKey, Qt::KeyboardModifiers qtModifiers);
+
+    HMIApplicationEventFilter *globalEventFilter;
+
+    void hmiHandleKeyPressed(QObject *target, QKeyEvent *event);
+
+    void hmiHandleMouse(QObject *target, QMouseEvent *event);
+
+    void hmiHandleIncomingEvent(QObject* target, QEvent *event, QEvent *originalEvent, bool isSourceExternal);
+
+    void wmHandleResize(QObject* target, QWidget* wmSignalRescaleWidget, QResizeEvent *event, const QString &channelA, const QString &channelB);
+
+    QString wmHandleSoftChannel(QString channel, QMap<QString, QString> map, bool doNothing, QString objectName);
+
     QHash<QString, QString> softvars;                // use a hash list to test if same variable names
 
     QString defaultPlugin;
@@ -471,9 +505,15 @@ private:
     QString handle_Macro_withConst(QString key, QString value, QString Text);
     QString handle_Macro_Scan(QString Text, QMap<QString, QString> map, macro_parser parse);
     QString handle_Macro_Constants(QString Text);
+    QStringList treat_read_MacroCommand(QStringList args);
+
+public slots:
+    void messageWindowOutput(const QtMsgType type, const QString &message);
+
 private slots:
     void Callback_CaCalc(double value) ;
     void Callback_UndefinedMacrowindowExit();
+    void Callback_GlobalShortcutWindowExit();
     void Callback_EApplyNumeric(double value);
     void Callback_ENumeric(double value);
     void Callback_Spinbox(double value);
@@ -510,6 +550,10 @@ private slots:
     void handleFileChanged(const QString&);
 
     void Callback_WriteDetectedValues(QWidget* w);
+    void Callback_CopyMarked();
+    void clearSelection();
+
+    void Callback_ExternalHmiEventReceived(int eventType, int senderPid, qint64 timestamp, const QByteArray& payload);
 
     void Callback_ReloadWindowL() {
 
@@ -546,6 +590,8 @@ private slots:
     }
 
     void updateResize();
+    void themeChanged();
+
 #ifndef MOBILE
     void send_delayed_popup_signal();
 #endif

@@ -5,34 +5,49 @@ contains(QT_VER_MAJ, 4) {
       CONFIG += designer
 }
 contains(QT_VER_MAJ, 5) {
-      CONFIG += plugin qt thread warn_on
+      CONFIG += plugin qt thread warn_on cahmi
       QT += widgets uitools opengl
-      ios | android {
-         greaterThan(QT_MINOR_VERSION, 4) {
-            QT += uiplugin
-         } else {
-            QT += designer
-         }
-      } else {
-          QT += designer
+      DEFINES += CAHMI
+      !MOBILE {
+        QT += designer
+      }else{
+        QT += uiplugin
       }
 }
 contains(QT_VER_MAJ, 6) {
-      CONFIG += plugin qt thread warn_on
-      QT += widgets uitools opengl
+      CONFIG += plugin qt thread warn_on cahmi
+      QT += widgets opengl
+      !android {
+        QT += uitools
+      }
+      DEFINES += CAHMI
       !MOBILE {
         QT += designer
+      }else{
+        !android {
+          QT += uiplugin
+        }
       }
 }
 TEMPLATE = lib
 
+
 ios | android {
   CONFIG += static
-  LIBS += $$(QWTHOME)/lib/$$(QWTLIBNAME).a
-  LIBS += ../$(CAQTDM_COLLECT)/libqtcontrols.a
+  android {
+    QT += xml
+    LIBS += $$(QWTLIB)/lib-$$(QWTLIBNAME)_$${QT_ARCH}.a
+    LIBS += ../$(CAQTDM_COLLECT)/libqtcontrols_$${QT_ARCH}.a
+  }
+  ios {
+    LIBS += $$(QWTHOME)/lib/$$(QWTLIBNAME).a
+    LIBS += ../$(CAQTDM_COLLECT)/libqtcontrols.a
+  }
   INCLUDEPATH += $(QWTINCLUDE)
   INCLUDEPATH += $$(QWTHOME)/src
-  INCLUDEPATH += $(QTHOME)/include
+  ios {
+    INCLUDEPATH += $(QTHOME)/include
+  }
   MOC_DIR = moc
   OBJECTS_DIR = obj
 }
@@ -73,8 +88,12 @@ unix:!ios {
    }
 
    unix:!macx {
-      LIBS += -L$(QWTLIB) -Wl,-rpath,$(QWTLIB) -l$$(QWTLIBNAME)
-      LIBS += -L$(CAQTDM_COLLECT) -Wl,-rpath,$(QTDM_RPATH) -lqtcontrols
+      LIBS += -L$(QWTLIB) -l$$(QWTLIBNAME)
+      LIBS += -L$(CAQTDM_COLLECT) -lqtcontrols
+      caqtdm_rpath {
+          LIBS += -Wl,-rpath,$(QTDM_RPATH)  -Wl,-rpath,$(QWTLIB)
+      }
+
    }
 
    macx: {

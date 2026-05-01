@@ -46,6 +46,12 @@
 #include <calinedraw.h>
 #include <replacemacro.h>
 #include "wmsignalpropagator.h"
+#include <wmsignalrescale.h>
+
+#ifdef CAHMI
+#include <cahmiconfig.h>
+#endif
+
 
 #ifndef MOBILE
     #include <cadoubletabwidgetextension.h>

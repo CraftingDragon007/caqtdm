@@ -1,4 +1,4 @@
-CAQTDM_VERSION = V4.5.0
+CAQTDM_VERSION = V4.6.0
 
 exists(../.git) {
   GIT_VERSION = $$system(git --version)
@@ -52,7 +52,7 @@ unix {
 
 
 # Set the overall Deployment Target for MACOSX
-QMAKE_MACOSX_DEPLOYMENT_TARGET = 15.0
+# QMAKE_MACOSX_DEPLOYMENT_TARGET = 18
 
 # at psi the designer in 4.8.2 is patched in order to display tooltip description (not a nice test, but for now ok)
 # when the qt version is higher then 5.5.0 then we can also compile the plugins with description texts
@@ -164,6 +164,48 @@ else {
       message( "Configuring build for GPS plugin" )
     }
 }
+# Unittests at the moment not in the homebrew build
+_HOMEBREWMAKEJOBS = $$(HOMEBREW_MAKE_JOBS)
+isEmpty(_HOMEBREWMAKEJOBS) {
+    message("caQtDM will be build with unit tests")
+    CONFIG += caqtdm_with_tests
+}
+else {
+    message( "caQtDM will be build without unit tests" )
+}
+
+
+
+
+
+_CAQTDM_NORPATH = $$(CAQTDM_NORPATH)
+isEmpty(_CAQTDM_NORPATH) {
+    message("caQtDM will be build with RPATH")
+    CONFIG += caqtdm_rpath
+}
+else {
+    message( "caQtDM will be build without RPATH" )
+}
+
+_CAQTDM_OPCUA = $$(CAQTDM_OPCUA)
+isEmpty(_CAQTDM_OPCUA) {
+    message("OPCUA Plugin not selected, will not be built.")
+} else {
+    qtHaveModule(opcua) {
+	    message("Configuring build to include opcua plugin")
+		CONFIG += opcua
+
+        QT_OPCUA_ENCRYPTION_HEADER = QtOpcUa/QOpcUaX509CertificateSigningRequest
+		exists($$quote($$[QT_INSTALL_HEADERS]/$$QT_OPCUA_ENCRYPTION_HEADER)) {
+		    DEFINES += QT_OPCUA_X509
+			message("Building OPCUA plugin with encryption.")
+		} else {
+		    message("No QOpcUaX509 headers available, skipping OPCUA encryption.")
+		}
+	} else {
+	    message("Qt module opcua was not found, OPCUA plugin will not be built.")
+	}
+}
 
 # undefine CONFIG epics4 for epics4 plugin support with epics version 4 (only preliminary version as example)
 # one can specify channel access with ca:// and pv access with pva:// (both use the epics4 plugin)
@@ -264,6 +306,7 @@ ios | android {
 bsread: { DEFINES += BSREAD }
 epics4: { DEFINES += EPICS4 }
 archiveSF: { DEFINES += ARCHIVESF }
+archiveHTTP: { DEFINES += ARCHIVEHTTP }
 archiveHIPA: { DEFINES += ARCHIVEHIPA }
 archivePRO: { DEFINES += ARCHIVEPRO }
 archiveCA: { DEFINES += ARCHIVECA }
@@ -294,8 +337,29 @@ DEFINES += TARGET_DESCRIPTION=\"\\\"$${TARGET_DESCRIPTION}\\\"\"
 DEFINES += TARGET_COPYRIGHT=\"\\\"$${TARGET_COPYRIGHT}\\\"\"
 DEFINES += TARGET_INTERNALNAME=\"\\\"$${TARGET_INTERNALNAME}\\\"\"
 DEFINES += TARGET_VERSION_STR=\"\\\"$${CAQTDM_VERSION}\\\"\"
+
+DEFINES += QT_MESSAGELOGCONTEXT
+
+# 4.6.0
+# update fix for unconnected Channels
+# %read command for cainclude and caRelatedDisplay
+# old files cleanup
+# implement pipelines for various target systems (github actions)
+# added various packing mechanissmen
+# caWavetable got some signals and slots for generating for vertical and horizontal sync
+# caWavetable added header manipulation functions
+# fix in RPM dependencies
+# cainfo Panel corrections and remove EPICS data requests (avoid unesseary channel searchs)
+# recoloring caDoubleTabWidget via Stylesheets
+# added a CloseOnExit0 for the caScriptbutton
+# added the localisation for characters to caMenu and caMessageButton
+# added selecting/copy/paste mechanisem at various parts of the caqtdm
+# caMessageButton can now set strings
+# changed the build system that for linux systems to build without RPATH
+
+
 # 4.5.0
-# special character feature handling by CAQTDM_CUSTOM_UNIT_REPLACMETS
+# special character feature handling by CAQTDM_CUSTOM_UNIT_REPLACEMETS
 # caStripplot improved data handling
 # optimized UI loading by reducing the load of incoming data (CAQTDM_SUPPRESS_UPDATES_ONLOAD)
 # improved colors in caQtDM status window

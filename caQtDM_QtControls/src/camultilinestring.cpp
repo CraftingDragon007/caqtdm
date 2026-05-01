@@ -35,6 +35,8 @@
 #include <QApplication>
 #include <QClipboard>
 
+Q_LOGGING_CATEGORY(caMultiLineStringLog, "caqtdm.widgets.camultilinestring")
+
 caMultiLineString::caMultiLineString(QWidget *parent) : QPlainTextEdit(parent), FontScalingWidget(this)
 {
     // to start with, clear the stylesheet, so that playing around
@@ -47,7 +49,7 @@ caMultiLineString::caMultiLineString(QWidget *parent) : QPlainTextEdit(parent), 
     QFontInfo info(font);
     //font.setStyleStrategy(QFont::NoAntialias);
     QString family = info.family();
-    //printf("got font %s\n", qasc(family));
+    qCDebug(caMultiLineStringLog) << "got font" << family;
     if(!family.contains("Lucida Sans Typewriter")) {
         QFont  newfont("Monospace");   // not very nice, while a a dot inside the zero to distinguish from o
         newfont.setStyleHint(QFont::TypeWriter);
@@ -250,10 +252,10 @@ bool caMultiLineString::event(QEvent *e)
           setStyleSheet("");
           QString c=  palette().color(QPalette::Base).name();
           defBackColor = QColor(c);
-          //printf("default back color %s %s\n", qasc(c), qasc(this->objectName()));
+          qCDebug(caMultiLineStringLog) << "default back color" << c <<this->objectName();
           c=  palette().color(QPalette::Text).name();
           defForeColor = QColor(c);
-          //printf("default fore color %s %s\n", qasc(c), qasc(this->objectName()));
+          qCDebug(caMultiLineStringLog) << "default fore color" << c << this->objectName();
 
           if(!defBackColor.isValid()) defBackColor = QColor(255, 248, 220, 255);
           if(!defForeColor.isValid()) defForeColor = Qt::black;
@@ -274,13 +276,6 @@ bool caMultiLineString::event(QEvent *e)
             setEnabled(false);
         }
 
-    } else if(e->type() == QEvent::KeyPress) {
-
-        QKeyEvent *key_event = static_cast<QKeyEvent*>(e);
-        if (key_event->matches(QKeySequence::Copy)) {
-            emit copy();
-        }
-
     }
     return QPlainTextEdit::event(e);
 }
@@ -294,7 +289,7 @@ void caMultiLineString::setAlarmColors(short status, double value, QColor bgAtIn
     switch (Alarm) {
 
     case NO_ALARM:
-        //qDebug() << "no alarm" << kPtr->pv;
+        qCDebug(caMultiLineStringLog) <<  "no alarm";
         if(thisColorMode == Alarm_Static || thisColorMode == Alarm_Default) {
             c = AL_GREEN;
             if(thisAlarmHandling == onForeground) setForeAndBackground(c, bgAtInit, thisFrameColor);
@@ -305,7 +300,7 @@ void caMultiLineString::setAlarmColors(short status, double value, QColor bgAtIn
         break;
 
     case MINOR_ALARM:
-        //qDebug() << "minor alarm";
+        qCDebug(caMultiLineStringLog) <<  "minor alarm";
         if(thisColorMode == Alarm_Static || thisColorMode == Alarm_Default) {
             c = AL_YELLOW;
             if(thisAlarmHandling == onForeground) setForeAndBackground(c, bgAtInit, thisFrameColor);
@@ -316,7 +311,7 @@ void caMultiLineString::setAlarmColors(short status, double value, QColor bgAtIn
         break;
 
     case MAJOR_ALARM:
-        //qDebug() << "serious alarm" << kPtr->pv;
+        qCDebug(caMultiLineStringLog) <<  "serious alarm";
         if(thisColorMode == Alarm_Static || thisColorMode == Alarm_Default) {
             c = AL_RED;
             if(thisAlarmHandling == onForeground) setForeAndBackground(c, bgAtInit, thisFrameColor);
@@ -327,7 +322,7 @@ void caMultiLineString::setAlarmColors(short status, double value, QColor bgAtIn
         break;
 
     case INVALID_ALARM:
-        //qDebug() << "invalid alarm";
+        qCDebug(caMultiLineStringLog) <<  "invalid alarm";
         if(thisColorMode == Alarm_Static) {
             c =AL_WHITE;
             if(thisAlarmHandling == onForeground) setForeAndBackground(c, bgAtInit, thisFrameColor);
@@ -338,12 +333,12 @@ void caMultiLineString::setAlarmColors(short status, double value, QColor bgAtIn
         break;
 
     case NOTCONNECTED:
-        //qDebug() << "no connection";
+        qCDebug(caMultiLineStringLog) <<  "no connection";
         forceForeAndBackground(AL_WHITE, AL_WHITE, thisFrameColor);
         break;
 
     default:
-        //qDebug() << "Alarm default" << status;
+        qCDebug(caMultiLineStringLog) <<  "Alarm default" << status;
         if(thisColorMode == Alarm_Static) {
             c = AL_DEFAULT;
             if(thisAlarmHandling == onForeground) setForeAndBackground(c, bgAtInit, thisFrameColor);
@@ -404,7 +399,7 @@ QSize caMultiLineString::sizeHint() const
     int w = QMETRIC_QT456_FONT_WIDTH(fm,text());
     int h = fm.height();
     QSize size(w, h);
-    //printf("ESimpleLabel \e[1;33msizeHint\e[0m \"%s\" returning size w %d h %d\n", objectName(), size.width(), size.height());
+    qCDebug(caMultiLineStringLog) << "ESimpleLabel \e[1;33msizeHint\e[0m \"" << objectName() << "\" returning size w" << size.width() << "h" << size.height();
     return size;
 }
 
@@ -415,7 +410,8 @@ QSize caMultiLineString::minimumSizeHint() const
         size = QPlainTextEdit::minimumSizeHint();
     else
         size = sizeHint();
-    //printf("ESimpleLabel \e[0;33mminimumSizeHint\e[0m \"%s\" returning size w %d h %d\n", objectName(), size.width(), size.height());
+    qCDebug(caMultiLineStringLog) << "ESimpleLabel \e[1;33mminimumsizeHint\e[0m \"" << objectName() << "\" returning size w" << size.width() << "h" << size.height();
+
     return size;
 }
 
@@ -424,5 +420,11 @@ void caMultiLineString::copy()
     QString s = textCursor().selectedText();
     QClipboard *clipboard = QApplication::clipboard();
     clipboard->setText(s);
+}
+
+void caMultiLineString::clearSelection(){
+    QTextCursor c = textCursor();
+    c.clearSelection();
+    setTextCursor(c);
 }
 

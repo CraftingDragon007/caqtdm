@@ -1,0 +1,65 @@
+class Epicsbase < Formula
+  desc "Experimental Physics and Industrial Control System"
+  homepage "https://epics-controls.org/"
+  url "https://github.com/epics-base/epics-base.git",
+     tag:      "R7.0.9",
+     revision: "86154953f57b1796e7cb81bbc807eae120b9e840"
+  license "EPICS"
+  depends_on "pkg-config" => :build
+  depends_on "perl"
+  depends_on "readline"
+  patch do
+    url "https://github.com/HelgeBrands/homebrew-core/raw/refs/heads/main/Patches/epicsbase/fix-build.diff"
+    sha256 "b988e750302893a206ed01e854dec0df04b4a23707a92bdc9f4096e0936c9b2d"
+  end
+  def install
+    # EPICS erwartet, dass diese Umgebungsvariablen gesetzt sind
+    ENV["EPICS_HOST_ARCH"] = `./startup/EpicsHostArch`.strip
+    hostarch = `./startup/EpicsHostArch`.strip
+    puts "EPICS_HOST_ARCH = #{hostarch}"
+    ENV["EPICS_BASE"] = buildpath
+    # Optional: Anpassung der Konfigurationsdateien
+    inreplace "configure/CONFIG_SITE", /#?INSTALL_LOCATION=.*/, "INSTALL_LOCATION=#{prefix}"
+    system "make"
+    # Installation: einfach alles kopieren
+    prefix.install Dir["*"]
+
+    bin.install_symlink "#{prefix}/bin/#{hostarch}/caget" => "caget"
+    bin.install_symlink "#{prefix}/bin/#{hostarch}/caput" => "caput"
+    bin.install_symlink "#{prefix}/bin/#{hostarch}/catime" => "catime"
+    bin.install_symlink "#{prefix}/bin/#{hostarch}/cainfo" => "cainfo"
+    bin.install_symlink "#{prefix}/bin/#{hostarch}/caEventRate" => "caEventRate"
+    bin.install_symlink "#{prefix}/bin/#{hostarch}/camonitor" => "camonitor"
+
+    bin.install_symlink "#{prefix}/bin/#{hostarch}/pvget" => "pvget"
+    bin.install_symlink "#{prefix}/bin/#{hostarch}/pvput" => "pvput"
+    bin.install_symlink "#{prefix}/bin/#{hostarch}/pvinfo" => "pvinfo"
+    bin.install_symlink "#{prefix}/bin/#{hostarch}/pvlist" => "pvlist"
+    bin.install_symlink "#{prefix}/bin/#{hostarch}/pvmonitor" => "pvmonitor"
+
+    bin.install_symlink "#{prefix}/bin/#{hostarch}/softIoc" => "softIoc"
+    bin.install_symlink "#{prefix}/bin/#{hostarch}/softIoc" => "softioc"
+    bin.install_symlink "#{prefix}/bin/#{hostarch}/softIocPVA" => "softIocPVA"
+    bin.install_symlink "#{prefix}/bin/#{hostarch}/softIocPVA" => "softiocpva"
+  end
+
+  def caveats
+    <<~EOS
+      EPICS Base wurde installiert.
+
+      Um EPICS korrekt zu verwenden, füge dies zu deiner Shell-Konfiguration hinzu:
+
+        export EPICS_BASE=#{opt_prefix}
+        export EPICS_HOST_ARCH=$(#{opt_prefix}/startup/EpicsHostArch)
+
+    EOS
+  end
+
+  test do
+    # einfacher Test, ob z.B. caput installiert ist
+    assert_path_exists "#{prefix}/bin/#{hostarch}/caput", :exist?
+    assert_path_exists "#{prefix}/bin/#{hostarch}/pvput", :exist?
+    assert_path_exists "#{prefix}/bin/#{hostarch}/softIoc", :exist?
+    assert_path_exists "#{prefix}/bin/#{hostarch}/softIocPVA", :exist?
+  end
+end

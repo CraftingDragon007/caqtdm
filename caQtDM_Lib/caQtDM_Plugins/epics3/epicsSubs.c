@@ -1,3 +1,4 @@
+
 /*
  *  This file is part of the caQtDM Framework, developed at the Paul Scherrer Institut,
  *  Villigen, Switzerland
@@ -218,14 +219,12 @@ void PrepareDeviceIO(void)
                 optimizeConnections = true;
                 if(firstTime) {
                     C_postMsgEvent(messageWindowPtr, 1, vaPrintf("caQtDM will close epics connections for data in invisible tabs while CAQTDM_OPTIMIZE_EPICS3CONNECTIONS is set to TRUE\n"));
-                    printf("caQtDM -- Close epics connections for data in invisible tabs while CAQTDM_OPTIMIZE_EPICS3CONNECTIONS is TRUE\n");
                 }
             }
         }
         if(!optimizeConnections) {
             if(firstTime) {
                 C_postMsgEvent(messageWindowPtr, 1, vaPrintf("caQtDM will suspend epics connections for data in invisible tabs while CAQTDM_OPTIMIZE_EPICS3CONNECTIONS not set to TRUE\n"));
-                printf("caQtDM -- Suspend epics connections for data in invisible tabs while CAQTDM_OPTIMIZE_EPICS3CONNECTIONS not set to TRUE\n");
             }
         }
         firstTime = false;
@@ -856,7 +855,7 @@ int CreateAndConnect(int index, knobData *kData, int rate, int skip)
 
     //printf("we have to add an epics device <%s>\n", kData->pv);
     status = ca_create_channel(kData->pv,
-                               (void(*)())connectCallback,
+                               connectCallback,
                                info,
                                CA_PRIORITY_DEFAULT,
                                &info->ch);
@@ -890,7 +889,7 @@ void EpicsReconnect(knobData *kData)
 
     if (info != (connectInfo *) 0) {
         status = ca_create_channel(kData->pv,
-                                   (void(*)())connectCallback,
+                                   connectCallback,
                                    info,
                                    CA_PRIORITY_DEFAULT,
                                    &info->ch);
@@ -1356,7 +1355,7 @@ int EpicsGetTimeStamp_Connected(chid ch,char *pv, char *timestamp)
     status = ca_pend_io(CA_TIMEOUT/2);
     if (status == ECA_NORMAL) {
         epicsTimeToStrftime(tsString, 32, "%b %d, %Y %H:%M:%S.%09f", &ctrlS.stamp);
-        sprintf(timestamp, "TimeStamp: %s\n", tsString);
+        sprintf(timestamp, "TimeStamp: %s", tsString);
     } else {
         strcpy(timestamp, "-timestamp timeout-");
     }
@@ -1394,6 +1393,7 @@ int EpicsGetDescription(char *pv, char *description)
     chid     ch;
     int status;
     pv_desc pvDesc = {'\0'};
+    pv_desc pvDescTarget = {'\0'};
     char * pch;
     dbr_string_t value;
     strcpy(description, "");
@@ -1411,10 +1411,9 @@ int EpicsGetDescription(char *pv, char *description)
 
     if (pch) *pch='\0';
 
-    sprintf(pvDesc, "%s.DESC", pvDesc);
-
+    sprintf(pvDescTarget, "%s.DESC", pvDesc);
     // get description
-    status = ca_create_channel(pvDesc, Q_NULLPTR, 0, CA_PRIORITY, &ch);
+    status = ca_create_channel(pvDescTarget, Q_NULLPTR, 0, CA_PRIORITY, &ch);
     if (ch == (chid) 0) return !ECA_NORMAL;
 
     status = ca_pend_io(CA_TIMEOUT/2);

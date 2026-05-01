@@ -60,6 +60,8 @@
 #define MAXIMUMSIZE 5000
 #define SOMEMORE 500
 
+Q_LOGGING_CATEGORY(caStripPlotLog, "caqtdm.widgets.castripplot")
+
 caStripPlot::~caStripPlot() {
 
     emit timerThreadStop();
@@ -96,7 +98,7 @@ caStripPlot::caStripPlot(QWidget *parent): QwtPlot(parent)
     autoscaleMinYOverride = false;
 
 #ifdef QWT_USE_OPENGL
-    printf("caStripplot uses opengl ?\n");
+    qCDebug(caStripPlotLog) << "caStripplot uses opengl";
     GLCanvas *canvas = new GLCanvas();
     canvas->setPalette( QColor( "khaki" ) );
     setCanvas(canvas);
@@ -358,7 +360,7 @@ void caStripPlot::selectYAxis(quint8 newYAxisIndex){
         newYAxisMax = qMax(newYAxisMax, 1e-19);
     }
 
-    qDebug() << "going from" << oldYAxisMin << "-" <<oldYAxisMax << "to" << newYAxisMin << "-" << newYAxisMax;
+    qCInfo(caStripPlotLog) << "going from" << oldYAxisMin << "-" <<oldYAxisMax << "to" << newYAxisMin << "-" << newYAxisMax;
 
     bool isLinear = (thisYaxisType == linear);
     static_cast<PlotScaleDraw*>(axisScaleDraw(yLeft))->setConversion(oldYAxisMin, oldYAxisMax, newYAxisMin, newYAxisMax, isLinear);
@@ -385,7 +387,7 @@ void caStripPlot::defineXaxis(units unit, double period)
         interval = period * 60;
     } else {
         interval = 60;
-        printf("\nunknown unit\n");
+        qCWarning(caStripPlotLog) << "unknown unit";
     }
 
     // set xaxis
@@ -453,7 +455,7 @@ void caStripPlot::setYaxisType(yAxisType s)
  * */
 void caStripPlot::remapCurve(double newMin, double newMax,  quint8 curvIndex, bool isNewLog = false)
 {
-    //qDebug() << "remapping Curve: " << curvIndex << "min/max:" << newMin << newMax << "isNewLog:"<< isNewLog;
+    qCDebug(caStripPlotLog) << "remapping Curve: " << curvIndex << "min/max:" << newMin << newMax << "isNewLog:"<< isNewLog;
     // Start timer to measure performance:
     //QElapsedTimer timer;
     //timer.start();
@@ -541,13 +543,13 @@ void caStripPlot::remapCurve(double newMin, double newMax,  quint8 curvIndex, bo
     replot();
 
     // Print time it took to do conversions
-    //qDebug() << "Conversion took ms: " << timer.nsecsElapsed()/1000000.0;
+    //qCDebug(caStripPlotLog) << "Conversion took ms: " << timer.nsecsElapsed()/1000000.0;
 }
 
 void caStripPlot::RescaleCurves(int width, units unit, double period)
 {
 
-    //printf("canvas width=%d\n",width);
+    qCDebug(caStripPlotLog) << "canvas width=" << width;
 
     HISTORY = width; // equals canvas width
 
@@ -810,7 +812,7 @@ void caStripPlot::defineCurves(QStringList titles, units unit, double period, in
     bool propertyConversionOk;
     xAxisToleranceFactor = this->property("xAxisToleranceFactor").toFloat(&propertyConversionOk);
     if (!propertyConversionOk || xAxisToleranceFactor <= 0 || xAxisToleranceFactor >= 1){
-        qDebug() << "The Dynamic Property xAxisToleranceFactor is either not set or set incorrectly (not between 0 and 1) and will be replaced by default value 0.01 for Object:" << this->objectName();
+        qCWarning(caStripPlotLog) << "The Dynamic Property xAxisToleranceFactor is either not set or set incorrectly (not between 0 and 1) and will be replaced by default value 0.01 for Object:" << this->objectName();
         xAxisToleranceFactor = 0.01f;
     }
     // set plotpicker, same reason as xAxisToleranceFactor;
@@ -1073,7 +1075,7 @@ void caStripPlot::TimeOut()
 
     if(thisXticks < 1) nbTicks = 1; else nbTicks = thisXticks;
 
-    //printf("timeout for numberofcurves=%d\n", NumberOfCurves);
+    qCDebug(caStripPlotLog) << "timeout for numberofcurves=" << NumberOfCurves;
 
     mutex.lock();
 
@@ -1178,7 +1180,7 @@ void caStripPlot::RescaleAxis()
 void caStripPlot::setLegendAttribute(QColor c, QFont f, LegendAtttribute SW)
 {
 
-    //printf("fontsize=%.1f %s\n", f.pointSizeF(), qasc(this->objectName()));
+    qCDebug(caStripPlotLog) << "fontsize=" << f.pointSizeF() << this->objectName();
     //when legend text gets to small, hide it (will give then space for plot)
     setProperty("legendfontsize", f.pointSizeF());
 
@@ -1558,7 +1560,7 @@ bool caStripPlot::eventFilter(QObject *obj, QEvent *event)
             return true;
         }
         if(nButton==2) {
-            //printf("emit from %s\n", qasc(this->objectName()));
+            qCDebug(caStripPlotLog) << "emit from" << this->objectName();
             QPoint p;
             emit ShowContextMenu(p);
             return true;
@@ -1568,5 +1570,6 @@ bool caStripPlot::eventFilter(QObject *obj, QEvent *event)
     }
     return QObject::eventFilter(obj, event);
 }
-
+//#ifndef MOBILE
 #include "moc_castripplot.cpp"
+//#endif

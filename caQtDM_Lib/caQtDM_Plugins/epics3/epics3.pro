@@ -21,7 +21,7 @@ INCLUDEPATH    += ../
 INCLUDEPATH    += ../../src
 INCLUDEPATH    += $(EPICSINCLUDE)
 
-HEADERS         = epics3_plugin.h ../controlsinterface.h
+HEADERS         = epics3_plugin.h ../controlsinterface.h ../loggingcategories.h
 SOURCES         = epics3_plugin.cpp epicsSubs.c
 TARGET          = epics3_plugin
 android {

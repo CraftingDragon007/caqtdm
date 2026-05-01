@@ -1,0 +1,369 @@
+name: caQtDM Windows Package Build
+
+on:
+  workflow_dispatch:
+  pull_request:
+  schedule: # Daily at 2am
+    - cron: '0 2 * * *'
+
+env:
+  QT_MODULES: 'qtserialbus qtpositioning qt5compat qtserialport qtmultimedia qtsensors qtwebsockets qtimageformats qtwebview'
+
+  DEPS_INSTALL_ROOT: ${{ github.workspace }}\deps
+
+  QWT_INSTALL_DIR: ${{ github.workspace }}\deps\qwt
+  ZEROMQ_INSTALL_DIR: ${{ github.workspace }}\deps\zeromq
+  EPICS_BASE_DIR: ${{ github.workspace }}\deps\epics-base
+  CAQTDM_DIR: ${{ github.workspace }}\caqtdm
+
+  OPENSSL_ROOT: C:\Program Files\OpenSSL
+
+  CAQTDM_OPCUA: 1
+
+jobs:
+  build:
+    name: Build windows package
+    runs-on: ${{ matrix.windows-version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        windows-version: ['windows-2025']
+        qt-version: ['6.9.3', '6.10.0']
+        qwt-version: ['6.3']
+        zeromq-version: ['4.3.5']
+        epics-version: ['R7.0.9']
+        
+    defaults:
+      run:
+        shell: cmd
+
+    permissions:
+      contents: read
+      actions: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          path: caqtdm
+
+      - name: Install Qt ${{ matrix.qt-version }}
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ matrix.qt-version }}
+          modules: ${{ env.QT_MODULES }}
+          host: windows
+          target: desktop
+          set-env: true
+          cache: true
+
+      - name: Cache Qwt
+        id: cache-qwt
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.QWT_INSTALL_DIR }}
+          key: qwt-${{ matrix.qwt-version }}-qt${{ matrix.qt-version }}-${{ matrix.windows-version }}-${{ runner.arch }}
+          restore-keys: |
+            qwt-${{ matrix.qwt-version }}-qt${{ matrix.qt-version }}-${{ matrix.windows-version }}-
+
+      - name: Cache ZeroMQ
+        id: cache-zeromq
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.ZEROMQ_INSTALL_DIR }}
+          key: zeromq-${{ matrix.zeromq-version }}-${{ matrix.windows-version }}-${{ runner.arch }}
+          restore-keys: |
+            zeromq-${{ matrix.zeromq-version }}-${{ matrix.windows-version }}-
+
+      - name: Cache EPICS Base
+        id: cache-epics
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.EPICS_BASE_DIR }}
+          key: epics-${{ matrix.epics-version }}-${{ matrix.windows-version }}-${{ runner.arch }}
+          restore-keys: |
+            epics-${{ matrix.epics-version }}-${{ matrix.windows-version }}-
+
+      - name: Cache JOM
+        id: cache-jom
+        uses: actions/cache@v5
+        with:
+          path: ${{ github.workspace }}\jom
+          key: jom-1.1.4-${{ runner.os }}
+
+      - name: Download jom & set up JOM
+        if: steps.cache-jom.outputs.cache-hit != 'true'
+        run: |
+          curl -L -o jom.zip https://download.qt.io/official_releases/jom/jom_1_1_4.zip
+          mkdir ${{ github.workspace }}\jom
+          tar -xf jom.zip -C ${{ github.workspace }}\jom
+
+      - name: Add JOM to PATH
+        shell: pwsh
+        run: Add-Content -Path $env:GITHUB_PATH -Value "${{ github.workspace }}\jom"
+
+      - name: Verify JOM installation
+        run: |
+          jom.exe /VERSION || echo "Error: JOM not found or not in PATH"
+
+      - name: Set up Visual Studio shell
+        uses: egor-tensin/vs-shell@v2
+        with:
+          arch: x64
+      
+      - name: Create retry function script
+        shell: pwsh
+        run: |
+          @'
+          function Invoke-WithRetry {
+              param(
+                  [scriptblock]$ScriptBlock,
+                  [int]$MaxAttempts = 5,
+                  [string]$Operation
+              )
+              
+              for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
+                  try {
+                      Write-Host "Attempt $attempt of $MaxAttempts for $Operation"
+                      & $ScriptBlock
+                      Write-Host "$Operation succeeded on attempt $attempt"
+                      return
+                  }
+                  catch {
+                      Write-Warning "$Operation failed on attempt $attempt`: $($_.Exception.Message)"
+                      if ($attempt -eq $MaxAttempts) {
+                          Write-Error "$Operation failed after $MaxAttempts attempts"
+                          throw
+                      }
+                      $delay = [math]::Pow(2, $attempt - 1) * 5
+                      Write-Host "Waiting $delay seconds before retry..."
+                      Start-Sleep -Seconds $delay
+                  }
+              }
+          }
+          '@ | Out-File -FilePath "${{ github.workspace }}\retry-helper.ps1" -Encoding utf8
+
+      - name: Create dependencies install directory
+        run: if not exist ${{ env.DEPS_INSTALL_ROOT }} mkdir ${{ env.DEPS_INSTALL_ROOT }}
+
+      - name: Install openssl for qt opcua
+        shell: pwsh
+        run: |
+          choco feature enable -n=allowGlobalConfirmation
+          choco install openssl --version=3.6.2 -y --no-progress
+          Write-Host "OPENSSL_ROOT: $env:OPENSSL_ROOT"
+          $defaultPaths = @(
+            "C:\Program Files\OpenSSL-Win64",
+            "C:\Program Files (x86)\OpenSSL-Win32"
+          )
+          foreach ($path in $defaultPaths) {
+            if (Test-Path $path) {
+              Write-Host "OpenSSL installation detected at: $path"
+            }
+          }
+          
+          Get-Command openssl.exe | ForEach-Object {
+            Write-Host "openssl.exe found at: $($_.Source)"
+            & $_.Source version
+          }
+
+      - name: Clone and build Qt OPC UA 
+        shell: cmd
+        run: |
+          setlocal
+          set QT6_DIR=%QT_ROOT_DIR%\lib\cmake\Qt6
+          set CMAKE_PREFIX_PATH=%QT_ROOT_DIR%
+      
+          set QTOPCUA_SRC=%GITHUB_WORKSPACE%\qtopcua-src
+          if exist "%QTOPCUA_SRC%" rmdir /s /q "%QTOPCUA_SRC%"
+          git clone https://code.qt.io/qt/qtopcua.git "%QTOPCUA_SRC%"
+          cd "%QTOPCUA_SRC%"
+          git checkout v${{ matrix.qt-version }}
+      
+          mkdir build
+          cd build
+          cmake .. -G "Ninja" -DQt6_DIR=%QT6_DIR% -DOPENSSL_ROOT_DIR="%OPENSSL_ROOT%" -DCMAKE_INSTALL_PREFIX=%QT_ROOT_DIR%
+          cmake --build . --config Release --target install
+          endlocal
+
+      - name: Clone Qwt
+        if: steps.cache-qwt.outputs.cache-hit != 'true'
+        run: git clone https://git.code.sf.net/p/qwt/git --single-branch --branch qwt-${{ matrix.qwt-version }} qwt-src
+        working-directory: ${{ github.workspace }}
+
+      - name: Configure, Build and Install Qwt
+        if: steps.cache-qwt.outputs.cache-hit != 'true'
+        working-directory: ${{ github.workspace }}/qwt-src
+        shell: pwsh
+        run: |
+          . "${{ github.workspace }}\retry-helper.ps1"
+
+          (Get-Content qwtbuild.pri) -replace '^#CONFIG.*debug_and_release.*$', 'CONFIG += debug_and_release' | Set-Content qwtbuild.pri
+          (Get-Content qwtbuild.pri) -replace '^#CONFIG.*build_all.*$', 'CONFIG += build_all' | Set-Content qwtbuild.pri
+          (Get-Content qwtconfig.pri) -replace '^\s*QWT_INSTALL_PREFIX\s*=.*$', '    QWT_INSTALL_PREFIX = ${{ env.QWT_INSTALL_DIR }}' | Set-Content qwtconfig.pri
+          
+          # Disable examples, playground, and tests to reduce build time in CI
+          (Get-Content qwtconfig.pri) -replace '^QWT_CONFIG\s*\+=\s*QwtExamples.*$', '# QWT_CONFIG += QwtExamples' | Set-Content qwtconfig.pri
+          (Get-Content qwtconfig.pri) -replace '^QWT_CONFIG\s*\+=\s*QwtPlayground.*$', '# QWT_CONFIG += QwtPlayground' | Set-Content qwtconfig.pri
+          (Get-Content qwtconfig.pri) -replace '^QWT_CONFIG\s*\+=\s*QwtTests.*$', '# QWT_CONFIG += QwtTests' | Set-Content qwtconfig.pri
+          (Get-Content qwtconfig.pri) -replace '^QWT_CONFIG\s*\+=\s*QwtDesigner.*$', '# QWT_CONFIG += QwtDesigner' | Set-Content qwtconfig.pri
+          (Get-Content qwtconfig.pri) -replace '^    QWT_CONFIG\s*\+=\s*QwtDesignerSelfContained.*$', '#     QWT_CONFIG += QwtDesignerSelfContained' | Set-Content qwtconfig.pri
+          
+          qmake qwt.pro
+
+          Invoke-WithRetry -Operation "Qwt build" -ScriptBlock {
+              $buildProcess = Start-Process -FilePath "jom.exe" -ArgumentList "-j$env:NUMBER_OF_PROCESSORS", "release" -Wait -PassThru -NoNewWindow
+              if ($buildProcess.ExitCode -ne 0) {
+                  throw "Qwt build failed with exit code $($buildProcess.ExitCode)"
+              }
+          }
+
+          $installProcess = Start-Process -FilePath "jom.exe" -ArgumentList "-j$env:NUMBER_OF_PROCESSORS", "install" -Wait -PassThru -NoNewWindow
+          if ($installProcess.ExitCode -ne 0) {
+            throw "Qwt install failed with exit code $($installProcess.ExitCode)"
+          }
+
+      - name: Clone ZeroMQ
+        if: steps.cache-zeromq.outputs.cache-hit != 'true'
+        run: |
+          git clone https://github.com/zeromq/libzmq.git libzmq-src
+          cd libzmq-src
+          git checkout v${{ matrix.zeromq-version }}
+        working-directory: ${{ github.workspace }}
+
+      - name: Build and Install ZeroMQ
+        if: steps.cache-zeromq.outputs.cache-hit != 'true'
+        working-directory: ${{ github.workspace }}\libzmq-src
+        run: |
+          mkdir build && cd build
+          cmake .. -DCMAKE_INSTALL_PREFIX=${{ env.ZEROMQ_INSTALL_DIR }} -DZMQ_BUILD_PROGRAMS=OFF -D WITH_PERF_TOOL=OFF -DZMQ_BUILD_TESTS=OFF -DCMAKE_GENERATOR_PLATFORM=x64 -DBUILD_SHARED=ON -DBUILD_STATIC=OFF
+          cmake --build . --config Release
+          cmake --install . --config Release
+
+      - name: Set MSVC_SUFFIX environment variable
+        shell: pwsh
+        run: |
+          $MSVC_SUFFIX = ""
+          if ($env:VC_TOOLS_VERSION) {
+            $vcToolParts = $env:VC_TOOLS_VERSION.Split('.'); if ($vcToolParts.Length -ge 2 -and $vcToolParts[0] -eq "14") {
+            if ($vcToolParts[1] -eq "2") { $MSVC_SUFFIX = "v142" } elseif ($vcToolParts[1] -eq "3") { $MSVC_SUFFIX = "v143" }
+            }
+          }
+          if (-not $MSVC_SUFFIX) {
+            if ($env:VisualStudioVersion) {
+            if ($env:VisualStudioVersion -like "17.*") { $MSVC_SUFFIX = "v143" } elseif ($env:VisualStudioVersion -like "16.*") { $MSVC_SUFFIX = "v142" }
+            }
+          }
+          if (-not $MSVC_SUFFIX) {
+            Write-Warning "Could not determine MSVC suffix. Defaulting to v143."; $MSVC_SUFFIX = "v143"
+          }
+          Add-Content -Path $env:GITHUB_ENV -Value "MSVC_SUFFIX=$MSVC_SUFFIX"
+          Write-Host "Exported MSVC_SUFFIX=$MSVC_SUFFIX to GITHUB_ENV"
+
+      - name: Set ZeroMQ environment variables
+        shell: pwsh
+        run : |
+          $zmqVersionUnderscore = "${{ matrix.zeromq-version }}".Replace(".", "_")
+          Add-Content -Path $env:GITHUB_ENV -Value "ZMQLIBRARY=libzmq-${{ env.MSVC_SUFFIX }}-mt-$zmqVersionUnderscore.dll"
+          Add-Content -Path $env:GITHUB_ENV -Value "ZMQ_LIB_NAME=libzmq-${{ env.MSVC_SUFFIX }}-mt-$zmqVersionUnderscore.lib"
+
+      - name: Create EPICS Base directory
+        if: steps.cache-epics.outputs.cache-hit != 'true'
+        run: mkdir ${{ env.EPICS_BASE_DIR }}
+      
+      - name: Clone EPICS Base
+        if: steps.cache-epics.outputs.cache-hit != 'true'
+        run: |
+          git clone https://github.com/epics-base/epics-base.git --branch ${{ matrix.epics-version }} --depth 1 .
+          git submodule update --init --recursive --jobs %NUMBER_OF_PROCESSORS%
+        working-directory: ${{ env.EPICS_BASE_DIR }}
+
+      - name: Configure and Build EPICS Base
+        if: steps.cache-epics.outputs.cache-hit != 'true'
+        working-directory: ${{ env.EPICS_BASE_DIR }}
+        run: |
+          set EPICS_HOST_ARCH=windows-x64
+          make -j%NUMBER_OF_PROCESSORS%
+
+      - name: Set EPICS environment variables
+        run: |
+          echo EPICS_BASE=${{ env.EPICS_BASE_DIR }}>> %GITHUB_ENV%
+          echo EPICS_HOST_ARCH=windows-x64>> %GITHUB_ENV%
+
+      - name: Set Qt version mapping
+        shell: pwsh
+        run: |
+          $qtVersion = "${{ matrix.qt-version }}"
+          $majorVersion = $qtVersion.Split('.')[0]
+          $caqtdmQtVer = "QT$majorVersion"
+
+          Add-Content -Path $env:GITHUB_ENV -Value "CAQTDMQTVER=$caqtdmQtVer"
+          Write-Host "Set CAQTDMQTVER=$caqtdmQtVer for Qt version $qtVersion"
+
+      - name: Set caQtDM build environment variables
+        run: |
+          echo QTHOME=${{ env.QT_ROOT_DIR }}>> %GITHUB_ENV%
+          echo QWTHOME=${{ env.QWT_INSTALL_DIR }}>> %GITHUB_ENV%
+          echo QWTINCLUDE=${{ env.QWT_INSTALL_DIR }}\include>> %GITHUB_ENV%
+          echo QWTLIB=${{ env.QWT_INSTALL_DIR }}\lib>> %GITHUB_ENV%
+          echo QWTVERSION=6.1>> %GITHUB_ENV%
+          echo QWTLIBNAME=qwt>> %GITHUB_ENV%
+          echo ZMQ=${{ env.ZEROMQ_INSTALL_DIR }}>> %GITHUB_ENV%
+          echo ZMQINC=${{ env.ZEROMQ_INSTALL_DIR }}\include>> %GITHUB_ENV%
+          echo ZMQLIB=${{ env.ZEROMQ_INSTALL_DIR }}\lib>> %GITHUB_ENV%
+          echo ZMQBIN=${{ env.ZEROMQ_INSTALL_DIR }}\bin>> %GITHUB_ENV%
+          echo ZMQ_VERSION=${{ matrix.zeromq-version }}>> %GITHUB_ENV%
+          echo EPICSINCLUDE=${{ env.EPICS_BASE }}\include>> %GITHUB_ENV%
+          echo QTCONTROLS_LIBS=${{ env.CAQTDM_DIR }}\caQtDM_Binaries>> %GITHUB_ENV%
+          echo CAQTDM_COLLECT=${{ env.CAQTDM_DIR }}\caQtDM_Binaries>> %GITHUB_ENV%
+          echo QTBASE=${{ env.CAQTDM_DIR }}\caQtDM_Binaries>> %GITHUB_ENV%
+          echo QMAKESPEC=${{ env.QT_ROOT_DIR }}\mkspecs\win32-msvc>> %GITHUB_ENV%
+          echo TIMESTAMPER=http://timestamp.digicert.com>> %GITHUB_ENV%
+          echo CAQTDM_SIGNER=Paul Scherrer Institut>> %GITHUB_ENV%
+          echo CAQTDM_GPS=1 >> %GITHUB_ENV%
+          echo CAQTDM_MODBUS=1 >> %GITHUB_ENV%
+
+      - name: Configure and Build caQtDM
+        working-directory: ${{ env.CAQTDM_DIR }}
+        shell: pwsh
+        run: |
+          . "${{ github.workspace }}\retry-helper.ps1"
+
+          $timerstart = Get-Date
+          qmake all.pro
+          
+          Invoke-WithRetry -Operation "caQtDM build" -ScriptBlock {
+              $process = Start-Process -FilePath "jom.exe" -ArgumentList "-j$env:NUMBER_OF_PROCESSORS", "release" -Wait -PassThru -NoNewWindow
+              if ($process.ExitCode -ne 0) {
+                  throw "Build failed with exit code $($process.ExitCode)"
+              }
+          }
+          
+          $timerstop = Get-Date
+          $elapsed = $timerstop - $timerstart
+          Write-Host "caQtDM compile time: $($elapsed.TotalSeconds) seconds -- $($elapsed.TotalMinutes) minutes"
+
+      - name: Set packaging environment variables
+        run: |
+          echo ZMQ=${{ env.ZEROMQ_INSTALL_DIR }}\lib>> %GITHUB_ENV%
+          echo ZMQLIB=${{ env.ZEROMQ_INSTALL_DIR }}\lib>> %GITHUB_ENV%
+          echo ZMQBIN=${{ env.ZEROMQ_INSTALL_DIR }}\bin>> %GITHUB_ENV%
+          echo SSLBIN=${{ env.OPENSSL_ROOT }}\bin>> %GITHUB_ENV%
+          echo LIBSSL=libssl-3-x64.dll>> %GITHUB_ENV%
+          echo LIBCRYPTO=libcrypto-3-x64.dll>> %GITHUB_ENV%
+
+
+      - name: Create caQtDM Windows package
+        working-directory: ${{ env.CAQTDM_DIR }}\caQtDM_Viewer\package\windows
+        run: |
+          mkdir project_x64
+          cd project_x64
+          candle ..\caQtDM_x64.wxs -ext WixUIExtension -ext WixUtilExtension
+          light caQtDM_x64.wixobj -ext WixUIExtension -ext WixUtilExtension
+          copy caQtDM_x64.msi ${{ github.workspace }}\caQtDM_x64.msi
+
+      - name: Upload caQtDM Windows package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: caQtDM_x64_${{ matrix.windows-version }}_qt${{ matrix.qt-version }}_qwt${{ matrix.qwt-version }}_zmq${{ matrix.zeromq-version }}_epics${{ matrix.epics-version }}
+          path: ${{ github.workspace }}\caQtDM_x64.msi

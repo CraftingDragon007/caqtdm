@@ -34,6 +34,8 @@
 
 #include <math.h>
 
+Q_LOGGING_CATEGORY(caChoiceLog, "caqtdm.widgets.cachoice")
+
 caChoice::caChoice(QWidget *parent) : QWidget(parent)
 {
 
@@ -124,7 +126,7 @@ void caChoice::arrangeCells(QStringList list, int indx)
     int count = 0;
     for (int i = 0; i < numCells ;i++) {
         EPushButton* temp;
-        //printf("numCells=%d start=%d end=%d\n", numCells, thisStartBit, thisEndBit);
+        qCDebug(caChoiceLog) << "numCells=" << numCells << "start=" << thisStartBit << "end=" << thisEndBit;
         if((i + thisStartBit) > numCells) break;
         if((i + thisStartBit) > thisEndBit) break;
         if((i + thisStartBit) >= list.count()) break;
@@ -323,7 +325,7 @@ void caChoice::setColors(QColor back, QColor fore, QColor border, alignmentHor a
         disabled.append("; etch-disabled-text: true; color: grey;}");
         style.append(disabled);
         if((QString::compare(style, styleSheet()) != 0)  || (thisColorMode != oldColorMode)) {
-            //printf("%s setcolors set style %s\n", qasc(this->objectName()), qasc(style));
+            qCDebug(caChoiceLog) << this->objectName() << "setcolors set style" << style;
             setStyleSheet(style);
             oldColorMode = thisColorMode;
         }

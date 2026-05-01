@@ -167,6 +167,10 @@ public:
 
     void setFormatString(const QString m) { thisFormatUserString = m; }
     QString getFormatString() {return thisFormatUserString;}
+    QString getMarkedText();
+    void clearSelection();
+    bool getMarkAll() {return m_markAllText;}
+    void copy();
 
 signals:
     void textChanged(QString);
@@ -184,9 +188,21 @@ protected:
     virtual bool event(QEvent *);
     virtual QSize sizeHint() const;
     virtual QSize minimumSizeHint() const;
-    QSize calculateTextSpace();
+    QSize calculateTextSpace() override;
     void paintEvent(QPaintEvent *);
+    void mousePressEvent(QMouseEvent *event);
+    void mouseMoveEvent(QMouseEvent *event);
+    void keyPressEvent(QKeyEvent *event);
+    void mouseReleaseEvent(QMouseEvent *event);
+    void mouseDoubleClickEvent(QMouseEvent *event);
+    int calculateSumOfStartingCoordinates(QList<int> list, int calculateUntilIndex = -1);
+    QPoint calculateCoordinates(QPoint point);
+    void handleMarking(QPoint position);
+    int getIndexofTextRectangle(QPoint position);
+    int getDirectionOfMouseMove(QPoint startPosition, QPoint endPosition);
+    QColor invertColor(QColor color);
     CaQtDM_Lib_Interface* caDataInterface;
+    int toEngineeringNotation(char* buffer, size_t bufferLen, double value, int eng_precision);
 
 private:
     QString thisPV, thisText;
@@ -201,6 +217,7 @@ private:
     bool m_UnitMode;
     double m_Maximum, m_Minimum;
     int m_Precision;
+    int engr_notationPrecision;
     SourceMode m_PrecMode;
     SourceMode m_LimitsMode;
     FormatType m_FormatType;
@@ -218,5 +235,10 @@ private:
     QBrush brush;
     int thisDatatype;
     QString thisFormatUserString;
+    QList<QRect> m_LettersBoundingRects;
+    QList<bool> m_LetterMarkedList;
+    QPoint m_MouseClickPosition;
+    bool m_markAllText;
+    QRect m_caLineDrawRectangle;
 };
 #endif

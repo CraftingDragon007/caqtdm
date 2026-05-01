@@ -33,10 +33,11 @@ android {
 }
 
 HEADERS         = ../../controlsinterface.h \
+    ../../loggingcategories.h \
     archivehttp_plugin.h \
 	httpretrieval.h \
 	../archiverGeneral.h \
-	httpperformancedata.h \
+    httpperformancedata.h \
     urlhandlerhttp.h \
     workerHttp.h \
     workerHttpThread.h
