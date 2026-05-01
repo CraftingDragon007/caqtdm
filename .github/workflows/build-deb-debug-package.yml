@@ -8,9 +8,11 @@ env:
 jobs:
   build:
     name: Build DEB package
-    runs-on: self-hosted
+    runs-on: self-hosted ${{ selfrunner-version }}
     strategy:
       fail-fast: false
+      matrix:
+        selfrunner-version: [ubuntu, debian]
 
     permissions:
       contents: read
@@ -62,19 +64,19 @@ jobs:
     - name: Upload Qt OPC UA package as artifact
       uses: actions/upload-artifact@v4
       with:
-        name: qtopcua_deb-package-ubuntu
+        name: qtopcua_deb-package-${{ selfrunner-version }}
         path: caQtDM_Viewer/package/debian/qtopcua/*.deb
 
     - name: Upload epics-base package as artifact
       uses: actions/upload-artifact@v4
       with:
-        name: epics-base_deb-package-ubuntu
+        name: epics-base_deb-package-${{ selfrunner-version }}
         path: caQtDM_Viewer/package/debian/epics-base/*.deb
 
     - name: Upload DEB package as artifact
       uses: actions/upload-artifact@v4
       with:
-        name: caqtdm_deb-package-ubuntu
+        name: caqtdm_deb-package-${{ selfrunner-version }}
         path: caQtDM_Viewer/package/debian/caqtdm_qt5/*.deb
 
     - name: Verify caQtDM installation
