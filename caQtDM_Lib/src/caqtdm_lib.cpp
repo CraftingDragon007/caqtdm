@@ -1,4 +1,4 @@
-﻿/*
+/*
  *  This file is part of the caQtDM Framework, developed at the Paul Scherrer Institut,
  *  Villigen, Switzerland
  *
@@ -319,27 +319,22 @@ double CaQtDM_Lib::rTime()
  */
 bool fixFileListRelative(const QString &cainclude_path, QString *filelist, bool shell=false)
 {
-  if(cainclude_path.isEmpty()) {return false;}
+    if (cainclude_path.isEmpty()) return false;
 
-  QStringList files = filelist->split(";", SKIP_EMPTY_PARTS);
-  bool affected = false;
+    QStringList files = filelist->split(";", SKIP_EMPTY_PARTS);
+    bool affected = false;
 
-  for(int i=0; i< files.count(); i++) {
-    if(shell){
-        if (files.at(i).startsWith("./") and QFileInfo(files.at(i)).isRelative()){
-          files[i] = cainclude_path + files.at(i).trimmed();
-          affected = true;
-        }
-      }else{
-        if (QFileInfo(files.at(i)).isRelative()){
-          files[i] = cainclude_path + files.at(i).trimmed();
-          affected = true;
+    for (int i=0; i < files.count(); i++) {
+        // Shell files are only treated if they start with "./" or "../", since otherwise they may be on PATH
+        // Windows is not treated, as relative files might not have anything to differentiate from files on  and "./" is invalid on windows.
+        if (QFileInfo(files.at(i)).isRelative() && (!shell || files.at(i).startsWith("./") || files.at(i).startsWith("../"))) {
+            files[i] = cainclude_path + files.at(i).trimmed();
+            affected = true;
         }
     }
-  }
 
-  if(affected){*filelist = files.join(";");}
-  return affected;
+    if (affected) *filelist = files.join(";");
+    return affected;
 }
 
 Q_LOGGING_CATEGORY(caQtDMLibLog, "caqtdm.lib.lib")
@@ -1563,8 +1558,9 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
         if(imageWidget->getFileName().size() > 0) {
             QString text = imageWidget->getFileName();
-            // must use bitwise OR to not short-circuit
-            if(reaffectText(map, &text, w1) | fixFileListRelative(cainclude_path, &text)) imageWidget->setFileName(text);
+            bool affected = reaffectText(map, &text, w1);
+            affected |= fixFileListRelative(cainclude_path, &text);
+            if (affected) imageWidget->setFileName(text);
 
         }
 
@@ -1601,8 +1597,9 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         if(reaffectText(map, &text, w1))  relatedWidget->setArgs(text);
 
         text = relatedWidget->getFiles();
-        // must use bitwise OR to not short-circuit
-        if(reaffectText(map, &text, w1) | fixFileListRelative(cainclude_path, &text)) relatedWidget->setFiles(text);
+        bool affected = reaffectText(map, &text, w1);
+        affected |= fixFileListRelative(cainclude_path, &text);
+        if (affected) relatedWidget->setFiles(text);
 
         text = relatedWidget->getLabel();
         if(reaffectText(map, &text, w1))  relatedWidget->setLabel(text);
@@ -1628,8 +1625,9 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         if(reaffectText(map, &text, w1))  shellWidget->setArgs(text);
 
         text = shellWidget->getFiles();
-        // must use bitwise OR to not short-circuit
-        if(reaffectText(map, &text, w1) | fixFileListRelative(cainclude_path, &text, true)) shellWidget->setFiles(text);
+        bool affected = reaffectText(map, &text, w1);
+        affected |= fixFileListRelative(cainclude_path, &text, true);
+        if (affected) shellWidget->setFiles(text);
 
         text = shellWidget->getLabel();
         if(reaffectText(map, &text, w1))  shellWidget->setLabel(text);
@@ -1655,9 +1653,9 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         if(reaffectText(map, &text, w1))  mimeWidget->setArgs(text);
 
         text = mimeWidget->getFiles();
-
-        // must use bitwise or to not short-circuit
-        if(reaffectText(map, &text, w1) | fixFileListRelative(cainclude_path, &text)) mimeWidget->setFiles(text);
+        bool affected = reaffectText(map, &text, w1);
+        affected |= fixFileListRelative(cainclude_path, &text);
+        if (affected) mimeWidget->setFiles(text);
 
         text = mimeWidget->getLabel();
         if(reaffectText(map, &text, w1))  mimeWidget->setLabel(text);
@@ -2813,7 +2811,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
                     //cainclude_path = fi.absolutePath() + "/";
                     cainclude_path = fi.path() + "/";
 
-                    // RECURSE TO LOWER WIDGETS
+                    // recurse (DFS) to lower widgets
                     scanWidgets(thisW->findChildren<QWidget *>(), macroS);
 
                     cainclude_path = cainclude_path_stacked;
