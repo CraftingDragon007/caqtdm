@@ -56,7 +56,7 @@ void HmiSharedConfigListManager::shutdown() {
         if (!this_sharedMemory.detach()) {
             qCWarning(caHMILog) << PREFIX << "Failed to detach from shared memory:" << this_sharedMemory.errorString();
         } else {
-            qCInfo(caHMILog) << PREFIX << "Detached from shared memory.";
+            qCDebug(caHMILog) << PREFIX << "Detached from shared memory.";
         }
     }
 }
