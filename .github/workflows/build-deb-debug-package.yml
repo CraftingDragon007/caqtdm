@@ -8,11 +8,14 @@ env:
 jobs:
   build:
     name: Build DEB package
-    runs-on: [self-hosted, ubuntu, debian]
     strategy:
-      fail-fast: false
       matrix:
-        selfrunner-version: [ubuntu, debian]
+       os: [ubuntu, debian]
+
+    runs-on: 
+      - self-hosted
+      - ${{ matrix.os }}
+      
 
     permissions:
       contents: read
