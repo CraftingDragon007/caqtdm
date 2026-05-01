@@ -8,7 +8,7 @@ env:
 jobs:
   build:
     name: Build DEB package
-    runs-on: ${{ selfrunner-version }}
+    runs-on: [self-hosted, ubuntu, debian]
     strategy:
       fail-fast: false
       matrix:
@@ -21,6 +21,13 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v6
+
+    - name: Detect distro
+        id: detect_os
+        run: |
+          DISTRO=$(lsb_release -si | tr '[:upper:]' '[:lower:]')
+          echo "DISTRO=$DISTRO" >> $GITHUB_ENV
+
 
     - name: Set up build environment
       run: |
@@ -64,19 +71,19 @@ jobs:
     - name: Upload Qt OPC UA package as artifact
       uses: actions/upload-artifact@v4
       with:
-        name: qtopcua_deb-package-${{ selfrunner-version }}
+        name: qtopcua_deb-package-${{ env.DISTRO }}
         path: caQtDM_Viewer/package/debian/qtopcua/*.deb
 
     - name: Upload epics-base package as artifact
       uses: actions/upload-artifact@v4
       with:
-        name: epics-base_deb-package-${{ selfrunner-version }}
+        name: epics-base_deb-package-${{ env.DISTRO }}
         path: caQtDM_Viewer/package/debian/epics-base/*.deb
 
     - name: Upload DEB package as artifact
       uses: actions/upload-artifact@v4
       with:
-        name: caqtdm_deb-package-${{ selfrunner-version }}
+        name: caqtdm_deb-package-${{ env.DISTRO }}
         path: caQtDM_Viewer/package/debian/caqtdm_qt5/*.deb
 
     - name: Verify caQtDM installation
