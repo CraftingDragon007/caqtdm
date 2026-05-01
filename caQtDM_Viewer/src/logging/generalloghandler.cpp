@@ -210,14 +210,15 @@ void GeneralLogHandler::messageHandler(QtMsgType type,
                      s_processId};
 
     QMutexLocker locker(&s_mutex);
+// if check for the logHandler is done because of a race condition on mac
     for (const auto logHandler : s_logHandlers) {
-        logHandler->handleLog(log);
+        if (logHandler) logHandler->handleLog(log);
     }
 
     // Qt will exit faulty after this returns, so make sure to flush
     if (type == QtFatalMsg) {
         for (const auto logHandler : s_logHandlers) {
-            logHandler->flush();
+            if (logHandler) logHandler->flush();
         }
     }
 }
