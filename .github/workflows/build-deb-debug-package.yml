@@ -8,7 +8,7 @@ env:
 jobs:
   build:
     name: Build DEB package
-    runs-on: [self-hosted, ${{ selfrunner-version }}]
+    runs-on: ${{ selfrunner-version }}
     strategy:
       fail-fast: false
       matrix:
