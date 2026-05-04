@@ -99,7 +99,11 @@ SplashScreen::SplashScreen(QWidget *parent) : QSplashScreen(), m_progress(0)
     painter.drawPixmap(0, 0, pixmap);
 
     // Bottom box where text and progress bar are
+ #ifdef Q_OS_MACOS
     painter.setBrush(QColor(200, 200, 200, 255));
+#else
+    painter.setBrush(QColor(150, 150, 150, 255));
+#endif
     painter.setPen(Qt::NoPen);
     painter.drawRect(0, pixmap.height(), splashWidth, PROGRESS_BAR_AREA_HEIGHT);
 
@@ -219,8 +223,17 @@ void SplashScreen::drawContents(QPainter *painter)
       pbstyle.invertedAppearance = false;
       pbstyle.text = "loading";
       pbstyle.textVisible = true;
-      pbstyle.rect = QRect(5, pixmap.height() + 3, pixmap.width() - 10, PROGRESS_BAR_AREA_HEIGHT  / 2 - 5);
+
+#ifdef Q_OS_MACOS
+      pbstyle.rect = QRect(5, pixmap.height()-5, pixmap.width() - 10, PROGRESS_BAR_AREA_HEIGHT  / 2 - 5);
+      painter->save();
+      painter->translate(pbstyle.rect.bottomLeft());
 
       style()->drawControl(QStyle::CE_ProgressBar, &pbstyle, painter, this);
+      painter->restore();
 
+#else
+      pbstyle.rect = QRect(5, pixmap.height() + 3, pixmap.width() - 10, PROGRESS_BAR_AREA_HEIGHT  / 2 - 5);
+      style()->drawControl(QStyle::CE_ProgressBar, &pbstyle, painter, this);
+#endif
 }
