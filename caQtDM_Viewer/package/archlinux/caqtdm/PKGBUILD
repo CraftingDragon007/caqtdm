@@ -1,5 +1,6 @@
 # Maintainer: Julian Houba <info at craftingdragon dot ch>
 _pkgsrc=caqtdm
+_caqtdm_repo="${CAQTDM_REPO_URL:-https://github.com/caqtdm/caqtdm.git}"
 pkgname='caqtdm-git'
 pkgver=4.6.0.r5463.g24d9eb2
 pkgrel=1
@@ -14,6 +15,8 @@ depends=(
     'python'
     'qt6-base'
     'qt6-opcua'
+    'qt6-positioning'
+    'qt6-serialbus'
     'qt6-tools'
     'qwt'
     'zeromq'
@@ -24,7 +27,7 @@ makedepends=(
 )
 provides=("caqtdm=${pkgver}")
 conflicts=('caqtdm')
-source=("$_pkgsrc::git+https://github.com/caqtdm/caqtdm.git")
+source=("$_pkgsrc::git+${_caqtdm_repo}")
 sha256sums=('SKIP')
 
 pkgver() {
@@ -49,6 +52,9 @@ build() {
     export ZMQ=/usr
     export ZMQINC=/usr/include
     export ZMQLIB=/usr/lib
+    export CAQTDM_OPCUA=1
+    export CAQTDM_MODBUS=1
+    export CAQTDM_GPS=1
     export CAQTDM_NORPATH=1
     export EPICS_HOST_ARCH="linux-${CARCH}"
     export QTHOME=/usr
