@@ -53,11 +53,25 @@ jobs:
         useradd -m -s /bin/bash builder
         chown -R builder:builder "$GITHUB_WORKSPACE"
 
+    - name: Cache epics-base package
+      id: cache-epics-base
+      uses: actions/cache@v5
+      with:
+        path: caQtDM_Viewer/package/archlinux/epics-base/*.pkg.tar.*
+        key: epics-base-pkg-${{ runner.os }}-${{ hashFiles('caQtDM_Viewer/package/archlinux/epics-base/PKGBUILD', 'caQtDM_Viewer/package/archlinux/epics-base/*.patch') }}
+
     - name: Build package from PKGBUILD
       run: |
         set -euo pipefail
         WORKSPACE_DIR="${GITHUB_WORKSPACE:-$PWD}"
-        sudo -u builder env WORKSPACE_DIR="$WORKSPACE_DIR" bash -lc 'cd "$WORKSPACE_DIR/caQtDM_Viewer/package/archlinux/epics-base" && makepkg --noconfirm --cleanbuild'
+
+        if ls "$WORKSPACE_DIR"/caQtDM_Viewer/package/archlinux/epics-base/*.pkg.tar.* >/dev/null 2>&1; then
+          echo "Using cached epics-base package"
+        else
+          echo "No cached epics-base package found, building..."
+          sudo -u builder env WORKSPACE_DIR="$WORKSPACE_DIR" bash -lc 'cd "$WORKSPACE_DIR/caQtDM_Viewer/package/archlinux/epics-base" && makepkg --noconfirm --cleanbuild'
+        fi
+
         pacman -U --noconfirm caQtDM_Viewer/package/archlinux/epics-base/*.pkg.tar.*
         sudo -u builder env WORKSPACE_DIR="$WORKSPACE_DIR" bash -lc 'cd "$WORKSPACE_DIR/caQtDM_Viewer/package/archlinux/caqtdm" && makepkg --noconfirm --cleanbuild'
 
