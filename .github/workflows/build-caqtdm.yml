@@ -47,6 +47,9 @@ jobs:
           git \
           qt6-5compat
 
+    - name: Checkout repository
+      uses: actions/checkout@v6
+
     - name: Create non-root builder user
       run: |
         set -euo pipefail
