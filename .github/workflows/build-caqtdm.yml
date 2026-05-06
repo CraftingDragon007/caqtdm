@@ -56,9 +56,10 @@ jobs:
     - name: Build package from PKGBUILD
       run: |
         set -euo pipefail
-        sudo -u builder bash -lc 'cd "$GITHUB_WORKSPACE/caQtDM_Viewer/package/archlinux/epics-base" && makepkg --noconfirm --cleanbuild'
+        WORKSPACE_DIR="${GITHUB_WORKSPACE:-$PWD}"
+        sudo -u builder env WORKSPACE_DIR="$WORKSPACE_DIR" bash -lc 'cd "$WORKSPACE_DIR/caQtDM_Viewer/package/archlinux/epics-base" && makepkg --noconfirm --cleanbuild'
         pacman -U --noconfirm caQtDM_Viewer/package/archlinux/epics-base/*.pkg.tar.*
-        sudo -u builder bash -lc 'cd "$GITHUB_WORKSPACE/caQtDM_Viewer/package/archlinux/caqtdm" && makepkg --noconfirm --cleanbuild'
+        sudo -u builder env WORKSPACE_DIR="$WORKSPACE_DIR" bash -lc 'cd "$WORKSPACE_DIR/caQtDM_Viewer/package/archlinux/caqtdm" && makepkg --noconfirm --cleanbuild'
 
     - name: Upload package artifact
       uses: actions/upload-artifact@v7
