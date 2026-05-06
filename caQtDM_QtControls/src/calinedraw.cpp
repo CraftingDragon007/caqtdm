@@ -724,6 +724,7 @@ void caLineDraw::paintEvent(QPaintEvent *)
             if(m_markAllText || isCurrentFieldMarked){
                 QColor invForeColor = invertColor(m_ForeColor);
                 QColor invBrushColor = invertColor(brush.color());
+                if (brush.color().alpha()==0) invBrushColor.setAlpha(128); // if this is not done the Background is BLACK!
 
                 painter.setPen(invForeColor);
                 painter.setBackground(invBrushColor);
@@ -732,9 +733,10 @@ void caLineDraw::paintEvent(QPaintEvent *)
                 painter.drawText(rectangleToDraw,Qt::AlignCenter | Qt::AlignVCenter,  QString(m_Text[i]));
             }
     }
-
-    if(m_Text == getMarkedText()){
-        m_markAllText = true;
+    if (m_AlarmState!=NOTCONNECTED){
+        if(m_Text == getMarkedText()){
+            m_markAllText = true;
+        }
     }
 
     painter.setPen(m_ForeColor);
@@ -1000,6 +1002,7 @@ void caLineDraw::caDataUpdate(const QString& units, const QString& String, const
         setText("");
         setAlarmColors(NOTCONNECTED, 0.0, bg, fg);
         setProperty("Connect", false);
+        clearSelection();
     }
 
 }
