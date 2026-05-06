@@ -38,11 +38,17 @@ jobs:
           readline \
           python \
           qt6-base \
+          qt6-declarative \
+          qt6-positioning \
+          qt6-serialbus \
           qt6-tools \
           qwt \
           zeromq \
           git \
-          qt6-5compat
+          qt6-5compat \
+          cmake \
+          ninja \
+          openssl
 
     - name: Checkout repository
       uses: actions/checkout@v6
@@ -71,7 +77,14 @@ jobs:
         path: caQtDM_Viewer/package/archlinux/epics-base/*.pkg.tar.*
         key: epics-base-pkg-${{ runner.os }}-${{ hashFiles('caQtDM_Viewer/package/archlinux/epics-base/PKGBUILD', 'caQtDM_Viewer/package/archlinux/epics-base/*.patch') }}
 
-    - name: Build package from PKGBUILD
+    - name: Cache qt6-opcua package
+      id: cache-qt6-opcua
+      uses: actions/cache@v5
+      with:
+        path: caQtDM_Viewer/package/archlinux/qt6-opcua/*.pkg.tar.*
+        key: qt6-opcua-pkg-${{ runner.os }}-${{ hashFiles('caQtDM_Viewer/package/archlinux/qt6-opcua/PKGBUILD') }}
+
+    - name: Build and install dependency packages
       run: |
         set -euo pipefail
         WORKSPACE_DIR="${GITHUB_WORKSPACE:-$PWD}"
@@ -83,7 +96,20 @@ jobs:
           sudo -u builder env WORKSPACE_DIR="$WORKSPACE_DIR" bash -lc 'cd "$WORKSPACE_DIR/caQtDM_Viewer/package/archlinux/epics-base" && makepkg --noconfirm --cleanbuild'
         fi
 
+        if ls "$WORKSPACE_DIR"/caQtDM_Viewer/package/archlinux/qt6-opcua/*.pkg.tar.* >/dev/null 2>&1; then
+          echo "Using cached qt6-opcua package"
+        else
+          echo "No cached qt6-opcua package found, building..."
+          sudo -u builder env WORKSPACE_DIR="$WORKSPACE_DIR" bash -lc 'cd "$WORKSPACE_DIR/caQtDM_Viewer/package/archlinux/qt6-opcua" && makepkg --noconfirm --cleanbuild'
+        fi
+
         pacman -U --noconfirm caQtDM_Viewer/package/archlinux/epics-base/*.pkg.tar.*
+        pacman -U --noconfirm caQtDM_Viewer/package/archlinux/qt6-opcua/*.pkg.tar.*
+
+    - name: Build caQtDM package
+      run: |
+        set -euo pipefail
+        WORKSPACE_DIR="${GITHUB_WORKSPACE:-$PWD}"
         sudo -u builder env WORKSPACE_DIR="$WORKSPACE_DIR" bash -lc 'cd "$WORKSPACE_DIR/caQtDM_Viewer/package/archlinux/caqtdm" && makepkg --noconfirm --cleanbuild'
 
     - name: Upload package artifact
@@ -97,3 +123,9 @@ jobs:
       with:
         name: epics-base-archlinux-package
         path: caQtDM_Viewer/package/archlinux/epics-base/*.pkg.tar.*
+
+    - name: Upload qt6-opcua package artifact
+      uses: actions/upload-artifact@v7
+      with:
+        name: qt6-opcua-archlinux-package
+        path: caQtDM_Viewer/package/archlinux/qt6-opcua/*.pkg.tar.*

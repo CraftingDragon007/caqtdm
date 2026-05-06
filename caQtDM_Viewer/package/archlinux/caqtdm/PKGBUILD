@@ -13,6 +13,7 @@ depends=(
     'glibc'
     'python'
     'qt6-base'
+    'qt6-opcua'
     'qt6-tools'
     'qwt'
     'zeromq'
