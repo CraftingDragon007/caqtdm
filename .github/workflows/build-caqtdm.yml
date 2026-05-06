@@ -53,6 +53,17 @@ jobs:
         useradd -m -s /bin/bash builder
         chown -R builder:builder "$GITHUB_WORKSPACE"
 
+    - name: Optimize makepkg.conf for parallel building
+      run: |
+        set -euo pipefail
+        NUM_CORES=$(nproc)
+        echo "Detected ${NUM_CORES} CPU cores. Optimizing /etc/makepkg.conf..."
+        grep -v "^MAKEFLAGS=" /etc/makepkg.conf > /tmp/makepkg.conf.tmp
+        echo "MAKEFLAGS=\"-j${NUM_CORES}\"" >> /tmp/makepkg.conf.tmp
+        mv /tmp/makepkg.conf.tmp /etc/makepkg.conf
+        echo "Current MAKEFLAGS in /etc/makepkg.conf:"
+        grep "MAKEFLAGS" /etc/makepkg.conf
+
     - name: Cache epics-base package
       id: cache-epics-base
       uses: actions/cache@v5
