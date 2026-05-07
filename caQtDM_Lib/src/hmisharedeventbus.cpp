@@ -187,7 +187,7 @@ bool HmiSharedEventBus::sendEvent(int eventType, const QByteArray& payload) {
         return false;
     }
 
-    int writeIndex = this_header->currentWriteIndex % EVENT_BUFFER_CAPACITY;
+    quint32 writeIndex = this_header->currentWriteIndex % EVENT_BUFFER_CAPACITY;
 
     EventPayload& event = this_eventBuffer[writeIndex];
     event.eventType = eventType;
@@ -231,15 +231,15 @@ void HmiSharedEventBus::checkForNewEvents() {
 
     quint64 eventsToProcess = std::min(unreadGlobalEvents, (quint64)EVENT_BUFFER_CAPACITY);
 
-    int readBufferStartIndex = (this_header->currentWriteIndex - eventsToProcess + EVENT_BUFFER_CAPACITY * 2) % EVENT_BUFFER_CAPACITY;
+    quint32 readBufferStartIndex = (this_header->currentWriteIndex - eventsToProcess + EVENT_BUFFER_CAPACITY * 2) % EVENT_BUFFER_CAPACITY;
 
 
     for (quint64 i = 0; i < eventsToProcess; ++i) {
-        int eventBufferIndex = (readBufferStartIndex + i) % EVENT_BUFFER_CAPACITY;
+        quint32 eventBufferIndex = (readBufferStartIndex + i) % EVENT_BUFFER_CAPACITY;
         const EventPayload& event = this_eventBuffer[eventBufferIndex];
 
         QByteArray payloadData;
-        if (event.dataSize > 0) {
+        if (event.dataSize > 0 && event.dataSize <= EVENT_PAYLOAD_SIZE) {
             payloadData = QByteArray(event.data, event.dataSize);
         }
 
