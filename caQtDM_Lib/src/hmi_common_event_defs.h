@@ -40,7 +40,7 @@ struct EventPayload {
 };
 
 struct SharedHeader {
-    int currentWriteIndex;  // Next available slot for writing (0 to EVENT_BUFFER_CAPACITY - 1)
+    quint32 currentWriteIndex;  // Next available slot for writing (0 to EVENT_BUFFER_CAPACITY - 1)
     quint64 totalEventsWritten;
 
     // Each slot represents a potential active process.
