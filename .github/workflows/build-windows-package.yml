@@ -363,7 +363,7 @@ jobs:
           copy caQtDM_x64.msi ${{ github.workspace }}\caQtDM_x64.msi
 
       - name: Upload caQtDM Windows package artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: caQtDM_x64_${{ matrix.windows-version }}_qt${{ matrix.qt-version }}_qwt${{ matrix.qwt-version }}_zmq${{ matrix.zeromq-version }}_epics${{ matrix.epics-version }}
           path: ${{ github.workspace }}\caQtDM_x64.msi

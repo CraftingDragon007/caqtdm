@@ -49,7 +49,7 @@ jobs:
         dnf config-manager --set-enabled epel || true
 
     - name: Checkout repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
 
     - name: Install Qwt build dependencies (RHEL >=10)
       if: ${{ matrix.rhel_major >= 10 }}
@@ -174,13 +174,13 @@ jobs:
         echo "rpms_name=caqtdm-rpms-${sanitized}" >> $GITHUB_OUTPUT
 
     - name: Upload all RPMs as one artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ steps.set-artifact-names.outputs.rpms_name }}
         path: ~/rpmbuild/RPMS/*/*.rpm
 
     - name: Upload all SRPMs as one artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ steps.set-artifact-names.outputs.rpms_name }}-source-rpms
         path: ~/rpmbuild/SRPMS/*.rpm
