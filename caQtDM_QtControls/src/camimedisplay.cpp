@@ -26,6 +26,8 @@
 #include "camimedisplay.h"
 #include <QApplication>
 
+Q_LOGGING_CATEGORY(caMimeDisplayLog, "caqtdm.widgets.camimedisplay")
+
 caMimeDisplay::caMimeDisplay(QWidget *parent) : caRowColMenu(parent)
 {
     setImage("mime.png");
@@ -44,7 +46,7 @@ void caMimeDisplay::Callback_Clicked(int indx)
         QString urlStr = Urls.at(indx);
         QUrl url(Urls.at(indx));
 
-        //printf("call mime <%s>\n", qasc(url.toString()));
+        qCDebug(caMimeDisplayLog) << "call mime" << url.toString();
 
         // file contains things like http:// or file:// or ...
         if(urlStr.contains("://")) {
@@ -64,7 +66,7 @@ void caMimeDisplay::Callback_Clicked(int indx)
                 }
                 // call file as specified
             }
-            printf("call file %s as specified\n;", qasc(Urls.at(indx)));
+            qCDebug(caMimeDisplayLog) << "call file" << Urls.at(indx) << "as specified";
             bool success;
             if(!Urls.at(indx).contains("%")) {
                 success = QDesktopServices::openUrl (QUrl(Urls.at(indx)));
@@ -85,7 +87,7 @@ void caMimeDisplay::Callback_Clicked(int indx)
             }
 #endif
             QString fileName = urlStr;
-            //printf("%s\n", qasc(fileName));
+            qCDebug(caMimeDisplayLog) << fileName;
             // find from application path
             QFile filePath(fileName);
             if(filePath.exists()) {

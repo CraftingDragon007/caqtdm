@@ -21,7 +21,7 @@ INCLUDEPATH    += ../
 INCLUDEPATH    += ../../src
 INCLUDEPATH    += ../../../caQtDM_QtControls/src
 
-HEADERS         = modbus_plugin.h modbus_decode.h ../controlsinterface.h \
+HEADERS         = modbus_plugin.h modbus_decode.h ../controlsinterface.h  ../loggingcategories.h \
     modbus_channeldata.h
 
 SOURCES         = modbus_plugin.cpp modbus_decode.cpp \

@@ -10,8 +10,8 @@ IF "%1"=="4" GOTO SELECT4
 echo =============================================================================================
 echo Select Build Environment
 echo 1) QT 4.8.5  QWT6.1.3 32 Bit VS2010  
-echo 2) QT 6.7.1  QWT6.2.0 64 Bit VS2019  
-echo 3) QT 5.15.0 QWT6.1.5 64 Bit VS2019
+echo 2) QT 6.10.0  QWT6.3.0 64 Bit VS2022  
+echo 3) QT 5.15.0 QWT6.3.0 64 Bit VS2019
 set /P SELCTION=Select: 
 echo =============================================================================================
  
@@ -68,18 +68,18 @@ REM ============================================================================
 
 :SELECT2 
 
-  call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
+  call "C:\Program Files\Microsoft Visual Studio\2022\Professional\VC\Auxiliary\Build\vcvarsall.bat" x64
   d:	
  
-  set QTHOME=D:\qt\build\Qt-6.9.0_VS22_64bit
+  set QTHOME=D:\qt\build\Qt-6.10.0_VS22_64bit
   
-  set QWTHOME=D:/qt/qwt-6.3.0_Qt6.9.0_64bit
-  set QWTINCLUDE=:/qt/qwt-6.3.0_Qt6.9.0_64bit/src
+  set QWTHOME=D:/qt/qwt-6.3.0_Qt6.10.0_64bit
+  set QWTINCLUDE=D:/qt/qwt-6.3.0_Qt6.10.0_64bit/src
   set QWTLIB=%QWTHOME%/lib
   set QWTLIBNAME=qwt
   set QWTVERSION=6.2
   set CAQTDMQTVER=QT6
-  set CAQTDM_GPS=1
+  
   
   
   set GITPATH=C:\Users\brands\AppData\Local\Atlassian\SourceTree\git_local\bin\
@@ -100,20 +100,20 @@ REM ============================================================================
   set CAQTDM_SIGNER="Paul Scherrer Institut"
 
   
-  set ZMQ=D:\epics\softioc\common\external\zeromq-4.3.5_windows-x64\bin\Release
+  set ZMQ=D:\epics\softioc\common\external\zeromq-4.3.5_windows-x64
   set ZMQINC=D:\epics\softioc\common\external\zeromq-4.3.5\include
   set ZMQLIB=D:\epics\softioc\common\external\zeromq-4.3.5_windows-x64\lib\Release
+  set ZMQBIN=D:\epics\softioc\common\external\zeromq-4.3.5_windows-x64\bin\Release
   set ZMQLIBRARY=libzmq-v142-mt-4_3_5.dll
   
-  set SSL=D:\qt\openssl-1.0.2n_VS16_64bit
-  set SSLINC=%SSL%\inc32
-  set SSLLIB=%SSL%\out32dll
- 
+  set SSLBIN=D:\qt\OpenSSL\bin
+  set LIBSSL=libssl-3-x64.dll
+  set LIBCRYPTO=libcrypto-3-x64.dll
+  
   set CAQTDM_GPS=1
   set CAQTDM_MODBUS=1
+  set CAQTDM_OPCUA=1
 
-  
-  
 GOTO PRINTOUT
 
 REM =============================================================================================
@@ -127,9 +127,9 @@ REM ============================================================================
  
   set QTHOME=D:/qt/build/Qt-5.15.0_VS19_64bit
   
-  set QWTHOME=D:/qt/build/qwt-Qt_5_15_0-Release
-  set QWTINCLUDE=%QWTHOME%/include
-  set QWTLIB=%QWTHOME%/lib
+  set QWTHOME=D:/qt/qwt-6.3.0_Qt5.15.0_64bit
+  set QWTINCLUDE=D:/qt/qwt-6.3.0_Qt5.15.0_64bit/src
+  set QWTLIB=D:/qt/qwt-6.3.0_Qt5.15.0_64bit/lib
   set QWTVERSION=6.1
   set QWTLIBNAME=qwt
   set CAQTDMQTVER=QT5
@@ -147,22 +147,24 @@ REM ============================================================================
  
   set QTBASE=%QTCONTROLS_LIBS%
   
-  set WIXHOME=C:\Program Files (x86)\WiX Toolset v3.14\bin
+  set WIXHOME=C:\Program Files (x86)\WiX Toolset v3.11\bin
   set QMAKESPEC=%QTHOME%\mkspecs\win32-msvc
   set TIMESTAPER="http://timestamp.digicert.com"
   set CAQTDM_SIGNER="Paul Scherrer Institut"
 
-  set ZMQ=D:\qt\zeromq-4.2.3
+  set ZMQ=D:\qt\zeromq-4.3.5_windows-x64
   set ZMQINC=%ZMQ%/include
-  set ZMQLIB=%ZMQ%/lib/%EPICS_HOST_ARCH%
+  set ZMQLIB=%ZMQ%/lib
+  set ZMQBIN=%ZMQ%/bin
+  set ZMQLIBRARY=libzmq-v142-mt-4_3_5.dll
 
-  set SSL=D:\qt\openssl-1.0.2n_VS16_64bit
-  set SSLINC=%SSL%\inc32
-  set SSLLIB=%SSL%\out32dll
+  set SSLBIN=D:\qt\OpenSSL\bin
+  set LIBSSL=libssl-3-x64.dll
+  set LIBCRYPTO=libcrypto-3-x64.dll
 
-  set CAQTDM_GPS=1
+  set CAQTDM_GPS=0
   set CAQTDM_MODBUS=1
-
+  set CAQTDM_OPCUA=1
 
 
 GOTO PRINTOUT
@@ -199,6 +201,10 @@ echo EPICSEXTENSIONS      	now defined as %EPICSEXTENSIONS%	for locating epics e
 echo QTDM_LIBINSTALL      	now defined as %QTDM_LIBINSTALL%	for libraries install 
 echo QTDM_BININSTALL      	now defined as %QTDM_BININSTALL%	for binaries install
 echo WIXHOME      		now defined as %WIXHOME%		for package generation 
+echo SSLBIN                     now defined as %SSLBIN%                 for ssl binaries
+echo LIBSSL                     now defined as %LIBSSL%                 for libssl binary name
+echo LIBCRYPTO                  now defined as %LIBCRYPTO%              for libcrypto binary name
+echo.
 echo ============================================================================================
  
 

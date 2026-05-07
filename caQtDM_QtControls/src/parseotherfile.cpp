@@ -27,6 +27,8 @@
 #include <math.h>
 #include "parseotherfile.h"
 
+Q_LOGGING_CATEGORY(parseOtherFileLog, "caqtdm.widgets.parseotherfile")
+
 ParseOtherFile::ParseOtherFile(QString fileName, bool &ok, QString &errorString)
 {
     QString outFileName;
@@ -39,17 +41,17 @@ ParseOtherFile::ParseOtherFile(QString fileName, bool &ok, QString &errorString)
     const bool isEdmFile = fileName.endsWith (".edl");
 
     if(isMedmFile || isEdmFile) {
-        //printf("caQtDM -- parseotherfile %s is a file to convert\n", qasc(fileName));
+        qCDebug(parseOtherFileLog) << "caQtDM -- parseotherfile" << fileName << "is a file to convert";
 
         // file to convert
         QFile* aFile = new QFile(fileName);
 
         if(!aFile->exists() ) {
-            //printf("caQtDM -- parseotherfile %s does not exist, sorry\n", qasc(fileName));
+            qCDebug(parseOtherFileLog) << "caQtDM -- parseotherfile" << fileName << "does not exist, sorry";
             errorString = tr("sorry -- specified file %1 is not found").arg(fileName);
         } else {
             // file to convert to locally
-            //printf("caQtDM -- parseotherfile %s file to convert exists\n", qasc(fileName));
+            qCDebug(parseOtherFileLog) << "caQtDM -- parseotherfile" << fileName << "file to convert exists";
             QFileInfo fileInfo(aFile->fileName());
 
             outFileName=QDir::tempPath()+QDir::separator()+fileInfo.fileName();
@@ -59,12 +61,12 @@ ParseOtherFile::ParseOtherFile(QString fileName, bool &ok, QString &errorString)
 
             QFile* newFile = new QFile(outFileName);
             if(newFile->exists() ) {
-                //printf("caQtDM -- parseotherfile uifile %s exists, no parsing done & file will be used\n", qasc(outFileName));
+                qCDebug(parseOtherFileLog) << "caQtDM -- parseotherfile uifile" << outFileName << "exists, no parsing done & file will be used";
                 errorString = tr("file %1 already exists, no parsing done and use existing file").arg(outFileName);
                 ok = true;
                 fileExists= true;
             } else {
-                //printf("caQtDM -- parseotherfile uifile %s will be written\n", qasc(outFileName));
+                qCDebug(parseOtherFileLog) << "caQtDM -- parseotherfile uifile" << outFileName << "will be written";
                 if( isMedmFile ){
                     // medm conversion
                     myParser converter;
@@ -84,7 +86,7 @@ ParseOtherFile::ParseOtherFile(QString fileName, bool &ok, QString &errorString)
         }
         delete aFile;
     } else {
-        //printf("caQtDM -- parseotherfile %s ism not a medm or edm file\n", qasc(fileName));
+        qCDebug(parseOtherFileLog) << "caQtDM -- parseotherfile" << fileName << "is not a medm or edm file";
         errorString = tr("sorry -- specified file %1 is not a med or edm file").arg(fileName);
     }
 
@@ -123,7 +125,7 @@ QWidget* ParseOtherFile::load(QWidget *parent)
     buffer->open(QIODevice::ReadOnly);
     buffer->seek(0);
     //QString str=buffer->buffer();
-    //std::cout<<str.toLocal8Bit().data()<<std::endl;
+    //qCDebug(parseOtherFileLog) << str;
     widget=loader.load(buffer, parent);
     buffer->close();
     return widget;

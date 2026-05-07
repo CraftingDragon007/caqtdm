@@ -29,6 +29,8 @@
 #include "pathdefinitions.h"
 #include "caQtDM_Lib_global.h"
 
+Q_LOGGING_CATEGORY(loadPluginsLog, "caqtdm.lib.loadplugins")
+
 loadPlugins::loadPlugins()
 {
 }
@@ -39,7 +41,7 @@ void loadPlugins::printPlugins(const QMap<QString,ControlsInterface*> interfaces
         QMapIterator<QString, ControlsInterface *> i(interfaces);
         while (i.hasNext()) {
             i.next();
-            qDebug() << "Info: plugin" <<  i.key() << "loaded";
+            qCInfo(loadPluginsLog) << "Info: plugin" <<  i.key() << "loaded";
         }
     }
 }
@@ -49,7 +51,7 @@ bool loadPlugins::loadAll(QMap<QString, ControlsInterface*> &interfaces, MutexKn
 {
     int nbInterfaces = 0;
 #ifndef MOBILE
-    //qDebug() << "load dynamic plugins";
+    qCDebug(loadPluginsLog) << "load dynamic plugins";
     char asc[MAX_STRING_LENGTH];
     QList<QString> allPaths;
 
@@ -77,7 +79,7 @@ bool loadPlugins::loadAll(QMap<QString, ControlsInterface*> &interfaces, MutexKn
     for (int i = 0; i < allPaths.size(); ++i) {
         QString path = allPaths.at(i);
         QDir pluginsDir(path);
-        qDebug() << "caQtDM -- Controlsystem plugins: attempt to load from" << pluginsDir.absolutePath();
+        qCInfo(loadPluginsLog) << "caQtDM -- Controlsystem plugins: attempt to load from" << pluginsDir.absolutePath();
 
         QStringList filesInPluginFolder = pluginsDir.entryList(QDir::Files);
         QStringList possiblePlugins;
@@ -114,7 +116,7 @@ bool loadPlugins::loadAll(QMap<QString, ControlsInterface*> &interfaces, MutexKn
             snprintf(asc, MAX_STRING_LENGTH, "Controlsystem plugins: attempt to load from %s", qasc(currentPath));
             if(messageWindow != (MessageWindow *) Q_NULLPTR) messageWindow->postMsgEvent(QtInfoMsg, asc);
             foreach (QString fileName, possiblePlugins) {
-                //qDebug() << "load " << pluginsDir.absoluteFilePath(fileName);
+                qCDebug(loadPluginsLog) << "load " << pluginsDir.absoluteFilePath(fileName);
                 QPluginLoader pluginLoader(pluginsDir.absoluteFilePath(fileName));
                 QObject *plugin = pluginLoader.instance();
                 if (plugin) {
@@ -133,7 +135,7 @@ bool loadPlugins::loadAll(QMap<QString, ControlsInterface*> &interfaces, MutexKn
         }
     }
 #else
-    //qDebug() << "load static plugins";
+    qCDebug(loadPluginsLog) << "load static plugins";
     foreach (QObject *plugin, QPluginLoader::staticInstances())
     {
         if (plugin) {

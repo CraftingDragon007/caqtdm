@@ -46,6 +46,7 @@ class Q_DECL_EXPORT gpsPlugin : public QObject, ControlsInterface
 public:
     QString pluginName();
     gpsPlugin();
+    ~gpsPlugin();
 
     int initCommunicationLayer(MutexKnobData *data, MessageWindow *messageWindow, QMap<QString, QString> options);
     int pvAddMonitor(int index, knobData *kData, int rate, int skip);
@@ -77,7 +78,7 @@ private:
     QMap<QString, double> listOfDoubles;
     QList<int> listOfIndexes;
     double initValue;
-    QTimer *timer, *timerValues;
+    QTimer *timerValues;
     QGeoPositionInfoSource *pos_data_source;
     QGeoCoordinate distancedata;
 

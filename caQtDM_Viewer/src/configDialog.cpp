@@ -207,6 +207,9 @@ configDialog::configDialog(const bool debugWindow, const QList<QString> &urls, c
     // second group, second combo
     urlComboBox = new QComboBox();
     urlComboBox->setEditable(true);
+#ifdef MOBILE
+    urlComboBox->setCompleter(Q_NULLPTR);
+#endif
     urlComboBox->setInsertPolicy(QComboBox::InsertAtCurrent);
     urlComboBox->setFocusPolicy(Qt::StrongFocus);
     for(int i=0; i< 5; i++) {
@@ -219,17 +222,19 @@ configDialog::configDialog(const bool debugWindow, const QList<QString> &urls, c
 
     // adjust height
     height = urlComboBox->minimumSizeHint().height();
-    width = urlComboBox->minimumSizeHint().width();
+    //width = urlComboBox->minimumSizeHint().width();
 #ifdef MOBILE_ANDROID
     urlComboBox->setMinimumHeight(qRound(height*COMBOHEIGHTFACTOR*1.1));
 #else
     urlComboBox->setMinimumHeight(qRound(height*COMBOHEIGHTFACTOR));
-    urlComboBox->setMaximumWidth(qRound(width*COMBOHEIGHTFACTOR));
+    urlComboBox->setMaximumWidth (desktopSize.width()*2 / 3);
 #endif
 
     // add it
     urlBox->setLayout(urlLayout);
     frameLayout->addWidget(urlBox);
+
+
 
     // third layout for third group
     QGridLayout* fileLayout = new QGridLayout;
@@ -243,6 +248,9 @@ configDialog::configDialog(const bool debugWindow, const QList<QString> &urls, c
     // third group, third combo
     fileComboBox = new QComboBox();
     fileComboBox->setEditable(true);
+#ifdef MOBILE
+    fileComboBox->setCompleter(Q_NULLPTR);
+#endif
     fileComboBox->setInsertPolicy(QComboBox::InsertAtCurrent);
     fileComboBox->setFocusPolicy(Qt::StrongFocus);
 
@@ -298,8 +306,8 @@ configDialog::configDialog(const bool debugWindow, const QList<QString> &urls, c
 
     // all should expand
     clearBox->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    urlBox->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    fileBox->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    urlBox->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    fileBox->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
 
     frame->setLayout(mainLayout);
     show();

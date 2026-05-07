@@ -28,6 +28,8 @@
 #include <QResizeEvent>
 #include "alarmdefs.h"
 
+Q_LOGGING_CATEGORY(caApplyNumericLog, "caqtdm.widgets.caapplynumeric")
+
 caApplyNumeric::caApplyNumeric(QWidget *parent) : EApplyNumeric(parent)
 {
     // to start with, clear the stylesheet, so that playing around
@@ -120,7 +122,7 @@ void caApplyNumeric::setColors(QColor bg, QColor fg, bool init)
         style = style.arg(fg.red()).arg(fg.green()).arg(fg.blue()).arg(fg.alpha()).
                           arg(bg.red()).arg(bg.green()).arg(bg.blue()).arg(bg.alpha());
         setStyleSheet(style);
-        //printf("%s\n", qasc(style));
+        qCDebug(caApplyNumericLog) << style;
         //fflush(stdout);
         oldForeColor = fg;
         oldBackColor = bg;

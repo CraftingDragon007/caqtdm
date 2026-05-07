@@ -94,7 +94,35 @@ HEADERS  +=  \
     fileopenwindow.h \
     configDialog.h \
     pipereader.h \
-    signalhandler.h
+    signalhandler.h \
+    src/loggingcategories.h
+
+CAQTDM_NO_CUSTOM_LOGHANDLER = $$(CAQTDM_NO_CUSTOM_LOGHANDLER)
+isEmpty(CAQTDM_NO_CUSTOM_LOGHANDLER) {
+    message("Building custom caQtDM LogHandler")
+
+    SOURCES +=\
+        src/logging/consoleloghandler.cpp \
+        src/logging/fileloghandler.cpp \
+        src/logging/generalloghandler.cpp \
+        src/logging/logstashloghandler.cpp
+
+    HEADERS +=\
+        src/logging/abstractloghandler.h \
+        src/logging/consoleloghandler.h \
+        src/logging/fileloghandler.h \
+        src/logging/generalloghandler.h \
+        src/logging/logstashloghandler.h
+
+    unix {
+        SOURCES += src/logging/syslogloghandler.cpp
+        HEADERS += src/logging/syslogloghandler.h
+    }
+} else {
+    message("caQtDM will be built without custom LogHandler")
+
+    DEFINES += CAQTDM_NO_CUSTOM_LOGHANDLER
+}
 
 FORMS += main.ui
 

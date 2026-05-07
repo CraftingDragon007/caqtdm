@@ -397,6 +397,7 @@ private:
     bool reaffectText(QMap<QString, QString> map, QString *text, QWidget *w);
     int InitVisibility(QWidget* widget, knobData *kData, QMap<QString, QString> map,  int *specData, QString info);
     void postMessage(QtMsgType type, char *msg);
+    void postMessageAndLog(QtMsgType type, char *msg, QMessageLogger::CategoryFunction category);
     int Execute(char *command);
 
     void TreatRequestedWave(QString pv, QString text, caWaveTable::FormatType fType, int index, QWidget *w);
@@ -462,6 +463,9 @@ private:
     // 50 levels of includes should do it
     QString savedMacro[CAQTDM_MAX_INCLUDE_LEVEL];
     QString savedFile[CAQTDM_MAX_INCLUDE_LEVEL];
+
+    QString m_normalTextColorHex;
+    QString m_debugTextColorHex;
 
 #ifndef MOBILE
     myQProcess *proc;
@@ -533,6 +537,9 @@ private:
     QString handle_Macro_Scan(QString Text, QMap<QString, QString> map, macro_parser parse);
     QString handle_Macro_Constants(QString Text);
     QStringList treat_read_MacroCommand(QStringList args);
+
+public slots:
+    void messageWindowOutput(const QtMsgType type, const QString &message);
 
 private slots:
     void Callback_CaCalc(double value) ;
@@ -619,6 +626,8 @@ private slots:
     }
 
     void updateResize();
+    void themeChanged();
+
 #ifndef MOBILE
     void send_delayed_popup_signal();
 #endif

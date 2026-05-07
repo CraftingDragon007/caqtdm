@@ -34,18 +34,24 @@
 #include <stdio.h>
 #include <QHeaderView>
 #include <QApplication>
+#include <QGuiApplication>
 #include <QClipboard>
 #include <qnumeric.h>
 #include "cawavetable.h"
 #include "cawavetablemodel.h"
 #include "alarmdefs.h"
 
+#define DEFAULT_CSV_SEPARATOR ','
+
+Q_DECLARE_METATYPE(QtMsgType)
 
 #if defined(_MSC_VER)
     #ifndef snprintf
      #define snprintf _snprintf
     #endif
 #endif
+
+Q_LOGGING_CATEGORY(caWaveTableLog, "caqtdm.widgets.cawavetable")
 
 caWaveTable::caWaveTable(QWidget *parent) : QTableWidget(parent)
 {
@@ -75,6 +81,13 @@ caWaveTable::caWaveTable(QWidget *parent) : QTableWidget(parent)
     verticalHeader()->setModel(d);
     horizontalHeader()->setModel(d);
 
+    QString csvSeparatorEnv = qgetenv("CAQTDM_CSV_SEPARATOR");
+    if (!csvSeparatorEnv.isEmpty()) {
+        csvSeparator = csvSeparatorEnv[0];
+    } else {
+        csvSeparator = DEFAULT_CSV_SEPARATOR;
+    }
+
 
  #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     horizontalHeader()->setResizeMode(QHeaderView::Stretch);
@@ -85,13 +98,13 @@ caWaveTable::caWaveTable(QWidget *parent) : QTableWidget(parent)
     bool canSetStyle = true;
     for(QWidget *checkWidget = this;checkWidget->parentWidget();checkWidget = checkWidget->parentWidget()){
         if (!(checkWidget->styleSheet().isEmpty())){
-            //qDebug().noquote()<<QString("Style for a child widget of %1 is NOT set by object, preferring Style from designer").arg(this->parentWidget()->objectName());
+            qCDebug(caWaveTableLog).noquote() << QString("Style for a child widget of %1 is NOT set by object, preferring Style from designer").arg(this->parentWidget()->objectName());
             canSetStyle = false;
             break;
         }
     }
     if (canSetStyle){
-        //qDebug().noquote()<<QString("Style for a child widget of %1 is set by object").arg(this->parentWidget()->objectName());
+        qCDebug(caWaveTableLog).noquote() << QString("Style for a child widget of %1 is set by object").arg(this->parentWidget()->objectName());
         QPalette p = QPalette();
         p.setColor(QPalette::AlternateBase, QColor(233, 231, 227));
         setPalette(p);
@@ -126,6 +139,16 @@ caWaveTable::caWaveTable(QWidget *parent) : QTableWidget(parent)
 
     connect(this->verticalScrollBar(),SIGNAL(valueChanged(int)),this, SLOT(vscrollbarInput(int)));
     connect(this->horizontalScrollBar(),SIGNAL(valueChanged(int)),this, SLOT(hscrollbarInput(int)));
+
+    // find parent and connect slot
+    QWidget *currentParent = parent;
+    while (currentParent != Q_NULLPTR) {
+        if (currentParent->metaObject() != Q_NULLPTR && qstrncmp(currentParent->metaObject()->className(), "CaQtDM_Lib", qstrlen("CaQtDM_Lib")) == 0) {
+            connect(this, SIGNAL(messageWindowOutput(QtMsgType,QString)), currentParent, SLOT(messageWindowOutput(QtMsgType,QString)));
+            break;
+        }
+        currentParent = currentParent->parentWidget();
+    }
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     defaultForeColor = palette().foreground().color();
@@ -204,6 +227,189 @@ void caWaveTable::hscrollbarControl(int scrollvalue)
 int caWaveTable::getHorizontalOffset() const
 {
     return horizontalOffset;
+}
+
+QString caWaveTable::getHeaderCSV()
+{
+    QString header = getHorizontalString();
+    if (!header.isEmpty()) {
+        int numTotalValues = qMin(sizeSaved, keepData.size());
+        int numHeaderValues = header.count(';') + 1;
+
+        // Sanitize header
+        QStringList headerValues = header.split(';');
+        for (auto& value: headerValues) {
+            QString newValue = value;
+            if (!value.startsWith('"')) {
+                newValue = '"' + newValue;
+            }
+            if (!value.endsWith('"')) {
+                newValue = newValue + '"';
+            }
+            value = newValue;
+        }
+        QString csvHeader = headerValues.join(csvSeparator);
+
+        // Calculate how many empty header columns have to be inserted such that each following column has a header field -> better tool compatiblity
+        int maxFilledColumns = qMin(colcount, numTotalValues);
+        int missingHeaderValues = maxFilledColumns - numHeaderValues;
+        if (missingHeaderValues > 0) {
+            csvHeader = csvHeader.leftJustified(csvHeader.size() + missingHeaderValues, csvSeparator);
+        }
+
+        return csvHeader;
+    }
+
+    return "";
+}
+
+void caWaveTable::copyDataCSV()
+{
+    if (rowcount == 0 || colcount == 0 || sizeSaved == 0 || keepData.size() == 0) return;
+
+    QVector<double> rawData = keepData;
+
+    // Get the string representation of the data as displayed to the user
+    QStringList stringData;
+    stringData.reserve(rawData.size());
+    int numTotalValues = qMin(sizeSaved, rawData.size());
+    for (int i = 0; i < numTotalValues; i++) {
+        stringData.push_back(setValue(rawData[i], keepDatatype));
+    }
+
+    // Create a csv string representing the tabular data encoded in the 1-Dimensional array
+    // Structure: All elements of the first row, then all elements of the second row etc.
+    // Reverse engineered from:
+    // row = index / colcount; -> 0 = colcount < index
+    // column = index - row * colcount;
+    QString text = "";
+    // For each row
+    for (int i = 0; i < rowcount; i++) {
+        bool gotAtLeastOne = false;
+        // Go over all elements in it, based on the offset which is calculated using the previous number of columns
+        for (int j = i * colcount; j < (i + 1) * colcount; j++) {
+            if (j >= stringData.size()) break; // Shouldn't happen
+
+            text += stringData[j] + csvSeparator;
+            gotAtLeastOne = true;
+        }
+         if (gotAtLeastOne) {
+            text[text.length() - 1] = '\n';
+        } else {
+            text.append('\n');
+        }
+    }
+    // If the text was filled, remove the trailing separator/newline
+    if (text.size() > 0) {
+        text.remove(text.size() - 1, 1);
+    }
+
+    // Add header, if specified
+    QString header = getHeaderCSV();
+    if (!header.isEmpty()) {
+        text = header + "\n" + text;
+    }
+
+    QClipboard *clipboard = QGuiApplication::clipboard();
+    clipboard->setText(text);
+}
+
+void caWaveTable::pasteDataCSV()
+{
+    if (rowcount == 0 || colcount == 0) return;
+
+    QClipboard *clipboard = QGuiApplication::clipboard();
+    QString text = clipboard->text();
+
+    if (text.size() == 0) return;
+
+    // Figure out if the pasted data contains a header and remove it if so.
+    // Pasting of header values is not allowed / headers should be ignored.
+    QStringList lines = text.split("\n", Qt::SkipEmptyParts);
+    bool removeHeader = false;
+    if (lines.size() > 1) {
+        // If the current header corresponds to the first pasted line, it is a header and should be ignored
+        if (getHeaderCSV() == lines[0]) {
+            removeHeader = true;
+        } else {
+            // Analyze the first possible header value to figure out if it can be converted into a value, if not it is a header
+            QStringList headerParts = lines[0].split(csvSeparator, Qt::SkipEmptyParts);
+            QString possibleHeaderValue;
+            if (!headerParts.isEmpty()) {
+                possibleHeaderValue = headerParts.first();
+            }
+            bool canConvert;
+            switch (keepDatatype) {
+            case doubles:
+                if (thisFormatType == octal) {
+                    possibleHeaderValue.replace('O', '0');
+                }
+                // In case its an integer format, propagate to long handling
+                if (thisFormatType != octal && thisFormatType != hexadecimal) {
+                    possibleHeaderValue.toDouble(&canConvert);
+                    if (!canConvert) {
+                        removeHeader = true;
+                    }
+                    break;
+                }
+                // propagates to long handling
+            case longs:
+                if (thisFormatType == octal) {
+                    // For octal format to be automatically detected, use 0 instead of caQtDM-Style O.
+                    possibleHeaderValue.replace('O', '0');
+                }
+                // base 0 makes it automatically detect format
+                possibleHeaderValue.toInt(&canConvert, 0);
+                if (!canConvert) {
+                    removeHeader = true;
+                }
+                break;
+            case characters:
+                if (possibleHeaderValue.length() > 1) {
+                    removeHeader = true;
+                }
+                break;
+            case strings:
+            default:
+                // In this case we cannot distinguish.
+                // Since it is not equal to the copied header, we can only assume it to be data.
+                break;
+            }
+        }
+
+        if (removeHeader) {
+            emit messageWindowOutput(QtInfoMsg, "caWaveTable: When pasting user input, a header row was detected and removed");
+            lines.removeFirst();
+            text = lines.join('\n');
+        }
+    }
+
+    if (!text.contains(csvSeparator) && colcount + rowcount > 1) {
+        emit messageWindowOutput(QtCriticalMsg, "caWaveTable: When pasting user input, no CSV separators were found, aborting. CSV separator is: <" + QString(csvSeparator) + "> and can be defined via: CAQTDM_CSV_SEPARATOR env");
+        return;
+    }
+
+    // Serialize it into one row, as internally it is stored as such
+    text = text.replace("\n", csvSeparator);
+
+    // Now we can separate it into an array of values, congruent with the stored data
+    QStringList stringData;
+    stringData = text.split(csvSeparator);
+
+    // Emulate the user changing each cell manually, to get the same format parsing etc.
+    int currentIndex = 0;
+    for (int i = 0; i < rowcount; i++) {
+        for (int j = 0; j < colcount; j++) {
+            if (currentIndex >= stringData.size()) {
+                break;
+            }
+            item(i, j)->setText(stringData[currentIndex]);
+            currentIndex++;
+            // blockIndex specifies that this item should be written back to the control system. will be reset after the write
+            blockIndex = toIndex(i, j);
+            dataInput(i, j);
+        }
+    }
 }
 
 void caWaveTable::setHorizontalOffset(int newHorizontalOffset)
@@ -344,11 +550,11 @@ void caWaveTable::dataInput(int row, int col)
 
     if(index == blockIndex) {
         blockIndex = -1;
-        QString valueText =  item(row, col)->text();
+        QString valueText = item(row, col)->text();
 
         clearSelection();
 
-        // set the value back (dataInput is now blocked again
+        // set the value back (dataInput is now blocked again)
         if(item(row,col) != (QTableWidgetItem*) Q_NULLPTR) {
             item(row,col)->setText(keepText[index]);
         }
@@ -384,11 +590,11 @@ bool caWaveTable::eventFilter(QObject *obj, QEvent *event)
         if (ev != (QKeyEvent *)0) {
             if (ev->key() == Qt::Key_Return || ev->key() == Qt::Key_Enter) {
                 if (ev->isAutoRepeat()) {
-                    //printf("keyPressEvent ignore\n");
+                    qCDebug(caWaveTableLog) << "keyPressEvent ignore";
                     event->ignore();
                 }
                 else {
-                    //printf("keyPressEvent accept\n");
+                    qCDebug(caWaveTableLog) << "keyPressEvent accept";
                     event->accept();
                 }
             }
@@ -405,7 +611,7 @@ bool caWaveTable::eventFilter(QObject *obj, QEvent *event)
         QApplication::restoreOverrideCursor();
         clearFocus();
     } else if(event->type() == QEvent::FocusOut) {
-        //printf("focus out\n");
+        qCDebug(caWaveTableLog) << "focus out";
     }
     return QObject::eventFilter(obj, event);
 }
@@ -760,7 +966,7 @@ void caWaveTable::copy()
         }
 
         if(i==0) {
-            //printf("no rows were selected\n");
+            qCDebug(caWaveTableLog) << "no rows were selected";
             QModelIndexList cols = select->selectedColumns();
             foreach (QModelIndex Col, cols) {
                 if (i > 0) str += "\n";

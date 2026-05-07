@@ -430,6 +430,7 @@ public slots:
        setYscaling(Auto);
     }
     void resetZoom();
+    void copyImage();
     void setZoom(const QRectF& newZoomRect);
     void zoomOnXAxis(const QRectF& newZoomRect);
 
