@@ -4,7 +4,6 @@
 #include "cahmiconfigtransferitem.h"
 #include <QObject>
 #include <QSharedMemory>
-#include <QSystemSemaphore>
 #include <QDataStream>
 #include <QByteArray>
 #include <QList>
@@ -28,7 +27,6 @@ private:
     ~HmiSharedConfigListManager();
     bool this_isInitialized;
     QSharedMemory this_sharedMemory;
-    QSystemSemaphore this_semaphore;
 
     HmiSharedConfigListManager(const HmiSharedConfigListManager&) = delete;
     HmiSharedConfigListManager& operator=(const HmiSharedConfigListManager&) = delete;

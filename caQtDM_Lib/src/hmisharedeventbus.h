@@ -5,7 +5,6 @@
 
 #include <QObject>
 #include <QSharedMemory>
-#include <QSystemSemaphore>
 #include <QTimer>
 #include "caQtDM_Lib_global.h"
 
@@ -37,7 +36,6 @@ private:
     HmiSharedEventBus& operator=(HmiSharedEventBus&&) = delete;
 
     QSharedMemory this_sharedMemory;
-    QSystemSemaphore this_writeLockSemaphore;
 
     SharedHeader* this_header;
     EventPayload* this_eventBuffer;
