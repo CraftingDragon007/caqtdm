@@ -389,6 +389,7 @@ Q_LOGGING_CATEGORY(caWaveTableLog, "caqtdm.widgets.cawavetable")
 Q_LOGGING_CATEGORY(replaceMacroLog, "caqtdm.widgets.replacemacro")
 Q_LOGGING_CATEGORY(caScan2DLog, "caqtdm.widgets.scan2d")
 Q_LOGGING_CATEGORY(wmSignalRescaleLog, "caqtdm.widgets.wmsignalrescale")
+Q_LOGGING_CATEGORY(webRelatedDisplay, "caqtdm.web.relateddisplay")
 
 QList<QSharedPointer<caHMIConfigTransferItem>> CaQtDM_Lib::externalHmiConfigList;
 QReadWriteLock CaQtDM_Lib::externalHmiConfigListLock;
@@ -7465,7 +7466,7 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
         // start new process and vnc or novnc
 
         if (indx >= files.count()) {
-            qWarning("caQtDM_Web -- Tried to open unavailable file through caRelatedDisplay (index was larger or equal than/to file count)");
+            qCWarning(webRelatedDisplay) << "Tried to open unavailable file through caRelatedDisplay (index was larger or equal than/to file count)";
             QMessageBox::critical(this, "Error", "Tried to open unavailable file through caRelatedDisplay (index was larger or equal than/to file count)");
             return;
         }
@@ -7480,7 +7481,7 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
         filecheck->deleteLater();
 
         if (absolutePath.isNull()) {
-            qWarning("caQtDM_Web -- caRelatedDisplay ui file not found");
+            qCWarning(webRelatedDisplay) << "caRelatedDisplay ui file not found";
             QMessageBox::critical(this, "Error - File not found", "The specified path is either invalid or CAQTDM_DISPLAY_PATH hasn't been correctly set");
             return;
         }
@@ -7511,12 +7512,13 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
         }
 
         if (processCount >= CaQtDM_Lib::webInstanceLimit - 1) {
+            qCInfo(webRelatedDisplay) << "Couldn't start child process, instance limit reached";
             QMessageBox::critical(this, "Error - Couldn't start instance", "Maximum instance limit reached");
             return;
         }
 
         if (!WebPortPool::instance()->allocate(new_vnc_port, new_web_port)) {
-            qWarning() << "Failed to allocate ports for new instance" << file << "- pool exhausted ("
+            qCWarning(webRelatedDisplay) << "Failed to allocate ports for new instance" << file << "- pool exhausted ("
                        << WebPortPool::instance()->freeCount() << "free)";
             QMessageBox::critical(this, "Error - Couldn't start instance", "Maximum instance limit reached");
             return;
@@ -7540,7 +7542,7 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
         filecheck->deleteLater();
 
         if (absolutePath.isNull()) {
-            qWarning("caQtDM_Web -- caRelatedDisplay ui file not found");
+            qCInfo(webRelatedDisplay) << "caRelatedDisplay ui file not found";
             QMessageBox::critical(this, "Error - File not found", "The specified path is either invalid or CAQTDM_DISPLAY_PATH hasn't been correctly set");
             return;
         }
@@ -7649,24 +7651,24 @@ VncWebChildProcess* CaQtDM_Lib::startVncChildProcess(quint16 vncPort, quint16 we
         QString websockify_path = QDir(web_path + "/websockify").absolutePath();
         QFileInfo websockify_info(websockify_path);
         if (!websockify_info.exists()) {
-            qCritical() << "caQtDM_Web -- websockify does not exist inside caQtDM_Web folder, unable to start another instance for caRelatedDisplay, please ensure you specified the right CAQTDM_WEB_PATH and the websockify folder exists within it.";
+            qCCritical(webChildProcess) << "websockify does not exist inside caQtDM_Web folder, unable to start another instance for caRelatedDisplay, please ensure you specified the right CAQTDM_WEB_PATH and the websockify folder exists within it.";
             if (parent) QMessageBox::critical(parent, "Error", WEB_CARELATED_DISPLAY_ERROR_MSG);
             return nullptr;
         }
         if (websockify_info.isFile()) {
-            qCritical() << "caQtDM_Web -- websockify is a file and not a folder, please ensure that you initialized the websockify git submodule.";
+            qCCritical(webChildProcess) << "websockify is a file and not a folder, please ensure that you initialized the websockify git submodule.";
             if (parent) QMessageBox::critical(parent, "Error", WEB_CARELATED_DISPLAY_ERROR_MSG);
             return nullptr;
         }
         if (!websockify_info.isDir()) {
-            qCritical() << "caQtDM_Web -- websockify is neither a folder nor a file, please check if you provided the right CAQTDM_WEB_PATH";
+            qCCritical(webChildProcess) << "websockify is neither a folder nor a file, please check if you provided the right CAQTDM_WEB_PATH";
             if (parent) QMessageBox::critical(parent, "Error", WEB_CARELATED_DISPLAY_ERROR_MSG);
             return nullptr;
         }
         QFile runScript(websockify_path + "/run");
 
         if (!runScript.exists()) {
-            qCritical() << "caQtDM_Web -- websockify run script, please check if you provided the right CAQTDM_WEB_PATH and if websockify was correctly cloned inside it";
+            qCCritical(webChildProcess) << "websockify run script, please check if you provided the right CAQTDM_WEB_PATH and if websockify was correctly cloned inside it";
             if (parent) QMessageBox::critical(parent, "Error", WEB_CARELATED_DISPLAY_ERROR_MSG);
             return nullptr;
         }

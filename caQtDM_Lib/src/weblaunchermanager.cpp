@@ -38,7 +38,7 @@ bool WebLauncherManager::setup(const QString& fileName) {
 
     QJsonValue result = loadAndExpand(fileName, true);
     if (result.isNull() || result.toObject().isEmpty()) {
-        qCWarning(webLauncherManager) << "caQtDM_Web_Launcher -- Error parsing or empty file:" << fileName;
+        qCWarning(webLauncherManager) << "Error parsing or empty file:" << fileName;
         return false;
     }
 
@@ -51,22 +51,22 @@ QJsonValue WebLauncherManager::loadAndExpand(const QString& fileName, bool loadF
     QString resolvedPath = resolveFilePath(fileName);
 
     if (resolvedPath.isEmpty()) {
-        qCWarning(webLauncherManager) << "caQtDM_Web_Launcher -- [File Error] Could not find or resolve path for:" << fileName;
+        qCWarning(webLauncherManager) << "[File Error] Could not find or resolve path for:" << fileName;
         return QJsonValue();
     }
 
     if (m_visitedFiles.contains(resolvedPath)) {
-        qCWarning(webLauncherManager) << "caQtDM_Web_Launcher -- [Recursion Error] Circular dependency blocked for:" << resolvedPath;
+        qCWarning(webLauncherManager) << "[Recursion Error] Circular dependency blocked for:" << resolvedPath;
         return QJsonValue();
     }
 
-    qCDebug(webLauncherManager) << "caQtDM_Web_Launcher -- [Info] Expanding file:" << resolvedPath;
+    qCDebug(webLauncherManager) << "Expanding file:" << resolvedPath;
 
     m_visitedFiles.insert(resolvedPath);
 
     QJsonDocument doc = parseJsonFile(resolvedPath);
     if (doc.isNull()) {
-        qCWarning(webLauncherManager) << "caQtDM_Web_Launcher -- [JSON Error] Failed to parse or empty file:" << resolvedPath;
+        qCWarning(webLauncherManager) << "[JSON Error] Failed to parse or empty file:" << resolvedPath;
         m_visitedFiles.remove(resolvedPath);
         return QJsonValue();
     }
@@ -110,14 +110,14 @@ QString WebLauncherManager::resolveFilePath(const QString& inputPath) {
 QJsonDocument WebLauncherManager::parseJsonFile(const QString& fileName) {
     QFile file(fileName);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        qCWarning(webLauncherManager) << "caQtDM_Web_Launcher -- [IO Error] Cannot open file for reading:" << fileName;
+        qCWarning(webLauncherManager) << "[IO Error] Cannot open file for reading:" << fileName;
         return QJsonDocument();
     }
 
     QJsonParseError error;
     QJsonDocument doc = QJsonDocument::fromJson(file.readAll(), &error);
     if (error.error != QJsonParseError::NoError) {
-        qCWarning(webLauncherManager) << "caQtDM_Web_Launcher -- [Syntax Error] in" << fileName << ":" << error.errorString() << "at offset" << error.offset;
+        qCWarning(webLauncherManager) << "[Syntax Error] in" << fileName << ":" << error.errorString() << "at offset" << error.offset;
     }
     return doc;
 }
@@ -134,7 +134,7 @@ void WebLauncherManager::processFileChoices(QJsonObject& obj) {
 
         QString resolvedPath = resolveFilePath(rawPath);
         if (resolvedPath.isEmpty()) {
-            qCWarning(webLauncherManager) << "caQtDM_Web_Launcher -- Launcher file not found:" << rawPath;
+            qCWarning(webLauncherManager) << "Launcher file not found:" << rawPath;
             continue;
         }
 
@@ -144,7 +144,7 @@ void WebLauncherManager::processFileChoices(QJsonObject& obj) {
         FileChoice choice = FileChoice::fromJson(choiceObj);
         choice.fileName = resolvedPath;
         m_fileChoices.insert(baseName, choice);
-        qCDebug(webLauncherManager) << "caQtDM_Web -- Added launcher file:" << baseName;
+        qCDebug(webLauncherManager) << "Added launcher file:" << baseName;
     }
 
     // Update the JSON object to reflect the internal map
@@ -208,7 +208,7 @@ QJsonArray WebLauncherManager::expandArray(const QJsonArray &arr) {
         if (item["type"].toString() == "menu" && item.contains("file")) {
             QString subPath = item["file"].toString();
 
-            qCDebug(webLauncherManager).noquote().nospace() << "caQtDM_Web_Launcher -- [Info] Item '" << item["text"].toString() << "' pulls from: " << subPath;
+            qCDebug(webLauncherManager).noquote().nospace() << "Item '" << item["text"].toString() << "' pulls from: " << subPath;
 
             QJsonValue subContent = loadAndExpand(subPath, false);
 
@@ -218,12 +218,12 @@ QJsonArray WebLauncherManager::expandArray(const QJsonArray &arr) {
                 if (subObj.contains("menu") && subObj["menu"].isArray()) {
                     item["menu"] = subObj["menu"].toArray();
                     item.remove("file");
-                    qCDebug(webLauncherManager) << "caQtDM_Web_Launcher -- [Info] Successfully merged" << subPath << "into menu.";
+                    qCDebug(webLauncherManager) << "Successfully merged" << subPath << "into menu.";
                 } else {
-                    qCWarning(webLauncherManager) << "caQtDM_Web_Launcher -- [Structure Error] File" << subPath << "loaded but contains no 'menu' array.";
+                    qCWarning(webLauncherManager) << "[Structure Error] File" << subPath << "loaded but contains no 'menu' array.";
                 }
             } else {
-                qCWarning(webLauncherManager).noquote().nospace() << "caQtDM_Web_Launcher -- [Expansion Failed] Sub-menu item '" << item["text"].toString() << "' could not be populated from: " << subPath;
+                qCWarning(webLauncherManager).noquote().nospace() << "[Expansion Failed] Sub-menu item '" << item["text"].toString() << "' could not be populated from: " << subPath;
             }
         }
         result.append(item);

@@ -312,7 +312,7 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
         quint16 vnc_port = options["vnc_port"].toUShort(&ok);
 
         if (!ok) {
-            qCritical() << "caQtDM_Web -- Invalid web/vnc ports defined, stuff will break.";
+            qCritical(webLog) << "Invalid web/vnc ports defined, stuff will break.";
         } else {
             CaQtDM_Lib::webPort = web_port;
             CaQtDM_Lib::vncPort = vnc_port;
