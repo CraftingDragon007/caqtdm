@@ -111,11 +111,10 @@ void HmiSharedEventBus::createSharedMemory() {
     if (this_sharedMemory.lock()) {
         new (this_sharedMemory.data()) SharedHeader();
         this_sharedMemory.unlock();
+        qCDebug(caHMILog) << "Shared memory segment created and initialized by process" << QCoreApplication::applicationPid();
     } else {
         qCCritical(caHMILog) << "Failed to lock shared memory for writing:" << this_sharedMemory.errorString();
     }
-
-    qCDebug(caHMILog) << "Shared memory segment created and initialized by process" << QCoreApplication::applicationPid();
 }
 
 int HmiSharedEventBus::findOrCreateProcessSlot() {
