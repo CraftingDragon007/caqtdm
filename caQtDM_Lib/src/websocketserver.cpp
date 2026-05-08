@@ -7,6 +7,8 @@
 #include "weblaunchermanager.h"
 #include "webportpool.h"
 
+Q_LOGGING_CATEGORY(webSocketServer, "caqtdm.web.webSocketServer")
+
 WebSocketServer::WebSocketServer(QObject *parent) : QObject(parent), m_pWebSocketServer(nullptr), m_isInitialized(false), m_isShuttingDown(false)
 {}
 
@@ -29,14 +31,14 @@ bool WebSocketServer::setup(const QString &caQtDM_Version, QString host, quint16
                                               QWebSocketServer::NonSecureMode, this);
 
     if (m_pWebSocketServer->listen(QHostAddress(host), port)) {
-        qDebug() << "WebSocketServer listening on port" << port << "on host" << host;
+        qCInfo(webSocketServer) << "WebSocketServer listening on port" << port << "on host" << host;
         connect(m_pWebSocketServer, &QWebSocketServer::newConnection,
                 this, &WebSocketServer::onNewConnection);
         tryScheduleTimeout(0); // Maybe first user leaves immediately
         m_isInitialized = true;
         return true;
     } else {
-        qCritical() << "Failed to start WebSocket server on port" << port << "on host" << host << ":" << m_pWebSocketServer->errorString();
+        qCCritical(webSocketServer) << "Failed to start WebSocket server on port" << port << "on host" << host << ":" << m_pWebSocketServer->errorString();
         return false;
     }
 }
@@ -70,7 +72,7 @@ void WebSocketServer::onNewConnection()
         return;
     }
 
-    qDebug().noquote() << "New connection from:" << pSocket->peerAddress().toString() + ":" + QString::number(pSocket->peerPort()) << "(" + getIPAddress(pSocket) + ")";
+    qCDebug(webSocketServer).noquote() << "New connection from:" << pSocket->peerAddress().toString() + ":" + QString::number(pSocket->peerPort()) << "(" + getIPAddress(pSocket) + ")";
 
     connect(pSocket, &QWebSocket::textMessageReceived, this, &WebSocketServer::processTextMessage);
     connect(pSocket, &QWebSocket::binaryMessageReceived, this, &WebSocketServer::processBinaryMessage);
@@ -97,7 +99,7 @@ void WebSocketServer::processTextMessage(const QString &message)
     QWebSocket *pSender = qobject_cast<QWebSocket *>(sender());
 
     if (pSender) {
-        qDebug().noquote() << "Text message received from" << pSender->peerAddress().toString() + ":" + QString::number(pSender->peerPort()) << "(" + getIPAddress(pSender) + ")" << ":" << message;
+        qCDebug(webSocketServer).noquote() << "Text message received from" << pSender->peerAddress().toString() + ":" + QString::number(pSender->peerPort()) << "(" + getIPAddress(pSender) + ")" << ":" << message;
         if (message.startsWith("PING")) {
             pSender->sendTextMessage("PONG");
         } else if (message.startsWith("RESOLVE|") && !CaQtDM_Lib::slaveServer) {
@@ -181,7 +183,7 @@ void WebSocketServer::processTextMessage(const QString &message)
             quint16 webPort;
 
             if (!WebPortPool::instance()->allocate(vncPort, webPort)) {
-                qWarning() << "Failed to allocate ports for new instance" << file << "- pool exhausted ("
+                qCWarning(webSocketServer) << "Failed to allocate ports for new instance" << file << "- pool exhausted ("
                            << WebPortPool::instance()->freeCount() << "free)";
                 pSender->sendTextMessage("ERROR|Maximum instance limit reached");
                 return;
@@ -224,7 +226,7 @@ void WebSocketServer::processBinaryMessage(const QByteArray &message)
     QWebSocket *pSender = qobject_cast<QWebSocket *>(sender());
 
     if (pSender) {
-        qDebug().noquote() << "Binary message received from" << pSender->peerAddress().toString() + ":" + QString::number(pSender->peerPort()) << "(" + getIPAddress(pSender) + ")" << ":" << message.size() << "bytes";
+        qCDebug(webSocketServer).noquote() << "Binary message received from" << pSender->peerAddress().toString() + ":" + QString::number(pSender->peerPort()) << "(" + getIPAddress(pSender) + ")" << ":" << message.size() << "bytes";
         pSender->sendBinaryMessage("Server received your binary data");
     }
 }
@@ -234,7 +236,7 @@ void WebSocketServer::socketDisconnected()
     if (m_isShuttingDown) return;
     QWebSocket *pSocket = qobject_cast<QWebSocket *>(sender());
     if (pSocket) {
-        qDebug().noquote() << "Client disconnected:" << pSocket->peerAddress().toString() + ":" + QString::number(pSocket->peerPort()) << "(" + getIPAddress(pSocket) + ")";
+        qCDebug(webSocketServer).noquote() << "Client disconnected:" << pSocket->peerAddress().toString() + ":" + QString::number(pSocket->peerPort()) << "(" + getIPAddress(pSocket) + ")";
         int count;
         {
             QWriteLocker locker(&m_clientReadWriteLock);
@@ -254,17 +256,17 @@ void WebSocketServer::tryScheduleTimeout(int count) {
         if (timeout == 0) timeout = 30 * 60;
         uint timeoutMsec = timeout * 1000;
         QTimer::singleShot(timeoutMsec, this, SLOT(shutdownNoUserTimeout()));
-        qDebug() << "Scheduled no user shutdown timeout in" << timeout << "seconds";
+        qCInfo(webSocketServer) << "Scheduled no user shutdown timeout in" << timeout << "seconds";
     }
 }
 
 void WebSocketServer::shutdownNoUserTimeout() {
     {
         QReadLocker locker(&m_clientReadWriteLock);
-        qDebug() << "No user timeout reached";
+        qCDebug(webSocketServer) << "No user timeout reached";
         if (m_clients.count() > 0) return;
     }
-    qDebug() << "No user based shutdown triggered!";
+    qCInfo(webSocketServer) << "No user based shutdown triggered!";
     QCoreApplication::exit(0);
 }
 

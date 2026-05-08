@@ -94,6 +94,7 @@ SOURCES +=\
 web {
 SOURCES +=\
     websocketserver.cpp \
+    vncwebchildprocess.cpp \
     webportpool.cpp \
     weblaunchermanager.cpp
 }
@@ -156,4 +157,3 @@ australian: {
 }
 
 FORMS +=
-

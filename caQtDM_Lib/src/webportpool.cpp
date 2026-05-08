@@ -3,6 +3,8 @@
 #include <QDebug>
 #include <QAbstractSocket>
 
+Q_LOGGING_CATEGORY(webPortPool, "caqtdm.web.portPool")
+
 WebPortPool::WebPortPool(QObject *parent)
     : QObject{parent}
 {
@@ -12,7 +14,7 @@ WebPortPool::WebPortPool(QObject *parent)
         m_freePorts.insert(port);
     }
     if (m_freePorts.size() < POOL_SIZE) {
-        qWarning() << "WebPortPool: Initialized only" << m_freePorts.size() << "ports (range limited to 65535)";
+        qCWarning(webPortPool) << "WebPortPool: Initialized only" << m_freePorts.size() << "ports (range limited to 65535)";
     }
 }
 
@@ -59,7 +61,7 @@ bool WebPortPool::allocate(quint16& port1, quint16& port2)
 void WebPortPool::release(quint16 port)
 {
     if (port < BASE_PORT) {
-        qWarning() << "Invalid port released:" << port;
+        qCWarning(webPortPool) << "Invalid port released:" << port;
         return;
     }
 

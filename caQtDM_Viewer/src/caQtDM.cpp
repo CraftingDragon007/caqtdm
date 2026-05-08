@@ -37,6 +37,7 @@
 #include "QDebug"
 #include <QFileDialog>
 #include <QLocale>
+#include <QHostAddress>
 #include "signalhandler.h"
 #include <iostream>
 #include <stdlib.h>
@@ -78,6 +79,7 @@
 #endif
 
 Q_LOGGING_CATEGORY(caQtDMLog, "caqtdm.viewer.caqtdm")
+Q_LOGGING_CATEGORY(webLog, "caqtdm.viewer.web")
 
 extern bool HTTPCONFIGURATOR;
 
@@ -413,17 +415,6 @@ int main(int argc, char *argv[])
         } else if (strcmp (argv[in], "-web_launcher_root_file") == 0) {
             in++;
             web_launcher_file = argv[in];
-            fileFunctions filefunction;
-            filefunction.checkFileAndDownload(web_launcher_file);
-
-            searchFile *filecheck = new searchFile(web_launcher_file);
-            web_launcher_file = filecheck->findFile();
-            filecheck->deleteLater();
-
-            if (web_launcher_file.isNull()) {
-                printf("caQtDM -- Error: Web launcher file not found, exiting...");
-                return 1;
-            }
         } else if (strcmp (argv[in], "-web_allow_insecure_cashell_commands") == 0) {
             web_allow_insecure_cashell_commands = true;
             printf("caQtDM - Allowing executing of caShellCommands in web mode, please be careful!");
@@ -480,20 +471,6 @@ int main(int argc, char *argv[])
     }
 
     if (server) {
-        options.insert("vnc_server", QString::number(server));
-        options.insert("novnc_plugin", QString::number(use_novnc_plugin));
-        options.insert("slave_server", QString::number(slave_server));
-        options.insert("vnc_port", QString::number(port));
-        options.insert("web_host", host);
-        options.insert("web_port", QString::number(web_port));
-        options.insert("web_timeout", QString::number(web_timeout));
-        options.insert("web_interaction_based_timeout", QString::number(web_interaction_based_timeout));
-        options.insert("novnc_readonly", QString::number(novnc_readonly));
-        options.insert("web_allow_insecure_cashell_commands", QString::number(web_allow_insecure_cashell_commands));
-        options.insert("web_instance_limit", QString::number(web_instance_limit));
-        options.insert("web_launcher_file", web_launcher_file);
-
-
 #if QT_VERSION < QT_VERSION_CHECK(6,0,0)
         // fix dpi for (no)VNC with qt5
         qputenv("QT_FONT_DPI", QString::number(96).toUtf8());
@@ -540,6 +517,37 @@ int main(int argc, char *argv[])
     }
 #endif
 
+#ifdef WEB
+    if (server) {
+        if (!web_launcher_file.isNull()) {
+            fileFunctions filefunction;
+            filefunction.checkFileAndDownload(web_launcher_file);
+
+            searchFile *filecheck = new searchFile(web_launcher_file);
+            web_launcher_file = filecheck->findFile();
+            filecheck->deleteLater();
+
+            if (web_launcher_file.isNull()) {
+                printf("caQtDM -- Error: Web launcher file not found, exiting...");
+                return 1;
+            }
+        }
+
+        options.insert("vnc_server", QString::number(server));
+        options.insert("novnc_plugin", QString::number(use_novnc_plugin));
+        options.insert("slave_server", QString::number(slave_server));
+        options.insert("vnc_port", QString::number(port));
+        options.insert("web_host", host);
+        options.insert("web_port", QString::number(web_port));
+        options.insert("web_timeout", QString::number(web_timeout));
+        options.insert("web_interaction_based_timeout", QString::number(web_interaction_based_timeout));
+        options.insert("novnc_readonly", QString::number(novnc_readonly));
+        options.insert("web_allow_insecure_cashell_commands", QString::number(web_allow_insecure_cashell_commands));
+        options.insert("web_instance_limit", QString::number(web_instance_limit));
+        options.insert("web_launcher_file", web_launcher_file);
+    }
+#endif
+
 #ifdef MOBILE_ANDROID
     qCDebug(caQtDMLog) << QStyleFactory::keys();
     app.setStyle(QStyleFactory::create("Fusion"));
@@ -550,7 +558,7 @@ int main(int argc, char *argv[])
 
         if (availableThemes.contains(theme, Qt::CaseInsensitive)) {
             if (theme.toLower() == "oxygen" && server) {
-                qWarning() << "caQtDM_Web -- Warning: You can expect degraded performance using this theme (Oxygen) in server mode";
+                qCWarning(webLog) << "caQtDM_Web -- Warning: You can expect degraded performance using this theme (Oxygen) in server mode";
             }
 
             QApplication::setStyle(QStyleFactory::create(theme));

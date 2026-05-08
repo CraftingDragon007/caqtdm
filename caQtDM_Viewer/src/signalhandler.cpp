@@ -1,5 +1,8 @@
 #include "signalhandler.h"
 #include <QCoreApplication>
+
+#include <loggingcategories.h>
+
 #include <QDebug>
 
 #ifdef _MSC_VER
@@ -9,6 +12,8 @@
 #include <unistd.h>
 #include <signal.h>
 #endif
+
+Q_LOGGING_CATEGORY(signalHandler, "caqtdm.viewer.signalHandler")
 
 #ifndef _MSC_VER
 int SignalHandler::signalSocketPair[2];
@@ -22,7 +27,7 @@ void SignalHandler::posixSignalHandler(int) {
 #ifdef _MSC_VER
 BOOL WINAPI windowsCtrlHandler(DWORD ctrlType) {
     if (ctrlType == CTRL_C_EVENT || ctrlType == CTRL_CLOSE_EVENT) {
-        qDebug() << "Windows signal received. Exiting...";
+        qCInfo(signalHandler) << "Windows signal received. Exiting...";
         QMetaObject::invokeMethod(qApp, [=](){ qApp->exit(0); });
         return TRUE;
     }
@@ -62,7 +67,7 @@ void SignalHandler::handleUnixSignal() {
     char tmp;
     ::read(signalSocketPair[1], &tmp, sizeof(tmp));
 
-    qDebug() << "Unix signal received. Exiting...";
+    qCInfo(signalHandler) << "Unix signal received. Exiting...";
     QCoreApplication::exit(0);
 }
 #endif

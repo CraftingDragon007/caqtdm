@@ -66,6 +66,7 @@ bool HTTPCONFIGURATOR = false;
 #include "messagebox.h"
 #include "configDialog.h"
 #include "caQtDM_Lib_global.h"
+#include "loggingcategories.h"
 
 #if defined(linux) || defined(__FreeBSD__)
 #include <sys/resource.h>
@@ -1260,7 +1261,7 @@ QMainWindow *FileOpenWindow::loadMainWindow(const QPoint &position, const QStrin
         QTimer::singleShot(1000, [safeMainWindow]{
 #endif
             if (!safeMainWindow) {
-                qDebug() << "caQtDM_Lib destroyed before windows size adjustment";
+                qCWarning(webLog) << "caQtDM_Lib destroyed before windows size adjustment";
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
                 return;
 #endif
@@ -1282,7 +1283,7 @@ QMainWindow *FileOpenWindow::loadMainWindow(const QPoint &position, const QStrin
                     width = qMax(width, minSize.width());
                     height = qMax(height, minSize.height());
 
-                    qDebug() << "Setting window size to virtual monitor size" << width << height;
+                    qCInfo(webLog) << "Setting window size to virtual monitor size" << width << height;
                     safeMainWindow->setGeometry(safeMainWindow->x(), safeMainWindow->y(), width, height);
                 }
             }
@@ -1357,6 +1358,41 @@ void FileOpenWindow::cycleWindows()
 void FileOpenWindow::nextWindow()
 {
     cycleWindows();
+}
+
+void FileOpenWindow::doSomething()
+{
+#ifdef WEB
+    {
+        QWriteLocker locker(&CaQtDM_Lib::webChildProcessesLock);
+        foreach (auto item, CaQtDM_Lib::webChildProcesses) {
+            if (item == nullptr) continue;
+            QProcess *process = item->process();
+            if (process != nullptr) {
+                if (process->state() == QProcess::Running) {
+                    qCInfo(webLog) << "Stopping child process (pid:" << process->processId() << "vnc port:" << item->vncPort() << ")";
+                    process->terminate();
+
+                    if (!process->waitForFinished(5000)) {
+                        qCWarning(webLog) << "Child process did not terminate gracefully (pid:" << process->processId() << "vnc port:" << item->vncPort() << "), killing it.";
+                        process->kill();
+                        process->waitForFinished(1000);
+                    }
+                }
+                item->deleteLater();
+            }
+        }
+    }
+#endif
+
+    printf("About to quit!\n");
+#if defined linux || defined TARGET_OS_MAC
+    // remove temporary file created by caQtDM for pipe reading
+    if(lastFile.contains("qt-tempFile")) {
+        QFile::remove(lastFile);
+    }
+#endif
+    sharedMemory.detach();
 }
 
 /**
