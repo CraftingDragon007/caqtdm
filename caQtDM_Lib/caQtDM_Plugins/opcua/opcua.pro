@@ -28,9 +28,6 @@ HEADERS         = ../controlsinterface.h ../loggingcategories.h \
 SOURCES         = \
     opcua_plugin.cpp opcua_core.cpp
 TARGET          = opcua_plugin
-android {
-   INCLUDEPATH += $(ANDROIDFUNCTIONSINCLUDE)
-}
 
 contains(DEFINES, QT_OPCUA_X509) {
     HEADERS += certificatedialog.h \

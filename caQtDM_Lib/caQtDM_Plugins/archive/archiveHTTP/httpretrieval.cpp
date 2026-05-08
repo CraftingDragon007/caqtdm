@@ -34,12 +34,6 @@
 #include <iostream>
 #include <time.h>
 
-#ifdef MOBILE_ANDROID
-#include <androidtimeb.h>
-#else
-#include <sys/timeb.h>
-#endif
-
 #include <QDebug>
 #include <QThread>
 #include <QTime>
@@ -220,7 +214,6 @@ void HttpRetrieval::finishReply(QNetworkReply *reply)
         return;
     }
     int count = 0;
-    struct timeb now;
     double seconds;
 
     QVariant status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute);
@@ -313,8 +306,7 @@ void HttpRetrieval::finishReply(QNetworkReply *reply)
 
     reply->deleteLater();
     m_errorString = "";
-    ftime(&now);
-    seconds = (double) now.time + (double) now.millitm / (double) 1000;
+    seconds = QDateTime::currentMSecsSinceEpoch() / 1000.0;
 
     bool conversionOk = true;
     QJsonObject rootObject;

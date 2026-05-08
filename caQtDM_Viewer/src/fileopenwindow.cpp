@@ -141,12 +141,6 @@ Q_IMPORT_PLUGIN(ArchiveSF_Plugin);
 #ifdef ARCHIVEHTTP
 Q_IMPORT_PLUGIN(ArchiveHTTP_Plugin);
 #endif
-#ifdef ARCHIVEHIPA
-Q_IMPORT_PLUGIN(ArchiveHIPA_Plugin);
-#endif
-#ifdef ARCHIVEPRO
-Q_IMPORT_PLUGIN(ArchivePRO_Plugin);
-#endif
 //*************************************
 
 #endif

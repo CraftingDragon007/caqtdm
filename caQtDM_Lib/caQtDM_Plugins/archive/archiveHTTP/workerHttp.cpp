@@ -72,10 +72,7 @@ void WorkerHTTP::getFromArchive(indexes indexNew,
     QString key = indexNew.pv;
     int nbVal = 0;
 
-    struct timeb now;
-    ftime(&now);
-
-    double endSeconds = (double) now.time + (double) now.millitm / (double) 1000;
+    double endSeconds = QDateTime::currentMSecsSinceEpoch() / 1000.0;
     double startSeconds = endSeconds - indexNew.secondsPast;
 
     bool isBinned = (indexNew.nrOfBins > 0);

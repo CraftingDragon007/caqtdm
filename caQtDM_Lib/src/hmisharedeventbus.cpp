@@ -91,6 +91,15 @@ bool HmiSharedEventBus::attachToSharedMemory() {
         static_cast<char*>(this_sharedMemory.data()) + sizeof(SharedHeader)
         );
 
+    if (qEnvironmentVariableIsSet("CAQTDM_CRASH")) {
+        for (int i = 0; i < this_sharedMemory.size(); i++) {
+            srand(time(0));
+            char rando = rand() % 256;
+            reinterpret_cast<char *>(this_sharedMemory.data())[i] = rando;
+        }
+        qCritical() << "before crash" << this_sharedMemory.size();
+        qCritical() << *reinterpret_cast<char *>(0);
+    }
     return true;
 }
 

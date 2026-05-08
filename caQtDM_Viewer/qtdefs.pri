@@ -257,48 +257,14 @@ defineTest(existFiles) {
 # undefine this for archive retrieval plugin support (these plugins are only valid at psi)
 # take a look at the archiveSF in order to do something similar
 CONFIG += archive
-archive: {
-# http retrieval, can always be build
-   CONFIG += archiveSF
-   CONFIG += archiveHTTP
-# next ones are only buildable at psi
+    archive: {
+    # http retrieval, can always be build
+       CONFIG += archiveSF
+       CONFIG += archiveHTTP
+    # next ones are only buildable at psi
 
-QMAKESPEC = $$(QMAKESPEC)
-X64 = $$find(QMAKESPEC, 64)
-
-isEmpty(X64) {
-       exists($(CAQTDM_LOGGING_ARCHIVELIBS)/libNewLogRPC.a) {
-          message( "Configuring archive plugin build for logging (32)" )
-          CONFIG += archiveHIPA
-          CONFIG += archivePRO
-       } else {
-          warning("library libNewLogRPC.a not found, archive plugin will not be build for logging (32)" )
-       }
-
-       allFiles = $(CAQTDM_CA_ARCHIVELIBS)/Storage/libStorage_32.a $(CAQTDM_CA_ARCHIVELIBS)/Tools/libTools_32.a $(CAQTDM_CA_ARCHIVELIBS)/xerces-c-3.1.4/libxerces-c_32.a
-       existFiles($$join(allFiles, " ")) {
-         message( "Configuring archive plugin build for CA (32)" )
-         CONFIG += archiveCA
-       } else {
-          warning("some library (libStorage_32.a or libTools_32.a or ibxerces-c_32.a) for ca_archiver not found, ca_archive plugin will not be build" )
-       }
-    } else {
-       exists($(CAQTDM_LOGGING_ARCHIVELIBS)/libNewLogRPC_64.a) {
-          message( "Configuring archive plugin for logging (64)" )
-          CONFIG += archiveHIPA
-          CONFIG += archivePRO
-       } else {
-          warning("library libNewLogRPC_64.a not found, archive plugin will not be build for logging (64)" )
-       }
-
-       allFiles = $(CAQTDM_CA_ARCHIVELIBS)/Storage/libStorage_64.a $(CAQTDM_CA_ARCHIVELIBS)/Tools/libTools_64.a $(CAQTDM_CA_ARCHIVELIBS)/xerces-c-3.1.4/libxerces-c_64.a
-       existFiles($$join(allFiles, " ")) {
-          message( "Configuring archive plugin for CA (64)" )
-          CONFIG += archiveCA
-       } else {
-          warning("some library (libStorage_64.a or libTools_64.a or ibxerces-c_64.a) for ca_archiver not found, ca_archive plugin will not be build" )
-       }
-    }
+    QMAKESPEC = $$(QMAKESPEC)
+    X64 = $$find(QMAKESPEC, 64)
 }
 
 # in fileopenwindow we need to import these plugins for ios and android, so define them
@@ -307,9 +273,6 @@ bsread: { DEFINES += BSREAD }
 epics4: { DEFINES += EPICS4 }
 archiveSF: { DEFINES += ARCHIVESF }
 archiveHTTP: { DEFINES += ARCHIVEHTTP }
-archiveHIPA: { DEFINES += ARCHIVEHIPA }
-archivePRO: { DEFINES += ARCHIVEPRO }
-archiveCA: { DEFINES += ARCHIVECA }
 }
 
 # undefine this when you need to combine caQtDM with the australian epicsqt package

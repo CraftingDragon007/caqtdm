@@ -29,12 +29,6 @@
 #include <QTimer>
 #include <stdio.h>
 
-#ifndef MOBILE_ANDROID
-  #include <sys/timeb.h>
-#else
-  #include "androidtimeb.h"
-#endif
-
 #include <qtcontrols_global.h>
 
 class QTCON_EXPORT stripplotthread : public QThread

@@ -40,6 +40,7 @@ extern CAQTDM_LIBSHARED_EXPORT MutexKnobData* C_SetMutexKnobDataReceived(MutexKn
 extern CAQTDM_LIBSHARED_EXPORT MutexKnobData* C_UpdateTextLine(MutexKnobData* p, char *message, char *name);
 extern CAQTDM_LIBSHARED_EXPORT MutexKnobData* C_DataLock(MutexKnobData* p, knobData *kData);
 extern CAQTDM_LIBSHARED_EXPORT MutexKnobData* C_DataUnlock(MutexKnobData* p, knobData *kData);
+extern CAQTDM_LIBSHARED_EXPORT long long C_CurrentTimeMs();
 
 #ifdef __cplusplus
 }

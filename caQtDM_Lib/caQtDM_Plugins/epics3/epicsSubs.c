@@ -113,7 +113,7 @@ char* myLimitedString (char * strng) {
     kData.edata.upper_warning_limit = (double) stsF->upper_warning_limit; }
 
 #define AssignEpicsValue(valx, vali, countx) { \
-    kData.edata.actTime = now; \
+    kData.edata.actTimeMs = C_CurrentTimeMs(); \
     kData.edata.rvalue = valx; \
     kData.edata.ivalue = vali; \
     kData.edata.severity = stsF->severity; \
@@ -258,7 +258,6 @@ static void access_rights_handler(struct access_rights_handler_args args)
 static void dataCallback(struct event_handler_args args)
 {
     knobData kData;
-    struct timeb now;
 
     connectInfo *info = (connectInfo *) ca_puser(args.chid);
     if(info == (connectInfo *) 0) return;
@@ -272,7 +271,6 @@ static void dataCallback(struct event_handler_args args)
         kData.edata.monitorCount = info->event;
         kData.edata.connected = info->connected;
         kData.edata.fieldtype = ca_field_type(args.chid);
-        ftime(&now);
 
         C_DataLock(mutexKnobdataPtr, &kData);
 
@@ -462,7 +460,6 @@ static void dataCallback(struct event_handler_args args)
 
 static void displayCallback(struct event_handler_args args) {
     knobData kData;
-    struct timeb now;
     int status;
 
     connectInfo *info = (connectInfo *) ca_puser(args.chid);
@@ -479,7 +476,6 @@ static void displayCallback(struct event_handler_args args) {
         kData.edata.connected = info->connected;
         kData.edata.fieldtype = ca_field_type(args.chid);
         kData.edata.nelm = ca_element_count(args.chid);
-        ftime(&now);
 
         C_DataLock(mutexKnobdataPtr, &kData);
 

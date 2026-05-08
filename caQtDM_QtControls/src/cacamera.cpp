@@ -1994,7 +1994,6 @@ QImage *caCamera::showImageCalc(int datasize, char *data, short datatype)
         m_init = false;
         minvalue = 0;
         maxvalue = 0xFFFFFFFF;
-        ftime(&timeRef);
 
         if(rgb != (uint*)Q_NULLPTR) free(rgb);
         ulong rgbsize = 3*m_width*m_height*sizeof(uint);

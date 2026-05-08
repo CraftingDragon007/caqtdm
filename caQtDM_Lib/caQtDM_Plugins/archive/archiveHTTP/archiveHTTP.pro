@@ -28,10 +28,6 @@ INCLUDEPATH    += ../../../src
 INCLUDEPATH    += ../../../../caQtDM_QtControls/src/
 INCLUDEPATH    += $(QWTINCLUDE)
 
-android {
-   INCLUDEPATH += $(ANDROIDFUNCTIONSINCLUDE)
-}
-
 HEADERS         = ../../controlsinterface.h \
     ../../loggingcategories.h \
     archivehttp_plugin.h \

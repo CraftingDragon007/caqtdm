@@ -36,11 +36,6 @@
 #include <QDebug>
 #include <QTextStream>
 #include <QScrollBar>
-#ifndef MOBILE_ANDROID
-#include <sys/timeb.h>
-#else
-#include <androidtimeb.h>
-#endif
 #include "qtdefinitions.h"
 
 #define GCC_VERSION (__GNUC__ * 10000 \
@@ -82,31 +77,8 @@ MessageWindow::MessageWindow(QWidget* parent) : QDockWidget(parent)
 
 QString MessageWindow::QtMsgToQString(QtMsgType type, const char *msg)
 {
-    time_t          time_val;
-    struct tm       *timess;
-    struct timeb    timeA;
-    char            prTime[200];
-
-    ftime(&timeA);
-    time_val = timeA.time;
-    timess = localtime(&time_val);
-    if(timess != Q_NULLPTR) {
-        sprintf(prTime, "%02d-%02d-%04d %02d:%02d:%02d ", timess->tm_mday, timess->tm_mon+1, timess->tm_year+1900,  timess->tm_hour, timess->tm_min, timess->tm_sec);
-        switch (type) {
-                case QtDebugMsg:
-                        return QString(prTime) + QString(msg);
-                case QtWarningMsg:
-                        return QString(prTime) + QString(msg);
-                case QtCriticalMsg:
-                        return QString(prTime) + QString(msg);
-                case QtFatalMsg:
-                        return QString(prTime) + QString(msg);
-                default:
-                        return QString(prTime) + QString(msg);
-        }
-     } else {
-        return QString(msg);
-     }
+    QString prTime = QDateTime::currentDateTime().toString("dd-MM-yyyy HH:mm:ss ");
+    return prTime + QString(msg);
 }
 
 void MessageWindow::AppendMsgWrapper(QtMsgType type, char* msg)

@@ -50,14 +50,7 @@
 #include <qwt_point_3d.h>
 #include <qwt_plot_spectrocurve.h>
 
-#ifndef MOBILE_ANDROID
-#include <sys/timeb.h>
-#else
-#include <androidtimeb.h>
-#endif
-
 #include <stdint.h>
-//#include <sys/timeb.h>
 
 #include <qtcontrols_global.h>
 
@@ -126,8 +119,6 @@ public:
 
     template <typename pureData> int setData(pureData* Array, int &count, int numCols, int numRows, int arraySize)
     {
-        //struct timeb now, last;
-        //ftime(&last);
         ActualNumberOfColumns = NumberOfColumns = numCols;
         NumberOfRows = numRows;
 
@@ -186,11 +177,6 @@ public:
                 }
             }
         }
-
-        //ftime(&now);
-        //double diff = ((double) now.time + (double) now.millitm / (double)1000) -
-        //        ((double) last.time + (double) last.millitm / (double)1000);
-        //printf("%f\n", diff);
 
         // update the matrix
         setValueMatrix(values, ActualNumberOfColumns);

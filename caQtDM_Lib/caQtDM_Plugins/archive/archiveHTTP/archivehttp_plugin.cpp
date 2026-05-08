@@ -305,10 +305,8 @@ void ArchiveHTTP_Plugin::updateCartesianAppended(int numberOfValues,
         }
 
         // Initialize values used amongst both indexes
-        QVector<double> alreadyStoredValues;
-        timeb now;
-        ftime(&now);
-        double endSeconds = (double) now.time + (double) now.millitm / (double) 1000;
+        QVector<double> alreadyStoredValues;;
+        double endSeconds = QDateTime::currentMSecsSinceEpoch() / 1000.0;
         double startSeconds = endSeconds - indexNew.secondsPast;
 
         // Lock both indexes so the corresponding data isn't updated while we process it.

@@ -119,10 +119,9 @@ private:
     int nbMonitorsPerSecond, nbMonitors;
     int highestCount, highestIndex, highestIndexPV;
     float highestCountPerSecond;
-    struct timeb monitorTiming;
+    qint64 monitorTimingMs;
 
     int nbDisplayCountPerSecond, displayCount;
-    struct timeb last;
 
     bool suppressUpdates;
     UpdateType myUpdateType;

@@ -41,12 +41,6 @@
 #endif
 #endif
 
-#ifndef MOBILE_ANDROID
-  #include <sys/timeb.h>
-#else
-  #include <androidtimeb.h>
-#endif
-
 #include <QObject>
 #include <QToolBar>
 #include <QUuid>
@@ -4281,7 +4275,6 @@ void CaQtDM_Lib::FlushAllInterfaces()
 int CaQtDM_Lib::addMonitor(QWidget *thisW, knobData *kData, QString pv, QWidget *w, int *specData, QMap<QString, QString> map, QString *pvRep)
 {
     QMutex *mutex= Q_NULLPTR;
-    struct timeb now;
     bool doNothing = false;
 
     int indx;
@@ -4289,7 +4282,6 @@ int CaQtDM_Lib::addMonitor(QWidget *thisW, knobData *kData, QString pv, QWidget 
     QString pluginFlavor="";
     ControlsInterface *plugininterface = (ControlsInterface *) 0;
 
-    ftime(&now);
     w->setProperty("Connect", false);
     int rate = DEFAULTRATE;  // default will be 5Hz
 
@@ -4496,7 +4488,7 @@ int CaQtDM_Lib::addMonitor(QWidget *thisW, knobData *kData, QString pv, QWidget 
     kData->edata.dataB =(void*) Q_NULLPTR;
     kData->edata.dataSize = 0;
     kData->edata.initialize = true;
-    kData->edata.lastTime = now;
+    kData->edata.lastTimeMs = QDateTime::currentMSecsSinceEpoch();
     kData->edata.repRate = rate;   // default 5 Hz
 
     // update data structure
@@ -5582,11 +5574,7 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
         if(data.edata.connected) {
             if(clockWidget->getTimeType() == caClock::ReceiveTime) {
                 clockWidget->setAlarmColors(data.edata.severity);
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-                QDateTime dattim = QDateTime::fromTime_t((uint) (data.edata.actTime.time + data.edata.actTime.millitm/1000.0));
-#else
-                QDateTime dattim = QDateTime::fromSecsSinceEpoch((data.edata.actTime.time + (time_t)(data.edata.actTime.millitm/1000.0)));
-#endif
+                QDateTime dattim = QDateTime::fromMSecsSinceEpoch(data.edata.actTimeMs);
                 clockWidget->updateClock(dattim.time());
             }
             // set no connection color
@@ -6251,11 +6239,11 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
             switch (data.edata.fieldtype){
                 case caINT:
                 case caLONG:{
-                    stripplotWidget->setData(data.edata.actTime, data.edata.ivalue, actPlot);
+                    stripplotWidget->setData(data.edata.actTimeMs, data.edata.ivalue, actPlot);
                     break;
                 }
                 default:{
-                    stripplotWidget->setData(data.edata.actTime, data.edata.rvalue, actPlot);
+                    stripplotWidget->setData(data.edata.actTimeMs, data.edata.rvalue, actPlot);
                 }
             }
 
