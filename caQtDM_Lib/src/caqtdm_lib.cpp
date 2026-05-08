@@ -7496,11 +7496,14 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
 
         VncWebChildProcess* existing = getWebChildProcess(absolutePath, macros);
 
+        QFileInfo info(absolutePath);
+        QString fileName(info.fileName());
+
         if (existing != nullptr) {
             if (existing->process() == nullptr || existing->process()->state() == QProcess::ProcessState::NotRunning) {
                 existing->deleteLater();
             } else if (WebSocketServer::instance().isInitialized()) {
-                WebSocketServer::instance().sendOpenFileRequest(file, macros);
+                WebSocketServer::instance().sendOpenFileRequest(fileName, macros);
                 return;
             }
         }
@@ -7527,7 +7530,7 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
         VncWebChildProcess *item = startVncChildProcess(new_vnc_port, new_web_port, absolutePath, macros, this);
 
         if (WebSocketServer::instance().isInitialized()) {
-            WebSocketServer::instance().sendOpenFileRequest(file, macros);
+            WebSocketServer::instance().sendOpenFileRequest(fileName, macros);
         }
 
         addWebChildProcess(absolutePath, macros, item);
@@ -7547,13 +7550,16 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
             return;
         }
 
+        QFileInfo info(absolutePath);
+        QString fileName(info.fileName());
+
         QString macros;
         if (indx < args.count()) {
             macros = args[indx].trimmed();
         }
 
         if (WebSocketServer::instance().isInitialized()) {
-            WebSocketServer::instance().sendOpenFileRequest(file, macros);
+            WebSocketServer::instance().sendOpenFileRequest(fileName, macros);
         }
     }
 #endif
