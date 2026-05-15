@@ -29,17 +29,16 @@ GNU_BIN=$(GNU_DIR)/bin
 
 #-------------------------------------------------------
 # Build architecture flags
-#   ARCH_CLASS must contain a list of CPU architectures which must be
-#   valid arguments to the -arch options for the cc and ld commands.
-#   ARCH_CLASS is defined in a CONFIG_SITE file which is not loaded
-#   until after this file.
 #
-ARCH_DEP_FLAGS = $(addprefix -arch ,$(ARCH_CLASS))
+# Android Clang selects architecture through --target, not -arch.
+# Keep these empty to avoid passing Darwin-style -arch flags.
+ARCH_DEP_FLAGS =
 ARCH_DEP_CFLAGS += $(ARCH_DEP_FLAGS)
 ARCH_DEP_LDFLAGS += $(ARCH_DEP_FLAGS)
 
 #--------------------------------------------------
 # Operating system flags
+SDK_DIR = $(GNU_DIR)/sysroot
 OP_SYS_CFLAGS += -isysroot $(SDK_DIR)
 OP_SYS_LDFLAGS += -isysroot $(SDK_DIR)
 
@@ -101,6 +100,5 @@ INCLUDES += -I.  -I$(NDK)/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/incl
 #
 #-I$(NDK)/sources/cxx-stl/llvm-libc++/include/ -I$(NDK)/sources/cxx-stl/llvm-libc++abi/include/ -I$(NDK)/sources/android/support/include/
 #
-
 
 
