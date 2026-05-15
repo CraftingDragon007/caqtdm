@@ -66,7 +66,9 @@ jobs:
       - name: Install Android packages
         run: |
           set -euo pipefail
+          set +o pipefail
           yes | sdkmanager --licenses >/dev/null
+          set -o pipefail
           sdkmanager \
             "platform-tools" \
             "platforms;android-${ANDROID_API}" \
