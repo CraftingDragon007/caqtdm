@@ -1003,3 +1003,17 @@ LIBCOM_API int epicsThreadGetCPUs(void)
 #endif
     return 1;
 }
+
+int epicsStdCall epicsThreadIsOkToBlock(void)
+{
+    epicsThreadOSD *pthreadInfo = epicsThreadGetIdSelf();
+
+    return pthreadInfo->isOkToBlock;
+}
+
+void epicsStdCall epicsThreadSetOkToBlock(int isOkToBlock)
+{
+    epicsThreadOSD *pthreadInfo = epicsThreadGetIdSelf();
+
+    pthreadInfo->isOkToBlock = !!isOkToBlock;
+}
