@@ -7,6 +7,7 @@ import { ControlSocket } from './modules/network/ControlSocket.js';
 import { parseLogMarkup, formatDateTime } from './modules/utils/Logger.js';
 
 (function() {
+  const LAST_LAUNCHER_STORAGE_KEY = 'caqtdm.web.lastLauncherChoice';
   const params = new URLSearchParams(window.location.search);
   let controlPath = params.get('control') || params.get('path') || '30000';
   let noVNCPath = params.get('novnc') || params.get('novncPath') || '30001';
@@ -59,8 +60,10 @@ import { parseLogMarkup, formatDateTime } from './modules/utils/Logger.js';
   const logContent = document.getElementById('log-content');
   const urlBuilderWindow = document.getElementById('url-builder-window');
   const launcherSelectionButton = document.getElementById('launcher-selection');
+  const launcherResetButton = document.getElementById('launcher-reset');
 
   if (launcherSelectionButton) launcherSelectionButton.style.display = 'none';
+  if (launcherResetButton) launcherResetButton.style.display = 'none';
 
   updateDocumentTitle(controlPath);
 
@@ -77,6 +80,9 @@ import { parseLogMarkup, formatDateTime } from './modules/utils/Logger.js';
   let pendingUrl = null;
   let pendingUrlType = 'url';
   let pendingFilePath = null;
+  let defaultLauncherPayload = null;
+  let currentLauncherChoice = 'root';
+  let attemptedLauncherRestore = false;
 
   if (displayMode) {
     const menuBar = document.getElementById('menu-bar');
@@ -193,6 +199,60 @@ import { parseLogMarkup, formatDateTime } from './modules/utils/Logger.js';
     return resolvedNoVNCPath || String(noVNCPath).trim() || '30001';
   }
 
+  function getStoredLauncherChoice() {
+    try {
+      return localStorage.getItem(LAST_LAUNCHER_STORAGE_KEY) || '';
+    } catch (_e) {
+      return '';
+    }
+  }
+
+  function setStoredLauncherChoice(choice) {
+    try {
+      if (choice && choice !== 'root') {
+        localStorage.setItem(LAST_LAUNCHER_STORAGE_KEY, choice);
+      } else {
+        localStorage.removeItem(LAST_LAUNCHER_STORAGE_KEY);
+      }
+    } catch (_e) {}
+  }
+
+  function updateLauncherResetButton() {
+    if (!launcherResetButton) return;
+    launcherResetButton.style.display = defaultLauncherPayload && currentLauncherChoice !== 'root' ? 'inline-block' : 'none';
+  }
+
+  function applyLauncherPayload(launcherPayload) {
+    setupLauncherMenu(launcherPayload);
+    setupLauncherSelectionMenu(launcherPayload, handleLauncherSelection);
+    updateLauncherResetButton();
+  }
+
+  function handleLauncherSelection(choice) {
+    currentLauncherChoice = choice || 'root';
+    setStoredLauncherChoice(currentLauncherChoice);
+    updateLauncherResetButton();
+    control.send('SELECT_LAUNCHER|' + currentLauncherChoice);
+  }
+
+  function maybeRestoreStoredLauncher() {
+    if (attemptedLauncherRestore) return;
+    attemptedLauncherRestore = true;
+
+    const storedChoice = getStoredLauncherChoice();
+    if (!storedChoice) return;
+
+    currentLauncherChoice = storedChoice;
+    updateLauncherResetButton();
+    control.send('SELECT_LAUNCHER|' + storedChoice);
+  }
+
+  function handleLauncherPayload(launcherPayload) {
+    if (!defaultLauncherPayload) defaultLauncherPayload = launcherPayload;
+    applyLauncherPayload(launcherPayload);
+    maybeRestoreStoredLauncher();
+  }
+
   // --- Clients ---
 
   const vnc = new VNCClient(vncContainer, reconnectOverlay, basePath);
@@ -203,6 +263,8 @@ import { parseLogMarkup, formatDateTime } from './modules/utils/Logger.js';
       return wsProtocol + window.location.host + withBasePath('/websockify/' + encodeURIComponent(getActiveControlPath()));
     },
     onOpen: () => {
+      defaultLauncherPayload = null;
+      attemptedLauncherRestore = false;
       const dateTime = formatDateTime(new Date());
       if (failedOnce && !newInstance) {
         control.reconnectDelay = 1000;
@@ -285,10 +347,7 @@ import { parseLogMarkup, formatDateTime } from './modules/utils/Logger.js';
     if (data.startsWith('LAUNCHER|')) {
       try {
         const launcherPayload = JSON.parse(data.slice(9));
-        setupLauncherMenu(launcherPayload);
-        setupLauncherSelectionMenu(launcherPayload, (choice) => {
-          control.send('SELECT_LAUNCHER|' + choice);
-        });
+        handleLauncherPayload(launcherPayload);
       } catch (e) {
         console.warn('Failed to parse LAUNCHER payload:', e);
       }
@@ -436,11 +495,37 @@ import { parseLogMarkup, formatDateTime } from './modules/utils/Logger.js';
   document.addEventListener('click', (e) => {
     const launcherBtn = document.getElementById('launcher');
     const launcherSelectionBtn = document.getElementById('launcher-selection');
+    const launcherResetBtn = document.getElementById('launcher-reset');
     const viewBtn = document.getElementById('menu-view');
     if ((launcherBtn && launcherBtn.contains(e.target))
       || (launcherSelectionBtn && launcherSelectionBtn.contains(e.target))
+      || (launcherResetBtn && launcherResetBtn.contains(e.target))
       || (viewBtn && viewBtn.contains(e.target))) return;
     closeAllMenus();
+  });
+
+  if (launcherResetButton) {
+    launcherResetButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeAllMenus();
+      currentLauncherChoice = 'root';
+      setStoredLauncherChoice('root');
+      if (defaultLauncherPayload) applyLauncherPayload(defaultLauncherPayload);
+    });
+  }
+
+  window.addEventListener('storage', (e) => {
+    if (e.key !== LAST_LAUNCHER_STORAGE_KEY) return;
+    const choice = e.newValue || 'root';
+    if (choice === currentLauncherChoice) return;
+    currentLauncherChoice = choice;
+    if (choice === 'root') {
+      if (defaultLauncherPayload) applyLauncherPayload(defaultLauncherPayload);
+      updateLauncherResetButton();
+      return;
+    }
+    updateLauncherResetButton();
+    control.send('SELECT_LAUNCHER|' + choice);
   });
 
   window.addEventListener('launcher-command', (e) => {
