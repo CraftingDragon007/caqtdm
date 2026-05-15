@@ -50,7 +50,9 @@
  #endif
 #endif
 
+#ifndef MOBILE
 Q_LOGGING_CATEGORY(caSliderLog, "caqtdm.widgets.caslider")
+#endif
 
 // I need to overload the scaleengine of qwt in order to get the upper and lower scale ticks drawn
 class mySliderScaleEngine: public QwtLinearScaleEngine

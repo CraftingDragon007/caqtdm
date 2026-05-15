@@ -49,6 +49,10 @@ contains(QT_VER_MAJ, 6) {
         QT     += printsupport
      }
 
+    android {
+        QT += xml
+    }
+
 }
 
 

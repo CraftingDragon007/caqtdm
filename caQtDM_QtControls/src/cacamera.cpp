@@ -59,7 +59,9 @@
 
 //#include "ittnotify.h"
 
+#ifndef MOBILE
 Q_LOGGING_CATEGORY(caCameraLog, "caqtdm.widgets.cacamera")
+#endif
 
 char caTypeStr[7][20] = {"caSTRING", "caINT", "caFLOAT", "caENUM", "caCHAR", "caLONG", "caDOUBLE"};
 

@@ -35,7 +35,9 @@
 #include <QtCore>
 #include <QGuiApplication>
 
+#ifndef MOBILE
 Q_LOGGING_CATEGORY(caCartesianPlotLog, "caqtdm.widgets.cacartesianplot")
+#endif
 
 caCartesianPlot::caCartesianPlot(QWidget *parent) : QwtPlot(parent)
 {

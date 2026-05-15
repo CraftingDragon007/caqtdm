@@ -35,7 +35,9 @@
 #include <QApplication>
 #include <QClipboard>
 
+#ifndef MOBILE
 Q_LOGGING_CATEGORY(caMultiLineStringLog, "caqtdm.widgets.camultilinestring")
+#endif
 
 caMultiLineString::caMultiLineString(QWidget *parent) : QPlainTextEdit(parent), FontScalingWidget(this)
 {

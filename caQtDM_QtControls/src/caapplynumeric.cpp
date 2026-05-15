@@ -28,7 +28,9 @@
 #include <QResizeEvent>
 #include "alarmdefs.h"
 
+#ifndef MOBILE
 Q_LOGGING_CATEGORY(caApplyNumericLog, "caqtdm.widgets.caapplynumeric")
+#endif
 
 caApplyNumeric::caApplyNumeric(QWidget *parent) : EApplyNumeric(parent)
 {

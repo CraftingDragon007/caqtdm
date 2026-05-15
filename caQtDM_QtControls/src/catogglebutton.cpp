@@ -32,7 +32,9 @@
 #include <QKeyEvent>
 #include <QStyle>
 
+#ifndef MOBILE
 Q_LOGGING_CATEGORY(caToggleButtonLog, "caqtdm.widgets.catogglebutton")
+#endif
 
 caToggleButton::caToggleButton(QWidget *parent) : QCheckBox(parent), FontScalingWidget(this)
 {

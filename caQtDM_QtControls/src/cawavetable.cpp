@@ -51,7 +51,9 @@ Q_DECLARE_METATYPE(QtMsgType)
     #endif
 #endif
 
+#ifndef MOBILE
 Q_LOGGING_CATEGORY(caWaveTableLog, "caqtdm.widgets.cawavetable")
+#endif
 
 caWaveTable::caWaveTable(QWidget *parent) : QTableWidget(parent)
 {

@@ -28,7 +28,9 @@
 #include <QApplication>
 #include "cascan2d.h"
 
+#ifndef MOBILE
 Q_LOGGING_CATEGORY(caScan2DLog, "caqtdm.widgets.cascan2d")
+#endif
 
 caScan2D::caScan2D(QWidget *parent) : QWidget(parent)
 {

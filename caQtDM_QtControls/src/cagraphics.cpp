@@ -31,7 +31,9 @@
 #include <math.h>
 #include "cagraphics.h"
 
+#ifndef MOBILE
 Q_LOGGING_CATEGORY(caGraphicsLog, "caqtdm.widgets.cagraphics")
+#endif
 
 caGraphics::caGraphics( QWidget *parent) :  QWidget(parent)
 {

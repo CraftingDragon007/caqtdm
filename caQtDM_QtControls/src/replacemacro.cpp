@@ -29,7 +29,9 @@
 #include <QMouseEvent>
 #include <QToolTip>
 
+#ifndef MOBILE
 Q_LOGGING_CATEGORY(replaceMacroLog, "caqtdm.widgets.replacemacro")
+#endif
 
 replaceMacro::replaceMacro(QWidget *parent) : QWidget(parent)
 {

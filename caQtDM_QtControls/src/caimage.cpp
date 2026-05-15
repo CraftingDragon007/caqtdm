@@ -29,7 +29,9 @@
 #include <QPainter>
 //#include <QElapsedTimer>
 
+#ifndef MOBILE
 Q_LOGGING_CATEGORY(caImageLog, "caqtdm.widgets.caimage")
+#endif
 
 caImage::caImage(QWidget* parent) : QWidget(parent)
 {

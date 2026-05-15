@@ -26,7 +26,9 @@
 #include "camimedisplay.h"
 #include <QApplication>
 
+#ifndef MOBILE
 Q_LOGGING_CATEGORY(caMimeDisplayLog, "caqtdm.widgets.camimedisplay")
+#endif
 
 caMimeDisplay::caMimeDisplay(QWidget *parent) : caRowColMenu(parent)
 {

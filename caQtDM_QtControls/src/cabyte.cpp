@@ -28,7 +28,9 @@
 #include <QGridLayout>
 #include <QtDebug>
 
+#ifndef MOBILE
 Q_LOGGING_CATEGORY(caByteLog, "caqtdm.widgets.cabyte")
+#endif
 
 caByte::caByte(QWidget *parent) : QWidget(parent)
 {
