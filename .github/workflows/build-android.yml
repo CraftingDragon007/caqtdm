@@ -207,15 +207,22 @@ jobs:
           test -x "${QT_ANDROID_ROOT}/bin/qmake"
           test -x "${QT_HOST_ROOT}/bin/qmake6"
 
-      - name: Cache third-party Android deps
-        id: cache-thirdparty
+      - name: Cache Qwt Android deps
+        id: cache-qwt
         uses: actions/cache@v5
         with:
-          path: ${{ env.DEPS_ROOT }}
-          key: android-thirdparty-${{ runner.os }}-qt${{ env.QT_VERSION }}-openssl${{ env.OPENSSL_VERSION }}-qwt${{ env.QWT_VERSION }}-epics${{ env.EPICS_VERSION }}-ndk${{ env.ANDROID_NDK_VERSION }}-${{ hashFiles('ci/epics-android/**') }}
+          path: ${{ env.QWT_INSTALL }}
+          key: android-qwt-${{ runner.os }}-qt${{ env.QT_VERSION }}-qwt${{ env.QWT_VERSION }}-abi${{ env.ANDROID_ABI }}
+
+      - name: Cache EPICS Android deps
+        id: cache-epics
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.EPICS_BASE }}
+          key: android-epics-${{ runner.os }}-epics${{ env.EPICS_VERSION }}-ndk${{ env.ANDROID_NDK_VERSION }}-abi${{ env.ANDROID_ABI }}-${{ hashFiles('ci/epics-android/**') }}
 
       - name: Build Qwt for Android
-        if: steps.cache-thirdparty.outputs.cache-hit != 'true'
+        if: steps.cache-qwt.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
           git clone https://git.code.sf.net/p/qwt/git --single-branch --branch qwt-${QWT_VERSION} "${RUNNER_TEMP}/qwt-src"
@@ -247,7 +254,7 @@ jobs:
           ls -lah "${QWT_INSTALL}/lib"
 
       - name: Build EPICS for Android
-        if: steps.cache-thirdparty.outputs.cache-hit != 'true'
+        if: steps.cache-epics.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
           git clone --depth 1 --branch "${EPICS_VERSION}" https://github.com/epics-base/epics-base.git "${RUNNER_TEMP}/epics-src"
