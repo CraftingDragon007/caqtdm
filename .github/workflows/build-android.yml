@@ -213,33 +213,31 @@ jobs:
           set -euo pipefail
           git clone https://git.code.sf.net/p/qwt/git --single-branch --branch qwt-${QWT_VERSION} "${RUNNER_TEMP}/qwt-src"
           cd "${RUNNER_TEMP}/qwt-src"
-          python3 - <<'PY'
-          import os
-          from pathlib import Path
-          p = Path('qwtconfig.pri')
-          lines = p.read_text().splitlines()
-          out = []
-          replaced = False
-          install_prefix = Path(os.environ['QWT_INSTALL']).as_posix()
-          for line in lines:
-              if line.strip().startswith('QWT_INSTALL_PREFIX'):
-                  out.append(f'QWT_INSTALL_PREFIX    = {install_prefix}')
-                  replaced = True
-              else:
-                  out.append(line)
-          if not replaced:
-              out.append(f'QWT_INSTALL_PREFIX    = {install_prefix}')
-          p.write_text("\n".join(out) + "\n")
-          print(f"Configured QWT_INSTALL_PREFIX={install_prefix}")
-          PY
-          grep '^QWT_INSTALL_PREFIX' qwtconfig.pri
+          sed -e '/^\s*QWT_INSTALL_PREFIX/ s|=.*|= /usr|' \
+              -e '/^QWT_INSTALL_DOCS/ s|/doc|/share/doc/qwt|' \
+              -e '/^QWT_INSTALL_HEADERS/ s|include|&/qwt|' \
+              -e '/^QWT_INSTALL_PLUGINS/ s|plugins/designer|lib/qt6/&|' \
+              -e '/^QWT_INSTALL_FEATURES/ s|features|lib/qt6/mkspecs/&|' \
+              -i qwtconfig.pri
+          grep '^QWT_INSTALL_' qwtconfig.pri
           sed -i 's/^QWT_CONFIG\s*+=\s*QwtExamples/# &/' qwtconfig.pri || true
           sed -i 's/^QWT_CONFIG\s*+=\s*QwtPlayground/# &/' qwtconfig.pri || true
           sed -i 's/^QWT_CONFIG\s*+=\s*QwtTests/# &/' qwtconfig.pri || true
           sed -i 's/^QWT_CONFIG\s*+=\s*QwtDesigner/# &/' qwtconfig.pri || true
           "${QT_ANDROID_ROOT}/bin/qmake" qwt.pro
           make -j"$(nproc)"
-          make install
+          QWT_STAGE="${RUNNER_TEMP}/qwt-stage"
+          rm -rf "${QWT_STAGE}"
+          make INSTALL_ROOT="${QWT_STAGE}" install
+
+          rm -rf "${QWT_INSTALL}"
+          mkdir -p "${QWT_INSTALL}"
+          cp -a "${QWT_STAGE}/usr/lib" "${QWT_INSTALL}/"
+          cp -a "${QWT_STAGE}/usr/include/qwt" "${QWT_INSTALL}/include"
+          mkdir -p "${QWT_INSTALL}/features"
+          cp -a "${QWT_STAGE}/usr/lib/qt6/mkspecs/features"/*.prf "${QWT_INSTALL}/features/" || true
+
+          ls -lah "${QWT_INSTALL}/lib"
 
       - name: Build EPICS for Android
         if: steps.cache-thirdparty.outputs.cache-hit != 'true'
