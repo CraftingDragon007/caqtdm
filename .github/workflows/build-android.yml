@@ -13,7 +13,7 @@ env:
   EPICS_VERSION: R7.0.10
   ANDROID_API: "36"
   ANDROID_SSL_API: "28"
-  ANDROID_NDK_VERSION: "29.0.14206865"
+  ANDROID_NDK_VERSION: "27.2.12479018"
   BUILD_TYPE: release
   ANDROID_ABI: arm64-v8a
 
@@ -86,6 +86,13 @@ jobs:
             "build-tools;36.0.0" \
             "ndk;${ANDROID_NDK_VERSION}" \
             "cmdline-tools;latest"
+
+      - name: Pin exact NDK path
+        if: steps.cache-qt.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          test -d "${ANDROID_SDK_ROOT}/ndk/${ANDROID_NDK_VERSION}"
+          echo "ANDROID_NDK_ROOT=${ANDROID_SDK_ROOT}/ndk/${ANDROID_NDK_VERSION}" >> "$GITHUB_ENV"
 
       - name: Cache OpenSSL Android build
         if: steps.cache-qt.outputs.cache-hit != 'true'
@@ -194,6 +201,12 @@ jobs:
           set -o pipefail
           sdkmanager "platform-tools" "platforms;android-${ANDROID_API}" "build-tools;36.0.0" "ndk;${ANDROID_NDK_VERSION}" "cmdline-tools;latest"
 
+      - name: Pin exact NDK path
+        run: |
+          set -euo pipefail
+          test -d "${ANDROID_SDK_ROOT}/ndk/${ANDROID_NDK_VERSION}"
+          echo "ANDROID_NDK_ROOT=${ANDROID_SDK_ROOT}/ndk/${ANDROID_NDK_VERSION}" >> "$GITHUB_ENV"
+
       - name: Restore Qt source cache
         id: cache-qt
         uses: actions/cache@v5
@@ -274,7 +287,7 @@ jobs:
           perl -0pi -e 's/^GNU\s*=\s*NO/GNU = YES/m' configure/os/CONFIG_SITE.linux-x86_64.android-arm64-v8a
 
           CLANG_VER="$(ls -1 "${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/lib/clang" | sort -V | tail -n 1)"
-          perl -0pi -e 's#^CLANG_INTERNAL\s*=.*#CLANG_INTERNAL = $(GNU_DIR)/lib/clang/'"${CLANG_VER}"'#m' configure/os/CONFIG_SITE.linux-x86_64.android-arm64-v8a
+          sed -i "s#^CLANG_INTERNAL\s*=.*#CLANG_INTERNAL = \$(GNU_DIR)/lib/clang/${CLANG_VER}#" configure/os/CONFIG_SITE.linux-x86_64.android-arm64-v8a
           perl -0pi -e 's/^TARGET_OPTS \+= -nostdinc -nostdinc\+\+\s*$/# TARGET_OPTS += -nostdinc -nostdinc++/m' configure/os/CONFIG_SITE.linux-x86_64.android-arm64-v8a
 
           grep -E '^(NDK|ABI|GNU|CLANG_INTERNAL|TARGET_OPTS)' configure/os/CONFIG_SITE.linux-x86_64.android-arm64-v8a
