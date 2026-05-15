@@ -157,16 +157,23 @@ void WebLauncherManager::processFileChoices(QJsonObject& obj) {
 }
 
 QJsonValue WebLauncherManager::getLauncherFromUserChoice(const QString& choice) {
+    QFileInfo choicePath(choice);
+    QString resultingChoice = choice;
+
+    if (choicePath.isAbsolute()) {
+        resultingChoice = choicePath.fileName();
+    }
+
     FileChoice choiceItem;
-    if (choice == "root") {
+    if (resultingChoice == "root") {
         return m_expandedLauncherJson;
     }
 
     {
         QReadLocker locker(&m_fileChoiceLock);
-        if (choice.isEmpty() || !m_fileChoices.contains(choice)) return QJsonValue();
+        if (resultingChoice.isEmpty() || !m_fileChoices.contains(resultingChoice)) return QJsonValue();
 
-        choiceItem = m_fileChoices.value(choice);
+        choiceItem = m_fileChoices.value(resultingChoice);
     }
 
     {
