@@ -29,7 +29,7 @@
 #include "alarmdefs.h"
 
 #ifndef MOBILE
-Q_LOGGING_CATEORY(caPolyLineLog, "caqtdm.widgets.capolyline")
+Q_LOGGING_CATEGORY(caPolyLineLog, "caqtdm.widgets.capolyline")
 #endif
 
 caPolyLine::caPolyLine(QWidget *parent): QWidget(parent)
