@@ -271,13 +271,14 @@ jobs:
           perl -0pi -e 's/^ABI\s*=.*/ABI = 29/m' configure/os/CONFIG.Common.androidCommon
           perl -0pi -e 's#^NDK\s*=.*#NDK = '"${ANDROID_NDK_ROOT}"'#m' configure/os/CONFIG_SITE.linux-x86_64.android-arm64-v8a
           perl -0pi -e 's/^ABI\s*=.*/ABI = 29/m' configure/os/CONFIG_SITE.linux-x86_64.android-arm64-v8a
+          perl -0pi -e 's/^GNU\s*=\s*NO/GNU = YES/m' configure/os/CONFIG_SITE.linux-x86_64.android-arm64-v8a
 
           CLANG_VER="$(ls -1 "${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/lib/clang" | sort -V | tail -n 1)"
           perl -0pi -e 's#^CLANG_INTERNAL\s*=.*#CLANG_INTERNAL = $(GNU_DIR)/lib/clang/'"${CLANG_VER}"'#m' configure/os/CONFIG_SITE.linux-x86_64.android-arm64-v8a
           perl -0pi -e 's/^TARGET_OPTS \+= -nostdinc -nostdinc\+\+\s*$/# TARGET_OPTS += -nostdinc -nostdinc++/m' configure/os/CONFIG_SITE.linux-x86_64.android-arm64-v8a
 
-          grep -E '^(NDK|ABI|CLANG_INTERNAL|TARGET_OPTS)' configure/os/CONFIG_SITE.linux-x86_64.android-arm64-v8a
-          make -j"$(nproc)"
+          grep -E '^(NDK|ABI|GNU|CLANG_INTERNAL|TARGET_OPTS)' configure/os/CONFIG_SITE.linux-x86_64.android-arm64-v8a
+          make -j1
           mkdir -p "${EPICS_BASE}/include"
           rsync -a include/ "${EPICS_BASE}/include/"
           mkdir -p "${EPICS_BASE}/lib/android-arm64-v8a"
