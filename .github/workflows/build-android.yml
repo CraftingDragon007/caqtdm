@@ -270,7 +270,7 @@ jobs:
         if: steps.cache-epics.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
-          git clone --depth 1 --branch "${EPICS_VERSION}" https://github.com/epics-base/epics-base.git "${RUNNER_TEMP}/epics-src"
+          git clone --depth 1 --recurse-submodules --branch "${EPICS_VERSION}" https://github.com/epics-base/epics-base.git "${RUNNER_TEMP}/epics-src"
           cd "${RUNNER_TEMP}/epics-src"
           cp "${GITHUB_WORKSPACE}/ci/epics-android/configure/os/CONFIG.Common.android-arm64-v8a" configure/os/CONFIG.Common.android-arm64-v8a
           cp "${GITHUB_WORKSPACE}/ci/epics-android/configure/os/CONFIG.Common.androidCommon" configure/os/CONFIG.Common.androidCommon
