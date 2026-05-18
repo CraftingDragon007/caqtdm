@@ -351,8 +351,9 @@ jobs:
         run: |
           set -euo pipefail
           test -f caQtDM_Viewer/android-caQtDM-deployment-settings.json
+          test -x "${QT_HOST_ROOT}/bin/androiddeployqt"
           mkdir -p "${GITHUB_WORKSPACE}/build/android"
-          "${QTHOME}/bin/androiddeployqt" \
+          "${QT_HOST_ROOT}/bin/androiddeployqt" \
             --input caQtDM_Viewer/android-caQtDM-deployment-settings.json \
             --output "${GITHUB_WORKSPACE}/build/android" \
             --android-platform "android-${ANDROID_API}" \
