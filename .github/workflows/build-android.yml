@@ -45,7 +45,6 @@ jobs:
           key: qt-src-build-${{ runner.os }}-qt${{ env.QT_VERSION }}-ndk${{ env.ANDROID_NDK_VERSION }}-abi${{ env.ANDROID_ABI }}-openssl${{ env.OPENSSL_VERSION }}-sslapi${{ env.ANDROID_SSL_API }}
 
       - name: Restore OpenSSL Android cache
-        id: cache-openssl
         uses: actions/cache@v5
         with:
           path: ${{ env.OPENSSL_ANDROID_PREFIX }}
@@ -220,6 +219,12 @@ jobs:
         with:
           path: ${{ env.QT_ROOT }}
           key: qt-src-build-${{ runner.os }}-qt${{ env.QT_VERSION }}-ndk${{ env.ANDROID_NDK_VERSION }}-abi${{ env.ANDROID_ABI }}-openssl${{ env.OPENSSL_VERSION }}-sslapi${{ env.ANDROID_SSL_API }}
+
+      - name: Restore OpenSSL Android cache
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.OPENSSL_ANDROID_PREFIX }}
+          key: android-openssl-${{ runner.os }}-${{ env.OPENSSL_VERSION }}-ndk${{ env.ANDROID_NDK_VERSION }}-api${{ env.ANDROID_SSL_API }}
 
       - name: Verify Qt cache restored
         run: |
