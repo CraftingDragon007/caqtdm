@@ -79,7 +79,9 @@ OP_SYS_LDFLAGS +=  --sysroot=$(NDK)/toolchains/llvm/prebuilt/linux-x86_64/sysroo
 #--------------------------------------------------
 # Header dependency file generation
 #
-HDEPENDS_METHOD = CMD
+# Use EPICS standard dependency generation to avoid empty HDEPENDS
+# recipes that can make source paths get executed as commands.
+HDEPENDS_METHOD = MKMF
 
 #--------------------------------------------------
 # Allow site overrides
@@ -100,5 +102,4 @@ INCLUDES += -I.  -I$(NDK)/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/incl
 #
 #-I$(NDK)/sources/cxx-stl/llvm-libc++/include/ -I$(NDK)/sources/cxx-stl/llvm-libc++abi/include/ -I$(NDK)/sources/android/support/include/
 #
-
 
