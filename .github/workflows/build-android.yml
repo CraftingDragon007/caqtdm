@@ -14,7 +14,7 @@ env:
   ANDROID_API: "36"
   ANDROID_SSL_API: "28"
   ANDROID_NDK_VERSION: "27.2.12479018"
-  BUILD_TYPE: release
+  BUILD_TYPE: debug
   ANDROID_ABI: arm64-v8a
 
   DEPS_ROOT: ${{ github.workspace }}/.ci-cache/deps
@@ -382,7 +382,7 @@ jobs:
             --input caQtDM_Viewer/android-caQtDM-deployment-settings.json \
             --output "${GITHUB_WORKSPACE}/build/android" \
             --android-platform "android-${ANDROID_API}" \
-            --release \
+            --debug \
             --gradle
 
       - name: Collect artifacts
