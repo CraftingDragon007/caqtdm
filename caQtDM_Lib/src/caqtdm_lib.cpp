@@ -1552,10 +1552,10 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
         if(imageWidget->getFileName().size() > 0) {
             QString text = imageWidget->getFileName();
-            bool affected = reaffectText(map, &text, w1);
-            affected |= fixFileListRelative(cainclude_path, &text);
-            if (affected) imageWidget->setFileName(text);
-
+            reaffectText(map, &text, w1);
+            fixFileListRelative(cainclude_path, &text);
+            // Always call this, since isProvisional = false tells the widget to only now emit errors if still not found, initially errors were suppressed
+            imageWidget->setFileName(text, false);
         }
 
         // any error messages for this object?
