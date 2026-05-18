@@ -371,6 +371,9 @@ jobs:
           set -euo pipefail
           test -f caQtDM_Viewer/android-caQtDM-deployment-settings.json
           test -x "${QT_HOST_ROOT}/bin/androiddeployqt"
+          mkdir -p "${GITHUB_WORKSPACE}/caQtDM_Viewer/src/Android/assets"
+          cp -f "${GITHUB_WORKSPACE}/caQtDM_Viewer/caQtDM_IOS_Config.xml" \
+                "${GITHUB_WORKSPACE}/caQtDM_Viewer/src/Android/assets/caQtDM_IOS_Config.xml"
           mkdir -p "${GITHUB_WORKSPACE}/build/android"
           mkdir -p "${GITHUB_WORKSPACE}/build/android/libs/${ANDROID_ABI}"
           cp -f "${GITHUB_WORKSPACE}/caQtDM_Binaries/libcaQtDM_${ANDROID_ABI}.so" \
