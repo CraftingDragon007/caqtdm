@@ -353,6 +353,9 @@ jobs:
           test -f caQtDM_Viewer/android-caQtDM-deployment-settings.json
           test -x "${QT_HOST_ROOT}/bin/androiddeployqt"
           mkdir -p "${GITHUB_WORKSPACE}/build/android"
+          mkdir -p "${GITHUB_WORKSPACE}/build/android/libs/${ANDROID_ABI}"
+          cp -f "${GITHUB_WORKSPACE}/caQtDM_Binaries/libcaQtDM_${ANDROID_ABI}.so" \
+                "${GITHUB_WORKSPACE}/build/android/libs/${ANDROID_ABI}/libcaQtDM_${ANDROID_ABI}.so"
           "${QT_HOST_ROOT}/bin/androiddeployqt" \
             --input caQtDM_Viewer/android-caQtDM-deployment-settings.json \
             --output "${GITHUB_WORKSPACE}/build/android" \
