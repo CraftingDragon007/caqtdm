@@ -44,6 +44,13 @@ jobs:
           path: ${{ env.QT_ROOT }}
           key: qt-src-build-${{ runner.os }}-qt${{ env.QT_VERSION }}-ndk${{ env.ANDROID_NDK_VERSION }}-abi${{ env.ANDROID_ABI }}-openssl${{ env.OPENSSL_VERSION }}-sslapi${{ env.ANDROID_SSL_API }}
 
+      - name: Restore OpenSSL Android cache
+        id: cache-openssl
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.OPENSSL_ANDROID_PREFIX }}
+          key: android-openssl-${{ runner.os }}-${{ env.OPENSSL_VERSION }}-ndk${{ env.ANDROID_NDK_VERSION }}-api${{ env.ANDROID_SSL_API }}
+
       - name: Checkout repository
         if: steps.cache-qt.outputs.cache-hit != 'true'
         uses: actions/checkout@v6
@@ -220,6 +227,12 @@ jobs:
           test -x "${QT_ANDROID_ROOT}/bin/qmake"
           test -x "${QT_HOST_ROOT}/bin/qmake6"
 
+      - name: Verify OpenSSL Android artifacts restored
+        run: |
+          set -euo pipefail
+          test -f "${OPENSSL_ANDROID_PREFIX}/lib/libssl.so"
+          test -f "${OPENSSL_ANDROID_PREFIX}/lib/libcrypto.so"
+
       - name: Cache Qwt Android deps
         id: cache-qwt
         uses: actions/cache@v5
@@ -338,6 +351,7 @@ jobs:
             echo "ZMQ=/usr"
             echo "ZMQINC=/usr/include"
             echo "ZMQLIB=/usr/lib"
+            echo "SSLLIB=${OPENSSL_ANDROID_PREFIX}/lib"
             echo "ANDROIDFUNCTIONSINCLUDE=${GITHUB_WORKSPACE}/caQtDM_AndroidFunctions/src"
           } >> "$GITHUB_ENV"
 
