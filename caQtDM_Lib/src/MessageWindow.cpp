@@ -31,7 +31,6 @@
 #include <QCoreApplication>
 #include <QMutexLocker>
 #include <stdio.h>
-#include <time.h>
 #include <QFile>
 #include <QDebug>
 #include <QTextStream>

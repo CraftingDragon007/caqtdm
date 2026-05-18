@@ -47,7 +47,6 @@
 #if QWT_VERSION >= 0x060100
 #include <qwt_scale_div.h>
 #endif
-#include <time.h>
 
 #include "mdaReader.h"
 

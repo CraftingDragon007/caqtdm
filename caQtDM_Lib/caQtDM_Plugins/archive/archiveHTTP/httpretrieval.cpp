@@ -31,8 +31,6 @@
 #include <QSslConfiguration>
 #include <QTimer>
 #include <QWaitCondition>
-#include <iostream>
-#include <time.h>
 
 #include <QDebug>
 #include <QThread>
@@ -46,11 +44,8 @@
 #include <zlib.h>
 #endif
 
-#include <fstream>
 #include <httpretrieval.h>
 #include "loggingcategories.h"
-#include <iostream>
-#include <sstream>
 
 #define qasc(x) x.toLatin1().constData()
 

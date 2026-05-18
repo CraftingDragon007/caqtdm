@@ -64,7 +64,6 @@ bool HTTPCONFIGURATOR = false;
 
 #if defined(linux) || defined(__FreeBSD__)
 #include <sys/resource.h>
-#include <sys/time.h>
 #include <unistd.h>
 
 #if QT_VERSION < QT_VERSION_CHECK(5,0,0)

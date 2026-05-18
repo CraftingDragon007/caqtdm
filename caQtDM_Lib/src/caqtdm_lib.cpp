@@ -302,9 +302,9 @@ public:
 #if !defined(useElapsedTimer)
 double CaQtDM_Lib::rTime()
 {
-    struct timeval tt;
-    gettimeofday(&tt, (struct timezone *) Q_NULLPTR);
-    return (double) 1000000.0 * (double) tt.tv_sec + (double) tt.tv_usec;
+    return static_cast<double>(
+        QDateTime::currentDateTimeUtc().toMSecsSinceEpoch() * 1000.0
+    );
 }
 #endif
 

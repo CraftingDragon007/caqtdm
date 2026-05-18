@@ -33,7 +33,6 @@
 #include <QWaitCondition>
 #include <QEventLoop>
 #include <QTimer>
-#include <time.h>
 
 #include "sfRetrieval.h"
 #include "loggingcategories.h"
