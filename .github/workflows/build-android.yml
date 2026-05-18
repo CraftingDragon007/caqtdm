@@ -251,6 +251,8 @@ jobs:
           sed -i 's/^QWT_CONFIG\s*+=\s*QwtPlayground/# &/' qwtconfig.pri || true
           sed -i 's/^QWT_CONFIG\s*+=\s*QwtTests/# &/' qwtconfig.pri || true
           sed -i 's/^QWT_CONFIG\s*+=\s*QwtDesigner/# &/' qwtconfig.pri || true
+          sed -i 's/^QWT_CONFIG\s*+=\s*QwtDll/# &/' qwtconfig.pri || true
+          grep -q '^QWT_CONFIG\s*+=\s*QwtStatic' qwtconfig.pri || echo 'QWT_CONFIG += QwtStatic' >> qwtconfig.pri
           "${QT_ANDROID_ROOT}/bin/qmake" qwt.pro
           make -j"$(nproc)"
           QWT_STAGE="${RUNNER_TEMP}/qwt-stage"
@@ -271,6 +273,8 @@ jobs:
           cp -a "${QWT_STAGE}/usr/include/qwt" "${QWT_INSTALL}/include"
           mkdir -p "${QWT_INSTALL}/features"
           cp -a "${QWT_STAGE}/usr/lib/qt6/mkspecs/features"/*.prf "${QWT_INSTALL}/features/" || true
+
+          test -f "${QWT_INSTALL}/lib/libqwt_${ANDROID_ABI}.a"
 
           ls -lah "${QWT_INSTALL}/lib"
 
