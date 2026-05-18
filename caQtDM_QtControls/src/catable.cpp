@@ -36,9 +36,7 @@
     #endif
 #endif
 
-#ifndef MOBILE
 Q_LOGGING_CATEGORY(caTableLog, "caqtdm.widgets.catable")
-#endif
 
 caTable::caTable(QWidget *parent) : QTableWidget(parent)
 {

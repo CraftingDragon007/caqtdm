@@ -31,9 +31,7 @@
 #include <QMouseEvent>
 #include <QApplication>
 
-#ifndef MOBILE
 Q_LOGGING_CATEGORY(caMenuLog, "caqtdm.widgets.camenu")
-#endif
 
 caMenu::caMenu(QWidget *parent) : QComboBox(parent)
 {

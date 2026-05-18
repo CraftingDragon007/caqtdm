@@ -34,9 +34,7 @@
 
 #include <math.h>
 
-#ifndef MOBILE
 Q_LOGGING_CATEGORY(caChoiceLog, "caqtdm.widgets.cachoice")
-#endif
 
 caChoice::caChoice(QWidget *parent) : QWidget(parent)
 {

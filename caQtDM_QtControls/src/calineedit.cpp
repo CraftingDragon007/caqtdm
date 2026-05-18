@@ -43,9 +43,7 @@
     #endif
 #endif
 
-#ifndef MOBILE
 Q_LOGGING_CATEGORY(caLineEditLog, "caqtdm.widgets.calineedit")
-#endif
 
 caLineEdit::caLineEdit(QWidget *parent) : QLineEdit(parent), FontScalingWidget(this)
 {

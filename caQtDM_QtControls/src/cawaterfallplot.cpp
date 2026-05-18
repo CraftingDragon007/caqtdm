@@ -29,9 +29,7 @@
 
 #include "cawaterfallplot.h"
 
-#ifndef MOBILE
 Q_LOGGING_CATEGORY(caWaterfallPlotLog, "caqtdm.widgets.cawaterfallplot")
-#endif
 
 __inline double gauss(double x)
 {

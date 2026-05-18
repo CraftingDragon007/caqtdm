@@ -27,9 +27,7 @@
 #include "alarmdefs.h"
 #include <QGridLayout>
 
-#ifndef MOBILE
 Q_LOGGING_CATEGORY(caByteControllerLog, "caqtdm.widgets.cabytecontroller");
-#endif
 
 caByteController::caByteController(QWidget *parent) : QWidget(parent)
 {
