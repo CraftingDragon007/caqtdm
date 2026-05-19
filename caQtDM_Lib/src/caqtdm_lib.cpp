@@ -3701,7 +3701,16 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         w1->setProperty("Connect", false);
         // in order to get the context on tablets
 #ifdef MOBILE
-        if(!className.contains("caInclude")) {
+        if(!className.contains("caInclude")
+                && !className.contains("caMessageButton")
+                && !className.contains("caRelatedDisplay")
+                && !className.contains("caToggleButton")
+                && !className.contains("caChoice")
+                && !className.contains("caMenu")
+                && !className.contains("caByteController")
+                && !className.contains("caApplyNumeric")
+                && !className.contains("caSpinbox")
+                && !className.contains("caTextEntry")) {
             w1->grabGesture(Qt::TapAndHoldGesture);
             w1->installEventFilter(this);
         }
