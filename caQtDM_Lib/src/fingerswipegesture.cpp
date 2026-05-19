@@ -37,6 +37,46 @@
 
 #include <QtControls>
 
+namespace {
+bool isInteractiveTouchTarget(QWidget *widget)
+{
+    QWidget *current = widget;
+    while (current != nullptr) {
+        if (qobject_cast<caNumeric *>(current) != nullptr) {
+            return true;
+        } else if (qobject_cast<caApplyNumeric *>(current) != nullptr) {
+            return true;
+        } else if (qobject_cast<caSlider *>(current) != nullptr) {
+            return true;
+        } else if (qobject_cast<caMenu *>(current) != nullptr) {
+            return true;
+        } else if (qobject_cast<caChoice *>(current) != nullptr) {
+            return true;
+        } else if (qobject_cast<caRelatedDisplay *>(current) != nullptr) {
+            return true;
+        } else if (qobject_cast<caTextEntry *>(current) != nullptr) {
+            return true;
+        } else if (qobject_cast<caMessageButton *>(current) != nullptr) {
+            return true;
+        } else if (qobject_cast<caToggleButton *>(current) != nullptr) {
+            return true;
+        } else if (qobject_cast<caSpinbox *>(current) != nullptr) {
+            return true;
+        } else if (qobject_cast<caByteController *>(current) != nullptr) {
+            return true;
+        } else if (qobject_cast<QwtPlotCanvas *>(current) != nullptr) {
+            return true;
+        } else if (qobject_cast<EPushButton *>(current) != nullptr) {
+            return true;
+        } else if (qobject_cast<QPushButton *>(current) != nullptr) {
+            return true;
+        }
+        current = current->parentWidget();
+    }
+    return false;
+}
+}
+
 FingerSwipeGestureRecognizer::FingerSwipeGestureRecognizer()
 {
 }
@@ -76,84 +116,10 @@ QGestureRecognizer::Result FingerSwipeGestureRecognizer::recognize(QGesture *sta
 
                 QWidget *w2 = w1->childAt ((int)q->m_startPos.x(), (int)q->m_startPos.y());
                 if(w2 != (QWidget*) nullptr) {
-#ifdef MOBILE_ANDROID
-                    if(caNumeric* numericWidget = qobject_cast<caNumeric *>(w2)) {
-                        return QGestureRecognizer::Ignore;
-                    } else if(caApplyNumeric* numericWidget = qobject_cast<caApplyNumeric *>(w2)) {
-                        q->m_cancelled = true;
-                        return QGestureRecognizer::Ignore;
-                    } else if(caSlider* sliderWidget = qobject_cast<caSlider *>(w2)) {
-                        q->m_cancelled = true;
-                        return QGestureRecognizer::Ignore;
-                    } else if(caMenu* sliderWidget = qobject_cast<caMenu *>(w2)) {
-                        q->m_cancelled = true;
-                        return QGestureRecognizer::Ignore;
-                    } else if(caChoice* sliderWidget = qobject_cast<caChoice *>(w2)) {
-                        q->m_cancelled = true;
-                        return QGestureRecognizer::Ignore;
-                    } else if(caRelatedDisplay* sliderWidget = qobject_cast<caRelatedDisplay *>(w2)) {
-                        q->m_cancelled = true;
-                        return QGestureRecognizer::Ignore;
-                    } else if(caTextEntry* sliderWidget = qobject_cast<caTextEntry *>(w2)) {
-                        q->m_cancelled = true;
-                        return QGestureRecognizer::Ignore;
-                    } else if(caMessageButton* sliderWidget = qobject_cast<caMessageButton *>(w2)) {
-                        q->m_cancelled = true;
-                        return QGestureRecognizer::Ignore;
-                    } else if(caToggleButton* sliderWidget = qobject_cast<caToggleButton *>(w2)) {
-                        q->m_cancelled = true;
-                        return QGestureRecognizer::Ignore;
-                    } else if(caSpinbox* sliderWidget = qobject_cast<caSpinbox *>(w2)) {
-                        q->m_cancelled = true;
-                        return QGestureRecognizer::Ignore;
-                    } else if(caByteController* sliderWidget = qobject_cast<caByteController *>(w2)) {
+                    if (isInteractiveTouchTarget(w2)) {
                         q->m_cancelled = true;
                         return QGestureRecognizer::Ignore;
                     }
-#else
-                    if(caNumeric* foundWidget = qobject_cast<caNumeric *>(w2)) {
-                        return QGestureRecognizer::Ignore;
-                    } else if(caApplyNumeric* foundWidget = qobject_cast<caApplyNumeric *>(w2)) {
-                        q->m_cancelled = true;
-                        return QGestureRecognizer::Ignore;
-                    } else if(caSlider* foundWidget = qobject_cast<caSlider *>(w2)) {
-                        q->m_cancelled = true;
-                        return QGestureRecognizer::Ignore;
-                    } else if(caMenu* foundWidget = qobject_cast<caMenu *>(w2)) {
-                        q->m_cancelled = true;
-                        return QGestureRecognizer::Ignore;
-                    } else if(caChoice* foundWidget = qobject_cast<caChoice *>(w2)) {
-                        q->m_cancelled = true;
-                        return QGestureRecognizer::Ignore;
-                    } else if(caRelatedDisplay* foundWidget = qobject_cast<caRelatedDisplay *>(w2)) {
-                        q->m_cancelled = true;
-                        return QGestureRecognizer::Ignore;
-                    } else if(caTextEntry* foundWidget = qobject_cast<caTextEntry *>(w2)) {
-                        q->m_cancelled = true;
-                        return QGestureRecognizer::Ignore;
-                    } else if(caMessageButton* foundWidget = qobject_cast<caMessageButton *>(w2)) {
-                        q->m_cancelled = true;
-                        return QGestureRecognizer::Ignore;
-                    } else if(caToggleButton* foundWidget = qobject_cast<caToggleButton *>(w2)) {
-                        q->m_cancelled = true;
-                        return QGestureRecognizer::Ignore;
-                    } else if(caSpinbox* foundWidget = qobject_cast<caSpinbox *>(w2)) {
-                        q->m_cancelled = true;
-                        return QGestureRecognizer::Ignore;
-                    } else if(caByteController* foundWidget = qobject_cast<caByteController *>(w2)) {
-                        q->m_cancelled = true;
-                        return QGestureRecognizer::Ignore;
-                    }else if(QwtPlotCanvas* foundWidget = qobject_cast<QwtPlotCanvas *>(w2)) {
-                        q->m_cancelled = true;
-                        return QGestureRecognizer::Ignore;
-                    }else if(EPushButton* foundWidget = qobject_cast<EPushButton *>(w2)) {
-                        q->m_cancelled = true;
-                        return QGestureRecognizer::Ignore;
-                    }else if(QPushButton* foundWidget = qobject_cast<QPushButton *>(w2)) {
-                        q->m_cancelled = true;
-                        return QGestureRecognizer::Ignore;
-                    }
-#endif
                 }
                 q->m_begin = true;
                 q->m_cancelled = false;
