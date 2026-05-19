@@ -69,6 +69,9 @@ MessageWindow::MessageWindow(QWidget* parent) : QDockWidget(parent)
     setFeatures(QDockWidget::NoDockWidgetFeatures);
     setWindowTitle(tr(WINDOW_TITLE));
     msgTextEdit.setReadOnly(true);
+#ifdef MOBILE
+    msgTextEdit.setTextInteractionFlags(Qt::NoTextInteraction);
+#endif
     msgTextEdit.document()->setMaximumBlockCount(400);
     setWidget(&msgTextEdit);
     MessageWindow::MsgHandler = this;
@@ -262,4 +265,3 @@ MessageEvent::MessageEvent(QString & msg):
 {
         this->msg = msg;
 }
-

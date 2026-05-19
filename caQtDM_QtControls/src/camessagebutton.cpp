@@ -183,6 +183,14 @@ bool caMessageButton::eventFilter(QObject *obj, QEvent *event)
         if (me->button()==Qt::LeftButton) {
             if(_AccessW) buttonhandle(1);
         }
+#ifdef MOBILE
+    } else if(event->type() == QEvent::TouchBegin) {
+        if(_AccessW) buttonhandle(0);
+        return true;
+    } else if(event->type() == QEvent::TouchEnd || event->type() == QEvent::TouchCancel) {
+        if(_AccessW) buttonhandle(1);
+        return true;
+#endif
         // intercept space key, so that no keyboard spacebar will trigger when button has focus
     }  else if(event->type() == QEvent::KeyPress || event->type() == QEvent::KeyRelease) {
         QKeyEvent *me = static_cast<QKeyEvent *>(event);
@@ -199,6 +207,5 @@ bool caMessageButton::eventFilter(QObject *obj, QEvent *event)
 
     return QObject::eventFilter(obj, event);
 }
-
 
 
