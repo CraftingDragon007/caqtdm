@@ -71,6 +71,9 @@ MessageWindow::MessageWindow(QWidget* parent) : QDockWidget(parent)
     msgTextEdit.setReadOnly(true);
 #ifdef MOBILE
     msgTextEdit.setTextInteractionFlags(Qt::NoTextInteraction);
+    msgTextEdit.setContextMenuPolicy(Qt::NoContextMenu);
+    msgTextEdit.setFocusPolicy(Qt::NoFocus);
+    msgTextEdit.setAttribute(Qt::WA_TransparentForMouseEvents, true);
 #endif
     msgTextEdit.document()->setMaximumBlockCount(400);
     setWidget(&msgTextEdit);
