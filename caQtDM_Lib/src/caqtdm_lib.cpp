@@ -3701,8 +3701,10 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         w1->setProperty("Connect", false);
         // in order to get the context on tablets
 #ifdef MOBILE
-        w1->grabGesture(Qt::TapAndHoldGesture);
-        w1->installEventFilter(this);
+        if(!className.contains("caInclude")) {
+            w1->grabGesture(Qt::TapAndHoldGesture);
+            w1->installEventFilter(this);
+        }
 #else
         if(!thisFileFull.contains(POPUPDEFENITION)) w1->installEventFilter(this);
 #endif
@@ -10139,43 +10141,52 @@ bool CaQtDM_Lib::eventFilter(QObject *obj, QEvent *event)
 
 bool CaQtDM_Lib::gestureEvent(QObject *obj, QGestureEvent *event)
 {
+    bool handled = false;
+
     if (QGesture *tapAndHold = event->gesture(Qt::TapAndHoldGesture)) {
         //postMessage(QtDebugMsg, (char*) "tapandhold");
         if (caSlider *widget = qobject_cast<caSlider *>(obj)) {
             if(widget->timerActive()) return false;
         }
-        tapAndHoldTriggered(obj, static_cast<QTapAndHoldGesture*>(tapAndHold));
+        handled = tapAndHoldTriggered(obj, static_cast<QTapAndHoldGesture*>(tapAndHold));
     } else if(QGesture *fingerswipe = event->gesture(fingerSwipeGestureType)) {
         //postMessage(QtDebugMsg, (char*) "fingerSwipeGesture");
-        fingerswipeTriggered(static_cast<FingerSwipeGesture *>(fingerswipe));
+        handled = fingerswipeTriggered(static_cast<FingerSwipeGesture *>(fingerswipe));
     }
-    return true;
+    return handled;
 }
 
-void CaQtDM_Lib::tapAndHoldTriggered(QObject *obj, QTapAndHoldGesture* tapAndHold)
+bool CaQtDM_Lib::tapAndHoldTriggered(QObject *obj, QTapAndHoldGesture* tapAndHold)
 {
     if (tapAndHold->state() == Qt::GestureFinished) {
         DisplayContextMenu((QWidget*) obj);
+        return true;
     }
+    return false;
 }
 
-void CaQtDM_Lib::fingerswipeTriggered(FingerSwipeGesture *swipe) {
+bool CaQtDM_Lib::fingerswipeTriggered(FingerSwipeGesture *swipe) {
     if (swipe->isLeftToRight()) {
         emit Signal_NextWindow();
         //postMessage(QtDebugMsg, (char*) "leftttoright");
+        return true;
     }
     else if (swipe->isRightToLeft()) {
         //postMessage(QtDebugMsg, (char*) "righttoleft");
         emit Signal_NextWindow();
+        return true;
     }
     else if (swipe->isBottomToTop()) {
         //postMessage(QtDebugMsg, (char*) "bottomtotop");
         closeWindow();
+        return true;
     }
     else if (swipe->isTopToBottom()) {
         //postMessage(QtDebugMsg, (char*) "toptobottom");
         closeWindow();
+        return true;
     }
+    return false;
 }
 
 // called from parent to define the custom gesture event

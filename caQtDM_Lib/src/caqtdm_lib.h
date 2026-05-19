@@ -401,8 +401,8 @@ private:
 #ifdef MOBILE
     bool eventFilter(QObject *obj, QEvent *event);
     bool gestureEvent(QObject *obj, QGestureEvent *event);
-    void tapAndHoldTriggered(QObject *obj, QTapAndHoldGesture* tapAndHold);
-    void fingerswipeTriggered(FingerSwipeGesture *gesture);
+    bool tapAndHoldTriggered(QObject *obj, QTapAndHoldGesture* tapAndHold);
+    bool fingerswipeTriggered(FingerSwipeGesture *gesture);
     Qt::GestureType fingerSwipeGestureType;
 #else
 
@@ -599,5 +599,4 @@ private slots:
 };
 
 #endif // CaQtDM_Lib_H
-
 
