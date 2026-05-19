@@ -97,6 +97,12 @@ QGesture *FingerSwipeGestureRecognizer::create(QObject *target)
 
 QGestureRecognizer::Result FingerSwipeGestureRecognizer::recognize(QGesture *state, QObject *obj, QEvent *event)
 {
+#ifdef MOBILE
+    Q_UNUSED(state);
+    Q_UNUSED(obj);
+    Q_UNUSED(event);
+    return QGestureRecognizer::Ignore;
+#else
     FingerSwipeGesture *q = static_cast<FingerSwipeGesture *>(state);
     const QTouchEvent *ev = static_cast<const QTouchEvent *>(event); // only use ev after checking event->type()
     QGestureRecognizer::Result result = QGestureRecognizer::Ignore;
@@ -209,6 +215,7 @@ QGestureRecognizer::Result FingerSwipeGestureRecognizer::recognize(QGesture *sta
         break;
     }
     return result;
+#endif
 }
 void FingerSwipeGestureRecognizer::reset(QGesture *state)
 {
