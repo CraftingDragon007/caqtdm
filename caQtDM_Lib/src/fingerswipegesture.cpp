@@ -163,6 +163,7 @@ QGestureRecognizer::Result FingerSwipeGestureRecognizer::recognize(QGesture *sta
             }
             // here we move the window, but first replace the centralwidget in order to have faster interaction
             if((qAbs(q->m_currentPos.x() - q->m_actPos.x()) > 10) || (qAbs(q->m_currentPos.y() - q->m_actPos.y()) > 10)) {
+#ifndef MOBILE
                 QMainWindow *w1 = (QMainWindow *) obj;
                 if(q->m_begin) {
 
@@ -197,6 +198,9 @@ QGestureRecognizer::Result FingerSwipeGestureRecognizer::recognize(QGesture *sta
                 // save last position
                 q->m_actPos = q->m_currentPos;
                 q->m_touchupdate = true;
+#else
+                q->m_actPos = q->m_currentPos;
+#endif
             }
         }
         break;

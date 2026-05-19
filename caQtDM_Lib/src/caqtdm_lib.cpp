@@ -10131,10 +10131,42 @@ bool CaQtDM_Lib::eventFilter(QObject *obj, QEvent *event)
 #endif
 // treat gesture events (we use tapandhold and fingerswipe, custom gesture)
 #ifdef MOBILE
+namespace {
+bool isInteractiveGestureWidget(QObject *obj)
+{
+    QWidget *widget = qobject_cast<QWidget *>(obj);
+    if (widget == nullptr) {
+        return false;
+    }
+
+    return qobject_cast<caNumeric *>(widget) != nullptr
+            || qobject_cast<caApplyNumeric *>(widget) != nullptr
+            || qobject_cast<caSlider *>(widget) != nullptr
+            || qobject_cast<caMenu *>(widget) != nullptr
+            || qobject_cast<caChoice *>(widget) != nullptr
+            || qobject_cast<caRelatedDisplay *>(widget) != nullptr
+            || qobject_cast<caTextEntry *>(widget) != nullptr
+            || qobject_cast<caMessageButton *>(widget) != nullptr
+            || qobject_cast<caToggleButton *>(widget) != nullptr
+            || qobject_cast<caSpinbox *>(widget) != nullptr
+            || qobject_cast<caByteController *>(widget) != nullptr
+            || qobject_cast<EPushButton *>(widget) != nullptr
+            || qobject_cast<QPushButton *>(widget) != nullptr;
+}
+}
+
 bool CaQtDM_Lib::eventFilter(QObject *obj, QEvent *event)
 {
     if (event->type() == QEvent::Gesture) {
-        return gestureEvent(obj, static_cast<QGestureEvent*>(event));
+        QGestureEvent *gesture = static_cast<QGestureEvent*>(event);
+        const bool handled = gestureEvent(obj, gesture);
+        if (handled) {
+            return true;
+        }
+        if (isInteractiveGestureWidget(obj)) {
+            return false;
+        }
+        return !gesture->gestures().isEmpty();
     }
     return QWidget::eventFilter(obj, event);
 }
