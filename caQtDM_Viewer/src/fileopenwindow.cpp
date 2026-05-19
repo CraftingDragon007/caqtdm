@@ -41,10 +41,6 @@ bool HTTPCONFIGURATOR = false;
 #include "fileFunctions.h"
 #include "loadPlugins.h"
 
-#ifdef MOBILE
-  #include "fingerswipegesture.h"
-#endif
-
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -684,9 +680,8 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
 //************************************************************************************************************************************************
 
 #ifdef MOBILE
-    // add fingerswipe gesture
-    QGestureRecognizer* pRecognizer = new FingerSwipeGestureRecognizer();
-    fingerSwipeGestureType = QGestureRecognizer::registerRecognizer(pRecognizer);
+    // Finger-swipe gesture registration is disabled on mobile because it
+    // interferes with normal touch interaction on panel controls.
 #endif
 
     // application state handler
@@ -1110,7 +1105,6 @@ QMainWindow *FileOpenWindow::loadMainWindow(const QPoint &position, const QStrin
     }
 
 #ifdef MOBILE
-    newWindow->grabSwipeGesture(fingerSwipeGestureType);
     newWindow->setAttribute(Qt::WA_ContentsMarginsRespectsSafeArea,false);
 #endif
 

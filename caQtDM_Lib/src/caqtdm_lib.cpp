@@ -594,7 +594,6 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
 #ifdef MOBILE
         // info can be called with tapandhold
         connect(this, SIGNAL(Signal_NextWindow()), parent, SLOT(nextWindow()));
-        installEventFilter(this);
 #endif
     }
 
@@ -3701,19 +3700,8 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         w1->setProperty("Connect", false);
         // in order to get the context on tablets
 #ifdef MOBILE
-        if(!className.contains("caInclude")
-                && !className.contains("caMessageButton")
-                && !className.contains("caRelatedDisplay")
-                && !className.contains("caToggleButton")
-                && !className.contains("caChoice")
-                && !className.contains("caMenu")
-                && !className.contains("caByteController")
-                && !className.contains("caApplyNumeric")
-                && !className.contains("caSpinbox")
-                && !className.contains("caTextEntry")) {
-            w1->grabGesture(Qt::TapAndHoldGesture);
-            w1->installEventFilter(this);
-        }
+        // Mobile reliability: disable tap-and-hold gesture grabbing on panel widgets.
+        // This avoids gesture interception that prevents normal touch/click behavior.
 #else
         if(!thisFileFull.contains(POPUPDEFENITION)) w1->installEventFilter(this);
 #endif

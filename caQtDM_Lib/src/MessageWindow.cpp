@@ -74,6 +74,11 @@ MessageWindow::MessageWindow(QWidget* parent) : QDockWidget(parent)
     msgTextEdit.setContextMenuPolicy(Qt::NoContextMenu);
     msgTextEdit.setFocusPolicy(Qt::NoFocus);
     msgTextEdit.setAttribute(Qt::WA_TransparentForMouseEvents, true);
+    if (msgTextEdit.viewport() != Q_NULLPTR) {
+        msgTextEdit.viewport()->setContextMenuPolicy(Qt::NoContextMenu);
+        msgTextEdit.viewport()->setFocusPolicy(Qt::NoFocus);
+        msgTextEdit.viewport()->setAttribute(Qt::WA_TransparentForMouseEvents, true);
+    }
 #endif
     msgTextEdit.document()->setMaximumBlockCount(400);
     setWidget(&msgTextEdit);
