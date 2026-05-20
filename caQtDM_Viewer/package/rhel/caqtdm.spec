@@ -3,7 +3,7 @@
 
 #############################################################################
 # special EPICS things
-%define EPICS_TARGET_VERSION -7.0.9
+%define EPICS_TARGET_VERSION -7.0.10
 #############################################################################
 
 # build qt4 support (or not)
