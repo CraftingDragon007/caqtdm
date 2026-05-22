@@ -49,10 +49,14 @@
 
 #include <QObject>
 #include <QAbstractButton>
+#include <QContextMenuEvent>
 #include <QPushButton>
 #include <QToolBar>
 #include <QTouchEvent>
 #include <QUuid>
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+#include <QStyleHints>
+#endif
 #include <QHostInfo>
 #include <QMutableListIterator>
 
@@ -400,6 +404,7 @@ QReadWriteLock CaQtDM_Lib::hmiConfigListLock;
 CaQtDM_Lib::~CaQtDM_Lib()
 {
 #ifdef MOBILE
+    cancelMobileLongPress();
     if(qApp != Q_NULLPTR) {
         qApp->removeEventFilter(this);
     }
@@ -436,6 +441,10 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
     firstResize = true;
     loopTimer = 0;
     prcFile = false;
+#ifdef MOBILE
+    mobileLongPressTimerId = 0;
+    mobileLongPressTriggered = false;
+#endif
 
     // for cainclude, we need when updating internal positions to know about the resize factors
     this->setProperty("RESIZEX", 1.0);
@@ -1074,7 +1083,14 @@ void CaQtDM_Lib::EnableDisableIO()
  */
 void CaQtDM_Lib::timerEvent(QTimerEvent *event)
 {
+#ifdef MOBILE
+    if(event != Q_NULLPTR && event->timerId() == mobileLongPressTimerId) {
+        triggerMobileLongPress();
+        return;
+    }
+#else
     Q_UNUSED(event);
+#endif
     // for epics we flush the buffer every second
     FlushAllInterfaces();
 
@@ -10162,6 +10178,44 @@ bool mobileIsRoutablePointerEvent(QEvent *event)
     }
 }
 
+bool mobileIsPointerPress(QEvent *event)
+{
+    return event != Q_NULLPTR
+            && (event->type() == QEvent::TouchBegin || event->type() == QEvent::MouseButtonPress);
+}
+
+bool mobileIsPointerRelease(QEvent *event)
+{
+    return event != Q_NULLPTR
+            && (event->type() == QEvent::TouchEnd || event->type() == QEvent::MouseButtonRelease);
+}
+
+bool mobileIsPointerCancel(QEvent *event)
+{
+    return event != Q_NULLPTR && event->type() == QEvent::TouchCancel;
+}
+
+bool mobileIsPointerMove(QEvent *event)
+{
+    return event != Q_NULLPTR
+            && (event->type() == QEvent::TouchUpdate || event->type() == QEvent::MouseMove);
+}
+
+int mobileLongPressInterval()
+{
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+    if(qApp != Q_NULLPTR && qApp->styleHints() != Q_NULLPTR) {
+        return qMax(300, qApp->styleHints()->mousePressAndHoldInterval());
+    }
+#endif
+    return 800;
+}
+
+int mobileLongPressMoveThreshold()
+{
+    return qMax(8, QApplication::startDragDistance());
+}
+
 bool mobileGlobalEventPosition(QEvent *event, QPoint *position)
 {
     if (event == Q_NULLPTR || position == Q_NULLPTR) {
@@ -10169,6 +10223,7 @@ bool mobileGlobalEventPosition(QEvent *event, QPoint *position)
     }
 
     if (event->type() == QEvent::TouchBegin
+            || event->type() == QEvent::TouchUpdate
             || event->type() == QEvent::TouchEnd
             || event->type() == QEvent::TouchCancel) {
         QTouchEvent *touchEvent = static_cast<QTouchEvent *>(event);
@@ -10187,6 +10242,7 @@ bool mobileGlobalEventPosition(QEvent *event, QPoint *position)
     }
 
     if (event->type() == QEvent::MouseButtonPress
+            || event->type() == QEvent::MouseMove
             || event->type() == QEvent::MouseButtonRelease) {
         QMouseEvent *mouseEvent = static_cast<QMouseEvent *>(event);
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -10220,6 +10276,41 @@ QWidget *mobileButtonAt(QWidget *window, QWidget *panel, const QPoint &position)
 
     const QPoint panelPosition = panel->mapFrom(window, position);
     return mobileButtonAncestor(panel->childAt(panelPosition), panel);
+}
+
+bool mobileCanShowContextMenu(QWidget *widget)
+{
+    return widget != Q_NULLPTR && widget->contextMenuPolicy() == Qt::CustomContextMenu;
+}
+
+QWidget *mobileContextMenuAncestor(QWidget *widget, QWidget *stopAt)
+{
+    while (widget != Q_NULLPTR) {
+        if (mobileCanShowContextMenu(widget)) {
+            return widget;
+        }
+        if (widget == stopAt) {
+            break;
+        }
+        widget = widget->parentWidget();
+    }
+    return Q_NULLPTR;
+}
+
+QWidget *mobileContextMenuTargetAt(QWidget *window, QWidget *panel, QObject *obj, const QPoint &position)
+{
+    QWidget *target = mobileContextMenuAncestor(qobject_cast<QWidget *>(obj), window);
+    if (target != Q_NULLPTR) {
+        return target;
+    }
+
+    target = mobileContextMenuAncestor(window->childAt(position), window);
+    if (target != Q_NULLPTR || panel == Q_NULLPTR) {
+        return target;
+    }
+
+    const QPoint panelPosition = panel->mapFrom(window, position);
+    return mobileContextMenuAncestor(panel->childAt(panelPosition), panel);
 }
 
 bool mobileDispatchButton(QWidget *target, QEvent::Type eventType)
@@ -10365,8 +10456,109 @@ bool isInteractiveGestureWidget(QObject *obj)
 }
 }
 
+bool CaQtDM_Lib::handleMobileLongPressEvent(QObject *obj, QEvent *event)
+{
+    if (mobileIsPointerRelease(event) || mobileIsPointerCancel(event)) {
+        const bool consumeRelease = mobileLongPressTriggered;
+        cancelMobileLongPress();
+        if (consumeRelease) {
+            event->accept();
+            return true;
+        }
+        return false;
+    }
+
+    if (!mobileIsPointerPress(event) && !mobileIsPointerMove(event)) {
+        return false;
+    }
+
+    QPoint globalPosition;
+    if (!mobileGlobalEventPosition(event, &globalPosition)) {
+        return false;
+    }
+
+    if (mobileIsPointerMove(event)) {
+        if (mobileLongPressTimerId != 0
+                && (globalPosition - mobileLongPressStartGlobalPosition).manhattanLength() > mobileLongPressMoveThreshold()) {
+            cancelMobileLongPress();
+        }
+        return false;
+    }
+
+    const QPoint windowPosition = mapFromGlobal(globalPosition);
+    if (!rect().contains(windowPosition)) {
+        cancelMobileLongPress();
+        return false;
+    }
+
+    QWidget *target = mobileContextMenuTargetAt(this, myWidget, obj, windowPosition);
+    if (target == Q_NULLPTR) {
+        cancelMobileLongPress();
+        return false;
+    }
+
+    startMobileLongPress(target, globalPosition);
+    return false;
+}
+
+void CaQtDM_Lib::startMobileLongPress(QWidget *target, const QPoint &globalPosition)
+{
+    cancelMobileLongPress();
+    if (target == Q_NULLPTR) {
+        return;
+    }
+
+    mobileLongPressTarget = target;
+    mobileLongPressGlobalPosition = globalPosition;
+    mobileLongPressStartGlobalPosition = globalPosition;
+    mobileLongPressTriggered = false;
+    mobileLongPressTimerId = startTimer(mobileLongPressInterval());
+}
+
+void CaQtDM_Lib::cancelMobileLongPress()
+{
+    if (mobileLongPressTimerId != 0) {
+        killTimer(mobileLongPressTimerId);
+        mobileLongPressTimerId = 0;
+    }
+    mobileLongPressTarget.clear();
+    mobileLongPressGlobalPosition = QPoint();
+    mobileLongPressStartGlobalPosition = QPoint();
+    mobileLongPressTriggered = false;
+}
+
+void CaQtDM_Lib::triggerMobileLongPress()
+{
+    if (mobileLongPressTimerId != 0) {
+        killTimer(mobileLongPressTimerId);
+        mobileLongPressTimerId = 0;
+    }
+
+    QWidget *target = mobileLongPressTarget.data();
+    if (target == Q_NULLPTR) {
+        cancelMobileLongPress();
+        return;
+    }
+
+    if (!mobileTouchTarget.isNull()) {
+        mobileDispatchButton(mobileTouchTarget.data(), QEvent::TouchCancel);
+        mobileTouchTarget.clear();
+    }
+
+    mobileLongPressTriggered = true;
+    QCursor::setPos(mobileLongPressGlobalPosition);
+    QContextMenuEvent contextEvent(QContextMenuEvent::Mouse,
+                                   target->mapFromGlobal(mobileLongPressGlobalPosition),
+                                   mobileLongPressGlobalPosition);
+    QCoreApplication::sendEvent(target, &contextEvent);
+}
+
 bool CaQtDM_Lib::eventFilter(QObject *obj, QEvent *event)
 {
+    if (handleMobileLongPressEvent(obj, event)) {
+        return true;
+    }
+
     if (mobileRouteButtonEvent(this, myWidget, obj, event, &mobileTouchTarget)) {
         return true;
     }

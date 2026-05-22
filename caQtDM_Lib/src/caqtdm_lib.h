@@ -404,8 +404,17 @@ private:
     bool gestureEvent(QObject *obj, QGestureEvent *event);
     bool tapAndHoldTriggered(QObject *obj, QTapAndHoldGesture* tapAndHold);
     bool fingerswipeTriggered(FingerSwipeGesture *gesture);
+    bool handleMobileLongPressEvent(QObject *obj, QEvent *event);
+    void startMobileLongPress(QWidget *target, const QPoint &globalPosition);
+    void cancelMobileLongPress();
+    void triggerMobileLongPress();
     Qt::GestureType fingerSwipeGestureType;
     QPointer<QWidget> mobileTouchTarget;
+    QPointer<QWidget> mobileLongPressTarget;
+    QPoint mobileLongPressGlobalPosition;
+    QPoint mobileLongPressStartGlobalPosition;
+    int mobileLongPressTimerId;
+    bool mobileLongPressTriggered;
 #else
 
     bool eventFilter(QObject *obj, QEvent *event);
