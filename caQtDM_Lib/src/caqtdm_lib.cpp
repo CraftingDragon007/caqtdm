@@ -10182,6 +10182,24 @@ bool mobileEventPosition(QEvent *event, QPoint *position)
     return false;
 }
 
+bool mobileIsRoutablePointerEvent(QEvent *event)
+{
+    if (event == Q_NULLPTR) {
+        return false;
+    }
+
+    switch (event->type()) {
+    case QEvent::TouchBegin:
+    case QEvent::TouchEnd:
+    case QEvent::TouchCancel:
+    case QEvent::MouseButtonPress:
+    case QEvent::MouseButtonRelease:
+        return true;
+    default:
+        return false;
+    }
+}
+
 bool mobileEventGlobalPosition(QObject *obj, QEvent *event, QPoint *position)
 {
     if (event == Q_NULLPTR || position == Q_NULLPTR) {
@@ -10317,6 +10335,9 @@ bool mobileDispatchButton(QWidget *target, QEvent::Type eventType)
 bool mobileRouteButtonEvent(QWidget *window, QWidget *panel, QObject *obj, QEvent *event, QPointer<QWidget> *touchTarget)
 {
     if (window == Q_NULLPTR || event == Q_NULLPTR || touchTarget == Q_NULLPTR) {
+        return false;
+    }
+    if (!mobileIsRoutablePointerEvent(event)) {
         return false;
     }
     if (QApplication::activePopupWidget() != Q_NULLPTR) {
