@@ -48,7 +48,10 @@
 #endif
 
 #include <QObject>
+#include <QAbstractButton>
+#include <QPushButton>
 #include <QToolBar>
+#include <QTouchEvent>
 #include <QUuid>
 #include <QHostInfo>
 #include <QMutableListIterator>
@@ -455,6 +458,9 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
 
     qCDebug(caQtDMLibLog) << "open file" << filename << "with macro" << macro;
     setAttribute(Qt::WA_DeleteOnClose);
+#ifdef MOBILE
+    setAttribute(Qt::WA_AcceptTouchEvents, true);
+#endif
 
     // define a layout
     QGridLayout *layout = new QGridLayout;
@@ -10129,6 +10135,130 @@ bool CaQtDM_Lib::eventFilter(QObject *obj, QEvent *event)
 // treat gesture events (we use tapandhold and fingerswipe, custom gesture)
 #ifdef MOBILE
 namespace {
+bool mobileEventPosition(QEvent *event, QPoint *position)
+{
+    if (event == Q_NULLPTR || position == Q_NULLPTR) {
+        return false;
+    }
+
+    if (event->type() == QEvent::TouchBegin
+            || event->type() == QEvent::TouchEnd
+            || event->type() == QEvent::TouchCancel) {
+        QTouchEvent *touchEvent = static_cast<QTouchEvent *>(event);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+        if (touchEvent->touchPoints().isEmpty()) {
+            return false;
+        }
+        *position = touchEvent->touchPoints().first().pos().toPoint();
+#else
+        if (touchEvent->points().isEmpty()) {
+            return false;
+        }
+        *position = touchEvent->points().first().position().toPoint();
+#endif
+        return true;
+    }
+
+    if (event->type() == QEvent::MouseButtonPress
+            || event->type() == QEvent::MouseButtonRelease) {
+        QMouseEvent *mouseEvent = static_cast<QMouseEvent *>(event);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+        *position = mouseEvent->pos();
+#else
+        *position = mouseEvent->position().toPoint();
+#endif
+        return true;
+    }
+
+    return false;
+}
+
+QWidget *mobileButtonAncestor(QWidget *widget, QWidget *stopAt)
+{
+    while (widget != Q_NULLPTR && widget != stopAt) {
+        if (qobject_cast<QAbstractButton *>(widget) != Q_NULLPTR) {
+            return widget;
+        }
+        widget = widget->parentWidget();
+    }
+    return Q_NULLPTR;
+}
+
+QWidget *mobileButtonAt(QWidget *window, QWidget *panel, const QPoint &position)
+{
+    QWidget *target = mobileButtonAncestor(window->childAt(position), window);
+    if (target != Q_NULLPTR || panel == Q_NULLPTR) {
+        return target;
+    }
+
+    const QPoint panelPosition = panel->mapFrom(window, position);
+    return mobileButtonAncestor(panel->childAt(panelPosition), panel);
+}
+
+bool mobileDispatchButton(QWidget *target, QEvent::Type eventType)
+{
+    if (target == Q_NULLPTR) {
+        return false;
+    }
+
+    if (caMessageButton *messageButton = qobject_cast<caMessageButton *>(target)) {
+        if (eventType == QEvent::TouchBegin || eventType == QEvent::MouseButtonPress) {
+            messageButton->setDown(true);
+            if (messageButton->getAccessW()) {
+                messageButton->buttonhandle(0);
+            }
+            return true;
+        }
+        if (eventType == QEvent::TouchEnd || eventType == QEvent::MouseButtonRelease) {
+            const bool wasDown = messageButton->isDown();
+            messageButton->setDown(false);
+            if (wasDown && messageButton->getAccessW()) {
+                messageButton->buttonhandle(1);
+            }
+            return true;
+        }
+        if (eventType == QEvent::TouchCancel) {
+            messageButton->setDown(false);
+            if (messageButton->getAccessW()) {
+                messageButton->buttonhandle(1);
+            }
+            return true;
+        }
+    }
+
+    QAbstractButton *button = qobject_cast<QAbstractButton *>(target);
+    if (button == Q_NULLPTR) {
+        return false;
+    }
+
+    if (eventType == QEvent::TouchBegin || eventType == QEvent::MouseButtonPress) {
+        button->setDown(true);
+        return true;
+    }
+    if (eventType == QEvent::TouchEnd || eventType == QEvent::MouseButtonRelease) {
+        const bool wasDown = button->isDown();
+        button->setDown(false);
+        if (wasDown && button->isEnabled()) {
+            if (QPushButton *pushButton = qobject_cast<QPushButton *>(button)) {
+                if (pushButton->menu() != Q_NULLPTR) {
+                    pushButton->showMenu();
+                } else {
+                    pushButton->click();
+                }
+            } else {
+                button->click();
+            }
+        }
+        return true;
+    }
+    if (eventType == QEvent::TouchCancel) {
+        button->setDown(false);
+        return true;
+    }
+
+    return false;
+}
+
 bool isInteractiveGestureWidget(QObject *obj)
 {
     QWidget *widget = qobject_cast<QWidget *>(obj);
@@ -10150,6 +10280,42 @@ bool isInteractiveGestureWidget(QObject *obj)
             || qobject_cast<EPushButton *>(widget) != nullptr
             || qobject_cast<QPushButton *>(widget) != nullptr;
 }
+}
+
+bool CaQtDM_Lib::event(QEvent *event)
+{
+    if (event != Q_NULLPTR && event->type() == QEvent::TouchCancel) {
+        QWidget *target = mobileTouchTarget.data();
+        mobileTouchTarget.clear();
+        if (target != Q_NULLPTR && mobileDispatchButton(target, event->type())) {
+            event->accept();
+            return true;
+        }
+    }
+
+    QPoint position;
+    if (mobileEventPosition(event, &position)) {
+        QWidget *target = mobileButtonAt(this, myWidget, position);
+
+        if (event->type() == QEvent::TouchBegin || event->type() == QEvent::MouseButtonPress) {
+            mobileTouchTarget = target;
+            if (target != Q_NULLPTR && mobileDispatchButton(target, event->type())) {
+                event->accept();
+                return true;
+            }
+        } else if (event->type() == QEvent::TouchEnd || event->type() == QEvent::MouseButtonRelease) {
+            if (!mobileTouchTarget.isNull()) {
+                target = mobileTouchTarget.data();
+            }
+            mobileTouchTarget.clear();
+            if (target != Q_NULLPTR && mobileDispatchButton(target, event->type())) {
+                event->accept();
+                return true;
+            }
+        }
+    }
+
+    return QMainWindow::event(event);
 }
 
 bool CaQtDM_Lib::eventFilter(QObject *obj, QEvent *event)

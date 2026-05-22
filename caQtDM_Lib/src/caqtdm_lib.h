@@ -65,6 +65,7 @@
 #include <cahmiconfigtransferitem.h>
 #include <hmiapplicationeventfilter.h>
 #include <QClipboard>
+#include <QPointer>
 
 #include <QUiLoader>
 
@@ -282,6 +283,9 @@ public:
 
 protected:
     virtual void timerEvent(QTimerEvent *e);
+#ifdef MOBILE
+    virtual bool event(QEvent *event);
+#endif
     void resizeEvent ( QResizeEvent * event );
     void mousePressEvent(QMouseEvent *event);
 
@@ -404,6 +408,7 @@ private:
     bool tapAndHoldTriggered(QObject *obj, QTapAndHoldGesture* tapAndHold);
     bool fingerswipeTriggered(FingerSwipeGesture *gesture);
     Qt::GestureType fingerSwipeGestureType;
+    QPointer<QWidget> mobileTouchTarget;
 #else
 
     bool eventFilter(QObject *obj, QEvent *event);
@@ -599,4 +604,3 @@ private slots:
 };
 
 #endif // CaQtDM_Lib_H
-
