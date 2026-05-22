@@ -283,9 +283,6 @@ public:
 
 protected:
     virtual void timerEvent(QTimerEvent *e);
-#ifdef MOBILE
-    virtual bool event(QEvent *event);
-#endif
     void resizeEvent ( QResizeEvent * event );
     void mousePressEvent(QMouseEvent *event);
 

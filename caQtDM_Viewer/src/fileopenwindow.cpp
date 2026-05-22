@@ -677,13 +677,6 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
         this->ui.menuHttp->setEnabled(false);
     }
 
-//************************************************************************************************************************************************
-
-#ifdef MOBILE
-    // Finger-swipe gesture registration is disabled on mobile because it
-    // interferes with normal touch interaction on panel controls.
-#endif
-
     // application state handler
 #if QT_VERSION > 0x050000
     connect(qApp, SIGNAL(applicationStateChanged(Qt::ApplicationState)), this, SLOT(onApplicationStateChange(Qt::ApplicationState)));

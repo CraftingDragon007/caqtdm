@@ -37,6 +37,7 @@
 
 #include <QtControls>
 
+#ifndef MOBILE
 namespace {
 bool isInteractiveTouchTarget(QWidget *widget)
 {
@@ -76,6 +77,7 @@ bool isInteractiveTouchTarget(QWidget *widget)
     return false;
 }
 }
+#endif
 
 FingerSwipeGestureRecognizer::FingerSwipeGestureRecognizer()
 {

@@ -33,26 +33,17 @@ Q_LOGGING_CATEGORY(ePushButtonLog, "caqtdm.widgets.epushbutton")
 EPushButton::EPushButton(const QString &text, QWidget * parent) : QPushButton(text, parent), FontScalingWidget(this)
 {
     installEventFilter(this);
-#ifdef MOBILE
-    setAttribute(Qt::WA_AcceptTouchEvents, true);
-#endif
 }
 
 EPushButton::EPushButton(QWidget * parent) : QPushButton(parent), FontScalingWidget(this)
 {
     installEventFilter(this);
-#ifdef MOBILE
-    setAttribute(Qt::WA_AcceptTouchEvents, true);
-#endif
 }
 
 EPushButton::EPushButton(const QIcon &icon, const QString &text, QWidget *parent) : 
 	QPushButton(icon, text, parent), FontScalingWidget(this)
 {
     installEventFilter(this);
-#ifdef MOBILE
-    setAttribute(Qt::WA_AcceptTouchEvents, true);
-#endif
 }
 
 void EPushButton::setText(const QString& text)
@@ -105,48 +96,6 @@ QSize EPushButton::calculateTextSpace()
    */
   d_savedLabelSize = style()->subElementRect(QStyle::SE_PushButtonContents, &button, this).size();
   return d_savedLabelSize;
-}
-
-bool EPushButton::event(QEvent *event)
-{
-#ifdef MOBILE
-    if (event != nullptr) {
-        if (event->type() == QEvent::Polish
-                || event->type() == QEvent::Show
-                || event->type() == QEvent::Resize
-                || event->type() == QEvent::ParentChange
-                || event->type() == QEvent::ParentAboutToChange) {
-            setAttribute(Qt::WA_AcceptTouchEvents, true);
-        }
-
-        if (!inherits("caMessageButton")) {
-            if (event->type() == QEvent::TouchBegin) {
-                setDown(true);
-                event->accept();
-                return true;
-            }
-            if (event->type() == QEvent::TouchEnd) {
-                const bool wasDown = isDown();
-                setDown(false);
-                if (wasDown && isEnabled()) {
-                    if (menu() != nullptr) {
-                        showMenu();
-                    } else {
-                        click();
-                    }
-                }
-                event->accept();
-                return true;
-            }
-            if (event->type() == QEvent::TouchCancel) {
-                setDown(false);
-                event->accept();
-                return true;
-            }
-        }
-    }
-#endif
-    return QPushButton::event(event);
 }
 
 // intercept space key, so that no keyboard spacebar will trigger when button has focus

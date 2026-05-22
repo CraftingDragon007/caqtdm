@@ -55,7 +55,6 @@ protected:
     virtual void resizeEvent(QResizeEvent *e);
     virtual void showEvent(QShowEvent *);
 
-    virtual bool event(QEvent *event);
     virtual QSize sizeHint() const;
     virtual QSize minimumSizeHint() const;
     virtual bool eventFilter(QObject *obj, QEvent *event);
