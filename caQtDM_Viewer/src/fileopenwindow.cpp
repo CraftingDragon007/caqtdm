@@ -346,7 +346,7 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
         uniqueKey.append(":"+ uids);
     #endif
 
-    qCInfo(fileOpenWindowLog) << "caQtDM -- shared memory key" << uniqueKey;
+    qCDebug(fileOpenWindowLog) << "caQtDM -- shared memory key" << uniqueKey;
     sharedMemory.setKey (uniqueKey);
 
     // in case that one wants to attach to an instance that is actually creating, wait until we can attach
@@ -389,7 +389,7 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
         } else {
             int size =  BlopSize * RingSize + 2 * sizeof(uint);
             QByteArray byteArray(size, '\0');
-            qCInfo(fileOpenWindowLog) << "caQtDM -- created shared memory with" << BlopSize * RingSize + 2 * sizeof(uint) << "bytes";
+            qCInfo(fileOpenWindowLog) << "caQtDM -- created shared memory";
             sharedMemory.lock();
             char *to = (char*)sharedMemory.data();
             const char *from = byteArray.data();

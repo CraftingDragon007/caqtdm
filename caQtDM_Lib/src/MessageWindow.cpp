@@ -148,7 +148,21 @@ void MessageWindow::postMsgEvent(QtMsgType type, char* msg)
 
     if (m_logMessageEvents) {
         // In addition to displaying the message in the message window, trigger a QtLogging message
-        qt_message_output(type, QMessageLogContext("", 0, "", messageWindowLog().categoryName()), msg);
+        switch (type) {
+        case QtDebugMsg:
+            qCDebug(messageWindowLog) << msg;
+            break;
+        case QtInfoMsg:
+            qCInfo(messageWindowLog) << msg;
+            break;
+        case QtWarningMsg:
+            qCWarning(messageWindowLog) << msg;
+            break;
+        case QtCriticalMsg:
+        case QtFatalMsg:
+            qCCritical(messageWindowLog) << msg;
+            break;
+        }
     }
 
     switch (type) {
@@ -201,21 +215,21 @@ extern "C" MessageWindow* C_postMsgEvent(MessageWindow* p, int type, char* msg)
     switch (type) {
     case 0:
         msgType = QtDebugMsg;
+        qCDebug(externCLog) << msg;
         break;
     case 1:
         msgType = QtWarningMsg;
+        qCWarning(externCLog) << msg;
         break;
     case 2:
     case 3:
         msgType = QtCriticalMsg;
+        qCCritical(externCLog) << msg;
         break;
     default:
         return p;
         break;
     }
-
-    // Trigger a QtLogging message since C cannot call QtLogging macros itself
-    qt_message_output(msgType, QMessageLogContext("", 0, "", externCLog().categoryName()), msg);
 
     if(p == 0) return p;
 

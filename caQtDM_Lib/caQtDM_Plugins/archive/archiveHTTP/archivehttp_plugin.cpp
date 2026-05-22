@@ -44,7 +44,7 @@ Q_LOGGING_CATEGORY(archiveHTTPLog, "caqtdm.plugins.archive.http")
 
 ArchiveHTTP_Plugin::ArchiveHTTP_Plugin()
 {
-    qCInfo(archiveHTTPLog) << "ArchiveHTTP: Create";
+    qCDebug(archiveHTTPLog) << "ArchiveHTTP: Create";
 
     m_IsSuspended = false;
     qRegisterMetaType<indexes>("indexes");

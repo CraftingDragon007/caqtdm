@@ -44,7 +44,7 @@ bool HmiSharedEventBus::setup() {
         return false;
     }
 
-    qCInfo(caHMILog) << "Process" << QCoreApplication::applicationPid()
+    qCDebug(caHMILog) << "Process" << QCoreApplication::applicationPid()
              << "initialized in slot" << this_currentProcessSlotIndex;
 
     // 3. Start polling for new events

@@ -177,7 +177,11 @@ void Exceptionhandler(struct exception_handler_args args)
     } else {
         pName = "?";
     }
-    C_postMsgEvent(messageWindowPtr, 2, vaPrintf("Channel Access Exception %s on %s (op=%ld data_type=%s count=%ld)\n",
+    int level = 2; // QtCriticalMsg
+    if (args.ctx && strstr(args.ctx, "Connecting to: ") && strstr(args.ctx, "Ignored: ")) {
+        level = 0; // QtDebugMsg, for simple connection warnings
+    }
+    C_postMsgEvent(messageWindowPtr, level, vaPrintf("Channel Access Exception %s on %s (op=%ld data_type=%s count=%ld)\n",
                                             args.ctx, pName, args.op, dbr_type_to_text(args.type), args.count));
 }
 
@@ -218,13 +222,13 @@ void PrepareDeviceIO(void)
             if(strcmp(optimize, "TRUE") == 0) {
                 optimizeConnections = true;
                 if(firstTime) {
-                    C_postMsgEvent(messageWindowPtr, 1, vaPrintf("caQtDM will close epics connections for data in invisible tabs while CAQTDM_OPTIMIZE_EPICS3CONNECTIONS is set to TRUE\n"));
+                    C_postMsgEvent(messageWindowPtr, 1, vaPrintf("caQtDM -- caQtDM will close epics connections for data in invisible tabs while CAQTDM_OPTIMIZE_EPICS3CONNECTIONS is set to TRUE\n"));
                 }
             }
         }
         if(!optimizeConnections) {
             if(firstTime) {
-                C_postMsgEvent(messageWindowPtr, 1, vaPrintf("caQtDM will suspend epics connections for data in invisible tabs while CAQTDM_OPTIMIZE_EPICS3CONNECTIONS not set to TRUE\n"));
+                C_postMsgEvent(messageWindowPtr, 1, vaPrintf("caQtDM -- caQtDM will suspend epics connections for data in invisible tabs while CAQTDM_OPTIMIZE_EPICS3CONNECTIONS not set to TRUE\n"));
             }
         }
         firstTime = false;
