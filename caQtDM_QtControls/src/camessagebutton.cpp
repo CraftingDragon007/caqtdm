@@ -43,6 +43,9 @@ caMessageButton::caMessageButton(QWidget *parent) : EPushButton(parent)
 
     installEventFilter(this);
     setFocusPolicy((Qt::StrongFocus));
+#ifdef MOBILE
+    setAttribute(Qt::WA_AcceptTouchEvents, true);
+#endif
 
     renewStyleSheet = true;
     setBackground(QColor(0xe8, 0xe8, 0xe8));
@@ -165,6 +168,17 @@ void caMessageButton::setAccessW(bool access)
 
 bool caMessageButton::eventFilter(QObject *obj, QEvent *event)
 {
+    Q_UNUSED(obj);
+#ifdef MOBILE
+    if (event->type() == QEvent::Polish
+            || event->type() == QEvent::Show
+            || event->type() == QEvent::Resize
+            || event->type() == QEvent::ParentChange
+            || event->type() == QEvent::ParentAboutToChange) {
+        setAttribute(Qt::WA_AcceptTouchEvents, true);
+    }
+#endif
+
     if (event->type() == QEvent::Enter) {
         if(!_AccessW) {
             QApplication::setOverrideCursor(QCursor(Qt::ForbiddenCursor));
@@ -185,10 +199,20 @@ bool caMessageButton::eventFilter(QObject *obj, QEvent *event)
         }
 #ifdef MOBILE
     } else if(event->type() == QEvent::TouchBegin) {
+        setDown(true);
         if(_AccessW) buttonhandle(0);
+        event->accept();
         return true;
-    } else if(event->type() == QEvent::TouchEnd || event->type() == QEvent::TouchCancel) {
+    } else if(event->type() == QEvent::TouchEnd) {
+        const bool wasDown = isDown();
+        setDown(false);
+        if(_AccessW && wasDown) buttonhandle(1);
+        event->accept();
+        return true;
+    } else if(event->type() == QEvent::TouchCancel) {
+        setDown(false);
         if(_AccessW) buttonhandle(1);
+        event->accept();
         return true;
 #endif
         // intercept space key, so that no keyboard spacebar will trigger when button has focus
@@ -207,5 +231,3 @@ bool caMessageButton::eventFilter(QObject *obj, QEvent *event)
 
     return QObject::eventFilter(obj, event);
 }
-
-
