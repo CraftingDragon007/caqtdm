@@ -147,9 +147,19 @@ modules:
         # Install binaries
         cp -r ${FLATPAK_BUILDER_BUILDDIR}/binaries/* /app/lib/caqtdm/qt6
         
-        # Create caQtDM script
-        echo '#!/bin/sh' > /app/bin/caqtdm
-        echo 'caQtDM -style Fusion "$@" &' >> /app/bin/caqtdm
+        # Create caQtDM scripts
+        cat > /app/bin/caQtDM <<'EOF'
+        #!/bin/sh
+        unset AT_SPI_BUS_ADDRESS
+        unset QT_LINUX_ACCESSIBILITY_ALWAYS_ON
+        exec /app/lib/caqtdm/qt6/caQtDM "$@"
+        EOF
+        chmod +x /app/bin/caQtDM
+
+        cat > /app/bin/caqtdm <<'EOF'
+        #!/bin/sh
+        caQtDM -style Fusion "$@" &
+        EOF
         chmod +x /app/bin/caqtdm
         
         # Create qt designer script
@@ -160,7 +170,6 @@ modules:
         chmod +x /app/bin/caqtdm_designer
 
         # Create symlinks
-        ln -sfv /app/lib/caqtdm/qt6/caQtDM /app/bin/caQtDM
         ln -sfv /app/lib/caqtdm/qt6/adl2ui /app/bin/adl2ui
         ln -sfv /app/lib/caqtdm/qt6/edl2ui /app/bin/edl2ui
         
