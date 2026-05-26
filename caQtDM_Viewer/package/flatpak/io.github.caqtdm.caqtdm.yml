@@ -1,6 +1,6 @@
 id: io.github.caqtdm.caqtdm
 runtime: org.kde.Platform
-runtime-version: "6.9"
+runtime-version: "6.10"
 sdk: org.kde.Sdk
 command: caQtDM
 finish-args:
@@ -17,8 +17,8 @@ modules:
     buildsystem: simple
     sources:
       - type: archive
-        url: https://epics-controls.org/download/base/base-7.0.9.tar.gz
-        sha256: acd62c9b97b60caea9303cc3aab922dbf2bc3bfb3d20e0027110ffe4c906a6c7
+        url: https://epics-controls.org/download/base/base-7.0.10.tar.gz
+        sha256: dca8a24a78fd5e48e659e510a4d40f04812aad9320a0a5317ab05099c27a6d22
     build-commands:
       - |
         
@@ -52,8 +52,8 @@ modules:
           ln -s ${FINAL_LOCATION}/bin/${EPICS_HOST_ARCH}/${bin} /app/bin/${bin}
         done
 
-  - name: qwt-qt6
-    buildsystem: qmake
+  - name: qwt
+    buildsystem: simple
     sources:
       - type: archive
         url: http://downloads.sourceforge.net/qwt/qwt-6.3.0.tar.bz2
@@ -61,15 +61,14 @@ modules:
     build-commands:
       - |
         # Configure
-        sed -e '/^\s*QWT_INSTALL_PREFIX/ s|=.*|= /app|' \
-          -e '/^QWT_INSTALL_DOCS/ s|/doc|/share/doc/qwt-qt6|' \
-          -e '/^QWT_INSTALL_HEADERS/ s|include|&/qwt-qt6|' \
+        sed -e '/^[[:space:]]*QWT_INSTALL_PREFIX/ s|=.*|= /app|' \
+          -e '/^QWT_INSTALL_DOCS/ s|/doc|/share/doc/qwt|' \
+          -e '/^QWT_INSTALL_HEADERS/ s|include|&/qwt|' \
           -e '/^QWT_INSTALL_PLUGINS/ s|plugins/designer|lib/qt6/&|' \
           -e '/^QWT_INSTALL_FEATURES/ s|features|lib/qt6/mkspecs/&|' \
+          -e 's|^[[:space:]]*QWT_CONFIG[[:space:]]*+=[[:space:]]*QwtExamples.*$|# QWT_CONFIG += QwtExamples|' \
+          -e 's|^[[:space:]]*QWT_CONFIG[[:space:]]*+=[[:space:]]*QwtPlayground.*$|# QWT_CONFIG += QwtPlayground|' \
           -i qwtconfig.pri
-        sed -e '/^TARGET/ s|(qwt)|(qwt-qt$${QT_MAJOR_VERSION})|' \
-          -e '/^\s*QWT_SONAME/ s|libqwt|&-qt$${QT_MAJOR_VERSION}|' \
-          -i src/src.pro
       - qmake6 qwt.pro
       - make -j$(nproc)
       - make install
@@ -87,10 +86,8 @@ modules:
     buildsystem: simple
     sources:
       - type: git
-        url: https://github.com/caqtdm/caqtdm.git
-        tag: v4.6.0
-        patches:
-          - fix_qwt_static_cast.patch
+        url: https://github.com/CraftingDragon007/caqtdm.git
+        branch: fix/flatpak
       - type: file
         path: io.github.caqtdm.caqtdm.desktop
       - type: dir
@@ -98,14 +95,12 @@ modules:
         dest: icons
       - type: file
         path: io.github.caqtdm.caqtdm.metainfo.xml
-      - type: file
-        path: debug.patch
 
     build-commands:
       - |
         # Set up environment variables
-        export QWTLIBNAME=qwt-qt6
-        export QWTINCLUDE=/app/include/qwt-qt6
+        export QWTLIBNAME=qwt
+        export QWTINCLUDE=/app/include/qwt
         export EPICS_BASE=/app/lib/epics
         export PYTHONVERSION=$(python --version 2>&1 | cut -d ' ' -f 2 | cut -d '.' -f 1-2)
         export ZMQ=/app
@@ -130,10 +125,11 @@ modules:
         export QTDM_BININSTALL=$EPICSEXTENSIONS/bin
         export PYTHONINCLUDE=/usr/include/python$PYTHONVERSION
         export PYTHONLIB=/usr/lib
+        export CAQTDM_GPS=1
 
         # Patches for debugging purposes
         #sed -i.bak '472/setWindowTitle(title);/printf("title:%s \n",title);fflush(stdout);/' ${FLATPAK_BUILDER_BUILDDIR}/caQtDM_Lib/src/caqtdm_lib.cpp
-        patch -p1 < ${FLATPAK_BUILDER_BUILDDIR}/debug.patch
+        #patch -p1 < ${FLATPAK_BUILDER_BUILDDIR}/debug.patch
 
         
         # Build caQtDM
