@@ -8,4 +8,5 @@ Categories=Science;DataVisualization;
 
 Icon=io.github.caqtdm.caqtdm
 Exec=caQtDM
+X-Flatpak-RunOptions=no-a11y-bus;
 Terminal=false
