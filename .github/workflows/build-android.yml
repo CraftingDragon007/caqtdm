@@ -302,23 +302,15 @@ jobs:
           set -euo pipefail
           git clone --depth 1 --recurse-submodules --branch "${EPICS_VERSION}" https://github.com/epics-base/epics-base.git "${RUNNER_TEMP}/epics-src"
           cd "${RUNNER_TEMP}/epics-src"
+          cp "${GITHUB_WORKSPACE}/ci/epics-android/configure/CONFIG_SITE.local" configure/CONFIG_SITE.local
           cp "${GITHUB_WORKSPACE}/ci/epics-android/configure/os/CONFIG.Common.android-arm64-v8a" configure/os/CONFIG.Common.android-arm64-v8a
           cp "${GITHUB_WORKSPACE}/ci/epics-android/configure/os/CONFIG.Common.androidCommon" configure/os/CONFIG.Common.androidCommon
           cp "${GITHUB_WORKSPACE}/ci/epics-android/configure/os/CONFIG_SITE.linux-x86_64.android-arm64-v8a" configure/os/CONFIG_SITE.linux-x86_64.android-arm64-v8a
           rm -rf modules/libcom/src/osi/os/android
           cp -R "${GITHUB_WORKSPACE}/ci/epics-android/modules/libcom/src/osi/os/android" modules/libcom/src/osi/os/android
-          perl -0pi -e 's/^CROSS_COMPILER_TARGET_ARCHS=.*/CROSS_COMPILER_TARGET_ARCHS=android-arm64-v8a/m' configure/CONFIG_SITE
-          perl -0pi -e 's/^SHARED_LIBRARIES=.*/SHARED_LIBRARIES=NO/m' configure/CONFIG_SITE
-          perl -0pi -e 's/^STATIC_BUILD=.*/STATIC_BUILD=YES/m' configure/CONFIG_SITE
-          perl -0pi -e 's#^NDK\s*=.*#NDK = '"${ANDROID_NDK_ROOT}"'#m' configure/os/CONFIG.Common.androidCommon
-          perl -0pi -e 's/^ABI\s*=.*/ABI = 29/m' configure/os/CONFIG.Common.androidCommon
-          perl -0pi -e 's#^NDK\s*=.*#NDK = '"${ANDROID_NDK_ROOT}"'#m' configure/os/CONFIG_SITE.linux-x86_64.android-arm64-v8a
-          perl -0pi -e 's/^ABI\s*=.*/ABI = 29/m' configure/os/CONFIG_SITE.linux-x86_64.android-arm64-v8a
-          perl -0pi -e 's/^GNU\s*=\s*NO/GNU = YES/m' configure/os/CONFIG_SITE.linux-x86_64.android-arm64-v8a
 
           CLANG_VER="$(ls -1 "${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/lib/clang" | sort -V | tail -n 1)"
           sed -i "s#^CLANG_INTERNAL\s*=.*#CLANG_INTERNAL = \$(GNU_DIR)/lib/clang/${CLANG_VER}#" configure/os/CONFIG_SITE.linux-x86_64.android-arm64-v8a
-          perl -0pi -e 's/^TARGET_OPTS \+= -nostdinc -nostdinc\+\+\s*$/# TARGET_OPTS += -nostdinc -nostdinc++/m' configure/os/CONFIG_SITE.linux-x86_64.android-arm64-v8a
 
           grep -E '^(NDK|ABI|GNU|CLANG_INTERNAL|TARGET_OPTS)' configure/os/CONFIG_SITE.linux-x86_64.android-arm64-v8a
           make -j1

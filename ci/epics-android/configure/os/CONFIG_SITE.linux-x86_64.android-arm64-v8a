@@ -1,6 +1,6 @@
 # Pathing
-NDK = /opt/android-sdk/ndk/29.0.14206865
-ABI = 28
+NDK = $(ANDROID_NDK_ROOT)
+ABI = 29
 GNU_DIR = $(NDK)/toolchains/llvm/prebuilt/linux-x86_64
 GNU_BIN = $(GNU_DIR)/bin
 
@@ -10,10 +10,10 @@ SYSROOT = $(GNU_DIR)/sysroot
 
 # Isolation Flags
 CMPLR_CLASS = clang
-GNU = NO
+GNU = YES
 
 TARGET_OPTS = --target=aarch64-linux-android$(ABI) --sysroot=$(SYSROOT)
-TARGET_OPTS += -nostdinc -nostdinc++ 
+# TARGET_OPTS += -nostdinc -nostdinc++
 TARGET_OPTS += -D_GNU_SOURCE -D_POSIX_BARRIERS=-1 -D_POSIX_THREAD_PRIO_INHERIT=-1
 
 # Header Search Paths

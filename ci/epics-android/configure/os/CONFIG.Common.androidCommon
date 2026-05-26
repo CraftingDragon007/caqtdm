@@ -20,7 +20,7 @@ VALID_BUILDS = Ioc
 #-------------------------------------------------------
 # operating system class (include/os/<os_class>)
 OS_CLASS = android
-NDK = /opt/android-sdk/ndk/29.0.14206865
+NDK = $(ANDROID_NDK_ROOT)
 ABI = 29
 #--------------------------------------------------
 GNU_DIR=$(NDK)/toolchains/llvm/prebuilt/linux-x86_64
@@ -102,4 +102,3 @@ INCLUDES += -I.  -I$(NDK)/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/incl
 #
 #-I$(NDK)/sources/cxx-stl/llvm-libc++/include/ -I$(NDK)/sources/cxx-stl/llvm-libc++abi/include/ -I$(NDK)/sources/android/support/include/
 #
-
