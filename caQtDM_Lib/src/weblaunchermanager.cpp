@@ -1,8 +1,10 @@
 #include "weblaunchermanager.h"
 
 #include <QFile>
+#include <QFileInfo>
 #include <QJsonObject>
 #include <QJsonParseError>
+#include <QUrl>
 #include <fileFunctions.h>
 #include <searchfile.h>
 
@@ -187,10 +189,28 @@ QString WebLauncherManager::getLastElementFromAnywhere(QString input) {
     if (input.isEmpty()) return QString();
     QUrl url(input);
     QString pathOnly = url.isValid() ? url.path() : input;
+    if (pathOnly.isEmpty()) pathOnly = input;
+    pathOnly.replace('\\', '/');
 
     QFileInfo info(pathOnly);
 
     return info.fileName().isEmpty() ? info.baseName() : info.fileName();
+}
+
+void WebLauncherManager::normalizePanelPath(QJsonObject& obj, const QString& key) {
+    if (!obj.contains(key) || !obj[key].isString()) return;
+
+    QString fileName = getLastElementFromAnywhere(obj[key].toString());
+    if (!fileName.isEmpty()) obj[key] = fileName;
+}
+
+void WebLauncherManager::normalizePanelPaths(QJsonObject& obj) {
+    QString type = obj["type"].toString();
+    if (type != "caqtdm" && type != "medm" && type != "pep") return;
+
+    normalizePanelPath(obj, "path");
+    normalizePanelPath(obj, "panel");
+    normalizePanelPath(obj, "file");
 }
 
 QJsonValue WebLauncherManager::expandObject(QJsonObject obj) {
@@ -232,7 +252,11 @@ QJsonArray WebLauncherManager::expandArray(const QJsonArray &arr) {
             } else {
                 qCWarning(webLauncherManager).noquote().nospace() << "[Expansion Failed] Sub-menu item '" << item["text"].toString() << "' could not be populated from: " << subPath;
             }
+        } else if (item.contains("menu") && item["menu"].isArray()) {
+            item["menu"] = expandArray(item["menu"].toArray());
         }
+
+        normalizePanelPaths(item);
         result.append(item);
     }
     return result;

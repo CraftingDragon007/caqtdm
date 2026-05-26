@@ -51,6 +51,8 @@ private:
     QJsonDocument parseJsonFile(const QString& fileName);
     QJsonValue expandObject(QJsonObject obj);
     QJsonArray expandArray(const QJsonArray &arr);
+    void normalizePanelPaths(QJsonObject& obj);
+    void normalizePanelPath(QJsonObject& obj, const QString& key);
 
     QString getLastElementFromAnywhere(QString input);
 
