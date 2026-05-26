@@ -615,10 +615,6 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
         centralWidget->layout()->setContentsMargins(0,0,0,0);
         setCentralWidget(centralWidget);
 
-#ifdef MOBILE
-        // info can be called with tapandhold
-        connect(this, SIGNAL(Signal_NextWindow()), parent, SLOT(nextWindow()));
-#endif
     }
 
     // connect all signals of our propagators
@@ -3729,11 +3725,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         w1->setContextMenuPolicy(Qt::CustomContextMenu);
         connect(w1, SIGNAL(customContextMenuRequested(const QPoint&)), this, SLOT(ShowContextMenu(const QPoint&)));
         w1->setProperty("Connect", false);
-        // in order to get the context on tablets
-#ifdef MOBILE
-        // Mobile reliability: disable tap-and-hold gesture grabbing on panel widgets.
-        // This avoids gesture interception that prevents normal touch/click behavior.
-#else
+#ifndef MOBILE
         if(!thisFileFull.contains(POPUPDEFENITION)) w1->installEventFilter(this);
 #endif
     }
@@ -10157,7 +10149,7 @@ bool CaQtDM_Lib::eventFilter(QObject *obj, QEvent *event)
 }
 
 #endif
-// treat gesture events (we use tapandhold and fingerswipe, custom gesture)
+// Route mobile pointer events that Qt sometimes loses after native window resizes.
 #ifdef MOBILE
 namespace {
 bool mobileIsRoutablePointerEvent(QEvent *event)
@@ -10433,27 +10425,6 @@ bool mobileRouteButtonEvent(QWidget *window, QWidget *panel, QObject *obj, QEven
     return false;
 }
 
-bool isInteractiveGestureWidget(QObject *obj)
-{
-    QWidget *widget = qobject_cast<QWidget *>(obj);
-    if (widget == nullptr) {
-        return false;
-    }
-
-    return qobject_cast<caNumeric *>(widget) != nullptr
-            || qobject_cast<caApplyNumeric *>(widget) != nullptr
-            || qobject_cast<caSlider *>(widget) != nullptr
-            || qobject_cast<caMenu *>(widget) != nullptr
-            || qobject_cast<caChoice *>(widget) != nullptr
-            || qobject_cast<caRelatedDisplay *>(widget) != nullptr
-            || qobject_cast<caTextEntry *>(widget) != nullptr
-            || qobject_cast<caMessageButton *>(widget) != nullptr
-            || qobject_cast<caToggleButton *>(widget) != nullptr
-            || qobject_cast<caSpinbox *>(widget) != nullptr
-            || qobject_cast<caByteController *>(widget) != nullptr
-            || qobject_cast<EPushButton *>(widget) != nullptr
-            || qobject_cast<QPushButton *>(widget) != nullptr;
-}
 }
 
 bool CaQtDM_Lib::handleMobileLongPressEvent(QObject *obj, QEvent *event)
@@ -10563,75 +10534,7 @@ bool CaQtDM_Lib::eventFilter(QObject *obj, QEvent *event)
         return true;
     }
 
-    if (event->type() == QEvent::Gesture) {
-        QGestureEvent *gesture = static_cast<QGestureEvent*>(event);
-        const bool handled = gestureEvent(obj, gesture);
-        if (handled) {
-            return true;
-        }
-        if (isInteractiveGestureWidget(obj)) {
-            return false;
-        }
-        return !gesture->gestures().isEmpty();
-    }
     return QWidget::eventFilter(obj, event);
-}
-
-bool CaQtDM_Lib::gestureEvent(QObject *obj, QGestureEvent *event)
-{
-    bool handled = false;
-
-    if (QGesture *tapAndHold = event->gesture(Qt::TapAndHoldGesture)) {
-        //postMessage(QtDebugMsg, (char*) "tapandhold");
-        if (caSlider *widget = qobject_cast<caSlider *>(obj)) {
-            if(widget->timerActive()) return false;
-        }
-        handled = tapAndHoldTriggered(obj, static_cast<QTapAndHoldGesture*>(tapAndHold));
-    } else if(QGesture *fingerswipe = event->gesture(fingerSwipeGestureType)) {
-        //postMessage(QtDebugMsg, (char*) "fingerSwipeGesture");
-        handled = fingerswipeTriggered(static_cast<FingerSwipeGesture *>(fingerswipe));
-    }
-    return handled;
-}
-
-bool CaQtDM_Lib::tapAndHoldTriggered(QObject *obj, QTapAndHoldGesture* tapAndHold)
-{
-    if (tapAndHold->state() == Qt::GestureFinished) {
-        DisplayContextMenu((QWidget*) obj);
-        return true;
-    }
-    return false;
-}
-
-bool CaQtDM_Lib::fingerswipeTriggered(FingerSwipeGesture *swipe) {
-    if (swipe->isLeftToRight()) {
-        emit Signal_NextWindow();
-        //postMessage(QtDebugMsg, (char*) "leftttoright");
-        return true;
-    }
-    else if (swipe->isRightToLeft()) {
-        //postMessage(QtDebugMsg, (char*) "righttoleft");
-        emit Signal_NextWindow();
-        return true;
-    }
-    else if (swipe->isBottomToTop()) {
-        //postMessage(QtDebugMsg, (char*) "bottomtotop");
-        closeWindow();
-        return true;
-    }
-    else if (swipe->isTopToBottom()) {
-        //postMessage(QtDebugMsg, (char*) "toptobottom");
-        closeWindow();
-        return true;
-    }
-    return false;
-}
-
-// called from parent to define the custom gesture event
-void CaQtDM_Lib::grabSwipeGesture(Qt::GestureType fingerSwipeGestureTypeID)
-{
-    fingerSwipeGestureType = fingerSwipeGestureTypeID;
-    grabGesture(fingerSwipeGestureType);
 }
 #endif
 
