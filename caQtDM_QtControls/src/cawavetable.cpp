@@ -96,15 +96,17 @@ caWaveTable::caWaveTable(QWidget *parent) : QTableWidget(parent)
 
     //Iterate over every parent QWidget and check if any styles have been applied to it in designer --> If at any point any styles have been applied, do not overwrite them, else set the style so it looks like before the update.
     bool canSetStyle = true;
+    const QWidget *parentWidgetPtr = this->parentWidget();
+    const QString parentName = parentWidgetPtr ? parentWidgetPtr->objectName() : QStringLiteral("<no-parent>");
     for(QWidget *checkWidget = this;checkWidget->parentWidget();checkWidget = checkWidget->parentWidget()){
         if (!(checkWidget->styleSheet().isEmpty())){
-            qCDebug(caWaveTableLog).noquote() << QString("Style for a child widget of %1 is NOT set by object, preferring Style from designer").arg(this->parentWidget()->objectName());
+            qCDebug(caWaveTableLog).noquote() << QString("Style for a child widget of %1 is NOT set by object, preferring Style from designer").arg(parentName);
             canSetStyle = false;
             break;
         }
     }
     if (canSetStyle){
-        qCDebug(caWaveTableLog).noquote() << QString("Style for a child widget of %1 is set by object").arg(this->parentWidget()->objectName());
+        qCDebug(caWaveTableLog).noquote() << QString("Style for a child widget of %1 is set by object").arg(parentName);
         QPalette p = QPalette();
         p.setColor(QPalette::AlternateBase, QColor(233, 231, 227));
         setPalette(p);
@@ -988,5 +990,4 @@ void caWaveTable::copy()
 void caWaveTable::createActions() {
 
 }
-
 

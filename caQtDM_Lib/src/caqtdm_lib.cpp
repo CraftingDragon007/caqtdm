@@ -6157,7 +6157,7 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
                     } else {
                         char asc[MAX_STRING_LENGTH];
                         snprintf(asc, MAX_STRING_LENGTH, "PV <%s> (x axis) in widget <%s> is set to channel scaling, but the channel limits are invalid. Therefore, the x axis scaling for the widget is reset to auto.", data.pv, qasc(w->objectName()));
-                        postMessageAndLog(QtFatalMsg, asc, caCartesianPlotLog);
+                        postMessageAndLog(QtWarningMsg, asc, caCartesianPlotLog);
                         cartesianplotWidget->setXscaling(caCartesianPlot::Auto);
                     }
                 } else if(XorY == caCartesianPlot::CH_Y && cartesianplotWidget->getYscaling() == caCartesianPlot::Channel) {
@@ -6166,7 +6166,7 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
                     } else {
                         char asc[MAX_STRING_LENGTH];
                         snprintf(asc, MAX_STRING_LENGTH, "PV <%s> (y axis) in widget <%s> is set to channel scaling, but the channel limits are invalid. Therefore, the y axis scaling for the widget is reset to auto.", data.pv, qasc(w->objectName()));
-                        postMessageAndLog(QtFatalMsg, asc, caCartesianPlotLog);
+                        postMessageAndLog(QtWarningMsg, asc, caCartesianPlotLog);
                         cartesianplotWidget->setYscaling(caCartesianPlot::Auto);
                     }
                 }
@@ -8906,7 +8906,7 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
                 if (dialog.getChannelScalingWasReset()) {
                    char asc[MAX_STRING_LENGTH];
                    snprintf(asc, MAX_STRING_LENGTH, "Selected scaling \"channel\" has been reset to \"auto\" in cartesian plot: \"%s\" because the limits provided by the PV are invalid.", qasc(cartesianplotWidget->objectName()));
-                   postMessage(QtFatalMsg, asc);
+                   postMessage(QtWarningMsg, asc);
                 }
             }
         } else if(selectedItem->text().contains(RESETZOOM)) {
