@@ -44,10 +44,20 @@ contains(QT_VER_MAJ, 6) {
        QT += positioning
        DEFINES += CAQTDM_GPS
     }
+    opcua {
+       MOBILE {
+       QT += opcua
+       }
+       DEFINES += CAQTDM_OPCUA
+    }
 
     !ios:!android {
         QT     += printsupport
      }
+
+    android {
+        QT += xml
+    }
 
 }
 

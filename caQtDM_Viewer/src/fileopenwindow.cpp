@@ -131,6 +131,9 @@ Q_IMPORT_PLUGIN(modbusPlugin);
 Q_IMPORT_PLUGIN(gpsPlugin);
 #endif
 #endif
+#ifdef CAQTDM_OPCUA
+Q_IMPORT_PLUGIN(OPCUAPlugin);
+#endif
 //*************************************
 #ifdef EPICS4
 Q_IMPORT_PLUGIN(Epics4Plugin);
