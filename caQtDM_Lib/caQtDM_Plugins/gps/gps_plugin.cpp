@@ -42,7 +42,7 @@ QString gpsPlugin::pluginName()
 // constructor
 gpsPlugin::gpsPlugin()
 {
-    qCInfo(gpsLog) << "GPS: Create";
+    qCDebug(gpsLog) << "GPS: Create";
     enable_gps_readout=false;
     timerValues = Q_NULLPTR;
 }

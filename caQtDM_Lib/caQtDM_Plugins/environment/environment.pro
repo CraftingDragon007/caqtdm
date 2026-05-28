@@ -23,7 +23,3 @@ HEADERS         = environment_plugin.h ../controlsinterface.h ../loggingcategori
 SOURCES         = environment_plugin.cpp
 
 TARGET          = environment_plugin
-
-android {
-   INCLUDEPATH += $(ANDROIDFUNCTIONSINCLUDE)
-}

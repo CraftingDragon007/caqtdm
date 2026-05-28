@@ -53,7 +53,7 @@ QString Epics3Plugin::pluginName()
 
 Epics3Plugin::Epics3Plugin()
 {
-    qCInfo(epics3Log) << "Epics3: Create";
+    qCDebug(epics3Log) << "Epics3: Create";
 }
 
 int Epics3Plugin::initCommunicationLayer(MutexKnobData *data, MessageWindow *messageWindow, QMap<QString, QString> options)

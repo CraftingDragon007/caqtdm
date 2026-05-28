@@ -76,7 +76,6 @@ public slots:
         QMutex *mutex = indexNew.mutexP;
         mutex->lock();
 
-        struct timeb now;
         QUrl url = QUrl(index_name);
         QString fields, agg;
         bool isBinned;
@@ -84,8 +83,7 @@ public slots:
         QString key = indexNew.pv;
         int nbVal = 0;
 
-        ftime(&now);
-        double endSeconds = (double) now.time + (double) now.millitm / (double)1000;
+        double endSeconds = QDateTime::currentMSecsSinceEpoch() / 1000.0;
         double startSeconds = endSeconds - indexNew.secondsPast;
 #ifdef CSV
         QString response ="'response':{'format':'csv'}";

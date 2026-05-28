@@ -78,10 +78,6 @@ INCLUDEPATH += ../caQtDM_QtControls/src
 INCLUDEPATH += ../caQtDM_Lib/src
 INCLUDEPATH += ../caQtDM_Lib/caQtDM_Plugins
 
-android {
-   INCLUDEPATH += $(ANDROIDFUNCTIONSINCLUDE)
-}
-
 RESOURCES += ./src/caQtDM.qrc
 RC_FILE = ./src/caQtDM.rc
 

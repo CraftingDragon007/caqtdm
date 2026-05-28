@@ -44,7 +44,7 @@ QString environmentPlugin::pluginName()
 // constructor
 environmentPlugin::environmentPlugin()
 {
-    qCInfo(environmentLog) << "Environment: Create";
+    qCDebug(environmentLog) << "Environment: Create";
 
     mutexknobdataP = Q_NULLPTR;
     connect(qApp, SIGNAL(aboutToQuit()), this, SLOT(closeEvent()));

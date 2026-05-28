@@ -64,7 +64,6 @@ bool HTTPCONFIGURATOR = false;
 
 #if defined(linux) || defined(__FreeBSD__)
 #include <sys/resource.h>
-#include <sys/time.h>
 #include <unistd.h>
 
 #if QT_VERSION < QT_VERSION_CHECK(5,0,0)
@@ -143,12 +142,6 @@ Q_IMPORT_PLUGIN(ArchiveSF_Plugin);
 #endif
 #ifdef ARCHIVEHTTP
 Q_IMPORT_PLUGIN(ArchiveHTTP_Plugin);
-#endif
-#ifdef ARCHIVEHIPA
-Q_IMPORT_PLUGIN(ArchiveHIPA_Plugin);
-#endif
-#ifdef ARCHIVEPRO
-Q_IMPORT_PLUGIN(ArchivePRO_Plugin);
 #endif
 //*************************************
 
@@ -356,7 +349,7 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
         uniqueKey.append(":"+ uids);
     #endif
 
-    qCInfo(fileOpenWindowLog) << "caQtDM -- shared memory key" << uniqueKey;
+    qCDebug(fileOpenWindowLog) << "caQtDM -- shared memory key" << uniqueKey;
     sharedMemory.setKey (uniqueKey);
 
     // in case that one wants to attach to an instance that is actually creating, wait until we can attach
@@ -399,7 +392,7 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
         } else {
             int size =  BlopSize * RingSize + 2 * sizeof(uint);
             QByteArray byteArray(size, '\0');
-            qCInfo(fileOpenWindowLog) << "caQtDM -- created shared memory with" << BlopSize * RingSize + 2 * sizeof(uint) << "bytes";
+            qCInfo(fileOpenWindowLog) << "caQtDM -- created shared memory";
             sharedMemory.lock();
             char *to = (char*)sharedMemory.data();
             const char *from = byteArray.data();

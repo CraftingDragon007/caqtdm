@@ -69,8 +69,7 @@ MutexKnobData::MutexKnobData()
     highestCountPerSecond = 0;
 
     suppressUpdates = false;
-    ftime(&last);
-    ftime(&monitorTiming);
+    monitorTimingMs = QDateTime::currentMSecsSinceEpoch();
 
     // start a timer with 10Hz
     prvRepetitionRate = DEFAULTRATE;
@@ -549,9 +548,14 @@ extern "C" MutexKnobData* C_DataLock(MutexKnobData* p, knobData *kData) {
     p->DataLock(kData);
     return p;
 }
+
 extern "C" MutexKnobData* C_DataUnlock(MutexKnobData* p, knobData *kData) {
     p->DataUnlock(kData);
     return p;
+}
+
+extern "C" long long C_CurrentTimeMs() {
+    return QDateTime::currentMSecsSinceEpoch();
 }
 
 /**
@@ -562,7 +566,6 @@ void MutexKnobData::SetMutexKnobDataReceived(knobData *kData) {
     char fec[40];
     char dataString[STRING_EXCHANGE_SIZE];
     double diff;
-    struct timeb now;
     QMutexLocker locker(&mutex);
     int index = kData->index;
     memcpy(&KnobData[index].edata, &kData->edata, sizeof(epicsData));
@@ -580,12 +583,10 @@ void MutexKnobData::SetMutexKnobDataReceived(knobData *kData) {
     }
 
     // calculate after 5 seconds our statistics
-    ftime(&now);
-    diff = ((double) now.time + (double) now.millitm / (double)1000) -
-            ((double) monitorTiming.time + (double) monitorTiming.millitm / (double)1000);
+    diff = QDateTime::currentMSecsSinceEpoch() / 1000.0 - monitorTimingMs / 1000.0;
 
     if(diff >= 5.0) {
-        ftime(&monitorTiming);
+        monitorTimingMs = QDateTime::currentMSecsSinceEpoch();
         nbMonitorsPerSecond = (int) (nbMonitors/diff);
         nbMonitors = 0;
         // remember monitor count for all monitors
@@ -625,7 +626,7 @@ void MutexKnobData::SetMutexKnobDataReceived(knobData *kData) {
             kData->edata.displayCount = kData->edata.monitorCount;
             locker.unlock();
             UpdateWidget(index, dispW, units, fec, dataString, KnobData[index]);
-            kData->edata.lastTime = now;
+            kData->edata.lastTimeMs = QDateTime::currentMSecsSinceEpoch();
             kData->edata.initialize = false;
             displayCount++;
         }
@@ -659,7 +660,7 @@ float MutexKnobData::getHighestCountPV(QString &pv)
 void MutexKnobData::initHighestCountPV()
 {
     QMutexLocker locker(&mutex);
-    ftime(&monitorTiming);
+    monitorTimingMs = QDateTime::currentMSecsSinceEpoch();
     highestCount = 0;
 }
 
@@ -682,10 +683,7 @@ void MutexKnobData::timerEvent(QTimerEvent *)
     char units[40];
     char fec[40];
     char dataString[STRING_EXCHANGE_SIZE];
-    struct timeb now;
     int repetitionRate = DEFAULTRATE;
-
-    ftime(&now);
 
     // do we have something that should go faster then 5 Hz, then change timer, but change back when nothing fast requested
     for(int i=0; i < GetMutexKnobDataSize(); i++) {
@@ -707,8 +705,7 @@ void MutexKnobData::timerEvent(QTimerEvent *)
         knobData *kPtr = (knobData*) &KnobData[i];
 
         if(kPtr->index != -1) {
-            diff = ((double) now.time + (double) now.millitm / (double)1000) -
-                    ((double) kPtr->edata.lastTime.time + (double) kPtr->edata.lastTime.millitm / (double)1000);
+            diff = QDateTime::currentMSecsSinceEpoch() / 1000.0 - kPtr->edata.lastTimeMs / 1000.0;
             if(kPtr->edata.repRate < 1) repRate = 1;
             else repRate = kPtr->edata.repRate;
         }
@@ -809,7 +806,7 @@ void MutexKnobData::timerEvent(QTimerEvent *)
                 kPtr->edata.displayCount = kPtr->edata.monitorCount;
                 locker.unlock();
                 UpdateWidget(index, dispW, units, fec, dataString, KnobData[index]);
-                kPtr->edata.lastTime = now;
+                kPtr->edata.lastTimeMs = QDateTime::currentMSecsSinceEpoch();
                 kPtr->edata.initialize = false;
                 displayCount++;
             }
@@ -825,7 +822,7 @@ void MutexKnobData::timerEvent(QTimerEvent *)
                 // brake unconnected displays
                 if(kPtr->edata.unconnectCount == 0) {
                     kPtr->edata.displayCount = kPtr->edata.monitorCount;
-                    kPtr->edata.lastTime = now;
+                    kPtr->edata.lastTimeMs = QDateTime::currentMSecsSinceEpoch();
                     displayIt = true;
                 }
                 kPtr->edata.unconnectCount++;

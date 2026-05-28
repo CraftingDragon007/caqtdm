@@ -290,7 +290,7 @@ int main(int argc, char *argv[])
 #ifndef CAQTDM_NO_CUSTOM_LOGHANDLER
     // From hereon, everything logged via qDebug or its siblings will be captured by the custom LogHandler.
     GeneralLogHandler::initialize();
-    qCInfo(caQtDMLog) << "initialized logger";
+    qCInfo(caQtDMLog) << "caQtDM -- initialized logger";
     // Log all arguments the application was started with (before they were processed)
     for (int i = 0; i < arguments.size(); i++) {
         qCDebug(caQtDMLog).nospace() << "Argument: " << i << ": " << arguments[i];

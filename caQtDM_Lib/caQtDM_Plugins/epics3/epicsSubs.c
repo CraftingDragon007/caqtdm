@@ -113,7 +113,7 @@ char* myLimitedString (char * strng) {
     kData.edata.upper_warning_limit = (double) stsF->upper_warning_limit; }
 
 #define AssignEpicsValue(valx, vali, countx) { \
-    kData.edata.actTime = now; \
+    kData.edata.actTimeMs = C_CurrentTimeMs(); \
     kData.edata.rvalue = valx; \
     kData.edata.ivalue = vali; \
     kData.edata.severity = stsF->severity; \
@@ -177,7 +177,11 @@ void Exceptionhandler(struct exception_handler_args args)
     } else {
         pName = "?";
     }
-    C_postMsgEvent(messageWindowPtr, 2, vaPrintf("Channel Access Exception %s on %s (op=%ld data_type=%s count=%ld)\n",
+    int level = 2; // QtCriticalMsg
+    if (args.ctx && strstr(args.ctx, "Connecting to: ") && strstr(args.ctx, "Ignored: ")) {
+        level = 0; // QtDebugMsg, for simple connection warnings
+    }
+    C_postMsgEvent(messageWindowPtr, level, vaPrintf("Channel Access Exception %s on %s (op=%ld data_type=%s count=%ld)\n",
                                             args.ctx, pName, args.op, dbr_type_to_text(args.type), args.count));
 }
 
@@ -218,13 +222,13 @@ void PrepareDeviceIO(void)
             if(strcmp(optimize, "TRUE") == 0) {
                 optimizeConnections = true;
                 if(firstTime) {
-                    C_postMsgEvent(messageWindowPtr, 1, vaPrintf("caQtDM will close epics connections for data in invisible tabs while CAQTDM_OPTIMIZE_EPICS3CONNECTIONS is set to TRUE\n"));
+                    C_postMsgEvent(messageWindowPtr, 1, vaPrintf("caQtDM -- caQtDM will close epics connections for data in invisible tabs while CAQTDM_OPTIMIZE_EPICS3CONNECTIONS is set to TRUE\n"));
                 }
             }
         }
         if(!optimizeConnections) {
             if(firstTime) {
-                C_postMsgEvent(messageWindowPtr, 1, vaPrintf("caQtDM will suspend epics connections for data in invisible tabs while CAQTDM_OPTIMIZE_EPICS3CONNECTIONS not set to TRUE\n"));
+                C_postMsgEvent(messageWindowPtr, 1, vaPrintf("caQtDM -- caQtDM will suspend epics connections for data in invisible tabs while CAQTDM_OPTIMIZE_EPICS3CONNECTIONS not set to TRUE\n"));
             }
         }
         firstTime = false;
@@ -258,7 +262,6 @@ static void access_rights_handler(struct access_rights_handler_args args)
 static void dataCallback(struct event_handler_args args)
 {
     knobData kData;
-    struct timeb now;
 
     connectInfo *info = (connectInfo *) ca_puser(args.chid);
     if(info == (connectInfo *) 0) return;
@@ -272,7 +275,6 @@ static void dataCallback(struct event_handler_args args)
         kData.edata.monitorCount = info->event;
         kData.edata.connected = info->connected;
         kData.edata.fieldtype = ca_field_type(args.chid);
-        ftime(&now);
 
         C_DataLock(mutexKnobdataPtr, &kData);
 
@@ -462,7 +464,6 @@ static void dataCallback(struct event_handler_args args)
 
 static void displayCallback(struct event_handler_args args) {
     knobData kData;
-    struct timeb now;
     int status;
 
     connectInfo *info = (connectInfo *) ca_puser(args.chid);
@@ -479,7 +480,6 @@ static void displayCallback(struct event_handler_args args) {
         kData.edata.connected = info->connected;
         kData.edata.fieldtype = ca_field_type(args.chid);
         kData.edata.nelm = ca_element_count(args.chid);
-        ftime(&now);
 
         C_DataLock(mutexKnobdataPtr, &kData);
 
