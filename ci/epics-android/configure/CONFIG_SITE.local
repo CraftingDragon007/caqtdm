@@ -1,0 +1,4 @@
+# Local site overrides for Android cross-builds.
+CROSS_COMPILER_TARGET_ARCHS=android-arm64-v8a
+SHARED_LIBRARIES=NO
+STATIC_BUILD=YES

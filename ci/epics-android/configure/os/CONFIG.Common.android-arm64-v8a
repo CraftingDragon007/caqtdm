@@ -1,0 +1,4 @@
+# Definitions for android-arm64-v8a target builds
+ARCH_CLASS = arm64-v8a
+TARGET = aarch64-linux-android
+-include $(CONFIG)/os/CONFIG.Common.androidCommon

@@ -1,6 +1,8 @@
 name: caQtDM DEB Package Build Debug
 
-on: [push]
+on:
+ workflow_dispatch:
+ push:
 
 jobs:
   build:

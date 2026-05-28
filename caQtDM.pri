@@ -1023,6 +1023,9 @@ caQtDM_Viewer {
                         gps {
                             LIBS += $(CAQTDM_COLLECT)/controlsystems/libgps_plugin_$${QT_ARCH}.a
                         }
+                        opcua {
+                            LIBS += $(CAQTDM_COLLECT)/controlsystems/libopcua_plugin_$${QT_ARCH}.a
+                        }
 
                         LIBS += $(CAQTDM_COLLECT)/libcaQtDM_Lib_$${QT_ARCH}.a
                         LOCAL_LDLIBS += -llog
