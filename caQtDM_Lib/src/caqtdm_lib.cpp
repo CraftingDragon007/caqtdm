@@ -317,6 +317,36 @@ double CaQtDM_Lib::rTime()
 /**
  * helper for fixing file lists to work with relative paths
  */
+static bool fileListEntryResolves(const QString &fileName)
+{
+    if (fileName.isEmpty()) return false;
+
+    QString fileNameUi = fileName;
+    if (fileName.endsWith(".edl") || fileName.endsWith(".adl")) {
+        fileNameUi.replace(".adl", ".ui").replace(".edl",".ui");
+    } else if (!fileName.endsWith(".ui")) {
+        fileNameUi.append(".ui");
+    }
+
+    if (QFileInfo::exists(fileName) || QFileInfo::exists(fileNameUi)) {
+        return true;
+    }
+
+    QString displayPath = (QString) qgetenv("CAQTDM_DISPLAY_PATH");
+    QStringList paths = displayPath.split(pathSeparator, SKIP_EMPTY_PARTS);
+
+    for (int i=0; i < paths.count(); i++) {
+#if defined(_WIN32) || defined(_WIN64)
+        paths[i] = paths[i].replace("\"", "");
+#endif
+        if (QFileInfo::exists(paths[i] + "/" + fileName) || QFileInfo::exists(paths[i] + "/" + fileNameUi)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 bool fixFileListRelative(const QString &cainclude_path, QString *filelist, bool shell=false)
 {
     if (cainclude_path.isEmpty()) return false;
@@ -327,8 +357,9 @@ bool fixFileListRelative(const QString &cainclude_path, QString *filelist, bool 
     for (int i=0; i < files.count(); i++) {
         // Shell files are only treated if they start with "./" or "../", since otherwise they may be on PATH
         // Windows is not treated, as relative files might not have anything to differentiate from files on  and "./" is invalid on windows.
-        if (QFileInfo(files.at(i)).isRelative() && (!shell || files.at(i).startsWith("./") || files.at(i).startsWith("../"))) {
-            files[i] = cainclude_path + files.at(i).trimmed();
+        QString fileName = files.at(i).trimmed();
+        if (QFileInfo(fileName).isRelative() && (!shell || fileName.startsWith("./") || fileName.startsWith("../")) && !fileListEntryResolves(fileName)) {
+            files[i] = QFileInfo(cainclude_path + fileName).absoluteFilePath();
             affected = true;
         }
     }
