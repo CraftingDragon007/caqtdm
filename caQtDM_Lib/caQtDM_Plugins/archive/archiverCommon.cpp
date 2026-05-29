@@ -58,7 +58,6 @@ QMutex* ArchiverCommon::globalMutex()
 void ArchiverCommon::updateInterface()
 {
     double diff;
-    struct timeb now;
     QMap<QString, indexes> listOfIndexesToBeExecuted;
     listOfIndexesToBeExecuted.clear();
 
@@ -72,18 +71,14 @@ void ArchiverCommon::updateInterface()
     }
 
     // copy indexes to be executed when it is time
-    ftime(&now);
-
     QMap<QString, indexes>::const_iterator i = listOfIndexes.constBegin();
     while (i != listOfIndexes.constEnd()) {
         indexes indexNew = i.value();
-        diff = ((double) now.time + (double) now.millitm / (double) 1000)
-               - ((double) indexNew.lastUpdateTime.time
-                  + (double) indexNew.lastUpdateTime.millitm / (double) 1000);
+        diff = QDateTime::currentMSecsSinceEpoch() / 1000.0 - indexNew.lastUpdateTimeMs / 1000.0;
         // is it time to update ?
         //QDebug() << (__FILE__) << ":" << (__LINE__) << "|" << i.key() << diff << indexNew.updateSeconds;
         if (diff >= indexNew.updateSeconds) {
-            ftime(&indexNew.lastUpdateTime);
+            indexNew.lastUpdateTimeMs = QDateTime::currentMSecsSinceEpoch();
             listOfIndexes.insert(i.key(), indexNew);
             listOfIndexesToBeExecuted.insert(i.key(), indexNew);
         }
@@ -240,7 +235,7 @@ int ArchiverCommon::pvAddMonitor(int index, knobData *kData, int rate, int skip)
                     }
                     kData->edata.info = (char *) malloc(key.length());
                     qstrncpy((char*)kData->edata.info, qasc(key), key.length());
-                    indexNew.lastUpdateTime.time = 0;
+                    indexNew.lastUpdateTimeMs = 0;
                     // Make sure that the key of indexNew contains ".minY" or ".maxY", if it exists in the current index
                     if (key.contains(".maxY") || key.contains(".minY")) {
                         indexNew.key = key;
@@ -278,7 +273,7 @@ void ArchiverCommon::updateSecondsPast(indexes indexNew, bool original)
         } else if (indexNew.updateSeconds < SECONDSTIMEOUT) {
             //QDebug() << (__FILE__) << ":" << (__LINE__) << "|" << "set new timing " << SECONDSTIMEOUT << " for" << indexNew.pv;
             indexNew.updateSeconds = SECONDSTIMEOUT;
-            ftime(&indexNew.lastUpdateTime);
+            indexNew.lastUpdateTimeMs = QDateTime::currentMSecsSinceEpoch();
             listOfIndexes.insert(key, indexNew);
         }
         break;
@@ -419,7 +414,7 @@ int ArchiverCommon::pvClearEvent(void *ptr)
         if (indexNew.updateSeconds != SECONDSSLEEP) {
             //QDebug() << "archiverCommon.cpp:354 " << "update" << indexNew.pv << "to " << SECONDSSLEEP << "seconds";
             indexNew.updateSeconds = SECONDSSLEEP;
-            ftime(&indexNew.lastUpdateTime);
+            indexNew.lastUpdateTimeMs = QDateTime::currentMSecsSinceEpoch();
             listOfIndexes.insert(key, indexNew);
         }
         break;

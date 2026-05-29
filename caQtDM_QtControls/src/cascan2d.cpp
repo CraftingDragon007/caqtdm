@@ -835,7 +835,6 @@ void caScan2D::showImage(int numXDataValues, int numYDataValues)
         m_init = false;
         minvalue = 0;
         maxvalue = 65535;
-        ftime(&timeRef);
     }
 
     Max[1] = 0;

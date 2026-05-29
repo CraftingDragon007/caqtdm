@@ -7,6 +7,7 @@
 #############################################################################
 
 %global no_rpath %{getenv:CAQTDM_NORPATH}
+%global caqtdm_opcua %{getenv:CAQTDM_OPCUA}
 
 %global _epics_host_arch_from_env %{getenv:EPICS_HOST_ARCH}
 
@@ -43,9 +44,9 @@ License: GPLv3
 URL:     https://github.com/caqtdm/caqtdm
 Source:  https://github.com/caqtdm/caqtdm/%{name}/%{name}-%{version}.tar.gz
 
-#%if 0%{?qt6}
-#Patch0: no_rpath.patch
-#%endif
+# %%if 0%%{?qt6}
+# Patch0: no_rpath.patch
+# %%endif
 
 %if 0%{?qt5}
 # Requires: caqtdm_archiver
@@ -64,7 +65,9 @@ BuildRequires: qt6-qtsvg-devel
 BuildRequires: qt6-qtserialbus-devel
 BuildRequires: qt6-qt5compat-devel
 BuildRequires: qt6-qtlocation-devel
+%if "%{caqtdm_opcua}" == "1"
 BuildRequires: qt6-qtopcua-devel
+%endif
 BuildRequires: qwt-qt6-devel
 BuildRequires: libXext-devel cppzmq-devel
 BuildRequires: python3-devel
@@ -189,7 +192,9 @@ Requires: epics-base%{EPICS_TARGET_VERSION}
 Requires: qt6-qt5compat
 Requires: qt6-qtlocation
 Requires: qt6-qtimageformats
+%if "%{caqtdm_opcua}" == "1"
 Requires: qt6-qtopcua
+%endif
 Requires: python3
 %endif
 
@@ -198,17 +203,22 @@ Requires: python3
 
 %setup -q
 
-#%patch50 -p1 -b .pkgconfig
-#%patch51 -p1 -b .qt_install_paths
-#%patch52 -p1 -b .qt5
-#%patch53 -p1 -b .no_rpath
+# %%patch50 -p1 -b .pkgconfig
+# %%patch51 -p1 -b .qt_install_paths
+# %%patch52 -p1 -b .qt5
+# %%patch53 -p1 -b .no_rpath
 
-#%if 0%{?qt6}
-#%patch 0 -p1
-#%endif
+# %%if 0%%{?qt6}
+# %%patch 0 -p1
+# %%endif
 
 %build
 mkdir -p %{buildroot}/opt/caqtdm/lib
+%if "%{caqtdm_opcua}" == "1"
+export CAQTDM_OPCUA=1
+%else
+unset CAQTDM_OPCUA
+%endif
 %if 0%{?qt5}
 mkdir -p %{_target_platform}-qt5
 pushd %{_target_platform}-qt5
@@ -745,4 +755,3 @@ fi
 %endif
 
 %changelog
-

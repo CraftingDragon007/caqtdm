@@ -50,7 +50,7 @@ struct indexes
     int secondsPast;
     QString pv;
     float updateSeconds;
-    struct timeb lastUpdateTime;
+    qint64 lastUpdateTimeMs;
     QWidget *w;
     int nrOfBins;
     QMutex *mutexP;

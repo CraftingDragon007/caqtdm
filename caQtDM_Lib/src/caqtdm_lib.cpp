@@ -47,12 +47,6 @@
 #endif
 #endif
 
-#ifndef MOBILE_ANDROID
-  #include <sys/timeb.h>
-#else
-  #include <androidtimeb.h>
-#endif
-
 #include <QObject>
 #include <QToolBar>
 #include <QUuid>
@@ -317,15 +311,45 @@ public:
 #if !defined(useElapsedTimer)
 double CaQtDM_Lib::rTime()
 {
-    struct timeval tt;
-    gettimeofday(&tt, (struct timezone *) Q_NULLPTR);
-    return (double) 1000000.0 * (double) tt.tv_sec + (double) tt.tv_usec;
+    return static_cast<double>(
+        QDateTime::currentDateTimeUtc().toMSecsSinceEpoch() * 1000.0
+    );
 }
 #endif
 
 /**
  * helper for fixing file lists to work with relative paths
  */
+static bool fileListEntryResolves(const QString &fileName)
+{
+    if (fileName.isEmpty()) return false;
+
+    QString fileNameUi = fileName;
+    if (fileName.endsWith(".edl") || fileName.endsWith(".adl")) {
+        fileNameUi.replace(".adl", ".ui").replace(".edl",".ui");
+    } else if (!fileName.endsWith(".ui")) {
+        fileNameUi.append(".ui");
+    }
+
+    if (QFileInfo::exists(fileName) || QFileInfo::exists(fileNameUi)) {
+        return true;
+    }
+
+    QString displayPath = (QString) qgetenv("CAQTDM_DISPLAY_PATH");
+    QStringList paths = displayPath.split(pathSeparator, SKIP_EMPTY_PARTS);
+
+    for (int i=0; i < paths.count(); i++) {
+#if defined(_WIN32) || defined(_WIN64)
+        paths[i] = paths[i].replace("\"", "");
+#endif
+        if (QFileInfo::exists(paths[i] + "/" + fileName) || QFileInfo::exists(paths[i] + "/" + fileNameUi)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 bool fixFileListRelative(const QString &cainclude_path, QString *filelist, bool shell=false)
 {
     if (cainclude_path.isEmpty()) return false;
@@ -336,8 +360,9 @@ bool fixFileListRelative(const QString &cainclude_path, QString *filelist, bool 
     for (int i=0; i < files.count(); i++) {
         // Shell files are only treated if they start with "./" or "../", since otherwise they may be on PATH
         // Windows is not treated, as relative files might not have anything to differentiate from files on  and "./" is invalid on windows.
-        if (QFileInfo(files.at(i)).isRelative() && (!shell || files.at(i).startsWith("./") || files.at(i).startsWith("../"))) {
-            files[i] = cainclude_path + files.at(i).trimmed();
+        QString fileName = files.at(i).trimmed();
+        if (QFileInfo(fileName).isRelative() && (!shell || fileName.startsWith("./") || fileName.startsWith("../")) && !fileListEntryResolves(fileName)) {
+            files[i] = QFileInfo(cainclude_path + fileName).absoluteFilePath();
             affected = true;
         }
     }
@@ -378,48 +403,54 @@ static QString webOpenPathFromDisplayPath(const QString &path)
 
 Q_LOGGING_CATEGORY(caQtDMLibLog, "caqtdm.lib.lib")
 Q_LOGGING_CATEGORY(caHMILog, "caqtdm.lib.cahmi")
+Q_LOGGING_CATEGORY(caRelatedDisplayLog, "caqtdm.widgets.carelateddislay")
+Q_LOGGING_CATEGORY(caShellCommandLog, "caqtdm.widgets.cashellcommand")
+Q_LOGGING_CATEGORY(caLabelLog, "caqtdm.widgets.calabel")
+Q_LOGGING_CATEGORY(caLabelVerticalLog, "caqtdm.widgets.calabelvertical")
+Q_LOGGING_CATEGORY(caNumericLog, "caqtdm.widgets.canumeric")
+Q_LOGGING_CATEGORY(caSpinboxLog, "caqtdm.widgets.caspinbox")
+Q_LOGGING_CATEGORY(caMessageButtonLog, "caqtdm.widgets.camessagebutton")
+Q_LOGGING_CATEGORY(caScriptButtonLog, "caqtdm.widgets.cascriptbutton")
+Q_LOGGING_CATEGORY(caLedLog, "caqtdm.widgets.caled")
+Q_LOGGING_CATEGORY(caBitnamesLog, "caqtdm.widgets.cabitnames")
+Q_LOGGING_CATEGORY(caClockLog, "caqtdm.widgets.caclock")
+Q_LOGGING_CATEGORY(caLinearGaugeLog, "caqtdm.widgets.calineargauge")
+Q_LOGGING_CATEGORY(caCircularGaugeLog, "caqtdm.widgets.cacirculargauge")
+Q_LOGGING_CATEGORY(caMeterLog, "caqtdm.widgets.cameter")
+Q_LOGGING_CATEGORY(caFrameLog, "caqtdm.widgets.caframe")
+Q_LOGGING_CATEGORY(wmSignalRescaleLog, "caqtdm.widgets.wmsignalrescale")
+
+#ifndef MOBILE // Names cannot be duplicated, and on mobile we only have one translatable unit as output, so this would cause duplication
+               // For regular builds they need to be defined here, since their other definition in the respective widget source files ends up in another translatable unit.
 Q_LOGGING_CATEGORY(caCartesianPlotLog, "caqtdm.widgets.cacartesianplot")
 Q_LOGGING_CATEGORY(caImageLog, "caqtdm.widgets.caimage")
 Q_LOGGING_CATEGORY(caCalcLog, "caqtdm.widgets.cacalc")
-Q_LOGGING_CATEGORY(caRelatedDisplayLog, "caqtdm.widgets.carelateddislay")
-Q_LOGGING_CATEGORY(caShellCommandLog, "caqtdm.widgets.cashellcommand")
 Q_LOGGING_CATEGORY(caMimeDisplayLog, "caqtdm.widgets.camimedisplay")
 Q_LOGGING_CATEGORY(caMenuLog, "caqtdm.widgets.camenu")
 Q_LOGGING_CATEGORY(caCameraLog, "caqtdm.widgets.cacamera")
 Q_LOGGING_CATEGORY(caChoiceLog, "caqtdm.widgets.cachoice")
-Q_LOGGING_CATEGORY(caLabelLog, "caqtdm.widgets.calabel")
-Q_LOGGING_CATEGORY(caLabelVerticalLog, "caqtdm.widgets.calabelvertical")
 Q_LOGGING_CATEGORY(caTextEntryLog, "caqtdm.widgets.catextentry")
 Q_LOGGING_CATEGORY(caLineEditLog, "caqtdm.widgets.calineedit")
 Q_LOGGING_CATEGORY(caMultiLineStringLog, "caqtdm.widgets.camultilinestring")
 Q_LOGGING_CATEGORY(caGraphicsLog, "caqtdm.widgets.cagraphics")
 Q_LOGGING_CATEGORY(caPolyLineLog, "caqtdm.widgets.capolyline")
 Q_LOGGING_CATEGORY(caApplyNumericLog, "caqtdm.widgets.caapplynumeric")
-Q_LOGGING_CATEGORY(caNumericLog, "caqtdm.widgets.canumeric")
-Q_LOGGING_CATEGORY(caSpinboxLog, "caqtdm.widgets.caspinbox")
-Q_LOGGING_CATEGORY(caMessageButtonLog, "caqtdm.widgets.camessagebutton")
 Q_LOGGING_CATEGORY(caToggleButtonLog, "caqtdm.widgets.catogglebutton")
-Q_LOGGING_CATEGORY(caScriptButtonLog, "caqtdm.widgets.cascriptbutton")
-Q_LOGGING_CATEGORY(caLedLog, "caqtdm.widgets.caled")
-Q_LOGGING_CATEGORY(caBitnamesLog, "caqtdm.widgets.cabitnames")
 Q_LOGGING_CATEGORY(caSliderLog, "caqtdm.widgets.caslider")
-Q_LOGGING_CATEGORY(caClockLog, "caqtdm.widgets.caclock")
 Q_LOGGING_CATEGORY(caThermoLog, "caqtdm.widgets.cathermo")
-Q_LOGGING_CATEGORY(caLinearGaugeLog, "caqtdm.widgets.calineargauge")
-Q_LOGGING_CATEGORY(caCircularGaugeLog, "caqtdm.widgets.cacirculargauge")
-Q_LOGGING_CATEGORY(caMeterLog, "caqtdm.widgets.cameter")
 Q_LOGGING_CATEGORY(caByteLog, "caqtdm.widgets.cabyte")
 Q_LOGGING_CATEGORY(caByteControllerLog, "caqtdm.widgets.cabytecontroller")
 Q_LOGGING_CATEGORY(caIncludeLog, "caqtdm.widgets.cainclude")
-Q_LOGGING_CATEGORY(caFrameLog, "caqtdm.widgets.caframe")
 Q_LOGGING_CATEGORY(caWaterfallPlotLog, "caqtdm.widgets.cawaterfallplot")
 Q_LOGGING_CATEGORY(caStripPlotLog, "caqtdm.widgets.castripplot")
 Q_LOGGING_CATEGORY(caTableLog, "caqtdm.widgets.catable")
 Q_LOGGING_CATEGORY(caWaveTableLog, "caqtdm.widgets.cawavetable")
 Q_LOGGING_CATEGORY(replaceMacroLog, "caqtdm.widgets.replacemacro")
 Q_LOGGING_CATEGORY(caScan2DLog, "caqtdm.widgets.scan2d")
-Q_LOGGING_CATEGORY(wmSignalRescaleLog, "caqtdm.widgets.wmsignalrescale")
+#ifdef WEB
 Q_LOGGING_CATEGORY(webRelatedDisplay, "caqtdm.web.relateddisplay")
+#endif
+#endif
 
 QList<QSharedPointer<caHMIConfigTransferItem>> CaQtDM_Lib::externalHmiConfigList;
 QReadWriteLock CaQtDM_Lib::externalHmiConfigListLock;
@@ -1626,10 +1657,10 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
         if(imageWidget->getFileName().size() > 0) {
             QString text = imageWidget->getFileName();
-            bool affected = reaffectText(map, &text, w1);
-            affected |= fixFileListRelative(cainclude_path, &text);
-            if (affected) imageWidget->setFileName(text);
-
+            reaffectText(map, &text, w1);
+            fixFileListRelative(cainclude_path, &text);
+            // Always call this, since isProvisional = false tells the widget to only now emit errors if still not found, initially errors were suppressed
+            imageWidget->setFileName(text, false);
         }
 
         // any error messages for this object?
@@ -4373,7 +4404,6 @@ void CaQtDM_Lib::FlushAllInterfaces()
 int CaQtDM_Lib::addMonitor(QWidget *thisW, knobData *kData, QString pv, QWidget *w, int *specData, QMap<QString, QString> map, QString *pvRep)
 {
     QMutex *mutex= Q_NULLPTR;
-    struct timeb now;
     bool doNothing = false;
 
     int indx;
@@ -4381,7 +4411,6 @@ int CaQtDM_Lib::addMonitor(QWidget *thisW, knobData *kData, QString pv, QWidget 
     QString pluginFlavor="";
     ControlsInterface *plugininterface = (ControlsInterface *) 0;
 
-    ftime(&now);
     w->setProperty("Connect", false);
     int rate = DEFAULTRATE;  // default will be 5Hz
 
@@ -4589,7 +4618,7 @@ int CaQtDM_Lib::addMonitor(QWidget *thisW, knobData *kData, QString pv, QWidget 
     kData->edata.dataB =(void*) Q_NULLPTR;
     kData->edata.dataSize = 0;
     kData->edata.initialize = true;
-    kData->edata.lastTime = now;
+    kData->edata.lastTimeMs = QDateTime::currentMSecsSinceEpoch();
     kData->edata.repRate = rate;   // default 5 Hz
 
     // update data structure
@@ -5675,11 +5704,7 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
         if(data.edata.connected) {
             if(clockWidget->getTimeType() == caClock::ReceiveTime) {
                 clockWidget->setAlarmColors(data.edata.severity);
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-                QDateTime dattim = QDateTime::fromTime_t((uint) (data.edata.actTime.time + data.edata.actTime.millitm/1000.0));
-#else
-                QDateTime dattim = QDateTime::fromSecsSinceEpoch((data.edata.actTime.time + (time_t)(data.edata.actTime.millitm/1000.0)));
-#endif
+                QDateTime dattim = QDateTime::fromMSecsSinceEpoch(data.edata.actTimeMs);
                 clockWidget->updateClock(dattim.time());
             }
             // set no connection color
@@ -6344,11 +6369,11 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
             switch (data.edata.fieldtype){
                 case caINT:
                 case caLONG:{
-                    stripplotWidget->setData(data.edata.actTime, data.edata.ivalue, actPlot);
+                    stripplotWidget->setData(data.edata.actTimeMs, data.edata.ivalue, actPlot);
                     break;
                 }
                 default:{
-                    stripplotWidget->setData(data.edata.actTime, data.edata.rvalue, actPlot);
+                    stripplotWidget->setData(data.edata.actTimeMs, data.edata.rvalue, actPlot);
                 }
             }
 

@@ -57,7 +57,7 @@ public:
     caImage( QWidget *parent = 0 );
 
     QString getFileName() const {return thisFileName;}
-    void setFileName(QString filename);
+    void setFileName(QString filename, const bool isProvisional = true);
 
     int getFrame() const {return thisFrame;}
     void setFrame(int frame);
@@ -98,7 +98,7 @@ protected:
     virtual void timerEvent(QTimerEvent *e);
 
 private:
-    void init(const QString& filename);
+    void init(const QString& filename, const bool isProvisional);
 
     messageQueue *messagequeue;
     QPointer<QLabel> _container;

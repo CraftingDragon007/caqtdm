@@ -27,12 +27,6 @@
 #define caStripPlot_H
 
 #include "plotHelperClasses.h"
-#ifndef MOBILE_ANDROID
-  #include <sys/timeb.h>
-#else
-  #include "androidtimeb.h"
-#endif
-
 #include <QTime>
 #include <QTimer>
 #include <QThread>
@@ -231,7 +225,7 @@ public:
     ~caStripPlot();
 
     void defineCurves(QStringList titles, units unit, double period, int width, int nb);
-    void setData(struct timeb now, double Y, int curvIndex);
+    void setData(qint64 nowMs, double Y, int curvIndex);
 
     bool getXaxisEnabled() const { return thisXshow; }
     void setXaxisEnabled(bool thisXshow);
@@ -511,9 +505,8 @@ private:
     double INTERVAL;
     int NumberOfCurves;
     QTimer *Timer;
-    struct timeb  timeNow;
-    struct timeb  timeStart;
-    struct timeb plotStart;
+    qint64 timeStartMs;
+    qint64 plotStartMs;
     bool RestartPlot1, RestartPlot2;
     bool plotIsPaused;
 
@@ -586,7 +579,7 @@ private:
 
     double maxVal[MAXCURVES], minVal[MAXCURVES], actVal[MAXCURVES];
     double realVal[MAXCURVES], realMax[MAXCURVES], realMin[MAXCURVES];
-    struct timeb realTim[MAXCURVES];
+    qint64 realTim[MAXCURVES];
 
     QStringList originalTitles;
     QStringList savedTitles;

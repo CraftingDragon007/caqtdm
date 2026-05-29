@@ -403,7 +403,7 @@ void caStripPlot::setXaxis(double interval, double period)
 
     if(thisXaxisType != ValueScale) {
         plotPicker->setIsXAxisAlreadyCorrect(false);
-        QDateTime timeNow= QDateTime::currentDateTime();
+        QDateTime timeNow = QDateTime::currentDateTime();
         timeNow = timeNow.addSecs((int) -interval);
         setAxisScale(QwtPlot::xBottom, 0, interval, interval/nbTicks);
         setAxisScaleDraw(QwtPlot::xBottom, new PlotDateScaleDraw(timeNow) );
@@ -859,15 +859,13 @@ void caStripPlot::TimeOutThread()
 
     // we need an exact time scale
     if(RestartPlot1) {
-        ftime(&timeStart);
-        static_cast<DynamicPlotPicker*>(plotPicker)->setStartTime(timeStart.time, thisPeriod);
+        timeStartMs = QDateTime::currentMSecsSinceEpoch();
+        static_cast<DynamicPlotPicker*>(plotPicker)->setStartTime(timeStartMs/1000, thisPeriod);
         RestartPlot1 = false;
         RestartPlot2 = true;
     }
-    ftime(&timeNow);
 
-    elapsedTime = ((double) timeNow.time + (double) timeNow.millitm / (double)1000) -
-                  ((double) timeStart.time + (double) timeStart.millitm / (double)1000);
+    elapsedTime = QDateTime::currentMSecsSinceEpoch() / 1000.0 - timeStartMs / 1000.0;
 
     timeData = INTERVAL + elapsedTime;  // in seconds
     interval = INTERVAL;
@@ -1082,10 +1080,8 @@ void caStripPlot::TimeOut()
     // in case of restart plot, get start time and for the running time scale the new scale
     if(RestartPlot2) {
         RestartPlot2 = false;
-        ftime(&plotStart);
+        plotStartMs = QDateTime::currentMSecsSinceEpoch();
         if(thisXaxisType != ValueScale) {
-            QTime timeNow= QTime::currentTime();
-            timeNow = timeNow.addSecs((int) -INTERVAL);
             setAxisScale(QwtPlot::xBottom, 0, INTERVAL, INTERVAL/nbTicks);
 
             if(thisXaxisType == TimeScaleFix) {
@@ -1095,7 +1091,8 @@ void caStripPlot::TimeOut()
                 QwtLinearScaleEngine *scaleEngine= new QwtDateScaleEngine();
                 setAxisScaleEngine(QwtPlot::xBottom, scaleEngine);
             }
-            QDateTime dateTimeNow= QDateTime::currentDateTime();
+
+            QDateTime dateTimeNow = QDateTime::currentDateTime();
             dateTimeNow = dateTimeNow.addSecs((int) -INTERVAL);
             setAxisScaleDraw (QwtPlot::xBottom, new PlotDateScaleDraw(dateTimeNow));
         }
@@ -1105,12 +1102,9 @@ void caStripPlot::TimeOut()
         }
     }
 
-    // get actual time
-    ftime(&timeNow);
-
     // get time since restart
-    elapsedTime = ((double) timeNow.time + (double) timeNow.millitm / (double)1000) -
-                  ((double) plotStart.time + (double) plotStart.millitm / (double)1000);
+    elapsedTime = QDateTime::currentMSecsSinceEpoch() /
+                      1000.0 - plotStartMs / 1000.0;
 
     // change scale base in case of running time scale
     if(thisXaxisType != ValueScale) {
@@ -1171,7 +1165,7 @@ void caStripPlot::RescaleAxis()
     int i;
     // rescale axis
     for(i=0; i < NumberOfCurves; i++) {
-        setData(realTim[i], realVal[i], i);
+        setData(realMin[i], realVal[i], i);
         // redraw legend if any
         curve[i]->setTitle(legendText(i));
     }
@@ -1279,7 +1273,7 @@ void caStripPlot::setLegendAttribute(QColor c, QFont f, LegendAtttribute SW)
 
 }
 
-void caStripPlot::setData(struct timeb now, double Y, int curvIndex)
+void caStripPlot::setData(qint64 nowMs, double Y, int curvIndex)
 {
     if(curvIndex < 0 || curvIndex > (MAXCURVES-1)) return;
 
@@ -1289,7 +1283,7 @@ void caStripPlot::setData(struct timeb now, double Y, int curvIndex)
     static std::vector<double> bmvece;
 
     realVal[curvIndex] = Y;
-    realTim[curvIndex] = now;
+    realTim[curvIndex] = nowMs;
     if(Y> realMax[curvIndex]) realMax[curvIndex]  = Y;
     if(Y< realMin[curvIndex]) realMin[curvIndex]  = Y;
 

@@ -47,7 +47,7 @@ QString DemoPlugin::pluginName()
 DemoPlugin::DemoPlugin()
 {
     // Logging this way, there is no need to manually specify information about where this log is from etc.
-    qCInfo(demoLog) << "Demo: Create";
+    qCDebug(demoLog) << "Demo: Create";
     timer = timerValues = Q_NULLPTR;
 }
 

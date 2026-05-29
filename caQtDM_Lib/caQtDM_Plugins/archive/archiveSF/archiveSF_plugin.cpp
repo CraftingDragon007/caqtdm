@@ -43,7 +43,7 @@ QString ArchiveSF_Plugin::pluginName()
 // constructor
 ArchiveSF_Plugin::ArchiveSF_Plugin()
 {
-    qCInfo(archiveSFLog) << "ArchiveSF: Create";
+    qCDebug(archiveSFLog) << "ArchiveSF: Create";
 
     suspend = false;
     qRegisterMetaType<indexes>("indexes");

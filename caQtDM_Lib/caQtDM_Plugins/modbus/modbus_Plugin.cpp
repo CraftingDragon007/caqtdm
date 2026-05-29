@@ -46,7 +46,7 @@ QString modbusPlugin::pluginName()
 // constructor
 modbusPlugin::modbusPlugin()
 {
-    qCInfo(modbusLog) << "modbusPlugin: Create";
+    qCDebug(modbusLog) << "modbusPlugin: Create";
 
     mutexknobdataP = Q_NULLPTR;
     connect(qApp, SIGNAL(aboutToQuit()), this, SLOT(closeEvent()));

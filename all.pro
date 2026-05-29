@@ -54,10 +54,6 @@ caqtdm_with_tests {
   SUBDIRS +=  caQtDM_Tests/unitTests
 }
 
-android {
-  SUBDIRS += caQtDM_AndroidFunctions
-}
-
 qtcontrols_controllers.file = caQtDM_QtControls/plugins/qtcontrols_controllers.pro 
 qtcontrols_controllers.depends = caQtDM_QtControls caQtDM_Lib
 
@@ -94,15 +90,8 @@ caQtDM_Lib.depends = caQtDM_QtControls
 
 caQtDM_QtControls.depends += caQtDM_Parsers
 
-android {
-  caQtDM_Lib.depends += caQtDM_AndroidFunctions
-}
-
-archiveCA.depends = caQtDM_QtControls caQtDM_Lib
-archivePRO.depends = caQtDM_QtControls caQtDM_Lib
 archiveSF.depends = caQtDM_QtControls caQtDM_Lib
 archiveHTTP.depends = caQtDM_QtControls caQtDM_Lib
-archiveHIPA.depends = caQtDM_QtControls caQtDM_Lib
 
 iosArchitectures=arm64
 iosTarget=17.0

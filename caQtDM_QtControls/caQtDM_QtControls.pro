@@ -52,10 +52,6 @@ freebsd {
    INCLUDEPATH += /usr/local/include
 }
 
-android {
-   INCLUDEPATH += $(ANDROIDFUNCTIONSINCLUDE)
-}
-
 RESOURCES = qtcontrols.qrc
 RC_FILE = ./src/qtcontrols.rc
 

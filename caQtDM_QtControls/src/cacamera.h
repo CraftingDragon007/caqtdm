@@ -50,13 +50,9 @@
 #if QWT_VERSION >= 0x060100
 #include <qwt_scale_div.h>
 #endif
-#include <time.h>
 
-#ifndef MOBILE_ANDROID
-#include <sys/timeb.h>
-#else
+#ifdef MOBILE_ANDROID
 #include <QtControls>
-#include <androidtimeb.h>
 #endif
 
 #include <stdint.h>
@@ -414,7 +410,6 @@ private:
     short m_datatype;
     colormode thisColormode;
     int  m_width, m_height;
-    struct timeb timeRef;
     int savedSize, savedSizeNew;
     int savedWidth;
     int savedHeight;

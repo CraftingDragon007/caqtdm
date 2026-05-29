@@ -23,9 +23,6 @@ opcua_plugin {
                 message( $$OUT_PWD )
                 CONFIG += staticlib
                 LIBS += $$OUT_PWD/../../libcaQtDM_Lib.a
-                android {
-                    INCLUDEPATH += $$OUT_PWD/../caQtDM_AndroidFunctions/src
-                }
         }
 
         win32 {
@@ -132,7 +129,6 @@ demo_plugin {
                 CONFIG += staticlib
                 android {
                     LIBS += $$OUT_PWD/../../libcaQtDM_Lib_$${QT_ARCH}.a
-                    INCLUDEPATH += $$OUT_PWD/../caQtDM_AndroidFunctions/src
                 }
                 ios {
                     LIBS += $$OUT_PWD/../../libcaQtDM_Lib.a
@@ -181,7 +177,6 @@ gps_plugin {
                 CONFIG += staticlib
                 android {
                     LIBS += $$OUT_PWD/../../libcaQtDM_Lib_$${QT_ARCH}.a
-                    INCLUDEPATH += $$OUT_PWD/../caQtDM_AndroidFunctions/src
                 }
                 ios {
                     LIBS += $$OUT_PWD/../../libcaQtDM_Lib.a
@@ -298,7 +293,6 @@ epics3_plugin {
                         INCLUDEPATH += $(EPICSINCLUDE)/os/android
                         INCLUDEPATH += $(EPICSINCLUDE)/compiler/clang
                         LIBS += $$OUT_PWD/../../libcaQtDM_Lib_$${QT_ARCH}.a
-                        INCLUDEPATH += $$OUT_PWD/../caQtDM_AndroidFunctions/src
                 }
         }
 
@@ -373,7 +367,6 @@ environment_Plugin {
                 android {
                         INCLUDEPATH += $(EPICSINCLUDE)/os/android
                         INCLUDEPATH += $(EPICSINCLUDE)/compiler/clang
-                        INCLUDEPATH += $(ANDROIDFUNCTIONSINCLUDE)
                         LIBS += $$OUT_PWD/../../libcaQtDM_Lib_$${QT_ARCH}.a
                 }
         }
@@ -519,7 +512,6 @@ epics4_plugin {
                 android {
                         INCLUDEPATH += $(EPICSINCLUDE)/os/android
                         INCLUDEPATH += $(EPICSINCLUDE)/compiler/clang
-                        INCLUDEPATH += $(ANDROIDFUNCTIONSINCLUDE)
                         LIBS += $$OUT_PWD/../../libcaQtDM_Lib_$${QT_ARCH}.a
                 }
         }
@@ -1013,7 +1005,6 @@ caQtDM_Viewer {
                         LIBS += $(CAQTDM_COLLECT)/designer/libqtcontrols_utilities_plugin_$${QT_ARCH}.a
                         LIBS += $(CAQTDM_COLLECT)/controlsystems/libdemo_plugin_$${QT_ARCH}.a
                         LIBS += $(CAQTDM_COLLECT)/controlsystems/libepics3_plugin_$${QT_ARCH}.a
-                        LIBS += $(CAQTDM_COLLECT)/libAndroidFunctions_$${QT_ARCH}.a
                         epics4: {
                                 LIBS += $(CAQTDM_COLLECT)/controlsystems/libepics4_plugin_$${QT_ARCH}.a
                                 }
@@ -1031,6 +1022,9 @@ caQtDM_Viewer {
                         }
                         gps {
                             LIBS += $(CAQTDM_COLLECT)/controlsystems/libgps_plugin_$${QT_ARCH}.a
+                        }
+                        opcua {
+                            LIBS += $(CAQTDM_COLLECT)/controlsystems/libopcua_plugin_$${QT_ARCH}.a
                         }
 
                         LIBS += $(CAQTDM_COLLECT)/libcaQtDM_Lib_$${QT_ARCH}.a

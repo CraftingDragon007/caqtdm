@@ -33,13 +33,6 @@
 #include <QWaitCondition>
 #include <QEventLoop>
 #include <QTimer>
-#include <time.h>
-
-#ifndef MOBILE_ANDROID
-#include <sys/timeb.h>
-#else
-#include <androidtimeb.h>
-#endif
 
 #include "sfRetrieval.h"
 #include "loggingcategories.h"
@@ -168,7 +161,6 @@ void sfRetrieval::finishReply(QNetworkReply *reply)
     if(aborted) return;
     qCDebug(archiveSFLog) << QTime::currentTime().toString() << this << PV << "reply received";
     int count = 0;
-    struct timeb now;
     int valueIndex = 2;
     int expected = 3;
     double seconds;
@@ -215,8 +207,7 @@ void sfRetrieval::finishReply(QNetworkReply *reply)
     reply->deleteLater();
 
     errorString = "";
-    ftime(&now);
-    seconds = (double) now.time + (double) now.millitm / (double)1000;
+    seconds = QDateTime::currentMSecsSinceEpoch() / 1000.0;
 
 
 #ifdef CSV

@@ -44,7 +44,7 @@ QString bsreadPlugin::pluginName()
 // constructor
 bsreadPlugin::bsreadPlugin()
 {
-    qCInfo(bsreadLog) << "bsreadPlugin: Create";
+    qCDebug(bsreadLog) << "bsreadPlugin: Create";
     DispatcherThread=Q_NULLPTR;
     Dispatcher=Q_NULLPTR;
     DispatcherThread=new QThread(this);

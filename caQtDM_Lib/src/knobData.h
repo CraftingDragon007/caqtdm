@@ -26,12 +26,6 @@
 #ifndef KNOBDATA_H
 #define KNOBDATA_H
 
-#ifndef MOBILE_ANDROID
-  #include <sys/timeb.h>
-#else
-  #include "androidtimeb.h"
-#endif
-
 #include "dbrString.h"
 #include "knobDefines.h"
 
@@ -75,8 +69,8 @@ typedef struct _epicsData {
     void         *dataPtr;
     int          initialize;            /* first initialisation */
     char         aux[10];               /* used for acs controlsystem images */
-    struct timeb lastTime;              /* last displayed time */
-    struct timeb actTime;               /* receive time */
+    long long    lastTimeMs;            /* last displayed time */
+    long long    actTimeMs;               /* receive time */
     int          repRate;               /* repetition rate for this channel, default will be 5Hz */
 } epicsData;
 

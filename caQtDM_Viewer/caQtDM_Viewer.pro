@@ -50,10 +50,20 @@ contains(QT_VER_MAJ, 6) {
        QT += positioning
        DEFINES += CAQTDM_GPS
     }
+    opcua {
+       MOBILE {
+       QT += opcua
+       }
+       DEFINES += CAQTDM_OPCUA
+    }
 
     !ios:!android {
         QT     += printsupport
      }
+
+    android {
+        QT += xml
+    }
 
 }
 
@@ -73,10 +83,6 @@ INCLUDEPATH += $$(QWTINCLUDE)
 INCLUDEPATH += ../caQtDM_QtControls/src
 INCLUDEPATH += ../caQtDM_Lib/src
 INCLUDEPATH += ../caQtDM_Lib/caQtDM_Plugins
-
-android {
-   INCLUDEPATH += $(ANDROIDFUNCTIONSINCLUDE)
-}
 
 RESOURCES += ./src/caQtDM.qrc
 RC_FILE = ./src/caQtDM.rc

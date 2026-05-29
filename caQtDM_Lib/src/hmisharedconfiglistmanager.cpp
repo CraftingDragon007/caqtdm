@@ -27,7 +27,7 @@ bool HmiSharedConfigListManager::setup() {
             qCCritical(caHMILog) << "Failed to create or attach shared memory:" << this_sharedMemory.errorString();
             return false;
         }
-        qCInfo(caHMILog) << "Shared memory created and attached.";
+        qCDebug(caHMILog) << "HMI Shared memory created and attached.";
 
         if (this_sharedMemory.lock()) {
             quint32 initialSize = 0;
@@ -38,7 +38,7 @@ bool HmiSharedConfigListManager::setup() {
             return false;
         }
     } else {
-        qCInfo(caHMILog) << "Shared memory attached to existing segment.";
+        qCDebug(caHMILog) << "Shared memory attached to existing segment.";
     }
     this_isInitialized = true;
     return true;

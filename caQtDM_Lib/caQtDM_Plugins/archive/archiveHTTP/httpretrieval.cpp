@@ -31,14 +31,6 @@
 #include <QSslConfiguration>
 #include <QTimer>
 #include <QWaitCondition>
-#include <iostream>
-#include <time.h>
-
-#ifdef MOBILE_ANDROID
-#include <androidtimeb.h>
-#else
-#include <sys/timeb.h>
-#endif
 
 #include <QDebug>
 #include <QThread>
@@ -52,11 +44,8 @@
 #include <zlib.h>
 #endif
 
-#include <fstream>
 #include <httpretrieval.h>
 #include "loggingcategories.h"
-#include <iostream>
-#include <sstream>
 
 #define qasc(x) x.toLatin1().constData()
 
@@ -220,7 +209,6 @@ void HttpRetrieval::finishReply(QNetworkReply *reply)
         return;
     }
     int count = 0;
-    struct timeb now;
     double seconds;
 
     QVariant status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute);
@@ -313,8 +301,7 @@ void HttpRetrieval::finishReply(QNetworkReply *reply)
 
     reply->deleteLater();
     m_errorString = "";
-    ftime(&now);
-    seconds = (double) now.time + (double) now.millitm / (double) 1000;
+    seconds = QDateTime::currentMSecsSinceEpoch() / 1000.0;
 
     bool conversionOk = true;
     QJsonObject rootObject;

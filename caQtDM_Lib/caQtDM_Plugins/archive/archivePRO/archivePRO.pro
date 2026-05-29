@@ -1,3 +1,5 @@
+# Deprecated - not used anymore - kept as example
+
 include (../../../../caQtDM_Viewer/qtdefs.pri)
 QT += core gui network
 contains(QT_VER_MAJ, 5) {

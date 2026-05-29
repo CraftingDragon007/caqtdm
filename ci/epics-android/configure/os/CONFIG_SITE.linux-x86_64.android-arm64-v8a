@@ -1,0 +1,32 @@
+# Pathing
+NDK = $(ANDROID_NDK_ROOT)
+ABI = 29
+GNU_DIR = $(NDK)/toolchains/llvm/prebuilt/linux-x86_64
+GNU_BIN = $(GNU_DIR)/bin
+
+# Internal headers
+CLANG_INTERNAL = $(GNU_DIR)/lib/clang/21
+SYSROOT = $(GNU_DIR)/sysroot
+
+# Isolation Flags
+CMPLR_CLASS = clang
+GNU = YES
+
+TARGET_OPTS = --target=aarch64-linux-android$(ABI) --sysroot=$(SYSROOT)
+# TARGET_OPTS += -nostdinc -nostdinc++
+TARGET_OPTS += -D_GNU_SOURCE -D_POSIX_BARRIERS=-1 -D_POSIX_THREAD_PRIO_INHERIT=-1
+
+# Header Search Paths
+TARGET_OPTS += -I$(SYSROOT)/usr/include/c++/v1
+TARGET_OPTS += -I$(CLANG_INTERNAL)/include
+TARGET_OPTS += -I$(SYSROOT)/usr/include/aarch64-linux-android
+TARGET_OPTS += -I$(SYSROOT)/usr/include
+
+override CFLAGS += $(TARGET_OPTS)
+override CXXFLAGS += $(TARGET_OPTS)
+override LDFLAGS += $(TARGET_OPTS)
+
+# Build Preferences
+STATIC_BUILD = YES
+SHARED_LIBRARIES = NO
+COMMANDLINE_LIBRARY = NONE
