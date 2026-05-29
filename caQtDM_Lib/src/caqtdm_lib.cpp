@@ -372,6 +372,29 @@ bool fixFileListRelative(const QString &cainclude_path, QString *filelist, bool 
 }
 
 #ifdef WEB
+static QString webResolveDisplayPath(const QString &file)
+{
+    fileFunctions filefunction;
+    filefunction.checkFileAndDownload(file);
+
+    searchFile filecheck(file);
+    QString resolvedPath = filecheck.findFile();
+    if (!resolvedPath.isNull() || !fileListEntryResolves(file)) return resolvedPath;
+
+    QString fallback = file;
+    if (fallback.endsWith(".edl") || fallback.endsWith(".adl")) {
+        fallback.replace(".adl", ".ui").replace(".edl", ".ui");
+    } else if (!fallback.endsWith(".ui")) {
+        fallback.append(".ui");
+    }
+
+    if (fallback == file) return resolvedPath;
+
+    filefunction.checkFileAndDownload(fallback);
+    searchFile fallbackCheck(fallback);
+    return fallbackCheck.findFile();
+}
+
 static QString webOpenPathFromDisplayPath(const QString &path)
 {
     QFileInfo pathInfo(path);
@@ -380,6 +403,7 @@ static QString webOpenPathFromDisplayPath(const QString &path)
     QString displayPath = (QString) qgetenv("CAQTDM_DISPLAY_PATH");
     QStringList paths = displayPath.split(pathSeparator, SKIP_EMPTY_PARTS);
     QString normalizedPath = QDir::cleanPath(path);
+    QString bestRelativePath;
 
     for (int i=0; i < paths.count(); i++) {
 #if defined(_WIN32) || defined(_WIN64)
@@ -392,10 +416,14 @@ static QString webOpenPathFromDisplayPath(const QString &path)
         QString relativePath = baseDir.relativeFilePath(normalizedPath);
         relativePath.replace('\\', '/');
         QFileInfo relativeInfo(relativePath);
-        if (!relativeInfo.isAbsolute() && relativePath != ".." && !relativePath.startsWith("../")) {
-            return "./" + relativePath;
+        if (!relativeInfo.isAbsolute() && relativePath != ".." && !relativePath.startsWith("../") && fileListEntryResolves(relativePath)) {
+            if (bestRelativePath.isEmpty() || relativePath.length() < bestRelativePath.length()) {
+                bestRelativePath = relativePath;
+            }
         }
     }
+
+    if (!bestRelativePath.isEmpty()) return "./" + bestRelativePath;
 
     return QFileInfo(path).fileName();
 }
@@ -7527,13 +7555,7 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
         }
 
         QString file = files[indx].trimmed();
-
-        fileFunctions filefunction;
-        filefunction.checkFileAndDownload(file);
-
-        searchFile *filecheck = new searchFile(file);
-        QString absolutePath = filecheck->findFile();
-        filecheck->deleteLater();
+        QString absolutePath = webResolveDisplayPath(file);
 
         if (absolutePath.isNull()) {
             qCWarning(webRelatedDisplay) << "caRelatedDisplay ui file not found";
@@ -7590,13 +7612,7 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
         addWebChildProcess(absolutePath, macros, item);
     } else {
         QString file = files[indx].trimmed();
-
-        fileFunctions filefunction;
-        filefunction.checkFileAndDownload(file);
-
-        searchFile *filecheck = new searchFile(file);
-        QString absolutePath = filecheck->findFile();
-        filecheck->deleteLater();
+        QString absolutePath = webResolveDisplayPath(file);
 
         if (absolutePath.isNull()) {
             qCInfo(webRelatedDisplay) << "caRelatedDisplay ui " << file <<" file not found";
