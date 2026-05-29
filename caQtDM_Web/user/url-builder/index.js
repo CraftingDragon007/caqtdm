@@ -52,7 +52,6 @@ function normalizeRelativePath(input) {
     }
   }
 
-  while (path.startsWith('./')) path = path.slice(2);
   if (path === '.') {
     return { ok: false, error: 'File path must point to a file.' };
   }

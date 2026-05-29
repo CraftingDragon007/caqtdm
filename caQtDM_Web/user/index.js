@@ -14,6 +14,19 @@ import { parseLogMarkup, formatDateTime } from './modules/utils/Logger.js';
   const macros = params.get('macros') || '';
   const displayMode = params.has('display');
 
+  function withDefaultUiExtension(pathValue) {
+    const raw = String(pathValue || '').trim();
+    if (raw === '' || /^[0-9]+$/.test(raw)) return pathValue;
+
+    const normalized = raw.replace(/\\/g, '/');
+    const fileName = normalized.slice(normalized.lastIndexOf('/') + 1);
+    if (fileName === '' || fileName.lastIndexOf('.') > 0) return pathValue;
+
+    return raw + '.ui';
+  }
+
+  controlPath = withDefaultUiExtension(controlPath);
+
   function resolveBasePath() {
     const path = window.location.pathname || '/';
     const segments = path.split('/').filter(Boolean);
