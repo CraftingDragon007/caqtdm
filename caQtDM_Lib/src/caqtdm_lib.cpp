@@ -346,6 +346,36 @@ bool fixFileListRelative(const QString &cainclude_path, QString *filelist, bool 
     return affected;
 }
 
+#ifdef WEB
+static QString webOpenPathFromDisplayPath(const QString &path)
+{
+    QFileInfo pathInfo(path);
+    if (pathInfo.isRelative()) return path;
+
+    QString displayPath = (QString) qgetenv("CAQTDM_DISPLAY_PATH");
+    QStringList paths = displayPath.split(pathSeparator, SKIP_EMPTY_PARTS);
+    QString normalizedPath = QDir::cleanPath(path);
+
+    for (int i=0; i < paths.count(); i++) {
+#if defined(_WIN32) || defined(_WIN64)
+        paths[i] = paths[i].replace("\"", "");
+#endif
+        QString basePath = QDir::cleanPath(paths[i]);
+        if (basePath.isEmpty()) continue;
+
+        QDir baseDir(basePath);
+        QString relativePath = baseDir.relativeFilePath(normalizedPath);
+        relativePath.replace('\\', '/');
+        QFileInfo relativeInfo(relativePath);
+        if (!relativeInfo.isAbsolute() && relativePath != ".." && !relativePath.startsWith("../")) {
+            return "./" + relativePath;
+        }
+    }
+
+    return QFileInfo(path).fileName();
+}
+#endif
+
 Q_LOGGING_CATEGORY(caQtDMLibLog, "caqtdm.lib.lib")
 Q_LOGGING_CATEGORY(caHMILog, "caqtdm.lib.cahmi")
 Q_LOGGING_CATEGORY(caCartesianPlotLog, "caqtdm.widgets.cacartesianplot")
@@ -7496,14 +7526,13 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
 
         VncWebChildProcess* existing = getWebChildProcess(absolutePath, macros);
 
-        QFileInfo info(absolutePath);
-        QString fileName(info.fileName());
+        QString webOpenPath = webOpenPathFromDisplayPath(absolutePath);
 
         if (existing != nullptr) {
             if (existing->process() == nullptr || existing->process()->state() == QProcess::ProcessState::NotRunning) {
                 existing->deleteLater();
             } else if (WebSocketServer::instance().isInitialized()) {
-                WebSocketServer::instance().sendOpenFileRequest(fileName, macros);
+                WebSocketServer::instance().sendOpenFileRequest(webOpenPath, macros);
                 return;
             }
         }
@@ -7530,7 +7559,7 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
         VncWebChildProcess *item = startVncChildProcess(new_vnc_port, new_web_port, absolutePath, macros, this);
 
         if (WebSocketServer::instance().isInitialized()) {
-            WebSocketServer::instance().sendOpenFileRequest(fileName, macros);
+            WebSocketServer::instance().sendOpenFileRequest(webOpenPath, macros);
         }
 
         addWebChildProcess(absolutePath, macros, item);
@@ -7545,13 +7574,12 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
         filecheck->deleteLater();
 
         if (absolutePath.isNull()) {
-            qCInfo(webRelatedDisplay) << "caRelatedDisplay ui file not found";
+            qCInfo(webRelatedDisplay) << "caRelatedDisplay ui " << file <<" file not found";
             QMessageBox::critical(this, "Error - File not found", "The specified path is either invalid or CAQTDM_DISPLAY_PATH hasn't been correctly set");
             return;
         }
 
-        QFileInfo info(absolutePath);
-        QString fileName(info.fileName());
+        QString webOpenPath = webOpenPathFromDisplayPath(absolutePath);
 
         QString macros;
         if (indx < args.count()) {
@@ -7559,7 +7587,7 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
         }
 
         if (WebSocketServer::instance().isInitialized()) {
-            WebSocketServer::instance().sendOpenFileRequest(fileName, macros);
+            WebSocketServer::instance().sendOpenFileRequest(webOpenPath, macros);
         }
     }
 #endif
