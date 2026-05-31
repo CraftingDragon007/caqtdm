@@ -290,6 +290,7 @@ copy_blacklisted_runtime_libraries() {
   copy_runtime_library libICE.so.6
   copy_runtime_library libfontconfig.so.1
   copy_runtime_library libfreetype.so.6
+  copy_runtime_library libexpat.so.1
 }
 
 copy_qt_plugin_subdir() {
