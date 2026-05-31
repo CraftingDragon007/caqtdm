@@ -609,6 +609,51 @@ detect_python_libdir() {
   detect_libdir "libpython${version}.so*" /usr/lib64 /usr/lib /usr/local/lib64 /usr/local/lib || printf '/usr/lib'
 }
 
+detect_python_path() {
+  local name="$1"
+  python3 -c 'import sysconfig, sys; print(sysconfig.get_path(sys.argv[1]) or "")' "$name" 2>/dev/null || true
+}
+
+install_python_runtime() {
+  local stdlib platstdlib dest python_dir_name
+
+  stdlib="$(detect_python_path stdlib)"
+  platstdlib="$(detect_python_path platstdlib)"
+  [ -d "$stdlib" ] || die "could not determine Python stdlib directory"
+
+  python_dir_name="$(basename "$stdlib")"
+  dest="$APPDIR/usr/lib/$python_dir_name"
+
+  msg "Installing Python runtime from $stdlib"
+  rm -rf "$dest"
+  mkdir -p "$dest"
+
+  (
+    cd "$stdlib"
+    tar \
+      --exclude='__pycache__' \
+      --exclude='*.pyc' \
+      --exclude='test' \
+      --exclude='tests' \
+      --exclude='idlelib' \
+      --exclude='tkinter' \
+      --exclude='turtledemo' \
+      --exclude='ensurepip' \
+      -cf - .
+  ) | (
+    cd "$dest"
+    tar -xf -
+  )
+
+  if [ -n "$platstdlib" ] && [ -d "$platstdlib/lib-dynload" ] && [ "$platstdlib" != "$stdlib" ]; then
+    msg "Installing Python extension modules from $platstdlib/lib-dynload"
+    mkdir -p "$dest/lib-dynload"
+    cp -a "$platstdlib/lib-dynload/." "$dest/lib-dynload/"
+  fi
+
+  [ -f "$dest/encodings/__init__.py" ] || die "Python runtime copy is missing encodings/__init__.py"
+}
+
 resolve_qmake() {
   if command -v "$QMAKE_BIN" >/dev/null 2>&1; then
     QMAKE_BIN="$(command -v "$QMAKE_BIN")"
@@ -853,9 +898,14 @@ if [ -z "\${APPDIR:-}" ]; then
 fi
 
 CAQTDM_LIB_DIR="\$APPDIR/usr/lib/caqtdm/$target_qt_dir"
+CAQTDM_PYTHON_DIR="\$(find "\$APPDIR/usr/lib" -maxdepth 1 -type d -name 'python3*' | sort | tail -n 1 || true)"
 export LD_LIBRARY_PATH="\$CAQTDM_LIB_DIR:\$CAQTDM_LIB_DIR/controlsystems:\$CAQTDM_LIB_DIR/designer:\$APPDIR/usr/lib\${LD_LIBRARY_PATH:+:\$LD_LIBRARY_PATH}"
 export QT_PLUGIN_PATH="\$APPDIR/usr/plugins:\$APPDIR/usr/lib/$target_qt_dir/plugins:\$CAQTDM_LIB_DIR\${QT_PLUGIN_PATH:+:\$QT_PLUGIN_PATH}"
 export QT_QPA_PLATFORM_PLUGIN_PATH="\$APPDIR/usr/plugins/platforms"
+if [ -n "\$CAQTDM_PYTHON_DIR" ]; then
+  export PYTHONHOME="\$APPDIR/usr"
+  export PYTHONPATH="\$CAQTDM_PYTHON_DIR:\$CAQTDM_PYTHON_DIR/lib-dynload\${PYTHONPATH:+:\$PYTHONPATH}"
+fi
 unset AT_SPI_BUS_ADDRESS
 unset QT_LINUX_ACCESSIBILITY_ALWAYS_ON
 
@@ -891,6 +941,7 @@ create_appdir() {
 
   cp -a "$BINARY_DIR/." "$app_lib_dir/"
   install_designer_binary
+  install_python_runtime
   filter_appdir_controlsystem_plugins "$app_lib_dir"
   patch_appdir_rpaths
 
@@ -941,9 +992,14 @@ if [ -z "\${APPDIR:-}" ]; then
 fi
 
 CAQTDM_LIB_DIR="\$APPDIR/usr/lib/caqtdm/$qt_dir"
+CAQTDM_PYTHON_DIR="\$(find "\$APPDIR/usr/lib" -maxdepth 1 -type d -name 'python3*' | sort | tail -n 1 || true)"
 export LD_LIBRARY_PATH="\$CAQTDM_LIB_DIR:\$CAQTDM_LIB_DIR/controlsystems:\$CAQTDM_LIB_DIR/designer:\$APPDIR/usr/lib\${LD_LIBRARY_PATH:+:\$LD_LIBRARY_PATH}"
 export QT_PLUGIN_PATH="\$APPDIR/usr/plugins:\$APPDIR/usr/lib/$qt_dir/plugins:\$CAQTDM_LIB_DIR\${QT_PLUGIN_PATH:+:\$QT_PLUGIN_PATH}"
 export QT_QPA_PLATFORM_PLUGIN_PATH="\$APPDIR/usr/plugins/platforms"
+if [ -n "\$CAQTDM_PYTHON_DIR" ]; then
+  export PYTHONHOME="\$APPDIR/usr"
+  export PYTHONPATH="\$CAQTDM_PYTHON_DIR:\$CAQTDM_PYTHON_DIR/lib-dynload\${PYTHONPATH:+:\$PYTHONPATH}"
+fi
 unset AT_SPI_BUS_ADDRESS
 unset QT_LINUX_ACCESSIBILITY_ALWAYS_ON
 
