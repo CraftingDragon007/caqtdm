@@ -153,6 +153,7 @@ RUN set -eux; \
     cmake --build . --parallel "$(nproc)"; \
     cmake --install .; \
     test "$(${QT_PREFIX}/bin/qmake6 -query QT_VERSION)" = "${QT_VERSION}"; \
+    test -x "${QT_PREFIX}/bin/designer"; \
     test -f "${QT_PREFIX}/lib/libQt6OpcUa.so.6"; \
     test -f "${QT_PREFIX}/plugins/opcua/libopen62541_backend.so"; \
     test -f "${QT_PREFIX}/include/QtOpcUa/QOpcUaX509CertificateSigningRequest"; \

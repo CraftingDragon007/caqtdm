@@ -448,6 +448,24 @@ prepare_qt_plugin_tree() {
   printf '%s\n' "$filtered_dir"
 }
 
+qt_designer_binary() {
+  local qt_bin_dir="$($QMAKE_BIN -query QT_INSTALL_BINS 2>/dev/null || true)"
+  local candidate
+
+  for candidate in \
+    ${qt_bin_dir:+"$qt_bin_dir/designer"} \
+    ${qt_bin_dir:+"$qt_bin_dir/designer$QT_MAJOR"} \
+    ${qt_bin_dir:+"$qt_bin_dir/designer-qt$QT_MAJOR"} \
+    ${qt_bin_dir:+"$qt_bin_dir/designer-qt"}; do
+    if [ -x "$candidate" ]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
 create_qmake_wrapper() {
   local qt_plugin_dir="$1"
   local wrapper="$BUILD_DIR/qmake-appimage-wrapper"
@@ -841,9 +859,22 @@ export QT_QPA_PLATFORM_PLUGIN_PATH="\$APPDIR/usr/plugins/platforms"
 unset AT_SPI_BUS_ADDRESS
 unset QT_LINUX_ACCESSIBILITY_ALWAYS_ON
 
+if [ "\${1:-}" = "--designer" ]; then
+  shift
+  exec "\$APPDIR/usr/bin/caqtdm-designer" "\$@"
+fi
+
 exec "\$CAQTDM_LIB_DIR/caQtDM" "\$@"
 EOF
   chmod +x "$path"
+}
+
+install_designer_binary() {
+  local designer
+  designer="$(qt_designer_binary)" || die "Qt Designer was not found; ensure qttools designer is built for $QMAKE_BIN"
+
+  msg "Installing Qt Designer from $designer"
+  install -Dm755 "$designer" "$APPDIR/usr/bin/qt-designer"
 }
 
 create_appdir() {
@@ -859,6 +890,7 @@ create_appdir() {
     "$APPDIR/usr/share/doc/caqtdm"
 
   cp -a "$BINARY_DIR/." "$app_lib_dir/"
+  install_designer_binary
   filter_appdir_controlsystem_plugins "$app_lib_dir"
   patch_appdir_rpaths
 
@@ -899,6 +931,25 @@ DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 exec "$DIR/caQtDM" -style Fusion "$@"
 EOF
   chmod +x "$APPDIR/usr/bin/caqtdm"
+
+  cat > "$APPDIR/usr/bin/caqtdm-designer" <<EOF
+#!/bin/sh
+set -eu
+
+if [ -z "\${APPDIR:-}" ]; then
+  APPDIR="\$(cd "\$(dirname "\$(readlink -f "\$0")")/../.." && pwd)"
+fi
+
+CAQTDM_LIB_DIR="\$APPDIR/usr/lib/caqtdm/$qt_dir"
+export LD_LIBRARY_PATH="\$CAQTDM_LIB_DIR:\$CAQTDM_LIB_DIR/controlsystems:\$CAQTDM_LIB_DIR/designer:\$APPDIR/usr/lib\${LD_LIBRARY_PATH:+:\$LD_LIBRARY_PATH}"
+export QT_PLUGIN_PATH="\$APPDIR/usr/plugins:\$APPDIR/usr/lib/$qt_dir/plugins:\$CAQTDM_LIB_DIR\${QT_PLUGIN_PATH:+:\$QT_PLUGIN_PATH}"
+export QT_QPA_PLATFORM_PLUGIN_PATH="\$APPDIR/usr/plugins/platforms"
+unset AT_SPI_BUS_ADDRESS
+unset QT_LINUX_ACCESSIBILITY_ALWAYS_ON
+
+exec "\$APPDIR/usr/bin/qt-designer" "\$@"
+EOF
+  chmod +x "$APPDIR/usr/bin/caqtdm-designer"
 
   if [ -x "$app_lib_dir/adl2ui" ]; then
     ln -sf "../lib/caqtdm/$qt_dir/adl2ui" "$APPDIR/usr/bin/adl2ui"
@@ -992,6 +1043,7 @@ make_appimage() {
   local deploy_args=(
     --appdir "$APPDIR"
     --executable "$app_lib_dir/caQtDM"
+    --executable "$APPDIR/usr/bin/qt-designer"
     --plugin qt
   )
 
