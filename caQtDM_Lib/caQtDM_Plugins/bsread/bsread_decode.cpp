@@ -260,32 +260,32 @@ bool bsread_Decode::setMainHeader(char *value,size_t size)
     if (parseError.error == QJsonParseError::NoError){
         if(MainMessageJ.isObject()) {
             QJsonObject jsonobj = MainMessageJ.object();
-            if (jsonobj[L"hash"].isString()) {
-                hash = jsonobj[L"hash"].toString();
+            if (jsonobj["hash"].isString()) {
+                hash = jsonobj["hash"].toString();
                 qCDebug(bsreadLog) << "hash:" << hash;
             }
 
-            if (jsonobj[L"pulse_id"].isDouble()) {
-                pulse_id = jsonobj[L"pulse_id"].toDouble();
+            if (jsonobj["pulse_id"].isDouble()) {
+                pulse_id = jsonobj["pulse_id"].toDouble();
                 qCDebug(bsreadLog) << "pulse_id:" << pulse_id;
             }
-            if (jsonobj[L"htype"].isString()) {
-                main_htype = jsonobj[L"htype"].toString();
+            if (jsonobj["htype"].isString()) {
+                main_htype = jsonobj["htype"].toString();
             }
-            if (jsonobj[L"global_timestamp"].isObject())
+            if (jsonobj["global_timestamp"].isObject())
             {
-                QJsonObject jsonobj2 = jsonobj[L"global_timestamp"].toObject();
-                if (jsonobj2[L"epoch"].isDouble()) {
-                    global_timestamp_epoch = jsonobj2[L"epoch"].toDouble();
+                QJsonObject jsonobj2 = jsonobj["global_timestamp"].toObject();
+                if (jsonobj2["epoch"].isDouble()) {
+                    global_timestamp_epoch = jsonobj2["epoch"].toDouble();
                 }
-                if (jsonobj2[L"ns"].isDouble()) {
-                    global_timestamp_ns = jsonobj2[L"ns"].toDouble();
+                if (jsonobj2["ns"].isDouble()) {
+                    global_timestamp_ns = jsonobj2["ns"].toDouble();
                 }
-                if (jsonobj2[L"sec"].isDouble()) {
-                    global_timestamp_sec = jsonobj2[L"sec"].toDouble();
+                if (jsonobj2["sec"].isDouble()) {
+                    global_timestamp_sec = jsonobj2["sec"].toDouble();
                 }
-                if (jsonobj2[L"ns_offset"].isDouble()) {
-                    global_timestamp_ns_offset = jsonobj2[L"ns_offset"].toDouble();
+                if (jsonobj2["ns_offset"].isDouble()) {
+                    global_timestamp_ns_offset = jsonobj2["ns_offset"].toDouble();
                 }
             }
         }
@@ -321,16 +321,16 @@ void bsread_Decode::setHeader(char *value,size_t size){
     if (parseError.error == QJsonParseError::NoError){
         if(HeaderMessageJ.isObject()) {
             QJsonObject jsonobj = HeaderMessageJ.object();
-            if (jsonobj[L"channels"].isArray()) {
-                QJsonArray jsonarr = jsonobj[L"channels"].toArray();
+            if (jsonobj["channels"].isArray()) {
+                QJsonArray jsonarr = jsonobj["channels"].toArray();
 
                 for (unsigned int i = 0; i < jsonarr.size(); i++)
                 {
                     bsread_channeldata *chdata = new bsread_channeldata();
                     Channels.append(chdata);
                     QJsonObject jsonobj2 = jsonarr[i].toObject();
-                    if (jsonobj2[L"type"].isString()) {
-                        QString value = jsonobj2[L"type"].toString();
+                    if (jsonobj2["type"].isString()) {
+                        QString value = jsonobj2["type"].toString();
                         if (value=="float64"){
                             chdata->type=bs_float64;
                         }else if(value=="float32"){
@@ -360,20 +360,20 @@ void bsread_Decode::setHeader(char *value,size_t size){
                         }
 
                     }
-                    if (jsonobj2[L"name"].isString()) {
-                        chdata->name = jsonobj2[L"name"].toString();
+                    if (jsonobj2["name"].isString()) {
+                        chdata->name = jsonobj2["name"].toString();
                         ChannelSearch.insert(chdata->name, chdata);
                         qCDebug(bsreadLog) << "Ch-Name :" << chdata;
                     }
-                    if (jsonobj2[L"offset"].isDouble()) {
-                        chdata->offset = jsonobj2[L"offset"].toDouble();
+                    if (jsonobj2["offset"].isDouble()) {
+                        chdata->offset = jsonobj2["offset"].toDouble();
                     }
-                    if (jsonobj2[L"modulo"].isDouble()) {
-                        chdata->modulo = jsonobj2[L"modulo"].toDouble();
+                    if (jsonobj2["modulo"].isDouble()) {
+                        chdata->modulo = jsonobj2["modulo"].toDouble();
                     }
 
-                    if (jsonobj2[L"encoding"].isString()) {
-                        QString encoding = jsonobj2[L"encoding"].toString();
+                    if (jsonobj2["encoding"].isString()) {
+                        QString encoding = jsonobj2["encoding"].toString();
 
                         if (encoding == "big"){
                             chdata->endianess=bs_big;
@@ -417,9 +417,9 @@ void bsread_Decode::setHeader(char *value,size_t size){
                         }
 
                     }
-                    if (jsonobj2[L"shape"].isArray()) {
+                    if (jsonobj2["shape"].isArray()) {
                         chdata->shape.clear();
-                        QJsonArray jsonarr2 = jsonobj2[L"shape"].toArray();
+                        QJsonArray jsonarr2 = jsonobj2["shape"].toArray();
                         for (unsigned int j = 0; j < jsonarr2.size(); j++){
                             int value = static_cast<int>(jsonarr2[j].toDouble());
                             chdata->shape.append(value);
@@ -443,20 +443,20 @@ void bsread_Decode::setHeader(char *value,size_t size){
 
                 }
 
-                if (jsonobj[L"pulse_id"].isDouble()) {
-                    pulse_id = jsonobj[L"pulse_id"].toDouble();
+                if (jsonobj["pulse_id"].isDouble()) {
+                    pulse_id = jsonobj["pulse_id"].toDouble();
                 }
-                if (jsonobj[L"htype"].isString()) {
-                    main_htype = jsonobj[L"htype"].toString();
+                if (jsonobj["htype"].isString()) {
+                    main_htype = jsonobj["htype"].toString();
                 }
-                if (jsonobj[L"global_timestamp"].isObject())
+                if (jsonobj["global_timestamp"].isObject())
                 {
-                    QJsonObject jsonobj2 = jsonobj[L"global_timestamp"].toObject();
-                    if (jsonobj2[L"sec"].isDouble()) {
-                        global_timestamp_sec = jsonobj2[L"sec"].toDouble();
+                    QJsonObject jsonobj2 = jsonobj["global_timestamp"].toObject();
+                    if (jsonobj2["sec"].isDouble()) {
+                        global_timestamp_sec = jsonobj2["sec"].toDouble();
                     }
-                    if (jsonobj2[L"ns"].isDouble()) {
-                        global_timestamp_ns = jsonobj2[L"ns"].toDouble();
+                    if (jsonobj2["ns"].isDouble()) {
+                        global_timestamp_ns = jsonobj2["ns"].toDouble();
                     }
                 }
             }

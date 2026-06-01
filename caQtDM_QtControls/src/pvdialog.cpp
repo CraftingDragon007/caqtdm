@@ -144,9 +144,9 @@ PVDialog::PVDialog(QWidget *tic, QWidget *parent) : QDialog(parent)
                 if(value.isObject() && value.toObject().contains("maxdisplayrate")) {
                     displayratePresent = true;
                     QJsonObject root = value.toObject();
-                    if (root[L"maxdisplayrate"].isDouble()) {;
+                    if (root["maxdisplayrate"].isDouble()) {;
                         //std::cerr << "maxdisplayrate detected\n";
-                        rateValueDecoded = root[L"maxdisplayrate"].toDouble();
+                        rateValueDecoded = root["maxdisplayrate"].toDouble();
                         rateValueOK = true;
                         //std::cerr << "decode value=" << rateValueOK << " " << rateValueDecoded << "\n";
                     } else {
@@ -158,16 +158,16 @@ PVDialog::PVDialog(QWidget *tic, QWidget *parent) : QDialog(parent)
                 if(key.contains("dbnd") && value.isObject()) {
                     deadbandPresent = true;
                     QJsonObject root = value.toObject();
-                    if (root[L"abs"].isDouble())  {
+                    if (root["abs"].isDouble())  {
                         //std::cerr << "abs detected " << root[L"abs"]->Stringify().c_str() << "\n";
                         dbndType = "abs";
-                        dbndValueDecoded = root[L"abs"].toDouble();
+                        dbndValueDecoded = root["abs"].toDouble();
                         dbndValueOK = true;
                         //std::cerr << "decode value=" << dbndValueOK << " " << dbndValueDecoded << "\n";
-                    } else if(root[L"rel"].isDouble()) {
+                    } else if(root["rel"].isDouble()) {
                         //std::cerr << "rel detected\n";
                         dbndType = "rel";
-                        dbndValueDecoded = root[L"rel"].toDouble();
+                        dbndValueDecoded = root["rel"].toDouble();
                         dbndValueOK = true;
                         //std::cerr << "decode value=" << dbndValueOK << " " << dbndValueDecoded << "\n";
                     } else {
@@ -179,9 +179,9 @@ PVDialog::PVDialog(QWidget *tic, QWidget *parent) : QDialog(parent)
                 if(key.contains("dec") && value.isObject()) {
                     decPresent = true;
                     QJsonObject root = value.toObject();
-                    if (root[L"n"].isDouble()) {
+                    if (root["n"].isDouble()) {
                         // std::cerr << "dec detected\n";
-                        decValueDecoded = root[L"n"].toDouble();
+                        decValueDecoded = root["n"].toDouble();
                         decValueOK = true;
                         //std::cerr << "decode value=" << decValueOK << " " << decValueDecoded << "\n";
                     } else {
@@ -478,25 +478,25 @@ void PVDialog::saveState()
         bool B_ts = tsCheckBox->isChecked();
         bool B_dec = decCheckBox->isChecked();
         if (B_dbnd) {
-            root[L"dbnd"] = QJsonObject{{dbndComboBox->currentText(), dbndDoubleValue->value()}};
+            root["dbnd"] = QJsonObject{{dbndComboBox->currentText(), dbndDoubleValue->value()}};
         }
         if (B_rate) {
-            root[L"caqtdm_monitor"] = QJsonObject{{"maxdisplayrate", rateIntValue->value()}};
+            root["caqtdm_monitor"] = QJsonObject{{"maxdisplayrate", rateIntValue->value()}};
         }
         if (B_dec) {
-            root[L"dec"] = QJsonObject{{"n", decIntValue->value()}};
+            root["dec"] = QJsonObject{{"n", decIntValue->value()}};
         }
         if (B_array) {
-            root[L"arr"] = QJsonObject{{"s", arrayIntValue_s->value()},
+            root["arr"] = QJsonObject{{"s", arrayIntValue_s->value()},
                                        {"i", arrayIntValue_i->value()},
                                        {"e", arrayIntValue_e->value()}};
         }
         if (B_sync) {
-            root[L"sync"] = QJsonObject{{syncComboBox->currentText(), syncLine->text()}};
+            root["sync"] = QJsonObject{{syncComboBox->currentText(), syncLine->text()}};
         }
         if (B_ts) {
             ;
-            root[L"ts"] = QJsonObject();
+            root["ts"] = QJsonObject();
         }
         if (pv.size() > 0) {
             if (prefix.size() > 0) {

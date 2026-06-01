@@ -3940,12 +3940,12 @@ QString CaQtDM_Lib::treatMacro(QMap<QString, QString> map, const QString& text, 
                             if (parseError.error == QJsonParseError::NoError){
                                 if(jsonDocument.isObject()) {
                                     QJsonObject jsonobj = jsonDocument.object();
-                                    if (jsonobj[L"regex"].isString()) {
-                                        macro_regex = jsonobj[L"regex"].toString();
+                                    if (jsonobj["regex"].isString()) {
+                                        macro_regex = jsonobj["regex"].toString();
                                     }
 
-                                    if (jsonobj[L"value"].isString()) {
-                                        macro_value = jsonobj[L"value"].toString();
+                                    if (jsonobj["value"].isString()) {
+                                        macro_value = jsonobj["value"].toString();
                                         macro_value_found = true;
                                     }
                                 }
@@ -9575,8 +9575,8 @@ bool CaQtDM_Lib::parseForQRectConst(QString &inputc, double *valueArray)
         // Retrieve the main object
         if (document.isObject()) {
             QJsonObject root = document.object();
-            if (root[L"valueconst"].isArray()) {
-                QJsonArray jsonarr = root[L"valueconst"].toArray();
+            if (root["valueconst"].isArray()) {
+                QJsonArray jsonarr = root["valueconst"].toArray();
                 for (unsigned int j = 0; j < jsonarr.size(); j++){
                     if (jsonarr[j].isDouble()) {
                        valueArray[j] = static_cast<int>(jsonarr[j].toDouble());
@@ -9610,13 +9610,13 @@ int CaQtDM_Lib::parseForDisplayRate(QString &inputc, int &rate)
         } else {
             QJsonObject root = document.object();
             // check for monitor
-            if (root[L"caqtdm_monitor"].isObject()) {
+            if (root["caqtdm_monitor"].isObject()) {
                 qCDebug(caQtDMLibLog) << "monitor detected";
                 // Retrieve nested object
-                QJsonObject obj = root[L"caqtdm_monitor"].toObject();
-                if (obj[L"maxdisplayrate"].isDouble()) {
+                QJsonObject obj = root["caqtdm_monitor"].toObject();
+                if (obj["maxdisplayrate"].isDouble()) {
                     qCDebug(caQtDMLibLog) << "maxdisplayrate detected";
-                    rate = obj[L"maxdisplayrate"].toDouble();
+                    rate = obj["maxdisplayrate"].toDouble();
                     qCDebug(caQtDMLibLog) << "decode value =" << rate;
                     success = true;
                 }

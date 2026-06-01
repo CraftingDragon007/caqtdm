@@ -293,34 +293,34 @@ void sfRetrieval::finishReply(QNetworkReply *reply)
                     QJsonObject root1 = value.toObject();
 
                     // find channel data inside this part of array
-                    if (root1[L"channel"].isObject()) {
+                    if (root1["channel"].isObject()) {
                         //qCDebug(archiveSFLog) << "\nchannel part found as object";
-                        QJsonObject root2 = root1[L"channel"].toObject();
+                        QJsonObject root2 = root1["channel"].toObject();
 
                         // get channel name
-                        if (root2[L"name"].isString()) {
-                            QString data = root2[L"name"].toString();
+                        if (root2["name"].isString()) {
+                            QString data = root2["name"].toString();
                             char *channel = new char[data.size()+1];
                             sprintf(channel,"%s", qasc(data));
-                            //qCDebug(archiveSFLog) << "channel name found" << root2[L"name"]->toString() << channel;
+                            //qCDebug(archiveSFLog) << "channel name found" << root2["name"]->toString() << channel;
                             delete[] channel;
                         }
 
                         // get backend name
-                        if (root2[L"backend"].isString()) {
-                            QString data = root2[L"backend"].toString();
+                        if (root2["backend"].isString()) {
+                            QString data = root2["backend"].toString();
                             char *backend = new char[data.size()+1];
                             sprintf(backend,"%s", qasc(data));
                             Backend = QString(backend);
                             Backend = Backend.replace("\"", "");
-                            //qCDebug(archiveSFLog) << "backend name found" << root2[L"backend"]->toString() << backend;
+                            //qCDebug(archiveSFLog) << "backend name found" << root2["backend"]->toString() << backend;
                             delete[] backend;
                         }
                     }
 
                     // find data array inside this part of array
-                    if (root1[L"data"].isArray()) {
-                        QJsonArray array = root1[L"data"].toArray();
+                    if (root1["data"].isArray()) {
+                        QJsonArray array = root1["data"].toArray();
                         //qCDebug(archiveSFLog) << "\ndata part found as array" << array.size();
 
                         // scan the data part (big array)
@@ -346,21 +346,21 @@ void sfRetrieval::finishReply(QNetworkReply *reply)
 
                                 // find value part now
                                 QJsonObject root1 = array[i].toObject();
-                                if (root1[L"value"].isObject()) {
-                                    QJsonObject root2 = root1[L"value"].toObject();
+                                if (root1["value"].isObject()) {
+                                    QJsonObject root2 = root1["value"].toObject();
 
                                     // look for mean
-                                    if (root2[L"mean"].isDouble()) {
+                                    if (root2["mean"].isDouble()) {
                                         //qCDebug(archiveSFLog) << "mean part found";
-                                        mean = root2[L"mean"].toDouble();
+                                        mean = root2["mean"].toDouble();
                                         valueFound = true;
                                     }
                                 }
 
                                 // look for globalSeconds
-                                if (root1[L"globalSeconds"].isString()) {
+                                if (root1["globalSeconds"].isString()) {
                                     //qCDebug(archiveSFLog) << "globalSeconds part found";
-                                    if(getDoubleFromString(root1[L"globalSeconds"].toString(), archiveTime)){
+                                    if(getDoubleFromString(root1["globalSeconds"].toString(), archiveTime)){
                                         timeFound = true;
                                     } else {
                                         qCDebug(archiveSFLog) << tr("could not decode globalSeconds ????");
@@ -390,15 +390,15 @@ void sfRetrieval::finishReply(QNetworkReply *reply)
 
                                 // simple value
                                 QJsonObject root1 = array[i].toObject();
-                                if (root1[L"value"].isDouble()) {
+                                if (root1["value"].isDouble()) {
                                     //qCDebug(archiveSFLog) << "value found";
-                                    //stat = swscanf(root1[L"value"].toString(), L "%lf", &mean);
-                                    mean=root1[L"value"].toDouble();
+                                    //stat = swscanf(root1["value"].toString(), L "%lf", &mean);
+                                    mean=root1["value"].toDouble();
                                     valueFound = true;
                                 } else
 
                                     // an array
-                                    if (root1[L"value"].isArray()) {
+                                    if (root1["value"].isArray()) {
                                         //qCDebug(archiveSFLog) << "\nvalue part found as array, not yet supported" << array.size();
                                         errorString = tr("waveforms not supported");
                                         //qCDebug(archiveSFLog)<< QTime::currentTime().toString()  << this << PV << "finishreply" << errorString;
@@ -407,9 +407,9 @@ void sfRetrieval::finishReply(QNetworkReply *reply)
                                     }
 
                                 // look for globalSeconds
-                                if (root1[L"globalSeconds"].isString()) {
+                                if (root1["globalSeconds"].isString()) {
                                     //qCDebug(archiveSFLog)<< "globalSeconds part found";
-                                    if(getDoubleFromString(root1[L"globalSeconds"].toString(), archiveTime)){
+                                    if(getDoubleFromString(root1["globalSeconds"].toString(), archiveTime)){
                                         timeFound = true;
                                         //qCDebug(archiveSFLog) << "time found" << archiveTime;
                                     } else {

@@ -680,16 +680,16 @@ void bsread_dispatchercontrol::finishReplyConnect()
     if (parseError.error == QJsonParseError::NoError){
         if(MainMessageJ.isObject()) {
             QJsonObject jsonobj = MainMessageJ.object();
-            if (jsonobj[L"configuration"].isObject())
+            if (jsonobj["configuration"].isObject())
             {
-                QJsonObject jsonobj2 = jsonobj[L"configuration"].toObject();
-                if (jsonobj2[L"streamType"].isString()) {
-                    streamType = jsonobj2[L"streamType"].toString();
+                QJsonObject jsonobj2 = jsonobj["configuration"].toObject();
+                if (jsonobj2["streamType"].isString()) {
+                    streamType = jsonobj2["streamType"].toString();
                 }
             }
             qCDebug(bsreadLog) << "streamType:" << streamType;
-            if (jsonobj[L"stream"].isString()) {
-                stream = jsonobj[L"stream"].toString();
+            if (jsonobj["stream"].isString()) {
+                stream = jsonobj["stream"].toString();
                 streams.append(stream);
                 bsreadconnections.append(new bsread_Decode(zmqcontex,stream,streamType));
                 bsreadThreads.append(new QThread(this));
@@ -725,13 +725,13 @@ void bsread_dispatchercontrol::finishReplyConnect()
                 qCDebug(bsreadLog) << "bsreadPlugin:" << stream;
             }
 
-            if (jsonobj[L"exception"].isString()) {
+            if (jsonobj["exception"].isString()) {
                 qCDebug(bsreadLog) << "Check exception:";
                 tobeRemoved.clear();
-                QString ExceptionError = jsonobj[L"exception"].toString();
+                QString ExceptionError = jsonobj["exception"].toString();
                 if (ExceptionError.startsWith("java.lang.IllegalArgumentException")){
-                    if (jsonobj[L"message"].isString()) {
-                        QString ErrorString = jsonobj[L"message"].toString();
+                    if (jsonobj["message"].isString()) {
+                        QString ErrorString = jsonobj["message"].toString();
                         QStringList ErrorChannels = ErrorString.split(",", SKIP_EMPTY_PARTS);
                         if (ErrorChannels.count()>0){
 
@@ -898,16 +898,16 @@ void bsread_dispatchercontrol::finishVerification()
             for (unsigned int i = 0; i < jsonarr.size(); i++)
             {
                 QJsonObject jsonobj2 = jsonarr[i].toObject();
-                if (jsonobj2[L"recording"].isBool())
+                if (jsonobj2["recording"].isBool())
                 {
-                    if (jsonobj2[L"recording"].toBool()){
+                    if (jsonobj2["recording"].toBool()){
                         qCDebug(bsreadLog) << "finishVerification() : Recording ok";
                         QString name="";
-                        if (jsonobj2[L"channel"].isObject())
+                        if (jsonobj2["channel"].isObject())
                         {
-                            QJsonObject jsonobj3 = jsonobj2[L"channel"].toObject();
-                            if (jsonobj3[L"name"].isString()) {
-                                name = jsonobj3[L"name"].toString();
+                            QJsonObject jsonobj3 = jsonobj2["channel"].toObject();
+                            if (jsonobj3["name"].isString()) {
+                                name = jsonobj3["name"].toString();
                             }
 
                         }
