@@ -34,12 +34,6 @@
 #include <QEventLoop>
 #include "loggingcategories.h"
 
-//#define CSV 1
-
-#ifndef CSV
-#include "JSON.h"
-#endif
-
 class QNetworkAccessManager;
 
 class sfRetrieval:public QObject

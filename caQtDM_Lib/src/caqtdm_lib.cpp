@@ -44,6 +44,8 @@
 #include <QObject>
 #include <QAbstractButton>
 #include <QContextMenuEvent>
+#include <QJsonDocument>
+#include <QJsonArray>
 #include <QPushButton>
 #include <QToolBar>
 #include <QTouchEvent>
@@ -3925,37 +3927,32 @@ QString CaQtDM_Lib::treatMacro(QMap<QString, QString> map, const QString& text, 
                     while (position!=(-1)){
                         qCDebug(caQtDMLibLog) << "position" <<position;
                         if ((position>=0)&&(position<newText.length())){
-                            int json_start=(position-1)+tofind.length();
-                            int json_end  =newText.indexOf(QString("})"),json_start);
+                            int json_start = (position-1)+tofind.length();
+                            int json_end = newText.indexOf(QString("})"),json_start);
 
                             qCDebug(caQtDMLibLog) << "newText.mid(): " << newText.mid(json_start,json_end-json_start+1);
-                            QString macro_regex="";
-                            QString macro_value="Parsing Error";
-                            bool macro_value_found=false;
+                            QString macro_regex = "";
+                            QString macro_value = "Parsing Error";
+                            bool macro_value_found = false;
 
-                            JSONObject jsonobj;
-                            JSONValue *MacroDataJ = JSON::Parse(newText.mid(json_start,json_end-json_start+1).toStdString().c_str());
-                            if (MacroDataJ!=Q_NULLPTR){
-                                if(!MacroDataJ->IsObject()) {
-                                    delete(MacroDataJ);
-                                } else {
-                                    jsonobj=MacroDataJ->AsObject();
-                                    if (jsonobj.find(L"regex") != jsonobj.end() && jsonobj[L"regex"]->IsString()) {
-                                        macro_regex=QString::fromWCharArray(jsonobj[L"regex"]->AsString().c_str());
+                            QJsonParseError parseError;
+                            QJsonDocument jsonDocument = QJsonDocument::fromJson(newText.mid(json_start,json_end-json_start+1).toUtf8(), &parseError);
+                            if (parseError.error == QJsonParseError::NoError){
+                                if(jsonDocument.isObject()) {
+                                    QJsonObject jsonobj = jsonDocument.object();
+                                    if (jsonobj[L"regex"].isString()) {
+                                        macro_regex = jsonobj[L"regex"].toString();
                                     }
 
-                                    if (jsonobj.find(L"value") != jsonobj.end() && jsonobj[L"value"]->IsString()) {
-                                        macro_value=QString::fromWCharArray(jsonobj[L"value"]->AsString().c_str());
-                                        macro_value_found=true;
+                                    if (jsonobj[L"value"].isString()) {
+                                        macro_value = jsonobj[L"value"].toString();
+                                        macro_value_found = true;
                                     }
-                                    delete(MacroDataJ);
                                 }
-                            }else{
-                                snprintf(asc, MAX_STRING_LENGTH, "JSON Error in (%s)", qasc(newText.mid(json_start,json_end-json_start+1)));
+                            } else {
+                                snprintf(asc, MAX_STRING_LENGTH, "JSON Error in (%s): %s", qasc(newText.mid(json_start,json_end-json_start+1)), qasc(parseError.errorString()));
                                 postMessage(QtWarningMsg, asc);
-
                             }
-
 
                             QString toReplace = "$(" + i.key() + newText.mid(json_start,json_end-json_start+1) + ")";
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -9569,38 +9566,26 @@ bool CaQtDM_Lib::parseForQRectConst(QString &inputc, double *valueArray)
 {
     // Parse data
     bool success = false;
-    char input[MAXPVLEN];
-    memset(&input,0,MAXPVLEN);
-    qstrncpy(input, qasc(inputc), MAXPVLEN-1);
 
-
-    JSONValue *value = JSON::Parse(input);
-    if (value == Q_NULLPTR) {
-        qCDebug(caQtDMLibLog) << "failed to parse:" << input;
+    QJsonParseError parseError;
+    QJsonDocument document = QJsonDocument::fromJson(inputc.toUtf8(), &parseError);
+    if (parseError.error != QJsonParseError::NoError) {
+        qCWarning(caQtDMLibLog) << "failed to parse:" << inputc << "with error:" << parseError.errorString();
     } else {
         // Retrieve the main object
-        JSONObject root;
-        if(!value->IsObject()) {
-            delete(value);
-        } else {
-
-            root = value->AsObject();
-            if (root.find(L"valueconst") != root.end() && root[L"valueconst"]->IsArray()) {
-                JSONArray jsonobj=root[L"valueconst"]->AsArray();
-                for (unsigned int j = 0; j < jsonobj.size(); j++){
-                    if (jsonobj[j]->IsNumber())
-                       valueArray[j]=(int)jsonobj[j]->AsNumber();
+        if (document.isObject()) {
+            QJsonObject root = document.object();
+            if (root[L"valueconst"].isArray()) {
+                QJsonArray jsonarr = root[L"valueconst"].toArray();
+                for (unsigned int j = 0; j < jsonarr.size(); j++){
+                    if (jsonarr[j].isDouble()) {
+                       valueArray[j] = static_cast<int>(jsonarr[j].toDouble());
+                    }
                 }
-                success =true;
-                // Did it go wrong?
-                } else {
-                    delete(value);
-                }
+                success = true;
             }
-
         }
-
-
+    }
 
     return success;
 }
@@ -9610,49 +9595,30 @@ int CaQtDM_Lib::parseForDisplayRate(QString &inputc, int &rate)
 {
     // Parse data
     bool success = false;
-    char input[MAXPVLEN];
-    memset(&input,0,MAXPVLEN);
-    qstrncpy(input,qasc(inputc), (size_t) MAXPVLEN-1);
 
-    JSONValue *value = JSON::Parse(input);
+    QJsonParseError parseError;
+    QJsonDocument document = QJsonDocument::fromJson(inputc.toUtf8(), &parseError);
     // Did it go wrong?
-    if (value == Q_NULLPTR) {
+    if (parseError.error != QJsonParseError::NoError) {
+        qCCritical(caQtDMLibLog) << "failed to parse:" << inputc << "with error:" << parseError.errorString();
         inputc = "{}";
-        qCCritical(caQtDMLibLog) << "Failed to parse:" << input;
         return success;
     } else {
         // Retrieve the main object
-        JSONObject root;
-        if(!value->IsObject()) {
+        if(!document.isObject()) {
             qCDebug(caQtDMLibLog) << "The root element is not an object";
-            delete(value);
         } else {
-
-            root = value->AsObject();
+            QJsonObject root = document.object();
             // check for monitor
-            if (root.find(L"caqtdm_monitor") != root.end() && root[L"caqtdm_monitor"]->IsObject()) {
+            if (root[L"caqtdm_monitor"].isObject()) {
                 qCDebug(caQtDMLibLog) << "monitor detected";
                 // Retrieve nested object
-                JSONValue *value1 = JSON::Parse(root[L"caqtdm_monitor"]->Stringify().c_str());
-                // Did it go wrong?
-                if ((value1 != Q_NULLPTR) && value1->IsObject()) {
-                    JSONObject root;
-                    root = value1->AsObject();
-                    if (root.find(L"maxdisplayrate") != root.end() && root[L"maxdisplayrate"]->IsNumber()) {
-                        int status;
-                        qCDebug(caQtDMLibLog) << "maxdisplayrate detected";
-                        status = swscanf(root[L"maxdisplayrate"]->Stringify().c_str(), L"%d", &rate);
-                        if(status != 1) return false;
-                        qCDebug(caQtDMLibLog) << status << "decode value=" << rate;
-                        delete(value1);
-                        delete(value);
-                        success = true;
-                    } else {
-                        delete(value1);
-                        delete(value);
-                    }
-                } else {
-                    delete(value);
+                QJsonObject obj = root[L"caqtdm_monitor"].toObject();
+                if (obj[L"maxdisplayrate"].isDouble()) {
+                    qCDebug(caQtDMLibLog) << "maxdisplayrate detected";
+                    rate = obj[L"maxdisplayrate"].toDouble();
+                    qCDebug(caQtDMLibLog) << "decode value =" << rate;
+                    success = true;
                 }
             }
         }
@@ -9677,31 +9643,14 @@ bool CaQtDM_Lib::checkJsonString(QString &inputc)
     // test if we have a valid json string
 
     bool success = false;
-    char input[MAXPVLEN];
-    memset(&input,0,MAXPVLEN);
-    qstrncpy(input, (char*) qasc(inputc), (size_t) MAXPVLEN-1);
-    JSONValue *value = JSON::Parse(input);
+    QJsonParseError parseError;
+    QJsonDocument document = QJsonDocument::fromJson(inputc.toUtf8(), &parseError);;
 
     // Did it go wrong?, when yes then get rid of it
-    if (value == Q_NULLPTR) {
+    if (parseError.error != QJsonParseError::NoError) {
         success = false;
-        inputc ="{}";
-        qCDebug(caQtDMLibLog) << "checkJsonString -- failed to parse:" << input;
-    } else {
-        // however is seems the parsing does not take into account if the last bracket is missing
-        int nbBrackets = 0;
-        for(int counter = 0; counter < inputc.size();  counter++){
-                QString element = inputc.at(counter);
-                if(element.contains("{")) nbBrackets++;
-                else if(element.contains("}")) nbBrackets--;
-        }
-        qCDebug(caQtDMLibLog) << "number of brackets" << nbBrackets;
-        if(nbBrackets == 0) {
-            success = true;
-        } else {
-            success = false;
-            inputc = "{}";
-        }
+        inputc = "{}";
+        qCDebug(caQtDMLibLog) << "checkJsonString -- failed to parse:" << inputc << "with error:" << parseError.errorString();
     }
 
     qCDebug(caQtDMLibLog) << "final2" << inputc;

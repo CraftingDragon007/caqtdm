@@ -35,16 +35,6 @@
 #include <QCheckBox>
 #include <qtcontrols_global.h>
 
-#if QT_VERSION < QT_VERSION_CHECK(4, 7, 0)
-#include <algorithm>
-#endif
-
-#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
-#include "JSON.h"
-#include "JSONValue.h"
-# define QStringLiteral(str) QString::fromUtf8("" str "", sizeof(str) - 1)
-#endif
-
 class QTCON_EXPORT NetworkModel: public QStandardItemModel
 {
     Q_OBJECT
@@ -109,31 +99,6 @@ private slots:
             QList<QString> nameList;
             msgWidget->setText("");
 
-#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
-            QList<QVariant> list;
-            JSONValue *value = JSON::Parse(response);
-            if (value == NULL) msgWidget->setText("failed to parse network reply");
-            if (value) {
-                //std::cerr << "count" << value->CountChildren() << "\n";
-                for(size_t i=0; i<value->CountChildren(); ++i) {
-                    JSONValue *key_value = value->Child(i);
-                    if (key_value) {
-                        QString QValue = QString::fromStdWString(std::wstring (key_value->Stringify()));
-                        // get name
-                        if(QValue.contains("name")) {
-                            JSONObject root;
-                            root = key_value->AsObject();
-                            if (root.find(L"name") != root.end() && root[L"name"]->IsString()) {
-                                QString nameValue = QString::fromStdWString(root[L"name"]->AsString());
-                                nameList.append(nameValue);
-                            }
-                        };
-                    }
-                }
-                delete value;
-            }
-
-#else
             QJsonParseError jsonError;
             QJsonDocument Json = QJsonDocument::fromJson(response, &jsonError);
             if (jsonError.error != QJsonParseError::NoError){
@@ -146,7 +111,6 @@ private slots:
                 QMap<QString, QVariant> map = list[i].toMap();
                 nameList.append(map["name"].toString());
             }
-#endif
             std::sort(nameList.begin(), nameList.end());
 
             for(int i=0; i<itemList.count(); i++)  {

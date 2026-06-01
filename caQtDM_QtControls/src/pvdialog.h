@@ -40,8 +40,6 @@
 #include <QCompleter>
 #include <qtcontrols_global.h>
 #include <QtControls>
-#include "JSON.h"
-#include "JSONValue.h"
 #include "textedit.h"
 #include "networkmodel.h"
 
@@ -72,7 +70,6 @@ private slots:
 private:
 
     void print_out(const wchar_t *output);
-    wchar_t* converToWChar_t(QString text);
 
     QWidget *thisWidget;
     QCheckBox *dbndCheckBox, *arrayCheckBox, *syncCheckBox, *rateCheckBox, *tsCheckBox, *decCheckBox;

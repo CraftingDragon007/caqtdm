@@ -22,16 +22,16 @@
  *  Contact details:
  *    helge.brands@psi.ch
  */
-#include <QNetworkAccessManager>
-#include <QApplication>
-#include <QSslConfiguration>
-#include <QDebug>
-#include <QBuffer>
 #include "bsread_dispatchercontrol.h"
-#include "JSON.h"
-#include "JSONValue.h"
+#include <QApplication>
+#include <QBuffer>
+#include <QDebug>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QNetworkAccessManager>
+#include <QSslConfiguration>
 #include "loggingcategories.h"
-
+#include "qtcontrols_global.h"
 
 bsread_dispatchercontrol::bsread_dispatchercontrol()
 {
@@ -653,7 +653,6 @@ int bsread_dispatchercontrol::set_Channel(char *pv, double rdata, int32_t idata,
 void bsread_dispatchercontrol::finishReplyConnect()
 {
 
-    JSONObject jsonobj;
     QString stream;
     QString streamType;
     QObject* obj = sender();
@@ -666,7 +665,8 @@ void bsread_dispatchercontrol::finishReplyConnect()
 
     httpdata=reply_local->readAll();
     reply_local->deleteLater();
-    JSONValue *MainMessageJ = JSON::Parse(httpdata);
+    QJsonParseError parseError;
+    QJsonDocument MainMessageJ = QJsonDocument::fromJson(httpdata, &parseError);
     qCDebug(bsreadLog) << "DATA:" << httpdata;
     QString msg="bsread: ";
     msg.append(httpdata);
@@ -677,21 +677,19 @@ void bsread_dispatchercontrol::finishReplyConnect()
 
         messagewindowP->postMsgEvent(QtDebugMsg,(char*) msg.toLatin1().constData());
     }
-    if (MainMessageJ!=Q_NULLPTR){
-        if(!MainMessageJ->IsObject()) {
-            delete(MainMessageJ);
-        } else {
-            jsonobj=MainMessageJ->AsObject();
-            if (jsonobj.find(L"configuration") != jsonobj.end() && jsonobj[L"configuration"]->IsObject())
+    if (parseError.error == QJsonParseError::NoError){
+        if(MainMessageJ.isObject()) {
+            QJsonObject jsonobj = MainMessageJ.object();
+            if (jsonobj[L"configuration"].isObject())
             {
-                JSONObject jsonobj2=jsonobj[L"configuration"]->AsObject();
-                if (jsonobj2.find(L"streamType") != jsonobj2.end() && jsonobj2[L"streamType"]->IsString()) {
-                    streamType=QString::fromWCharArray(jsonobj2[L"streamType"]->AsString().c_str());
+                QJsonObject jsonobj2 = jsonobj[L"configuration"].toObject();
+                if (jsonobj2[L"streamType"].isString()) {
+                    streamType = jsonobj2[L"streamType"].toString();
                 }
             }
             qCDebug(bsreadLog) << "streamType:" << streamType;
-            if (jsonobj.find(L"stream") != jsonobj.end() && jsonobj[L"stream"]->IsString()) {
-                stream=QString::fromWCharArray(jsonobj[L"stream"]->AsString().c_str());
+            if (jsonobj[L"stream"].isString()) {
+                stream = jsonobj[L"stream"].toString();
                 streams.append(stream);
                 bsreadconnections.append(new bsread_Decode(zmqcontex,stream,streamType));
                 bsreadThreads.append(new QThread(this));
@@ -727,13 +725,13 @@ void bsread_dispatchercontrol::finishReplyConnect()
                 qCDebug(bsreadLog) << "bsreadPlugin:" << stream;
             }
 
-            if (jsonobj.find(L"exception") != jsonobj.end() && jsonobj[L"exception"]->IsString()) {
+            if (jsonobj[L"exception"].isString()) {
                 qCDebug(bsreadLog) << "Check exception:";
                 tobeRemoved.clear();
-                QString ExceptionError=QString::fromWCharArray(jsonobj[L"exception"]->AsString().c_str());
+                QString ExceptionError = jsonobj[L"exception"].toString();
                 if (ExceptionError.startsWith("java.lang.IllegalArgumentException")){
-                    if (jsonobj.find(L"message") != jsonobj.end() && jsonobj[L"message"]->IsString()) {
-                        QString ErrorString=QString::fromWCharArray(jsonobj[L"message"]->AsString().c_str());
+                    if (jsonobj[L"message"].isString()) {
+                        QString ErrorString = jsonobj[L"message"].toString();
                         QStringList ErrorChannels = ErrorString.split(",", SKIP_EMPTY_PARTS);
                         if (ErrorChannels.count()>0){
 
@@ -746,23 +744,12 @@ void bsread_dispatchercontrol::finishReplyConnect()
                                         tobeRemoved.append(ErrorChannels.at(x).split(" - ",SKIP_EMPTY_PARTS).at(0));
                                     }
                                 }
-
-
-
                             }
-
-                            qCDebug(bsreadLog) << "tobeRemoved:" << tobeRemoved;
-
                         }
-
-
-
                     }
-
                 }
-            }//if jsonobj
-            qCDebug(bsreadLog) << tobeRemoved;
-
+            }
+            qCDebug(bsreadLog) << "tobeRemoved:" << tobeRemoved;
         }
     }
 
@@ -889,7 +876,6 @@ void bsread_dispatchercontrol::ChannelVerification(QNetworkAccessManager* manage
 void bsread_dispatchercontrol::finishVerification()
 {
 
-    JSONArray jsonobj;
     QObject* obj = sender();
     QNetworkReply* reply_local = qobject_cast<QNetworkReply*>(obj);
 
@@ -897,33 +883,31 @@ void bsread_dispatchercontrol::finishVerification()
 
     httpdata=reply_local->readAll();
     reply_local->deleteLater();
-    JSONValue *MainMessageJ = JSON::Parse(httpdata);
+    QJsonParseError parseError;
+    QJsonDocument MainMessageJ = QJsonDocument::fromJson(httpdata, &parseError);
 
     QString msg="bsread: ";
     msg.append(httpdata);
-    if (MainMessageJ!=Q_NULLPTR){
-        if(!MainMessageJ->IsArray()) {
-            qCDebug(bsreadLog) << "finishVerification() : MainMessageJ=Q_NULLPTR";
-            delete(MainMessageJ);
+    if (parseError.error == QJsonParseError::NoError){
+        if(!MainMessageJ.isArray()) {
+            qCDebug(bsreadLog) << "finishVerification() : MainMessageJ is not Array";
         } else {
-            jsonobj=MainMessageJ->AsArray();
-            qCDebug(bsreadLog) << "finishVerification() : Step array :" << jsonobj.size();
+            QJsonArray jsonarr = MainMessageJ.array();
+            qCDebug(bsreadLog) << "finishVerification() : Step array :" << jsonarr.size();
 
-            for (unsigned int i = 0; i < jsonobj.size(); i++)
+            for (unsigned int i = 0; i < jsonarr.size(); i++)
             {
-                JSONObject jsonobj2=jsonobj[i]->AsObject();
-                if (jsonobj2.find(L"recording") != jsonobj2.end() && jsonobj2[L"recording"]->IsBool())
+                QJsonObject jsonobj2 = jsonarr[i].toObject();
+                if (jsonobj2[L"recording"].isBool())
                 {
-                    if (jsonobj2[L"recording"]->AsBool()){
+                    if (jsonobj2[L"recording"].toBool()){
                         qCDebug(bsreadLog) << "finishVerification() : Recording ok";
                         QString name="";
-                        if (jsonobj2.find(L"channel") != jsonobj2.end() && jsonobj2[L"channel"]->IsObject())
+                        if (jsonobj2[L"channel"].isObject())
                         {
-                            JSONObject jsonobj3=jsonobj2[L"channel"]->AsObject();
-
-
-                            if (jsonobj3.find(L"name") != jsonobj3.end() && jsonobj3[L"name"]->IsString()) {
-                                name=QString::fromWCharArray(jsonobj3[L"name"]->AsString().c_str());
+                            QJsonObject jsonobj3 = jsonobj2[L"channel"].toObject();
+                            if (jsonobj3[L"name"].isString()) {
+                                name = jsonobj3[L"name"].toString();
                             }
 
                         }
@@ -955,18 +939,13 @@ void bsread_dispatchercontrol::finishVerification()
         }
     }
 
-
-
-
     qCDebug(bsreadLog) << "finishVerification():" << ChannelsApprovePipeline.count();// httpdata;
 
     if (ChannelsToBeApprovePipeline.count()>0){
-     QString msg_not="bsread: Not approved channels ";
-     msg_not.append(QString("%1").arg(ChannelsToBeApprovePipeline.count()));
-     messagewindowP->postMsgEvent(QtCriticalMsg,(char*) msg_not.toLatin1().constData());
-
+        QString msg_not="bsread: Not approved channels ";
+        msg_not.append(QString("%1").arg(ChannelsToBeApprovePipeline.count()));
+        messagewindowP->postMsgEvent(QtCriticalMsg,(char*) msg_not.toLatin1().constData());
     }
-
 
     if (msg.contains("exception")){
         messagewindowP->postMsgEvent(QtCriticalMsg,(char*) msg.toLatin1().constData());
