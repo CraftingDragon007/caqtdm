@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# docker-build.sh — build a portable caQtDM AppImage inside Rocky Linux 8.
+# docker-build.sh - build a portable caQtDM AppImage inside Rocky Linux 8.
 #
 # The resulting AppImage targets glibc >= 2.28 (RHEL/Rocky/AlmaLinux 8 and
 # newer). The Docker image builds and caches Qt from source.
@@ -52,10 +52,65 @@ die() {
   exit 1
 }
 
-command -v docker >/dev/null 2>&1 || die "docker is required but was not found"
+usage() {
+  cat <<EOF
+Usage: $(basename "$0") [OPTION...]
 
-# ── Build the Docker image unless suppressed ──────────────────────────────────
-if [ "$DOCKER_NO_BUILD" != "1" ]; then
+Build a portable caQtDM AppImage inside the Rocky Linux 8 Docker environment.
+Options are forwarded to create-appimage.sh after the Docker wrapper handles
+its own --help option.
+
+Common options passed through to create-appimage.sh:
+  --no-checkout        Build from the mounted working tree
+  --branch REF         Git branch or tag to clone inside the container
+  --repo URL           Git repository to clone inside the container
+  --source DIR         Build from an existing source tree inside the container
+  --skip-build         Reuse binaries from BINARY_DIR
+  --appdir-only        Stop after creating the AppDir
+  --without-bsread     Exclude the bsread controlsystem plugin
+  --no-download-tools  Require linuxdeploy tools to be available locally
+  --help, -h           Show this help and exit
+
+Environment overrides:
+  DOCKER_IMAGE      Image tag to build/use (default: $DOCKER_IMAGE)
+  DOCKER_NO_BUILD   Set to 1 to skip rebuilding the image
+  DOCKER_NETWORK    Docker network mode (default: $DOCKER_NETWORK)
+  OUTPUT_DIR        Where to write the final AppImage (default: $OUTPUT_DIR)
+  QT_VERSION        Qt version built into the image (default: $QT_VERSION)
+  OPENSSL_VERSION   OpenSSL version built into the image (default: $OPENSSL_VERSION)
+  QWT_VERSION       Qwt version built into the image (default: $QWT_VERSION)
+  QWT_REF           Qwt git tag or branch (default: $QWT_REF)
+  QWT_REPOSITORY    Qwt git repository URL (default: $QWT_REPOSITORY)
+  EPICS_VERSION_TAG EPICS Base git tag built into the image (default: $EPICS_VERSION_TAG)
+  GCC_TOOLSET       RHEL/Rocky gcc-toolset version (default: $GCC_TOOLSET)
+
+Examples:
+  $(basename "$0")
+  $(basename "$0") --branch Development
+  $(basename "$0") --no-checkout --without-bsread
+EOF
+}
+
+parse_args() {
+  local arg
+
+  for arg in "$@"; do
+    case "$arg" in
+      --help|-h)
+        usage
+        exit 0
+        ;;
+    esac
+  done
+}
+
+require_docker() {
+  command -v docker >/dev/null 2>&1 || die "docker is required but was not found"
+}
+
+build_image() {
+  [ "$DOCKER_NO_BUILD" = "1" ] && return 0
+
   msg "Building Docker image $DOCKER_IMAGE (Rocky Linux 8 baseline)"
   docker build \
     --network "$DOCKER_NETWORK" \
@@ -68,48 +123,51 @@ if [ "$DOCKER_NO_BUILD" != "1" ]; then
     --build-arg "GCC_TOOLSET=$GCC_TOOLSET" \
     --tag "$DOCKER_IMAGE" \
     "$SCRIPT_DIR"
-fi
+}
 
-# ── Resolve the absolute OUTPUT_DIR ──────────────────────────────────────────
-mkdir -p "$OUTPUT_DIR"
-OUTPUT_DIR="$(cd -- "$OUTPUT_DIR" && pwd)"
+resolve_output_dir() {
+  mkdir -p "$OUTPUT_DIR"
+  OUTPUT_DIR="$(cd -- "$OUTPUT_DIR" && pwd)"
+}
 
-# ── Run the build inside the container ───────────────────────────────────────
-#
-# Mounts:
-#   /src         → repository root (read-write; build artefacts go here)
-#   /output      → OUTPUT_DIR (where the final .AppImage is written)
-#
-# The create-appimage.sh ENTRYPOINT receives all extra arguments passed to
-# this script. By default it performs a fresh checkout in the ignored work/
-# directory, avoiding stale object files from previous host builds. Pass
-# --no-checkout only when intentionally building the mounted working tree.
-#
-# FUSE is required to run AppImages inside the container (appimagetool uses
-# APPIMAGE_EXTRACT_AND_RUN=1 to work around that, and we set it here too).
+build_docker_run_args() {
+  docker_run_args=(
+    --rm
+    --interactive
+    --network "$DOCKER_NETWORK"
+    --volume "$REPO_ROOT:/src"
+    --volume "$OUTPUT_DIR:/output"
+    --env "APPIMAGE_EXTRACT_AND_RUN=1"
+    --env "OUTPUT_DIR=/output"
+    --env "BUILD_DIR=/src/caQtDM_Viewer/package/appimage/build-docker"
+    --env "TOOLS_DIR=/src/caQtDM_Viewer/package/appimage/tools"
+  )
 
-docker_run_args=(
-  --rm
-  --interactive
-  --network "$DOCKER_NETWORK"
-  --volume "$REPO_ROOT:/src"
-  --volume "$OUTPUT_DIR:/output"
-  --env "APPIMAGE_EXTRACT_AND_RUN=1"
-  --env "OUTPUT_DIR=/output"
-  --env "BUILD_DIR=/src/caQtDM_Viewer/package/appimage/build-docker"
-  --env "TOOLS_DIR=/src/caQtDM_Viewer/package/appimage/tools"
-)
+  [ ! -t 1 ] || docker_run_args+=(--tty)
 
-if [ -t 1 ]; then
-  docker_run_args+=(--tty)
-fi
+  if [ -e /dev/fuse ]; then
+    docker_run_args+=(--device /dev/fuse --cap-add SYS_ADMIN --security-opt apparmor:unconfined)
+  fi
+}
 
-if [ -e /dev/fuse ]; then
-  docker_run_args+=(--device /dev/fuse --cap-add SYS_ADMIN --security-opt apparmor:unconfined)
-fi
+run_container() {
+  build_docker_run_args
+  msg "Running AppImage build inside $DOCKER_IMAGE"
+  docker run "${docker_run_args[@]}" "$DOCKER_IMAGE" "$@"
+}
 
-msg "Running AppImage build inside $DOCKER_IMAGE"
-docker run "${docker_run_args[@]}" "$DOCKER_IMAGE" "$@"
+print_output_summary() {
+  msg "AppImage written to: $OUTPUT_DIR"
+  ls -lh "$OUTPUT_DIR"/*.AppImage 2>/dev/null || true
+}
 
-msg "AppImage written to: $OUTPUT_DIR"
-ls -lh "$OUTPUT_DIR"/*.AppImage 2>/dev/null || true
+main() {
+  parse_args "$@"
+  require_docker
+  build_image
+  resolve_output_dir
+  run_container "$@"
+  print_output_summary
+}
+
+main "$@"

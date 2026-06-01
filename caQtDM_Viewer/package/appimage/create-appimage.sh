@@ -19,6 +19,7 @@ PACKAGE_VERSION="${PACKAGE_VERSION:-}"
 DOWNLOAD_TOOLS="${DOWNLOAD_TOOLS:-1}"
 CAQTDM_APPIMAGE_BSREAD="${CAQTDM_APPIMAGE_BSREAD:-1}"
 JOBS="${JOBS:-$(nproc 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || printf '1')}"
+DESKTOP_ID="io.github.caqtdm.caqtdm"
 
 USE_CHECKOUT=1
 SKIP_BUILD=0
@@ -35,7 +36,7 @@ Options:
   --no-checkout        Build from the current repository checkout
   --source DIR         Build from an existing caQtDM source tree
   --branch REF         Git branch or tag to clone (default: Development)
-  --repository URL     Git repository to clone (default: $REPOSITORY)
+  --repo URL           Git repository to clone (default: $REPOSITORY)
   --qt-major N         Qt major version for layout/wrappers (default: 6)
   --qmake PATH         qmake executable (default: qmake6)
   --skip-build         Reuse binaries from BINARY_DIR or the default build dir
@@ -265,6 +266,8 @@ copy_runtime_library() {
 }
 
 copy_blacklisted_runtime_libraries() {
+  local library
+
   if compgen -G "$APPDIR/usr/lib/libhogweed.so*" >/dev/null || \
      compgen -G "$APPDIR/usr/lib/libgnutls.so*" >/dev/null; then
     copy_runtime_library libgmp.so.10
@@ -275,22 +278,28 @@ copy_blacklisted_runtime_libraries() {
   # legacy libGL.so.1 stub).  RHEL 9 and other enterprise distros ship
   # libGL.so.1 but not libOpenGL.so.0, so bundle the whole GLvnd stack so the
   # AppImage is self-contained on those targets.
-  copy_runtime_library libOpenGL.so.0
-  copy_runtime_library libGLX.so.0
-  copy_runtime_library libGLdispatch.so.0
-  copy_runtime_library libEGL.so.1
+  for library in \
+    libOpenGL.so.0 \
+    libGLX.so.0 \
+    libGLdispatch.so.0 \
+    libEGL.so.1; do
+    copy_runtime_library "$library"
+  done
 
   # linuxdeploy also treats parts of the X11/font stack as system libraries, but
   # minimal Rocky/RHEL installations do not necessarily include them.
-  copy_runtime_library libX11.so.6
-  copy_runtime_library libX11-xcb.so.1
-  copy_runtime_library libxcb.so.1
-  copy_runtime_library libXdmcp.so.6
-  copy_runtime_library libSM.so.6
-  copy_runtime_library libICE.so.6
-  copy_runtime_library libfontconfig.so.1
-  copy_runtime_library libfreetype.so.6
-  copy_runtime_library libexpat.so.1
+  for library in \
+    libX11.so.6 \
+    libX11-xcb.so.1 \
+    libxcb.so.1 \
+    libXdmcp.so.6 \
+    libSM.so.6 \
+    libICE.so.6 \
+    libfontconfig.so.1 \
+    libfreetype.so.6 \
+    libexpat.so.1; do
+    copy_runtime_library "$library"
+  done
 }
 
 copy_qt_plugin_subdir() {
@@ -886,14 +895,11 @@ build_caqtdm() {
   [ -x "$BINARY_DIR/caQtDM" ] || die "build finished but $BINARY_DIR/caQtDM was not created"
 }
 
-write_launcher() {
+append_launcher_environment() {
   local path="$1"
   local target_qt_dir="$2"
 
-  cat > "$path" <<EOF
-#!/bin/sh
-set -eu
-
+  cat >> "$path" <<EOF
 if [ -z "\${APPDIR:-}" ]; then
   APPDIR="\$(cd "\$(dirname "\$(readlink -f "\$0")")/../.." && pwd)"
 fi
@@ -909,13 +915,42 @@ if [ -n "\$CAQTDM_PYTHON_DIR" ]; then
 fi
 unset AT_SPI_BUS_ADDRESS
 unset QT_LINUX_ACCESSIBILITY_ALWAYS_ON
+EOF
+}
 
-if [ "\${1:-}" = "--designer" ]; then
+write_launcher() {
+  local path="$1"
+  local target_qt_dir="$2"
+
+  cat > "$path" <<'EOF'
+#!/bin/sh
+set -eu
+EOF
+  append_launcher_environment "$path" "$target_qt_dir"
+  cat >> "$path" <<'EOF'
+
+if [ "${1:-}" = "--designer" ]; then
   shift
-  exec "\$APPDIR/usr/bin/caqtdm-designer" "\$@"
+  exec "$APPDIR/usr/bin/caqtdm-designer" "$@"
 fi
 
-exec "\$CAQTDM_LIB_DIR/caQtDM" "\$@"
+exec "$CAQTDM_LIB_DIR/caQtDM" "$@"
+EOF
+  chmod +x "$path"
+}
+
+write_designer_launcher() {
+  local path="$1"
+  local target_qt_dir="$2"
+
+  cat > "$path" <<'EOF'
+#!/bin/sh
+set -eu
+EOF
+  append_launcher_environment "$path" "$target_qt_dir"
+  cat >> "$path" <<'EOF'
+
+exec "$APPDIR/usr/bin/qt-designer" "$@"
 EOF
   chmod +x "$path"
 }
@@ -926,6 +961,32 @@ install_designer_binary() {
 
   msg "Installing Qt Designer from $designer"
   install -Dm755 "$designer" "$APPDIR/usr/bin/qt-designer"
+}
+
+install_designer_plugin_links() {
+  local qt_dir="$1"
+  local app_lib_dir="$2"
+  local plugin
+
+  [ -d "$app_lib_dir/designer" ] || return 0
+
+  for plugin in "$app_lib_dir"/designer/libqtcontrols_*.so; do
+    [ -e "$plugin" ] || continue
+    ln -sf "../../../caqtdm/$qt_dir/designer/$(basename "$plugin")" \
+      "$APPDIR/usr/lib/$qt_dir/plugins/designer/$(basename "$plugin")"
+  done
+}
+
+install_appdir_documentation() {
+  local doc_dir="$SOURCE_DIR/caQtDM_QtControls/doc"
+  local doc
+
+  [ -d "$doc_dir" ] || return 0
+
+  for doc in "$doc_dir"/*.qch "$doc_dir"/*.html "$doc_dir"/*.css; do
+    [ -e "$doc" ] || continue
+    cp -a "$doc" "$APPDIR/usr/share/doc/caqtdm/"
+  done
 }
 
 create_appdir() {
@@ -945,24 +1006,8 @@ create_appdir() {
   install_python_runtime
   filter_appdir_controlsystem_plugins "$app_lib_dir"
   patch_appdir_rpaths
-
-  if [ -d "$app_lib_dir/designer" ]; then
-    local plugin
-    for plugin in "$app_lib_dir"/designer/libqtcontrols_*.so; do
-      [ -e "$plugin" ] || continue
-      ln -sf "../../../caqtdm/$qt_dir/designer/$(basename "$plugin")" \
-        "$APPDIR/usr/lib/$qt_dir/plugins/designer/$(basename "$plugin")"
-    done
-  fi
-
-  local doc_dir="$SOURCE_DIR/caQtDM_QtControls/doc"
-  if [ -d "$doc_dir" ]; then
-    local doc
-    for doc in "$doc_dir"/*.qch "$doc_dir"/*.html "$doc_dir"/*.css; do
-      [ -e "$doc" ] || continue
-      cp -a "$doc" "$APPDIR/usr/share/doc/caqtdm/"
-    done
-  fi
+  install_designer_plugin_links "$qt_dir" "$app_lib_dir"
+  install_appdir_documentation
 
   if [ "$APPDIR_ONLY" -eq 1 ]; then
     finalize_appdir
@@ -984,29 +1029,7 @@ exec "$DIR/caQtDM" -style Fusion "$@"
 EOF
   chmod +x "$APPDIR/usr/bin/caqtdm"
 
-  cat > "$APPDIR/usr/bin/caqtdm-designer" <<EOF
-#!/bin/sh
-set -eu
-
-if [ -z "\${APPDIR:-}" ]; then
-  APPDIR="\$(cd "\$(dirname "\$(readlink -f "\$0")")/../.." && pwd)"
-fi
-
-CAQTDM_LIB_DIR="\$APPDIR/usr/lib/caqtdm/$qt_dir"
-CAQTDM_PYTHON_DIR="\$(find "\$APPDIR/usr/lib" -maxdepth 1 -type d -name 'python3*' | sort | tail -n 1 || true)"
-export LD_LIBRARY_PATH="\$CAQTDM_LIB_DIR:\$CAQTDM_LIB_DIR/controlsystems:\$CAQTDM_LIB_DIR/designer:\$APPDIR/usr/lib\${LD_LIBRARY_PATH:+:\$LD_LIBRARY_PATH}"
-export QT_PLUGIN_PATH="\$APPDIR/usr/plugins:\$APPDIR/usr/lib/$qt_dir/plugins:\$CAQTDM_LIB_DIR\${QT_PLUGIN_PATH:+:\$QT_PLUGIN_PATH}"
-export QT_QPA_PLATFORM_PLUGIN_PATH="\$APPDIR/usr/plugins/platforms"
-if [ -n "\$CAQTDM_PYTHON_DIR" ]; then
-  export PYTHONHOME="\$APPDIR/usr"
-  export PYTHONPATH="\$CAQTDM_PYTHON_DIR:\$CAQTDM_PYTHON_DIR/lib-dynload\${PYTHONPATH:+:\$PYTHONPATH}"
-fi
-unset AT_SPI_BUS_ADDRESS
-unset QT_LINUX_ACCESSIBILITY_ALWAYS_ON
-
-exec "\$APPDIR/usr/bin/qt-designer" "\$@"
-EOF
-  chmod +x "$APPDIR/usr/bin/caqtdm-designer"
+  write_designer_launcher "$APPDIR/usr/bin/caqtdm-designer" "$qt_dir"
 
   if [ -x "$app_lib_dir/adl2ui" ]; then
     ln -sf "../lib/caqtdm/$qt_dir/adl2ui" "$APPDIR/usr/bin/adl2ui"
@@ -1019,31 +1042,30 @@ EOF
 }
 
 install_appdir_metadata() {
-  local metadata_dir="$SOURCE_DIR/caQtDM_Viewer/package/appimage"
-  local desktop_id="io.github.caqtdm.caqtdm"
+  local metadata_dir="$SCRIPT_DIR"
 
   install -dm755 \
     "$APPDIR/usr/share/applications" \
     "$APPDIR/usr/share/metainfo"
 
-  if [ -f "$metadata_dir/$desktop_id.desktop" ]; then
-    install -Dm644 "$metadata_dir/$desktop_id.desktop" "$APPDIR/usr/share/applications/$desktop_id.desktop"
+  if [ -f "$metadata_dir/$DESKTOP_ID.desktop" ]; then
+    install -Dm644 "$metadata_dir/$DESKTOP_ID.desktop" "$APPDIR/usr/share/applications/$DESKTOP_ID.desktop"
   else
-    cat > "$APPDIR/usr/share/applications/$desktop_id.desktop" <<EOF
+    cat > "$APPDIR/usr/share/applications/$DESKTOP_ID.desktop" <<EOF
 [Desktop Entry]
 Version=1.0
 Type=Application
 Name=caQtDM
 Comment=caQtDM is a popular Epics framework for developing panels
 Categories=Science;DataVisualization;
-Icon=$desktop_id
+Icon=$DESKTOP_ID
 Exec=caQtDM
 Terminal=false
 EOF
   fi
 
-  if [ -f "$metadata_dir/$desktop_id.metainfo.xml" ]; then
-    install -Dm644 "$metadata_dir/$desktop_id.metainfo.xml" "$APPDIR/usr/share/metainfo/$desktop_id.metainfo.xml"
+  if [ -f "$metadata_dir/$DESKTOP_ID.metainfo.xml" ]; then
+    install -Dm644 "$metadata_dir/$DESKTOP_ID.metainfo.xml" "$APPDIR/usr/share/metainfo/$DESKTOP_ID.appdata.xml"
   fi
 
   if [ -d "$metadata_dir/icons" ]; then
@@ -1051,15 +1073,12 @@ EOF
     cp -a "$metadata_dir/icons/." "$APPDIR/usr/share/icons/hicolor/"
   fi
 
-  local root_icon="$metadata_dir/icons/256x256/apps/$desktop_id.png"
-  if [ ! -f "$root_icon" ]; then
-    root_icon="$SOURCE_DIR/caQtDM_Viewer/src/caqtdm762x.png"
-  fi
-  [ -f "$root_icon" ] || die "no caQtDM icon found for AppImage metadata"
+  local root_icon="$metadata_dir/icons/256x256/apps/$DESKTOP_ID.png"
+  [ -f "$root_icon" ] || die "no AppImage icon found: $root_icon"
 
-  rm -f "$APPDIR/$desktop_id.desktop" "$APPDIR/$desktop_id.png"
-  ln -sf "usr/share/applications/$desktop_id.desktop" "$APPDIR/$desktop_id.desktop"
-  cp "$root_icon" "$APPDIR/$desktop_id.png"
+  rm -f "$APPDIR/$DESKTOP_ID.desktop" "$APPDIR/$DESKTOP_ID.png"
+  ln -sf "usr/share/applications/$DESKTOP_ID.desktop" "$APPDIR/$DESKTOP_ID.desktop"
+  cp "$root_icon" "$APPDIR/$DESKTOP_ID.png"
 }
 
 finalize_appdir() {
@@ -1089,6 +1108,8 @@ make_appimage() {
 
   local qt_dir="qt${QT_MAJOR}"
   local app_lib_dir="$APPDIR/usr/lib/caqtdm/$qt_dir"
+  local desktop_file="$APPDIR/usr/share/applications/$DESKTOP_ID.desktop"
+  local root_icon_file="$APPDIR/$DESKTOP_ID.png"
   local qt_plugin_dir
   local qmake_wrapper
   local output_file
@@ -1099,6 +1120,8 @@ make_appimage() {
 
   local deploy_args=(
     --appdir "$APPDIR"
+    --desktop-file "$desktop_file"
+    --icon-file "$root_icon_file"
     --executable "$app_lib_dir/caQtDM"
     --executable "$APPDIR/usr/bin/qt-designer"
     --plugin qt
@@ -1122,6 +1145,8 @@ make_appimage() {
     export LD_LIBRARY_PATH="$app_lib_dir:$app_lib_dir/controlsystems:$app_lib_dir/designer:${EPICSLIB:-}:${LD_LIBRARY_PATH:-}"
     setup_appimage_strip_env
     install_appdir_metadata
+    [ -f "$desktop_file" ] || die "AppImage desktop file was not created: $desktop_file"
+    [ -f "$root_icon_file" ] || die "AppImage icon file was not created: $root_icon_file"
     "$linuxdeploy" "${deploy_args[@]}"
     copy_blacklisted_runtime_libraries
     [ -z "${CAQTDM_OPCUA:-}" ] || copy_qt_plugin_subdir "$qt_plugin_dir" opcua
@@ -1149,8 +1174,8 @@ parse_args() {
         BRANCH_OR_TAG="$2"
         shift
         ;;
-      --repository)
-        [ "$#" -ge 2 ] || die "--repository requires a URL"
+      --repo|--repository)
+        [ "$#" -ge 2 ] || die "$1 requires a URL"
         REPOSITORY="$2"
         shift
         ;;

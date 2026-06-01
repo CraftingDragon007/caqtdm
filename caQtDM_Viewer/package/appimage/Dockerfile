@@ -2,7 +2,7 @@
 #
 # The baseline is Rocky Linux 8 / glibc 2.28 so the resulting AppImage runs on
 # RHEL, Rocky, and AlmaLinux 8 or newer. In addition to RHEL based distros it
-# will also almost certainly run on any distro with glic 2.28 or newer.
+# will also almost certainly run on any distro with glibc 2.28 or newer.
 # Qt is built from source and installed into /opt/qt so the AppImage
 # does not depend on distribution Qt packages.
 #
@@ -15,6 +15,8 @@ ARG GCC_TOOLSET=10
 ARG OPENSSL_VERSION=3.5.1
 ARG QT_VERSION=6.11.1
 ARG QWT_VERSION=6.3.0
+ARG QWT_REPOSITORY=https://git.code.sf.net/p/qwt/git
+ARG QWT_REF=v6.3.0
 ARG EPICS_VERSION_TAG=R7.0.10
 
 ENV OPENSSL_PREFIX=/opt/openssl-${OPENSSL_VERSION}
@@ -32,6 +34,7 @@ ENV OPENSSL_ROOT_DIR=${OPENSSL_PREFIX}
 RUN dnf -y install dnf-plugins-core epel-release \
     && (dnf config-manager --set-enabled powertools || dnf config-manager --set-enabled PowerTools || true) \
     && dnf -y --setopt=install_weak_deps=False install \
+      appstream \
       bison \
       bzip2 \
       ca-certificates \
@@ -121,7 +124,7 @@ RUN set -eux; \
     ldconfig; \
     rm -rf "/tmp/openssl-${OPENSSL_VERSION}" "/tmp/openssl-${OPENSSL_VERSION}.tar.gz"
 
-# Qt 6.11.1 from source. The selected modules cover caQtDM's Qt requirements:
+# Qt from source. The selected modules cover caQtDM's Qt requirements:
 # Widgets, Designer/UiTools, SVG, SerialPort, SerialBus, Positioning, OPC UA,
 # Qt5Compat/QTextCodec, OpenGL, PrintSupport, XCB platform and image plugins.
 RUN set -eux; \
@@ -167,8 +170,6 @@ RUN set -eux; \
     rm -rf "/tmp/qt-everywhere-src-${QT_VERSION}" "/tmp/qt-everywhere-src-${QT_VERSION}.tar.xz" /tmp/qt-build
 
 # Qwt 6 built against the cached Qt build.
-ARG QWT_REPOSITORY=https://git.code.sf.net/p/qwt/git
-ARG QWT_REF=v6.3.0
 RUN set -eux; \
     cd /tmp; \
     git clone --depth 1 --single-branch --branch "${QWT_REF}" "${QWT_REPOSITORY}" /tmp/qwt; \
