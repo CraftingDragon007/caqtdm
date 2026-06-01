@@ -188,7 +188,11 @@ bool HmiSharedEventBus::sendEvent(int eventType, const QByteArray& payload) {
     }
 
     quint32 writeIndex = this_header->currentWriteIndex % EVENT_BUFFER_CAPACITY;
-
+    if (!this_eventBuffer) {
+        qCritical() << PREFIX << "this_eventBuffer is a null pointer.";
+        this_writeLockSemaphore.release();
+        return false;
+    }
     EventPayload& event = this_eventBuffer[writeIndex];
     event.eventType = eventType;
     event.senderPid = QCoreApplication::applicationPid();
