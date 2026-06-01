@@ -9,6 +9,7 @@ import { parseLogMarkup, formatDateTime } from './modules/utils/Logger.js';
 (function() {
   const LAST_LAUNCHER_STORAGE_KEY = 'caqtdm.web.lastLauncherChoice';
   const params = new URLSearchParams(window.location.search);
+  const controlPathParam = params.has('control') ? 'control' : (params.has('path') ? 'path' : null);
   let controlPath = params.get('control') || params.get('path') || '30000';
   let noVNCPath = params.get('novnc') || params.get('novncPath') || '30001';
   const macros = params.get('macros') || '';
@@ -25,7 +26,15 @@ import { parseLogMarkup, formatDateTime } from './modules/utils/Logger.js';
     return raw + '.ui';
   }
 
-  controlPath = withDefaultUiExtension(controlPath);
+  const normalizedControlPath = withDefaultUiExtension(controlPath);
+  if (normalizedControlPath !== controlPath) {
+    controlPath = normalizedControlPath;
+    if (controlPathParam) {
+      const url = new URL(window.location.href);
+      url.searchParams.set(controlPathParam, controlPath);
+      window.history.replaceState(window.history.state, '', url.toString());
+    }
+  }
 
   function resolveBasePath() {
     const path = window.location.pathname || '/';
@@ -44,8 +53,7 @@ import { parseLogMarkup, formatDateTime } from './modules/utils/Logger.js';
     const normalized = raw.replace(/\\/g, '/').split('?')[0].split('#')[0];
     const parts = normalized.split('/').filter(Boolean);
     const fileName = parts.length > 0 ? parts[parts.length - 1] : normalized;
-    const decoded = decodeURIComponent(fileName);
-    return decoded.replace(/\.[^.]+$/, '');
+    return decodeURIComponent(fileName);
   }
 
   function updateDocumentTitle(pathValue) {
