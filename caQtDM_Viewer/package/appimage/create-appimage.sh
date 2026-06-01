@@ -29,7 +29,7 @@ usage() {
 Usage: $(basename "$0") [OPTION...]
 
 Build a caQtDM AppImage using the same Qt/EPICS/Qwt environment style as the
-existing DEB/RPM/Arch/Flatpak package definitions.
+existing Linux package definitions.
 
 Options:
   --no-checkout        Build from the current repository checkout
@@ -1019,15 +1019,15 @@ EOF
 }
 
 install_appdir_metadata() {
-  local flatpak_dir="$SOURCE_DIR/caQtDM_Viewer/package/flatpak"
+  local metadata_dir="$SOURCE_DIR/caQtDM_Viewer/package/appimage"
   local desktop_id="io.github.caqtdm.caqtdm"
 
   install -dm755 \
     "$APPDIR/usr/share/applications" \
     "$APPDIR/usr/share/metainfo"
 
-  if [ -f "$flatpak_dir/$desktop_id.desktop" ]; then
-    install -Dm644 "$flatpak_dir/$desktop_id.desktop" "$APPDIR/usr/share/applications/$desktop_id.desktop"
+  if [ -f "$metadata_dir/$desktop_id.desktop" ]; then
+    install -Dm644 "$metadata_dir/$desktop_id.desktop" "$APPDIR/usr/share/applications/$desktop_id.desktop"
   else
     cat > "$APPDIR/usr/share/applications/$desktop_id.desktop" <<EOF
 [Desktop Entry]
@@ -1042,16 +1042,16 @@ Terminal=false
 EOF
   fi
 
-  if [ -f "$flatpak_dir/$desktop_id.metainfo.xml" ]; then
-    install -Dm644 "$flatpak_dir/$desktop_id.metainfo.xml" "$APPDIR/usr/share/metainfo/$desktop_id.metainfo.xml"
+  if [ -f "$metadata_dir/$desktop_id.metainfo.xml" ]; then
+    install -Dm644 "$metadata_dir/$desktop_id.metainfo.xml" "$APPDIR/usr/share/metainfo/$desktop_id.metainfo.xml"
   fi
 
-  if [ -d "$flatpak_dir/icons" ]; then
+  if [ -d "$metadata_dir/icons" ]; then
     install -dm755 "$APPDIR/usr/share/icons/hicolor"
-    cp -a "$flatpak_dir/icons/." "$APPDIR/usr/share/icons/hicolor/"
+    cp -a "$metadata_dir/icons/." "$APPDIR/usr/share/icons/hicolor/"
   fi
 
-  local root_icon="$flatpak_dir/icons/256x256/apps/$desktop_id.png"
+  local root_icon="$metadata_dir/icons/256x256/apps/$desktop_id.png"
   if [ ! -f "$root_icon" ]; then
     root_icon="$SOURCE_DIR/caQtDM_Viewer/src/caqtdm762x.png"
   fi
