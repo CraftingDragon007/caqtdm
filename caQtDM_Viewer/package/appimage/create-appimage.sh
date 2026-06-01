@@ -514,38 +514,6 @@ qt_requires_cxx17() {
   esac
 }
 
-apply_qt6_cxx17_patch() {
-  qt_requires_cxx17 || return 0
-
-  local qtdefs="$SOURCE_DIR/caQtDM_Viewer/qtdefs.pri"
-  [ -f "$qtdefs" ] || return 0
-
-  if grep -Eq 'CONFIG[[:space:]]*\+=[[:space:]]*.*c\+\+17' "$qtdefs"; then
-    return 0
-  fi
-
-  msg "Patching qtdefs.pri to request C++17 for Qt $QT_MAJOR"
-  python3 - "$qtdefs" <<'PY'
-from pathlib import Path
-import sys
-
-path = Path(sys.argv[1])
-text = path.read_text()
-block = "\ncontains(QT_VER_MAJ, 6) {\n    CONFIG += c++17\n}\n"
-marker = "QT_VER_PAT = $$member(QT_VERSION, 2)\n"
-
-if "c++17" in text:
-    raise SystemExit(0)
-
-if marker in text:
-    text = text.replace(marker, marker + block, 1)
-else:
-    text = block.lstrip("\n") + "\n" + text
-
-path.write_text(text)
-PY
-}
-
 detect_python_version() {
   local token value
 
@@ -1259,7 +1227,6 @@ main() {
   check_glibc_baseline
   resolve_qmake
   prepare_source
-  apply_qt6_cxx17_patch
   detect_package_version
   setup_build_env
   build_caqtdm

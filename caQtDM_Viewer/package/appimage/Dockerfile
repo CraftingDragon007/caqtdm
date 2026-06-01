@@ -11,10 +11,10 @@
 
 FROM rockylinux:8
 
-ARG GCC_TOOLSET=10
+ARG GCC_TOOLSET=15
 ARG OPENSSL_VERSION=3.5.1
 ARG QT_VERSION=6.11.1
-ARG QT_BUILD_JOBS=4
+ARG QT_BUILD_JOBS=auto
 
 ENV OPENSSL_PREFIX=/opt/openssl-${OPENSSL_VERSION}
 ENV QT_PREFIX=/opt/qt-${QT_VERSION}
@@ -26,8 +26,8 @@ ENV PKG_CONFIG_PATH=${OPENSSL_PREFIX}/lib64/pkgconfig:${QT_PREFIX}/lib/pkgconfig
 ENV CMAKE_PREFIX_PATH=${OPENSSL_PREFIX}:${QT_PREFIX}
 ENV OPENSSL_ROOT_DIR=${OPENSSL_PREFIX}
 
-# Base repositories and build tools. Qt 6.11 officially supports RHEL 8.10 with
-# GCC 10 toolset, which keeps the glibc baseline at 2.28.
+# Base repositories and build tools. Rocky Linux 8 keeps the glibc baseline at
+# 2.28 while gcc-toolset provides a newer compiler for the bundled Qt build.
 RUN dnf -y install dnf-plugins-core epel-release \
     && (dnf config-manager --set-enabled powertools || dnf config-manager --set-enabled PowerTools || true) \
     && dnf -y --setopt=install_weak_deps=False install \
@@ -152,6 +152,7 @@ RUN set -eux; \
       -DQT_BUILD_TESTS_BY_DEFAULT=OFF \
       -DQT_BUILD_TOOLS_BY_DEFAULT=ON \
       -DQT_INSTALL_CONFIG_INFO_FILES=ON; \
+    if [ "${QT_BUILD_JOBS}" = auto ]; then QT_BUILD_JOBS="$(nproc)"; fi; \
     cmake --build . --parallel "${QT_BUILD_JOBS}"; \
     cmake --install .; \
     test "$(${QT_PREFIX}/bin/qmake6 -query QT_VERSION)" = "${QT_VERSION}"; \

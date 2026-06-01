@@ -18,14 +18,14 @@ on:
 
 env:
   QT_VERSION: 6.11.1
-  QT_BUILD_JOBS: ""
+  QT_BUILD_JOBS: auto
   OPENSSL_VERSION: 3.5.1
   QWT_VERSION: 6.3.0
   QWT_REF: v6.3.0
   QWT_REPOSITORY: https://git.code.sf.net/p/qwt/git
   EPICS_VERSION_TAG: R7.0.10
-  GCC_TOOLSET: "10"
-  DOCKER_IMAGE: caqtdm-appimage-builder:rhel8-qt6.11.1
+  GCC_TOOLSET: "15"
+  DOCKER_IMAGE: caqtdm-appimage-builder:rhel8-gcc15-qt6.11.1
   OUTPUT_DIR: ${{ github.workspace }}/artifacts/appimage
 
 jobs:
@@ -43,11 +43,6 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
-
-      - name: Use runner CPU count for Qt build
-        run: |
-          set -euo pipefail
-          echo "QT_BUILD_JOBS=$(nproc)" >> "$GITHUB_ENV"
 
       - name: Build AppImage Docker image
         uses: docker/build-push-action@v7
