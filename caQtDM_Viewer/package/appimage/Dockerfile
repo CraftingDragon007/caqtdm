@@ -14,6 +14,7 @@ FROM rockylinux:8
 ARG GCC_TOOLSET=10
 ARG OPENSSL_VERSION=3.5.1
 ARG QT_VERSION=6.11.1
+ARG QT_BUILD_JOBS=4
 
 ENV OPENSSL_PREFIX=/opt/openssl-${OPENSSL_VERSION}
 ENV QT_PREFIX=/opt/qt-${QT_VERSION}
@@ -133,6 +134,7 @@ RUN set -eux; \
       -prefix "${QT_PREFIX}" \
       -opensource -confirm-license \
       -release -shared \
+      -no-pch \
       -nomake examples -nomake tests \
       -submodules qtbase,qttools,qtsvg,qtserialport,qtserialbus,qtpositioning,qtopcua,qt5compat,qtimageformats \
       -openssl-linked \
@@ -143,13 +145,14 @@ RUN set -eux; \
       -DOPENSSL_USE_STATIC_LIBS=OFF \
       -DCMAKE_PREFIX_PATH="${OPENSSL_PREFIX}" \
       -DINPUT_open62541=qt \
+      -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON \
       -DFEATURE_open62541_security=ON \
       -DFEATURE_gds=ON \
       -DQT_BUILD_EXAMPLES_BY_DEFAULT=OFF \
       -DQT_BUILD_TESTS_BY_DEFAULT=OFF \
       -DQT_BUILD_TOOLS_BY_DEFAULT=ON \
       -DQT_INSTALL_CONFIG_INFO_FILES=ON; \
-    cmake --build . --parallel "$(nproc)"; \
+    cmake --build . --parallel "${QT_BUILD_JOBS}"; \
     cmake --install .; \
     test "$(${QT_PREFIX}/bin/qmake6 -query QT_VERSION)" = "${QT_VERSION}"; \
     test -x "${QT_PREFIX}/bin/designer"; \

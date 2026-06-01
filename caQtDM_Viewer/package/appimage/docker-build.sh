@@ -18,6 +18,7 @@
 #   DOCKER_NETWORK    Docker network mode (default: host)
 #   OUTPUT_DIR        Where to write the final AppImage (default: script dir)
 #   QT_VERSION        Qt version built into the image (default: 6.11.1)
+#   QT_BUILD_JOBS     Parallel jobs for the Qt source build (default: 4)
 #   OPENSSL_VERSION   OpenSSL version built into the image (default: 3.5.1)
 #   QWT_VERSION       Qwt version built into the image (default: 6.3.0)
 #   QWT_REF           Qwt git tag or branch (default: v$QWT_VERSION)
@@ -31,6 +32,7 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd -- "$SCRIPT_DIR/../../.." && pwd)"
 
 QT_VERSION="${QT_VERSION:-6.11.1}"
+QT_BUILD_JOBS="${QT_BUILD_JOBS:-4}"
 OPENSSL_VERSION="${OPENSSL_VERSION:-3.5.1}"
 QWT_VERSION="${QWT_VERSION:-6.3.0}"
 QWT_REF="${QWT_REF:-v${QWT_VERSION}}"
@@ -77,6 +79,7 @@ Environment overrides:
   DOCKER_NETWORK    Docker network mode (default: $DOCKER_NETWORK)
   OUTPUT_DIR        Where to write the final AppImage (default: $OUTPUT_DIR)
   QT_VERSION        Qt version built into the image (default: $QT_VERSION)
+  QT_BUILD_JOBS     Parallel jobs for the Qt source build (default: $QT_BUILD_JOBS)
   OPENSSL_VERSION   OpenSSL version built into the image (default: $OPENSSL_VERSION)
   QWT_VERSION       Qwt version built into the image (default: $QWT_VERSION)
   QWT_REF           Qwt git tag or branch (default: $QWT_REF)
@@ -115,6 +118,7 @@ build_image() {
   docker build \
     --network "$DOCKER_NETWORK" \
     --build-arg "QT_VERSION=$QT_VERSION" \
+    --build-arg "QT_BUILD_JOBS=$QT_BUILD_JOBS" \
     --build-arg "OPENSSL_VERSION=$OPENSSL_VERSION" \
     --build-arg "QWT_VERSION=$QWT_VERSION" \
     --build-arg "QWT_REF=$QWT_REF" \
