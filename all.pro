@@ -102,5 +102,5 @@ QMAKE_IOS_DEVICE_ARCHS = $$iosArchitectures
 # QMAKE_IOS_DEPLOYMENT_TARGET = $$iosTarget
 
 # Set "Devices" (1=iPhone, 2=iPad, 1,2=Universal)
-QMAKE_IOS_TARGETED_DEVICE_FAMILY = 2
+# QMAKE_IOS_TARGETED_DEVICE_FAMILY = 2
 

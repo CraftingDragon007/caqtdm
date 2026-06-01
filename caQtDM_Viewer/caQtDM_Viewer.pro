@@ -34,7 +34,7 @@ unix:!macx:!ios:!android{
 }
 
 contains(QT_VER_MAJ, 6) {
-    QT     += core gui svg uitools network opengl
+    QT     += core gui svg uitools network opengl xml
     CONFIG += qt warn_on thread widgets
     modbus{
        QT += serialbus

@@ -2508,9 +2508,9 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         QUiLoader loader;
         bool prcFile = false;
 
-        QHBoxLayout *boxLayout = includeWidget->getIncludeboxLayout();//new QHBoxLayout;
-        if (boxLayout) SETMARGIN_QT456(boxLayout,0);
-        if (boxLayout) boxLayout->setSpacing(0);
+        QHBoxLayout *m_boxLayout = includeWidget->getIncludeboxLayout();//new QHBoxLayout;
+        if (m_boxLayout) SETMARGIN_QT456(m_boxLayout,0);
+        if (m_boxLayout) m_boxLayout->setSpacing(0);
         QFrame *frame = includeWidget->getIncludeFrame();//new QFrame();
         // define a layout for adding the includes
         QGridLayout *gridLayout =  includeWidget->getIncludegridLayout();//new QGridLayout;
@@ -2530,8 +2530,8 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         thisPalette.setColor(QPalette::Light, thisLightColor);
         thisPalette.setColor(QPalette::Dark, thisDarkColor);
         thisPalette.setColor(QPalette::Window, thisFrameColor);
-        if (boxLayout) includeWidget->setLayout(boxLayout);
-        if (boxLayout) boxLayout->addWidget(frame);
+        //if (m_boxLayout) includeWidget->setLayout(m_boxLayout);
+        if (m_boxLayout) m_boxLayout->addWidget(frame);
 
         if(gridLayout) frame->setLayout(gridLayout);
 
@@ -2628,6 +2628,8 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
             if(filefunction.lastInfo().length() > 0) messageWindowP->postMsgEvent(QtWarningMsg, (char*) qasc(filefunction.lastInfo()));
             if(filefunction.lastError().length() > 0)  messageWindowP->postMsgEvent(QtCriticalMsg, (char*) qasc(filefunction.lastError()));
         }
+
+        QApplication::processEvents();
 
         searchFile *s = new searchFile(fileName);
         QString fileNameFound = s->findFile();
@@ -2733,7 +2735,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
                                 buffer->seek(0);
 
                                 thisW = loader.load(buffer, this);
-
+                                QApplication::processEvents();
                                 //qDebug() << "iload= " << fileName << buffer->size() << md5Gen.result().toHex();
                                 //qDebug() << thisW->findChildren<QWidget *>();
                                 //foreach(QWidget *w1, thisW->findChildren<QWidget *>()) {
@@ -2949,6 +2951,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
             for (int i = topIncludesWidgetList.count()-1; i >= 0; --i) {
                 if(w1 ==  topIncludesWidgetList.at(i)) {
                     splash->setProgress(splashCounter++);
+                    QApplication::processEvents();
                     break;
                 }
             }
