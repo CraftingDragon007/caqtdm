@@ -29,7 +29,6 @@ env:
   CAQTDM_NORPATH: "1"
   CAQTDM_GPS: "1"
   CAQTDM_MODBUS: "0"
-  CAQTDM_WEB: "0"
   CAQTDM_OPCUA: "0"
 
 jobs:
