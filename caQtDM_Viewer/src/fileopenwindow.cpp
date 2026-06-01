@@ -41,10 +41,6 @@ bool HTTPCONFIGURATOR = false;
 #include "fileFunctions.h"
 #include "loadPlugins.h"
 
-#ifdef MOBILE
-  #include "fingerswipegesture.h"
-#endif
-
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -674,14 +670,6 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
         this->ui.menuHttp->setEnabled(false);
     }
 
-//************************************************************************************************************************************************
-
-#ifdef MOBILE
-    // add fingerswipe gesture
-    QGestureRecognizer* pRecognizer = new FingerSwipeGestureRecognizer();
-    fingerSwipeGestureType = QGestureRecognizer::registerRecognizer(pRecognizer);
-#endif
-
     // application state handler
 #if QT_VERSION > 0x050000
     connect(qApp, SIGNAL(applicationStateChanged(Qt::ApplicationState)), this, SLOT(onApplicationStateChange(Qt::ApplicationState)));
@@ -1103,7 +1091,6 @@ QMainWindow *FileOpenWindow::loadMainWindow(const QPoint &position, const QStrin
     }
 
 #ifdef MOBILE
-    newWindow->grabSwipeGesture(fingerSwipeGestureType);
     newWindow->setAttribute(Qt::WA_ContentsMarginsRespectsSafeArea,false);
 #endif
 

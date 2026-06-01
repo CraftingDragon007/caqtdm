@@ -63,12 +63,32 @@ MessageWindow::MessageWindow(QWidget* parent) : QDockWidget(parent)
     setFeatures(QDockWidget::NoDockWidgetFeatures);
     setWindowTitle(tr(WINDOW_TITLE));
     msgTextEdit.setReadOnly(true);
+#ifdef MOBILE
+    setFocusPolicy(Qt::NoFocus);
+    setContextMenuPolicy(Qt::NoContextMenu);
+    setAttribute(Qt::WA_TransparentForMouseEvents, true);
+    msgTextEdit.setTextInteractionFlags(Qt::NoTextInteraction);
+    msgTextEdit.setContextMenuPolicy(Qt::NoContextMenu);
+    msgTextEdit.setFocusPolicy(Qt::NoFocus);
+    msgTextEdit.setAttribute(Qt::WA_TransparentForMouseEvents, true);
+    if (msgTextEdit.viewport() != Q_NULLPTR) {
+        msgTextEdit.viewport()->setContextMenuPolicy(Qt::NoContextMenu);
+        msgTextEdit.viewport()->setFocusPolicy(Qt::NoFocus);
+        msgTextEdit.viewport()->setAttribute(Qt::WA_TransparentForMouseEvents, true);
+    }
+#endif
     msgTextEdit.document()->setMaximumBlockCount(400);
     setWidget(&msgTextEdit);
     MessageWindow::MsgHandler = this;
     setMinimumSize(600, 150);
-    setWindowFlags(Qt::CustomizeWindowHint | Qt::WindowMinMaxButtonsHint);
+    Qt::WindowFlags flags = Qt::CustomizeWindowHint | Qt::WindowMinMaxButtonsHint;
+#if defined(MOBILE) && QT_VERSION >= QT_VERSION_CHECK(5, 5, 0)
+    flags |= Qt::WindowTransparentForInput;
+#endif
+    setWindowFlags(flags);
+#ifndef MOBILE
     setContextMenuPolicy(Qt::CustomContextMenu);
+#endif
     show();
 
     move(x(), 0);
@@ -247,4 +267,3 @@ MessageEvent::MessageEvent(QString & msg):
 {
         this->msg = msg;
 }
-

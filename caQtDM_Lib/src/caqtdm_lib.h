@@ -65,6 +65,7 @@
 #include <cahmiconfigtransferitem.h>
 #include <hmiapplicationeventfilter.h>
 #include <QClipboard>
+#include <QPointer>
 
 #include <QUiLoader>
 
@@ -91,12 +92,6 @@
 #include "caqtdm_lib_interface.h"
 
 #include <QtControls>
-
-#ifdef MOBILE
-#include <QGestureEvent>
-#include <QTapAndHoldGesture>
-#include "fingerswipegesture.h"
-#endif
 
 #include <QMenuBar>
 
@@ -149,10 +144,6 @@ public:
     // ZHW requested for external integration - allow an external application/object to get the top level ui widget of caQtDM_Lib window
     QWidget* getMyWidget(){ return myWidget; }
     // interface finish (perhaps we need more)
-
-#ifdef MOBILE
-    void grabSwipeGesture(Qt::GestureType fingerSwipeGestureTypeID);
-#endif
 
 #if defined(linux) || defined(__FreeBSD__)
     QString getDefaultPrinterFromSystem() {
@@ -292,7 +283,6 @@ signals:
     void Signal_QLineEdit(const QString&, const QString&);
     void Signal_OpenNewWFile(const QString&, const QString&, const QString&, const QString&);
     void Signal_ContextMenu(QWidget*);
-    void Signal_NextWindow();
     void Signal_IosExit();
     void Signal_ReloadWindow(QWidget*);
     void Signal_ReloadWindowL();
@@ -400,10 +390,16 @@ private:
 
 #ifdef MOBILE
     bool eventFilter(QObject *obj, QEvent *event);
-    bool gestureEvent(QObject *obj, QGestureEvent *event);
-    void tapAndHoldTriggered(QObject *obj, QTapAndHoldGesture* tapAndHold);
-    void fingerswipeTriggered(FingerSwipeGesture *gesture);
-    Qt::GestureType fingerSwipeGestureType;
+    bool handleMobileLongPressEvent(QObject *obj, QEvent *event);
+    void startMobileLongPress(QWidget *target, const QPoint &globalPosition);
+    void cancelMobileLongPress();
+    void triggerMobileLongPress();
+    QPointer<QWidget> mobileTouchTarget;
+    QPointer<QWidget> mobileLongPressTarget;
+    QPoint mobileLongPressGlobalPosition;
+    QPoint mobileLongPressStartGlobalPosition;
+    int mobileLongPressTimerId;
+    bool mobileLongPressTriggered;
 #else
 
     bool eventFilter(QObject *obj, QEvent *event);
@@ -599,5 +595,3 @@ private slots:
 };
 
 #endif // CaQtDM_Lib_H
-
-

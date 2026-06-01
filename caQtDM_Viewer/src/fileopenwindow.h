@@ -257,7 +257,6 @@ protected:
      virtual bool event(QEvent *);
 
      virtual void timerEvent(QTimerEvent *e);
-     Qt::GestureType fingerSwipeGestureType;
      bool eventFilter(QObject *obj, QEvent *event);
 
 signals:

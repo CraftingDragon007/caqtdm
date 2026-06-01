@@ -101,6 +101,8 @@ QSize EPushButton::calculateTextSpace()
 // intercept space key, so that no keyboard spacebar will trigger when button has focus
 bool EPushButton::eventFilter(QObject *obj, QEvent *event)
 {
+    Q_UNUSED(obj);
+
     if(event->type() == QEvent::KeyPress || event->type() == QEvent::KeyRelease) {
         QKeyEvent *me = static_cast<QKeyEvent *>(event);
         if(me->key() == Qt::Key_Space) {
