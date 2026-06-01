@@ -495,7 +495,6 @@ void PVDialog::saveState()
             root["sync"] = QJsonObject{{syncComboBox->currentText(), syncLine->text()}};
         }
         if (B_ts) {
-            ;
             root["ts"] = QJsonObject();
         }
         if (pv.size() > 0) {

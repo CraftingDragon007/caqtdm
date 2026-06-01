@@ -9642,20 +9642,19 @@ bool CaQtDM_Lib::checkJsonString(QString &inputc)
 {
     // test if we have a valid json string
 
-    bool success = false;
     QJsonParseError parseError;
     QJsonDocument document = QJsonDocument::fromJson(inputc.toUtf8(), &parseError);;
 
+    qCDebug(caQtDMLibLog) << "checking" << inputc;
+
     // Did it go wrong?, when yes then get rid of it
     if (parseError.error != QJsonParseError::NoError) {
-        success = false;
         inputc = "{}";
         qCDebug(caQtDMLibLog) << "checkJsonString -- failed to parse:" << inputc << "with error:" << parseError.errorString();
+        return false;
     }
 
-    qCDebug(caQtDMLibLog) << "final2" << inputc;
-
-    return success;
+    return true;
 }
 
 void CaQtDM_Lib::allowResizing(bool allowresize)
