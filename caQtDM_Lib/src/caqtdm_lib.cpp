@@ -50,10 +50,13 @@
 #include <QObject>
 #include <QAbstractButton>
 #include <QContextMenuEvent>
+#include <QGuiApplication>
 #include <QPushButton>
+#include <QScreen>
 #include <QToolBar>
 #include <QTouchEvent>
 #include <QUuid>
+#include <QVector>
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
 #include <QStyleHints>
 #endif
@@ -444,6 +447,11 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
 #ifdef MOBILE
     mobileLongPressTimerId = 0;
     mobileLongPressTriggered = false;
+    mobileTwoFingerFirstId = -1;
+    mobileTwoFingerSecondId = -1;
+    mobileTwoFingerTracking = false;
+    mobileTwoFingerTriggered = false;
+    mobileTwoFingerSuppressUntilRelease = false;
 #endif
 
     // for cainclude, we need when updating internal positions to know about the resize factors
@@ -615,6 +623,9 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
         centralWidget->layout()->setContentsMargins(0,0,0,0);
         setCentralWidget(centralWidget);
 
+#ifdef MOBILE
+        connect(this, SIGNAL(Signal_NextWindow()), parent, SLOT(nextWindow()));
+#endif
     }
 
     // connect all signals of our propagators
@@ -10193,6 +10204,108 @@ bool mobileIsPointerMove(QEvent *event)
             && (event->type() == QEvent::TouchUpdate || event->type() == QEvent::MouseMove);
 }
 
+bool mobileIsTouchEvent(QEvent *event)
+{
+    return event != Q_NULLPTR
+            && (event->type() == QEvent::TouchBegin
+                || event->type() == QEvent::TouchUpdate
+                || event->type() == QEvent::TouchEnd
+                || event->type() == QEvent::TouchCancel);
+}
+
+struct MobileTouchPoint
+{
+    int id;
+    QPoint globalPosition;
+    bool active;
+};
+
+QVector<MobileTouchPoint> mobileTouchPoints(QEvent *event)
+{
+    QVector<MobileTouchPoint> points;
+    if (!mobileIsTouchEvent(event)) {
+        return points;
+    }
+
+    QTouchEvent *touchEvent = static_cast<QTouchEvent *>(event);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    foreach (const QTouchEvent::TouchPoint &point, touchEvent->touchPoints()) {
+        MobileTouchPoint touchPoint;
+        touchPoint.id = point.id();
+        touchPoint.globalPosition = point.screenPos().toPoint();
+        touchPoint.active = point.state() != Qt::TouchPointReleased;
+        points.append(touchPoint);
+    }
+#else
+    foreach (const QEventPoint &point, touchEvent->points()) {
+        MobileTouchPoint touchPoint;
+        touchPoint.id = point.id();
+        touchPoint.globalPosition = point.globalPosition().toPoint();
+        touchPoint.active = point.state() != QEventPoint::State::Released;
+        points.append(touchPoint);
+    }
+#endif
+    return points;
+}
+
+QVector<MobileTouchPoint> mobileActiveTouchPoints(QEvent *event)
+{
+    QVector<MobileTouchPoint> activePoints;
+    const QVector<MobileTouchPoint> points = mobileTouchPoints(event);
+    foreach (const MobileTouchPoint &point, points) {
+        if (point.active) {
+            activePoints.append(point);
+        }
+    }
+    return activePoints;
+}
+
+bool mobileTouchPointById(const QVector<MobileTouchPoint> &points, int id, MobileTouchPoint *result)
+{
+    foreach (const MobileTouchPoint &point, points) {
+        if (point.id == id && point.active) {
+            if (result != Q_NULLPTR) {
+                *result = point;
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
+int mobileTwoFingerHorizontalThreshold()
+{
+    QScreen *screen = QGuiApplication::primaryScreen();
+    return qMax(80, screen != Q_NULLPTR ? screen->size().width() / 4 : 160);
+}
+
+int mobileTwoFingerVerticalThreshold()
+{
+    QScreen *screen = QGuiApplication::primaryScreen();
+    return qMax(100, screen != Q_NULLPTR ? screen->size().height() / 4 : 200);
+}
+
+double mobilePointDistance(const QPoint &first, const QPoint &second)
+{
+    const double dx = first.x() - second.x();
+    const double dy = first.y() - second.y();
+    return sqrt(dx * dx + dy * dy);
+}
+
+bool mobileSameDirection(int first, int second)
+{
+    return (first > 0 && second > 0) || (first < 0 && second < 0);
+}
+
+bool mobileDistanceStable(const QPoint &startFirst, const QPoint &startSecond,
+                          const QPoint &currentFirst, const QPoint &currentSecond)
+{
+    const double startDistance = mobilePointDistance(startFirst, startSecond);
+    const double currentDistance = mobilePointDistance(currentFirst, currentSecond);
+    const double tolerance = qMax(30.0, startDistance * 0.25);
+    return qAbs(currentDistance - startDistance) <= tolerance;
+}
+
 int mobileLongPressInterval()
 {
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
@@ -10427,6 +10540,141 @@ bool mobileRouteButtonEvent(QWidget *window, QWidget *panel, QObject *obj, QEven
 
 }
 
+bool CaQtDM_Lib::handleMobileTwoFingerSwipeEvent(QEvent *event)
+{
+    if (!mobileIsTouchEvent(event)) {
+        return false;
+    }
+
+    if (event->type() == QEvent::TouchCancel) {
+        const bool consume = mobileTwoFingerTracking || mobileTwoFingerSuppressUntilRelease;
+        resetMobileTwoFingerSwipe();
+        return consume;
+    }
+
+    const QVector<MobileTouchPoint> activePoints = mobileActiveTouchPoints(event);
+    if (activePoints.count() < 2) {
+        const bool consume = mobileTwoFingerTracking || mobileTwoFingerSuppressUntilRelease;
+        if (consume) {
+            resetMobileTwoFingerSwipe();
+        }
+        return consume;
+    }
+
+    if (mobileTwoFingerSuppressUntilRelease && !mobileTwoFingerTracking) {
+        return true;
+    }
+
+    MobileTouchPoint firstPoint;
+    MobileTouchPoint secondPoint;
+    if (mobileTwoFingerTracking) {
+        if (!mobileTouchPointById(activePoints, mobileTwoFingerFirstId, &firstPoint)
+                || !mobileTouchPointById(activePoints, mobileTwoFingerSecondId, &secondPoint)) {
+            resetMobileTwoFingerSwipe();
+            return true;
+        }
+    } else {
+        firstPoint = activePoints.at(0);
+        secondPoint = activePoints.at(1);
+
+        const QPoint center((firstPoint.globalPosition.x() + secondPoint.globalPosition.x()) / 2,
+                            (firstPoint.globalPosition.y() + secondPoint.globalPosition.y()) / 2);
+        if (!rect().contains(mapFromGlobal(center))) {
+            return false;
+        }
+
+        startMobileTwoFingerSwipe(firstPoint.id, firstPoint.globalPosition,
+                                  secondPoint.id, secondPoint.globalPosition);
+    }
+
+    return updateMobileTwoFingerSwipe(firstPoint.id, firstPoint.globalPosition,
+                                      secondPoint.id, secondPoint.globalPosition);
+}
+
+void CaQtDM_Lib::startMobileTwoFingerSwipe(int firstId, const QPoint &firstPosition,
+                                           int secondId, const QPoint &secondPosition)
+{
+    cancelMobileLongPress();
+    if (!mobileTouchTarget.isNull()) {
+        mobileDispatchButton(mobileTouchTarget.data(), QEvent::TouchCancel);
+        mobileTouchTarget.clear();
+    }
+
+    mobileTwoFingerFirstId = firstId;
+    mobileTwoFingerSecondId = secondId;
+    mobileTwoFingerStartFirstPosition = firstPosition;
+    mobileTwoFingerStartSecondPosition = secondPosition;
+    mobileTwoFingerCurrentFirstPosition = firstPosition;
+    mobileTwoFingerCurrentSecondPosition = secondPosition;
+    mobileTwoFingerTracking = true;
+    mobileTwoFingerTriggered = false;
+    mobileTwoFingerSuppressUntilRelease = true;
+}
+
+void CaQtDM_Lib::resetMobileTwoFingerSwipe()
+{
+    mobileTwoFingerFirstId = -1;
+    mobileTwoFingerSecondId = -1;
+    mobileTwoFingerStartFirstPosition = QPoint();
+    mobileTwoFingerStartSecondPosition = QPoint();
+    mobileTwoFingerCurrentFirstPosition = QPoint();
+    mobileTwoFingerCurrentSecondPosition = QPoint();
+    mobileTwoFingerTracking = false;
+    mobileTwoFingerTriggered = false;
+    mobileTwoFingerSuppressUntilRelease = false;
+}
+
+bool CaQtDM_Lib::updateMobileTwoFingerSwipe(int firstId, const QPoint &firstPosition,
+                                            int secondId, const QPoint &secondPosition)
+{
+    if (!mobileTwoFingerTracking || firstId != mobileTwoFingerFirstId || secondId != mobileTwoFingerSecondId) {
+        return mobileTwoFingerSuppressUntilRelease;
+    }
+
+    mobileTwoFingerCurrentFirstPosition = firstPosition;
+    mobileTwoFingerCurrentSecondPosition = secondPosition;
+
+    if (mobileTwoFingerTriggered) {
+        return true;
+    }
+
+    const QPoint firstDelta = mobileTwoFingerCurrentFirstPosition - mobileTwoFingerStartFirstPosition;
+    const QPoint secondDelta = mobileTwoFingerCurrentSecondPosition - mobileTwoFingerStartSecondPosition;
+    const int averageDx = (firstDelta.x() + secondDelta.x()) / 2;
+    const int averageDy = (firstDelta.y() + secondDelta.y()) / 2;
+    const int absAverageDx = qAbs(averageDx);
+    const int absAverageDy = qAbs(averageDy);
+
+    if (!mobileDistanceStable(mobileTwoFingerStartFirstPosition, mobileTwoFingerStartSecondPosition,
+                              mobileTwoFingerCurrentFirstPosition, mobileTwoFingerCurrentSecondPosition)) {
+        return true;
+    }
+
+    if (absAverageDx >= mobileTwoFingerHorizontalThreshold()
+            && absAverageDx > absAverageDy * 2
+            && mobileSameDirection(firstDelta.x(), secondDelta.x())
+            && qAbs(firstDelta.y()) < qAbs(firstDelta.x())
+            && qAbs(secondDelta.y()) < qAbs(secondDelta.x())) {
+        mobileTwoFingerTriggered = true;
+        mobileTwoFingerTracking = false;
+        emit Signal_NextWindow();
+        return true;
+    }
+
+    if (absAverageDy >= mobileTwoFingerVerticalThreshold()
+            && absAverageDy > absAverageDx * 2
+            && mobileSameDirection(firstDelta.y(), secondDelta.y())
+            && qAbs(firstDelta.x()) < qAbs(firstDelta.y())
+            && qAbs(secondDelta.x()) < qAbs(secondDelta.y())) {
+        mobileTwoFingerTriggered = true;
+        mobileTwoFingerTracking = false;
+        closeWindow();
+        return true;
+    }
+
+    return true;
+}
+
 bool CaQtDM_Lib::handleMobileLongPressEvent(QObject *obj, QEvent *event)
 {
     if (mobileIsPointerRelease(event) || mobileIsPointerCancel(event)) {
@@ -10526,6 +10774,10 @@ void CaQtDM_Lib::triggerMobileLongPress()
 
 bool CaQtDM_Lib::eventFilter(QObject *obj, QEvent *event)
 {
+    if (handleMobileTwoFingerSwipeEvent(event)) {
+        return true;
+    }
+
     if (handleMobileLongPressEvent(obj, event)) {
         return true;
     }

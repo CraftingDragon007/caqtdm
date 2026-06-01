@@ -283,6 +283,7 @@ signals:
     void Signal_QLineEdit(const QString&, const QString&);
     void Signal_OpenNewWFile(const QString&, const QString&, const QString&, const QString&);
     void Signal_ContextMenu(QWidget*);
+    void Signal_NextWindow();
     void Signal_IosExit();
     void Signal_ReloadWindow(QWidget*);
     void Signal_ReloadWindowL();
@@ -390,11 +391,24 @@ private:
 
 #ifdef MOBILE
     bool eventFilter(QObject *obj, QEvent *event);
+    bool handleMobileTwoFingerSwipeEvent(QEvent *event);
+    void startMobileTwoFingerSwipe(int firstId, const QPoint &firstPosition, int secondId, const QPoint &secondPosition);
+    void resetMobileTwoFingerSwipe();
+    bool updateMobileTwoFingerSwipe(int firstId, const QPoint &firstPosition, int secondId, const QPoint &secondPosition);
     bool handleMobileLongPressEvent(QObject *obj, QEvent *event);
     void startMobileLongPress(QWidget *target, const QPoint &globalPosition);
     void cancelMobileLongPress();
     void triggerMobileLongPress();
     QPointer<QWidget> mobileTouchTarget;
+    QPoint mobileTwoFingerStartFirstPosition;
+    QPoint mobileTwoFingerStartSecondPosition;
+    QPoint mobileTwoFingerCurrentFirstPosition;
+    QPoint mobileTwoFingerCurrentSecondPosition;
+    int mobileTwoFingerFirstId;
+    int mobileTwoFingerSecondId;
+    bool mobileTwoFingerTracking;
+    bool mobileTwoFingerTriggered;
+    bool mobileTwoFingerSuppressUntilRelease;
     QPointer<QWidget> mobileLongPressTarget;
     QPoint mobileLongPressGlobalPosition;
     QPoint mobileLongPressStartGlobalPosition;
