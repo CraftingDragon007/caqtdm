@@ -271,7 +271,7 @@ epics3_plugin {
 
 	}
 
-        macx {
+        macx:!ios {
                 message("epics3_plugin configuration macx")
  		INCLUDEPATH   += $(EPICSINCLUDE)/os/Darwin
                 INCLUDEPATH   += $(EPICSINCLUDE)/compiler/clang
@@ -466,7 +466,7 @@ epics4_plugin {
         }
 
 	
-        macx {
+        macx:!ios {
                 message("epics4_plugin configuration macx")
                 INCLUDEPATH   += $(EPICSINCLUDE)
                 INCLUDEPATH   += $(EPICSINCLUDE)/os/Darwin
@@ -845,7 +845,6 @@ caQtDM_Viewer {
                     LIBS += $$OUT_PWD/../caQtDM_Lib/caQtDM_Plugins/epics3/libepics3_plugin.a
                     LIBS += $$OUT_PWD/../caQtDM_Lib/caQtDM_Plugins/archive/archiveSF/libarchiveSF_plugin.a
                     LIBS += $$OUT_PWD/../caQtDM_Lib/caQtDM_Plugins/environment/libenvironment_plugin.a
-
                     modbus {
                         LIBS += $$OUT_PWD/../caQtDM_Lib/caQtDM_Plugins/modbus/libmodbus_plugin.a
                     }
@@ -878,16 +877,16 @@ caQtDM_Viewer {
                     #QMAKE_BUNDLE_DATA += assets_catalogs
 
                     QMAKE_BUNDLE_DATA += APP_XML_FILES APP-FONTS #APP_ICON APP1_ICON
-                    QMAKE_CFLAGS += -gdwarf-2
-                    QMAKE_CXXFLAGS += -gdwarf-2
+                    #QMAKE_CFLAGS += -gdwarf-2
+                    #QMAKE_CXXFLAGS += -gdwarf-2
                     QMAKE_TARGET_BUNDLE_PREFIX=ch.psi
 
                     QMAKE_BUNDLE_NAME = ch.psi.caQtDM
                     bundle_identifier.name = PRODUCT_BUNDLE_IDENTIFIER
                     bundle_identifier.value = ch.psi.caQtDM
                     QMAKE_MAC_XCODE_SETTINGS += bundle_identifier
-                    target.name=IPHONEOS_DEPLOYMENT_TARGET
-                    target.value = 18.0
+                    #target.name=IPHONEOS_DEPLOYMENT_TARGET
+                    #target.value = 18.0
 
                     QMAKE_MAC_XCODE_SETTINGS += target
                     assetIcon.name = ASSETCATALOG_COMPILER_APPICON_NAME
@@ -917,6 +916,7 @@ caQtDM_Viewer {
                          # build simulator only for 32 bit
                          INCLUDEPATH += $$(QWTHOME)/src
                          QMAKE_LFLAGS += -all_load
+                         QMAKE_APPLE_SIMULATOR_ARCHS="arm64 x86_64"
                     }
                     CONFIG(iphoneos,iphoneos|iphonesimulator): {
                         message("caQtDM_viewer configuration : iphoneos")

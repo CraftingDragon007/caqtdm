@@ -73,7 +73,7 @@
         #include <X11/Xatom.h>
 #endif //CAQTDM_X11
 
-#ifdef MOBILE_ANDROID
+#ifdef MOBILE
 #include <QStyleFactory>
 #endif
 

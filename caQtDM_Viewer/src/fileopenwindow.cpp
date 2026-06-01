@@ -1149,7 +1149,7 @@ QMainWindow *FileOpenWindow::loadMainWindow(const QPoint &position, const QStrin
     mainWindow->setAttribute(Qt::WA_ContentsMarginsRespectsSafeArea,false);
     QRect availscreengeo = qApp->primaryScreen()->availableGeometry();
     //QRect screengeo = QApplication::desktop()->geometry();
-    qCDebug(fileOpenWindowLog) << "IOS screen" << screengeo<< availscreengeo;
+    qCDebug(fileOpenWindowLog) << "IOS screen" << availscreengeo;
     QSize winsize=mainWindow->size();
     winsize.setHeight( winsize.rheight() -availscreengeo.top());
     mainWindow->resize(winsize);
