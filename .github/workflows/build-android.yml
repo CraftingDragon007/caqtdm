@@ -36,6 +36,9 @@ jobs:
   build-qt:
     name: Build Qt Cache
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: write
     steps:
       - name: Restore Qt source cache
         id: cache-qt
@@ -180,6 +183,9 @@ jobs:
     name: Build Android APK
     runs-on: ubuntu-24.04
     needs: build-qt
+    permissions:
+      contents: read
+      actions: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
