@@ -14,10 +14,6 @@ FROM rockylinux:8
 ARG GCC_TOOLSET=10
 ARG OPENSSL_VERSION=3.5.1
 ARG QT_VERSION=6.11.1
-ARG QWT_VERSION=6.3.0
-ARG QWT_REPOSITORY=https://git.code.sf.net/p/qwt/git
-ARG QWT_REF=v6.3.0
-ARG EPICS_VERSION_TAG=R7.0.10
 
 ENV OPENSSL_PREFIX=/opt/openssl-${OPENSSL_VERSION}
 ENV QT_PREFIX=/opt/qt-${QT_VERSION}
@@ -170,6 +166,9 @@ RUN set -eux; \
     rm -rf "/tmp/qt-everywhere-src-${QT_VERSION}" "/tmp/qt-everywhere-src-${QT_VERSION}.tar.xz" /tmp/qt-build
 
 # Qwt 6 built against the cached Qt build.
+ARG QWT_VERSION=6.3.0
+ARG QWT_REPOSITORY=https://git.code.sf.net/p/qwt/git
+ARG QWT_REF=v6.3.0
 RUN set -eux; \
     cd /tmp; \
     git clone --depth 1 --single-branch --branch "${QWT_REF}" "${QWT_REPOSITORY}" /tmp/qwt; \
@@ -193,6 +192,7 @@ ENV EPICS_BASE=/usr/lib/epics
 ENV EPICS_HOST_ARCH=linux-x86_64
 
 # EPICS Base 7.0.10.
+ARG EPICS_VERSION_TAG=R7.0.10
 RUN set -eux; \
     mkdir -p "$(dirname "${EPICS_BASE}")"; \
     git clone --depth 1 --branch "${EPICS_VERSION_TAG}" https://github.com/epics-base/epics-base.git "${EPICS_BASE}"; \
