@@ -20,6 +20,7 @@ env:
   QT_VERSION: 6.11.1
   QT_BUILD_JOBS: auto
   OPENSSL_VERSION: 3.5.1
+  PATCHELF_VERSION: 0.18.0
   QWT_VERSION: 6.3.0
   QWT_REF: v6.3.0
   QWT_REPOSITORY: https://git.code.sf.net/p/qwt/git
@@ -55,6 +56,7 @@ jobs:
             QT_VERSION=${{ env.QT_VERSION }}
             QT_BUILD_JOBS=${{ env.QT_BUILD_JOBS }}
             OPENSSL_VERSION=${{ env.OPENSSL_VERSION }}
+            PATCHELF_VERSION=${{ env.PATCHELF_VERSION }}
             QWT_VERSION=${{ env.QWT_VERSION }}
             QWT_REF=${{ env.QWT_REF }}
             QWT_REPOSITORY=${{ env.QWT_REPOSITORY }}
@@ -62,8 +64,8 @@ jobs:
             GCC_TOOLSET=${{ env.GCC_TOOLSET }}
           cache-from: |
             type=gha,scope=appimage-qt-${{ env.QT_VERSION }}
-            type=gha,scope=appimage-deps-qt-${{ env.QT_VERSION }}-openssl-${{ env.OPENSSL_VERSION }}-qwt-${{ env.QWT_REF }}-epics-${{ env.EPICS_VERSION_TAG }}
-          cache-to: type=gha,mode=max,scope=appimage-deps-qt-${{ env.QT_VERSION }}-openssl-${{ env.OPENSSL_VERSION }}-qwt-${{ env.QWT_REF }}-epics-${{ env.EPICS_VERSION_TAG }}
+            type=gha,scope=appimage-deps-qt-${{ env.QT_VERSION }}-openssl-${{ env.OPENSSL_VERSION }}-patchelf-${{ env.PATCHELF_VERSION }}-qwt-${{ env.QWT_REF }}-epics-${{ env.EPICS_VERSION_TAG }}
+          cache-to: type=gha,mode=max,scope=appimage-deps-qt-${{ env.QT_VERSION }}-openssl-${{ env.OPENSSL_VERSION }}-patchelf-${{ env.PATCHELF_VERSION }}-qwt-${{ env.QWT_REF }}-epics-${{ env.EPICS_VERSION_TAG }}
 
       - name: Build AppImage from current checkout
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.repository == '' }}

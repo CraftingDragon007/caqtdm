@@ -307,39 +307,12 @@ copy_qt_plugin_subdir() {
   local plugin_subdir="$2"
   local source_dir="$source_plugin_dir/$plugin_subdir"
   local dest_dir="$APPDIR/usr/plugins/$plugin_subdir"
-  local file
 
   [ -d "$source_dir" ] || return 0
 
   msg "Copying Qt plugin directory not deployed by linuxdeploy: $plugin_subdir"
   mkdir -p "$dest_dir"
   cp -a "$source_dir/." "$dest_dir/"
-
-  while IFS= read -r -d '' file; do
-    is_patchable_elf "$file" || continue
-    patchelf --set-rpath '$ORIGIN/../../lib:$ORIGIN' "$file"
-  done < <(find "$dest_dir" -type f -print0)
-}
-
-patch_appdir_rpaths() {
-  local qt_dir="qt${QT_MAJOR}"
-  local app_lib_dir="$APPDIR/usr/lib/caqtdm/$qt_dir"
-  local top_rpath='$ORIGIN:$ORIGIN/controlsystems:$ORIGIN/designer:$ORIGIN/../../..'
-  local plugin_rpath='$ORIGIN:$ORIGIN/..:$ORIGIN/../../..'
-  local file
-
-  require_command patchelf
-
-  while IFS= read -r -d '' file; do
-    is_patchable_elf "$file" || continue
-    patchelf --set-rpath "$top_rpath" "$file"
-  done < <(find "$app_lib_dir" -maxdepth 1 -type f -print0)
-
-  for file in "$app_lib_dir"/controlsystems/*.so "$app_lib_dir"/designer/*.so; do
-    [ -e "$file" ] || continue
-    is_patchable_elf "$file" || continue
-    patchelf --set-rpath "$plugin_rpath" "$file"
-  done
 }
 
 setup_appimage_strip_env() {
@@ -973,7 +946,6 @@ create_appdir() {
   install_designer_binary
   install_python_runtime
   filter_appdir_controlsystem_plugins "$app_lib_dir"
-  patch_appdir_rpaths
   install_designer_plugin_links "$qt_dir" "$app_lib_dir"
   install_appdir_documentation
 

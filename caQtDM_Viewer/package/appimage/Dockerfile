@@ -13,6 +13,7 @@ FROM rockylinux:8
 
 ARG GCC_TOOLSET=15
 ARG OPENSSL_VERSION=3.5.1
+ARG PATCHELF_VERSION=0.18.0
 ARG QT_VERSION=6.11.1
 ARG QT_BUILD_JOBS=auto
 
@@ -49,7 +50,6 @@ RUN dnf -y install dnf-plugins-core epel-release \
       gperf \
       make \
       ninja-build \
-      patchelf \
       perl \
       pkgconf-pkg-config \
       python3 \
@@ -65,6 +65,20 @@ RUN dnf -y install dnf-plugins-core epel-release \
     && python3 -m pip install --no-cache-dir --upgrade pip \
     && python3 -m pip install --no-cache-dir jinja2 lxml six \
     && dnf clean all
+
+# Rocky 8's patchelf is too old for GCC 15-linked objects and can corrupt
+# DT_INIT when changing RPATHs. linuxdeploy uses patchelf internally, so install
+# a current upstream version before packaging anything.
+RUN set -eux; \
+    cd /tmp; \
+    wget -q "https://github.com/NixOS/patchelf/releases/download/${PATCHELF_VERSION}/patchelf-${PATCHELF_VERSION}.tar.gz"; \
+    tar -xzf "patchelf-${PATCHELF_VERSION}.tar.gz"; \
+    cd "patchelf-${PATCHELF_VERSION}"; \
+    ./configure --prefix=/usr/local; \
+    make -j"$(nproc)"; \
+    make install; \
+    test "$(patchelf --version)" = "patchelf ${PATCHELF_VERSION}"; \
+    rm -rf "/tmp/patchelf-${PATCHELF_VERSION}" "/tmp/patchelf-${PATCHELF_VERSION}.tar.gz"
 
 # Development headers required by QtBase platform plugins, QtSvg, QtPositioning,
 # QtSerialBus, QtOpcUa, and the caQtDM build.

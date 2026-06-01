@@ -20,6 +20,7 @@
 #   QT_VERSION        Qt version built into the image (default: 6.11.1)
 #   QT_BUILD_JOBS     Parallel jobs for the Qt source build (default: auto)
 #   OPENSSL_VERSION   OpenSSL version built into the image (default: 3.5.1)
+#   PATCHELF_VERSION  patchelf version built into the image (default: 0.18.0)
 #   QWT_VERSION       Qwt version built into the image (default: 6.3.0)
 #   QWT_REF           Qwt git tag or branch (default: v$QWT_VERSION)
 #   QWT_REPOSITORY    Qwt git repository URL (default: official SourceForge git)
@@ -34,6 +35,7 @@ REPO_ROOT="$(cd -- "$SCRIPT_DIR/../../.." && pwd)"
 QT_VERSION="${QT_VERSION:-6.11.1}"
 QT_BUILD_JOBS="${QT_BUILD_JOBS:-auto}"
 OPENSSL_VERSION="${OPENSSL_VERSION:-3.5.1}"
+PATCHELF_VERSION="${PATCHELF_VERSION:-0.18.0}"
 QWT_VERSION="${QWT_VERSION:-6.3.0}"
 QWT_REF="${QWT_REF:-v${QWT_VERSION}}"
 QWT_REPOSITORY="${QWT_REPOSITORY:-https://git.code.sf.net/p/qwt/git}"
@@ -81,6 +83,7 @@ Environment overrides:
   QT_VERSION        Qt version built into the image (default: $QT_VERSION)
   QT_BUILD_JOBS     Parallel jobs for the Qt source build (default: $QT_BUILD_JOBS)
   OPENSSL_VERSION   OpenSSL version built into the image (default: $OPENSSL_VERSION)
+  PATCHELF_VERSION  patchelf version built into the image (default: $PATCHELF_VERSION)
   QWT_VERSION       Qwt version built into the image (default: $QWT_VERSION)
   QWT_REF           Qwt git tag or branch (default: $QWT_REF)
   QWT_REPOSITORY    Qwt git repository URL (default: $QWT_REPOSITORY)
@@ -120,6 +123,7 @@ build_image() {
     --build-arg "QT_VERSION=$QT_VERSION" \
     --build-arg "QT_BUILD_JOBS=$QT_BUILD_JOBS" \
     --build-arg "OPENSSL_VERSION=$OPENSSL_VERSION" \
+    --build-arg "PATCHELF_VERSION=$PATCHELF_VERSION" \
     --build-arg "QWT_VERSION=$QWT_VERSION" \
     --build-arg "QWT_REF=$QWT_REF" \
     --build-arg "QWT_REPOSITORY=$QWT_REPOSITORY" \
