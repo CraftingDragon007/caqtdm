@@ -83,7 +83,7 @@ caQtDM_Plugins.depends = caQtDM_Lib
 }
 
 caQtDM_Viewer.depends = caQtDM_QtControls caQtDM_Lib qtcontrols_controllers qtcontrols_graphics qtcontrols_utilities qtcontrols_monitors caQtDM_Plugins
-unitTests.depends = caQtDM_Viewer
+unitTests.depends = caQtDM_Viewer caQtDM_QtControls
 caQtDM_Lib.depends = caQtDM_QtControls
 
 caQtDM_QtControls.depends += caQtDM_Parsers
