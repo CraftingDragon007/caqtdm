@@ -96,8 +96,10 @@ PVDialog::PVDialog(QWidget *tic, QWidget *parent) : QDialog(parent)
     else if (caToggleButton *w = qobject_cast<caToggleButton*>(tic)) PV = w->getPV();
     else if (caSpinbox *w = qobject_cast<caSpinbox*>(tic)) PV = w->getPV();
     else if (caByteController *w = qobject_cast<caByteController*>(tic)) PV = w->getPV();
-
-    else return;
+    else {
+        entry = Q_NULLPTR;
+        return;
+    }
 
     entry = tic;
 
