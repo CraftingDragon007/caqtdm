@@ -26,6 +26,7 @@ INCLUDEPATH += ../../../caQtDM_QtControls/src \
     $$(QWTINCLUDE)
 
 LIBS += \
-    -L../../../caQtDM_Binaries_64Bit \
-    -L../../../caQtDM_Binaries \
+    -L$$(CAQTDM_COLLECT) \
     -lqtcontrols
+
+LIBS += -Wl,-rpath,$$(CAQTDM_COLLECT)

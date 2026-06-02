@@ -36,7 +36,7 @@ void TestPVDialog::cleanup()
 void TestPVDialog::test1() {
     PVDialog dialog(Q_NULLPTR, Q_NULLPTR);
     qInfo() << dialog.sizeHint();
-    qInfo() << (int)dialog.entry;
+    qInfo() << (long long)dialog.entry;
     dialog.print_out(L"test");
     dialog.saveState();
 }
