@@ -24,13 +24,13 @@ HEADERS += \
 
 # --- Tested classes below ---
 
-SOURCES +=\
+SOURCES += \
     ../../../caQtDM_Viewer/src/logging/consoleloghandler.cpp \
     ../../../caQtDM_Viewer/src/logging/fileloghandler.cpp \
     ../../../caQtDM_Viewer/src/logging/generalloghandler.cpp \
     ../../../caQtDM_Viewer/src/logging/logstashloghandler.cpp
 
-HEADERS +=\
+HEADERS += \
     ../../../caQtDM_Viewer/src/logging/abstractloghandler.h \
     ../../../caQtDM_Viewer/src/logging/consoleloghandler.h \
     ../../../caQtDM_Viewer/src/logging/fileloghandler.h \
