@@ -50,7 +50,9 @@ SUBDIRS += qtcontrols_controllers qtcontrols_graphics qtcontrols_monitors qtcont
 SUBDIRS += caQtDM_Plugins caQtDM_Parsers
 
 caqtdm_with_tests {
-  SUBDIRS +=  caQtDM_Tests/unitTests
+  SUBDIRS += unitTests
+  unitTests.file = caQtDM_Tests/unitTests/unitTests.pro
+  unitTests.depends = caQtDM_Viewer caQtDM_QtControls
 }
 
 qtcontrols_controllers.file = caQtDM_QtControls/plugins/qtcontrols_controllers.pro 
@@ -83,7 +85,6 @@ caQtDM_Plugins.depends = caQtDM_Lib
 }
 
 caQtDM_Viewer.depends = caQtDM_QtControls caQtDM_Lib qtcontrols_controllers qtcontrols_graphics qtcontrols_utilities qtcontrols_monitors caQtDM_Plugins
-unitTests.depends = caQtDM_Viewer caQtDM_QtControls
 caQtDM_Lib.depends = caQtDM_QtControls
 
 caQtDM_QtControls.depends += caQtDM_Parsers
