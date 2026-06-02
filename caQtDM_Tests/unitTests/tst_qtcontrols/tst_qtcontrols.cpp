@@ -5,6 +5,8 @@
 
 int main(int argc, char **argv)
 {
+    qputenv("QT_QPA_PLATFORM", QByteArrayLiteral("offscreen"));
+
     QApplication app(argc, argv);
     QApplication::setOrganizationName("Paul Scherrer Institut");
     QApplication::setApplicationName("caQtDM-UnitTests-QtControls");
