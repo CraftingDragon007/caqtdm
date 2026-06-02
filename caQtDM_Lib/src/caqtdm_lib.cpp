@@ -372,6 +372,7 @@ bool fixFileListRelative(const QString &cainclude_path, QString *filelist, bool 
 }
 
 Q_LOGGING_CATEGORY(caQtDMLibLog, "caqtdm.lib.lib")
+Q_LOGGING_CATEGORY(fileIOLog, "caqtdm.lib.fileio")
 Q_LOGGING_CATEGORY(caHMILog, "caqtdm.lib.cahmi")
 Q_LOGGING_CATEGORY(caRelatedDisplayLog, "caqtdm.widgets.carelateddislay")
 Q_LOGGING_CATEGORY(caShellCommandLog, "caqtdm.widgets.cashellcommand")
@@ -498,7 +499,7 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
         myWidget = parentAS;
     }
 
-    qCDebug(caQtDMLibLog) << "open file" << filename << "with macro" << macro;
+    qCDebug(fileIOLog) << "open file" << filename << "with macro" << macro;
     setAttribute(Qt::WA_DeleteOnClose);
 #ifdef MOBILE
     setAttribute(Qt::WA_AcceptTouchEvents, true);
@@ -546,7 +547,7 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
 
                     myWidget = loader.load(buffer, this);
                     delete buffer;
-                    qCDebug(caQtDMLibLog) << "load= " << filename;
+                    qCDebug(fileIOLog) << "load= " << filename;
                 }
             }
             if (!myWidget) {
@@ -605,7 +606,7 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
             delete otherFile;
 #endif
         } else {
-            qCCritical(caQtDMLibLog) << "caQtDM -- internal error with fileName= " << filename;
+            qCCritical(fileIOLog) << "caQtDM -- internal error with fileName= " << filename;
             this->deleteLater();
             return;
         }
@@ -816,21 +817,21 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
         splash->deleteLater();
     }
     // reapply a globally loaded user stylesheet, cainlude seems to disable it
-    qCInfo(caQtDMLibLog) << "caQtDM -- user_defined_stylesheet:" << qApp->property("user_defined_stylesheet").toString();
+    qCInfo(fileIOLog) << "caQtDM -- user_defined_stylesheet:" << qApp->property("user_defined_stylesheet").toString();
     if (qApp->property("user_defined_stylesheet").isValid() && (!qApp->property("user_defined_stylesheet").toString().isEmpty())){
         QString printdata=qApp->styleSheet();
         QString stylereload = (QString)  qgetenv("CAQTDM_STYLESHEET_RELOAD");
         if (stylereload.contains("file",Qt::CaseInsensitive)){
-            qCInfo(caQtDMLibLog) << "caQtDM -- search for:" << qApp->property("user_defined_stylesheet").toString();
+            qCInfo(fileIOLog) << "caQtDM -- search for:" << qApp->property("user_defined_stylesheet").toString();
             searchFile *searchDefaultStyleSheet = new searchFile(qApp->property("user_defined_stylesheet").toString());
             QString fileNameFound = searchDefaultStyleSheet->findFile();
-            qCInfo(caQtDMLibLog) << "caQtDM -- custom stylesheet found:" << fileNameFound;
+            qCInfo(fileIOLog) << "caQtDM -- custom stylesheet found:" << fileNameFound;
             if(!fileNameFound.isEmpty()) {
                 QFile file(fileNameFound);
                 file.open(QFile::ReadOnly);
                 QString StyleSheet = QLatin1String(file.readAll());
                 printdata=StyleSheet;
-                qCInfo(caQtDMLibLog) << "caQtDM -- custom stylesheet file:" << fileNameFound << "reloaded stylesheet";
+                qCInfo(fileIOLog) << "caQtDM -- custom stylesheet file:" << fileNameFound << "reloaded stylesheet";
                 if (stylereload.contains("later",Qt::CaseInsensitive)){
                     QTimer::singleShot(3000, this, [this,StyleSheet] () {
                             this->setStyleSheet(StyleSheet);
@@ -845,7 +846,7 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
         }
 
         if (stylereload.contains("print",Qt::CaseInsensitive)){
-            qCInfo(caQtDMLibLog) << "caQtDM -- custom stylesheet file data:" << printdata;
+            qCInfo(fileIOLog) << "caQtDM -- custom stylesheet file data:" << printdata;
         }
     }
 
@@ -1559,11 +1560,11 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         QString fileName = browserWidget->source().path();
 
         if(!fileName.isEmpty()) {
-            qCInfo(caQtDMLibLog) << "caQtDM -- watch file" << source;
+            qCInfo(fileIOLog) << "caQtDM -- watch file" << source;
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
             bool success = watcher->addPath(fileName);
-            if(!success) qCWarning(caQtDMLibLog) << fileName << "can not be watched for changes";
-            else qCInfo(caQtDMLibLog) << fileName << "is watched for changes";
+            if(!success) qCWarning(fileIOLog) << fileName << "can not be watched for changes";
+            else qCInfo(fileIOLog) << fileName << "is watched for changes";
 #else
             watcher->addPath(fileName);
 #endif
@@ -1575,7 +1576,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
             if(list.count() > 0 && list.at(0).contains("http")) {
                 QUrl url = QUrl::fromUserInput(list.at(0));
                  if (!url.isValid()) {
-                      qCWarning(caQtDMLibLog) << QString("Invalid URL: %1").arg(url.toString());
+                      qCWarning(fileIOLog) << QString("Invalid URL: %1").arg(url.toString());
                  // try to load from that url
                  } else {
                      fileFunctions filefunction;
@@ -2024,7 +2025,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
                     ControlsInterface * plugininterface = (ControlsInterface *) ptr;
                     if(plugininterface != (ControlsInterface *) Q_NULLPTR) {
                         if(plugininterface->pluginName().contains("bsread")) {
-                            qCInfo(caLineEditLog) << "bread detected";
+                            qCInfo(caLineEditLog) << "bsread detected";
                             pv.append(".EGU");
                             specData[0] = 1;
                             if(pv.contains("bsread://")) pv.replace("bsread://", "epics3://");
@@ -3777,7 +3778,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 void CaQtDM_Lib::handleFileChanged(const QString &file)
 {
     Q_UNUSED(file);
-    qCDebug(caQtDMLibLog) << "update" << file;
+    qCDebug(fileIOLog) << "update" << file;
     updateTextBrowser();
 }
 
@@ -10004,7 +10005,7 @@ void CaQtDM_Lib::send_delayed_popup_signal(){
             geometry =dynVars.toString();
         }
 
-        qCDebug(caQtDMLibLog) << Filename << Args <<w;
+        qCDebug(fileIOLog) << Filename << Args <<w;
         if(!Filename.isEmpty())  {
             qCDebug(caQtDMLibLog) << "delayed_popup_timer";
             emit Signal_OpenNewWFile(Filename, Args, geometry, "true ToolTip FramelessWindowHint PopUpWindow");
@@ -10051,7 +10052,7 @@ bool CaQtDM_Lib::eventFilter(QObject *obj, QEvent *event)
                             w->setProperty("delayed_popup_filename",Filename);
                             w->setProperty("delayed_popup_args",Args);
                             w->setProperty("delayed_popup_geometry",geometry);
-                            qCDebug(caQtDMLibLog) << Filename << Args <<w;
+                            qCDebug(fileIOLog) << Filename << Args <<w;
                             QTimer::singleShot(timeout, this, SLOT(send_delayed_popup_signal()));
 
                         }
@@ -11224,12 +11225,12 @@ extern "C"  {
         delete filecheck;
         if (FileName.isNull()) {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
-            qCFatal(caQtDMLibLog) << "file" << FileName << "could not be loaded -> exit";
+            qCFatal(fileIOLog) << "file" << FileName << "could not be loaded -> exit";
 #else
             qFatal("%s", qasc(QString("file " + FileName + " could not be loaded -> exit")));
 #endif
         } else {
-            qCInfo(caQtDMLibLog) << "file" << FileName << "will be loaded";
+            qCInfo(fileIOLog) << "file" << FileName << "will be loaded";
         }
 
         QMainWindow *widget = new QMainWindow;
