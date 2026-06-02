@@ -42,15 +42,14 @@ Options:
   --skip-build         Reuse binaries from BINARY_DIR or the default build dir
   --appdir-only        Stop after creating the AppDir, do not make an AppImage
   --without-bsread     Exclude the bsread controlsystem plugin (default: on)
-  --no-download-tools  Require linuxdeploy tools to be provided locally
+  --no-download-tools  Require appimagetool to be provided locally
   --help               Show this help
 
 Useful environment overrides:
   EPICS_BASE, EPICS_HOST_ARCH, QWTLIBNAME, QWTINCLUDE, QWTLIB, QWTVERSION,
   CAQTDM_OPCUA=auto|1|0, CAQTDM_MODBUS=auto|1|0, CAQTDM_GPS=auto|1|0,
   QTDM_RPATH, CAQTDM_NORPATH=1, CAQTDM_APPIMAGE_BSREAD=0,
-  APPIMAGE_STRIP=1, BINARY_DIR, OUTPUT_DIR, LINUXDEPLOY,
-  LINUXDEPLOY_PLUGIN_QT, APPIMAGETOOL, JOBS
+  APPIMAGE_STRIP=1, BINARY_DIR, OUTPUT_DIR, APPIMAGETOOL, JOBS
 
 The AppImage is written to OUTPUT_DIR, which defaults to this directory.
 EOF
@@ -78,7 +77,7 @@ download_file() {
   elif command -v wget >/dev/null 2>&1; then
     wget --output-document="$dest" "$url"
   else
-    die "curl or wget is required to download linuxdeploy tools"
+    die "curl or wget is required to download AppImage tools"
   fi
 }
 
@@ -215,6 +214,36 @@ is_patchable_elf() {
   esac
 }
 
+normalize_hex_address() {
+  local value="$1"
+  printf '0x%x\n' "$((value))"
+}
+
+validate_elf_init_tag() {
+  local file="$1"
+  local dynamic_init
+  local section_init
+
+  dynamic_init="$(readelf -d "$file" 2>/dev/null | sed -n 's/.*(INIT)[^0-9x]*\(0x[0-9a-fA-F][0-9a-fA-F]*\).*/\1/p' | head -n 1)"
+  [ -n "$dynamic_init" ] || return 0
+
+  section_init="$(readelf -SW "$file" 2>/dev/null | awk '$2 == ".init" { print "0x" $4; exit }')"
+  [ -n "$section_init" ] || return 0
+
+  dynamic_init="$(normalize_hex_address "$dynamic_init")"
+  section_init="$(normalize_hex_address "$section_init")"
+  [ "$dynamic_init" = "$section_init" ] || die "corrupt ELF INIT in $file: DT_INIT=$dynamic_init .init=$section_init"
+}
+
+validate_appdir_elf_init_tags() {
+  local file
+
+  while IFS= read -r -d '' file; do
+    is_patchable_elf "$file" || continue
+    validate_elf_init_tag "$file"
+  done < <(find "$APPDIR" -type f -print0)
+}
+
 elf_has_missing_dependencies() {
   ldd "$1" 2>/dev/null | grep -q 'not found'
 }
@@ -225,7 +254,7 @@ disable_non_elf_executables() {
 
   while IFS= read -r -d '' file; do
     if ! is_elf_file "$file"; then
-      msg "Clearing executable bit on non-ELF file before linuxdeploy: $file"
+      msg "Clearing executable bit on non-ELF file before packaging: $file"
       chmod a-x "$file"
     fi
   done < <(find "$directory" -type f -perm /111 -print0)
@@ -261,7 +290,7 @@ copy_runtime_library() {
   fi
 
   source="$(find_runtime_library "$name")" || return 0
-  msg "Copying runtime library blacklisted by linuxdeploy: $name"
+  msg "Copying runtime library: $name"
   install -Dm755 "$source" "$APPDIR/usr/lib/$name"
 }
 
@@ -273,11 +302,9 @@ copy_blacklisted_runtime_libraries() {
     copy_runtime_library libgmp.so.10
   fi
 
-  # libGLdispatch.so.0 is blacklisted by linuxdeploy as a transitive dep of
-  # libGL/libOpenGL, but Qt 6 requires libOpenGL.so.0 explicitly (not the
-  # legacy libGL.so.1 stub).  RHEL 9 and other enterprise distros ship
-  # libGL.so.1 but not libOpenGL.so.0, so bundle the whole GLvnd stack so the
-  # AppImage is self-contained on those targets.
+  # Qt 6 requires libOpenGL.so.0 explicitly (not the legacy libGL.so.1 stub).
+  # RHEL 9 and other enterprise distros ship libGL.so.1 but not necessarily
+  # libOpenGL.so.0, so bundle the whole GLvnd stack.
   for library in \
     libOpenGL.so.0 \
     libGLX.so.0 \
@@ -286,8 +313,8 @@ copy_blacklisted_runtime_libraries() {
     copy_runtime_library "$library"
   done
 
-  # linuxdeploy also treats parts of the X11/font stack as system libraries, but
-  # minimal Rocky/RHEL installations do not necessarily include them.
+  # Minimal Rocky/RHEL installations do not necessarily include these runtime
+  # pieces even though they are common on developer workstations.
   for library in \
     libX11.so.6 \
     libX11-xcb.so.1 \
@@ -302,17 +329,82 @@ copy_blacklisted_runtime_libraries() {
   done
 }
 
-copy_qt_plugin_subdir() {
-  local source_plugin_dir="$1"
-  local plugin_subdir="$2"
-  local source_dir="$source_plugin_dir/$plugin_subdir"
-  local dest_dir="$APPDIR/usr/plugins/$plugin_subdir"
+is_system_runtime_library() {
+  case "$(basename "$1")" in
+    ld-linux*.so.*|libanl.so.*|libBrokenLocale.so.*|libc.so.*|libdl.so.*|libm.so.*|libmvec.so.*|libnsl.so.*|libnss_*.so.*|libpthread.so.*|libresolv.so.*|librt.so.*|libthread_db.so.*|libutil.so.*)
+      return 0
+      ;;
+    libgcc_s.so.*|libstdc++.so.*)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
 
-  [ -d "$source_dir" ] || return 0
+copy_dependency_library() {
+  local source="$1"
+  local dest="$APPDIR/usr/lib/$(basename "$source")"
 
-  msg "Copying Qt plugin directory not deployed by linuxdeploy: $plugin_subdir"
-  mkdir -p "$dest_dir"
-  cp -a "$source_dir/." "$dest_dir/"
+  [ -e "$source" ] || return 0
+  is_system_runtime_library "$source" && return 0
+  [ -e "$dest" ] && return 0
+
+  msg "Bundling dependency: $(basename "$source")"
+  install -Dm755 "$source" "$dest"
+}
+
+bundle_elf_dependencies_once() {
+  local copied=0
+  local file
+  local dep
+  local qt_dir="qt${QT_MAJOR}"
+  local app_lib_dir="$APPDIR/usr/lib/caqtdm/$qt_dir"
+  local dependency_library_path="$app_lib_dir:$app_lib_dir/controlsystems:$app_lib_dir/designer:$APPDIR/usr/lib:${EPICSLIB:-}:${LD_LIBRARY_PATH:-}"
+
+  while IFS= read -r -d '' file; do
+    is_patchable_elf "$file" || continue
+    while IFS= read -r dep; do
+      [ -n "$dep" ] || continue
+      [ -e "$APPDIR/usr/lib/$(basename "$dep")" ] && continue
+      copy_dependency_library "$dep"
+      [ -e "$APPDIR/usr/lib/$(basename "$dep")" ] && copied=1
+    done < <(
+      LD_LIBRARY_PATH="$dependency_library_path" ldd "$file" 2>/dev/null | while IFS= read -r line; do
+        case "$line" in
+          *"=> /"*) printf '%s\n' "$line" | sed -n 's/.*=> \([^ ]*\).*/\1/p' ;;
+          [[:space:]]/*) printf '%s\n' "$line" | sed -n 's/^[[:space:]]*\([^ ]*\).*/\1/p' ;;
+        esac
+      done
+    )
+  done < <(find "$APPDIR" -type f -print0)
+
+  return "$copied"
+}
+
+bundle_elf_dependencies() {
+  local pass
+
+  msg "Bundling ELF dependencies"
+  for pass in 1 2 3 4 5 6 7 8; do
+    if bundle_elf_dependencies_once; then
+      msg "Dependency scan converged after $pass pass(es)"
+      return 0
+    fi
+  done
+
+  die "dependency scan did not converge"
+}
+
+install_qt_plugins() {
+  local qt_plugin_dir="$1"
+
+  [ -d "$qt_plugin_dir" ] || return 0
+  msg "Installing Qt plugins"
+  rm -rf "$APPDIR/usr/plugins"
+  install -dm755 "$APPDIR/usr/plugins"
+  cp -a "$qt_plugin_dir/." "$APPDIR/usr/plugins/"
 }
 
 setup_appimage_strip_env() {
@@ -447,33 +539,6 @@ qt_designer_binary() {
   done
 
   return 1
-}
-
-create_qmake_wrapper() {
-  local qt_plugin_dir="$1"
-  local wrapper="$BUILD_DIR/qmake-appimage-wrapper"
-
-  cat > "$wrapper" <<EOF
-#!/usr/bin/env bash
-set -euo pipefail
-
-REAL_QMAKE="$QMAKE_BIN"
-QT_PLUGIN_DIR="$qt_plugin_dir"
-
-if [ "\${1:-}" = "-query" ] && [ "\${2:-}" = "QT_INSTALL_PLUGINS" ]; then
-  printf '%s\\n' "\$QT_PLUGIN_DIR"
-  exit 0
-fi
-
-if [ "\${1:-}" = "-query" ] && [ "\$#" -eq 1 ]; then
-  "\$REAL_QMAKE" -query | sed "s|^QT_INSTALL_PLUGINS:.*|QT_INSTALL_PLUGINS:\$QT_PLUGIN_DIR|"
-  exit 0
-fi
-
-exec "\$REAL_QMAKE" "\$@"
-EOF
-  chmod +x "$wrapper"
-  printf '%s\n' "$wrapper"
 }
 
 host_triplet() {
@@ -1031,16 +1096,11 @@ make_appimage() {
     return 0
   fi
 
-  require_command patchelf
   require_command readelf
   require_command ldd
 
   local arch="$(tool_arch)"
-  local linuxdeploy
-  local linuxdeploy_qt
   local appimagetool_path
-  linuxdeploy="$(ensure_tool LINUXDEPLOY "linuxdeploy-$arch.AppImage" "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-$arch.AppImage")"
-  linuxdeploy_qt="$(ensure_tool LINUXDEPLOY_PLUGIN_QT "linuxdeploy-plugin-qt-$arch.AppImage" "https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-$arch.AppImage")"
   appimagetool_path="$(ensure_tool APPIMAGETOOL "appimagetool-$arch.AppImage" "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-$arch.AppImage")"
 
   msg "Creating AppImage in $OUTPUT_DIR"
@@ -1051,47 +1111,23 @@ make_appimage() {
   local desktop_file="$APPDIR/usr/share/applications/$DESKTOP_ID.desktop"
   local root_icon_file="$APPDIR/$DESKTOP_ID.png"
   local qt_plugin_dir
-  local qmake_wrapper
   local output_file
   qt_plugin_dir="$(prepare_qt_plugin_tree)"
-  qmake_wrapper="$(create_qmake_wrapper "$qt_plugin_dir")"
   output_file="$OUTPUT_DIR/caQtDM-${PACKAGE_VERSION}-${arch}.AppImage"
   disable_non_elf_executables "$app_lib_dir"
-
-  local deploy_args=(
-    --appdir "$APPDIR"
-    --desktop-file "$desktop_file"
-    --icon-file "$root_icon_file"
-    --executable "$app_lib_dir/caQtDM"
-    --executable "$APPDIR/usr/bin/qt-designer"
-    --plugin qt
-  )
-
-  local library
-  while IFS= read -r -d '' library; do
-    if is_elf_file "$library"; then
-      deploy_args+=(--library "$library")
-    else
-      msg "Skipping non-ELF library candidate: $library"
-    fi
-  done < <(find "$app_lib_dir" -type f -name '*.so*' -print0)
 
   (
     cd "$OUTPUT_DIR"
     export APPIMAGE_EXTRACT_AND_RUN="${APPIMAGE_EXTRACT_AND_RUN:-1}"
-    export QMAKE="$qmake_wrapper"
     export VERSION="$PACKAGE_VERSION"
-    export PATH="$(dirname "$linuxdeploy_qt"):$PATH"
-    export LD_LIBRARY_PATH="$app_lib_dir:$app_lib_dir/controlsystems:$app_lib_dir/designer:${EPICSLIB:-}:${LD_LIBRARY_PATH:-}"
     setup_appimage_strip_env
-    install_appdir_metadata
+    install_qt_plugins "$qt_plugin_dir"
+    copy_blacklisted_runtime_libraries
+    bundle_elf_dependencies
+    finalize_appdir
     [ -f "$desktop_file" ] || die "AppImage desktop file was not created: $desktop_file"
     [ -f "$root_icon_file" ] || die "AppImage icon file was not created: $root_icon_file"
-    "$linuxdeploy" "${deploy_args[@]}"
-    copy_blacklisted_runtime_libraries
-    [ -z "${CAQTDM_OPCUA:-}" ] || copy_qt_plugin_subdir "$qt_plugin_dir" opcua
-
-    finalize_appdir
+    validate_appdir_elf_init_tags
 
     rm -f "$output_file"
     ARCH="$arch" "$appimagetool_path" "$APPDIR" "$output_file"
