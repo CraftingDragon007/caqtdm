@@ -52,7 +52,7 @@ SUBDIRS += caQtDM_Plugins caQtDM_Parsers
 caqtdm_with_tests {
   SUBDIRS += unitTests
   unitTests.file = caQtDM_Tests/unitTests/unitTests.pro
-  unitTests.depends = caQtDM_Viewer caQtDM_QtControls
+  unitTests.depends = caQtDM_Viewer
 }
 
 qtcontrols_controllers.file = caQtDM_QtControls/plugins/qtcontrols_controllers.pro 
