@@ -16,11 +16,13 @@
 #   DOCKER_IMAGE      Image tag to build/use (default includes Qt version)
 #   DOCKER_NO_BUILD   Set to 1 to skip rebuilding the image
 #   DOCKER_NETWORK    Docker network mode (default: host)
+#   BUILDX_BUILDER    Optional buildx builder name for --buildx-bake
+#   BUILDX_BAKE_OUTPUT Buildx bake output, e.g. type=docker or type=oci,dest=...
+#   DOCKER_COPY_SOURCE Copy source into the container instead of bind-mounting
 #   OUTPUT_DIR        Where to write the final AppImage (default: script dir)
 #   QT_VERSION        Qt version built into the image (default: 6.11.1)
 #   QT_BUILD_JOBS     Parallel jobs for the Qt source build (default: auto)
 #   OPENSSL_VERSION   OpenSSL version built into the image (default: 3.5.1)
-#   PATCHELF_VERSION  patchelf version built into the image (default: 0.18.0)
 #   QWT_VERSION       Qwt version built into the image (default: 6.3.0)
 #   QWT_REF           Qwt git tag or branch (default: v$QWT_VERSION)
 #   QWT_REPOSITORY    Qwt git repository URL (default: official SourceForge git)
@@ -35,17 +37,24 @@ REPO_ROOT="$(cd -- "$SCRIPT_DIR/../../.." && pwd)"
 QT_VERSION="${QT_VERSION:-6.11.1}"
 QT_BUILD_JOBS="${QT_BUILD_JOBS:-auto}"
 OPENSSL_VERSION="${OPENSSL_VERSION:-3.5.1}"
-PATCHELF_VERSION="${PATCHELF_VERSION:-0.18.0}"
 QWT_VERSION="${QWT_VERSION:-6.3.0}"
 QWT_REF="${QWT_REF:-v${QWT_VERSION}}"
 QWT_REPOSITORY="${QWT_REPOSITORY:-https://git.code.sf.net/p/qwt/git}"
 EPICS_VERSION_TAG="${EPICS_VERSION_TAG:-R7.0.10}"
 GCC_TOOLSET="${GCC_TOOLSET:-15}"
 
-DOCKER_IMAGE="${DOCKER_IMAGE:-caqtdm-appimage-builder:rhel8-qt${QT_VERSION}}"
+DOCKER_IMAGE="${DOCKER_IMAGE:-caqtdm-appimage-builder:rhel8-gcc${GCC_TOOLSET}-qt${QT_VERSION}-wayland}"
 DOCKER_NO_BUILD="${DOCKER_NO_BUILD:-${DOCKER_NO_PULL:-0}}"
 DOCKER_NETWORK="${DOCKER_NETWORK:-host}"
+BUILDX_BUILDER="${BUILDX_BUILDER:-}"
+BUILDX_BAKE_OUTPUT="${BUILDX_BAKE_OUTPUT:-}"
+DOCKER_COPY_SOURCE_EXPLICIT=0
+[ "${DOCKER_COPY_SOURCE+x}" = x ] && DOCKER_COPY_SOURCE_EXPLICIT=1
+DOCKER_COPY_SOURCE="${DOCKER_COPY_SOURCE:-0}"
 OUTPUT_DIR="${OUTPUT_DIR:-$SCRIPT_DIR}"
+USE_BUILDX_BAKE=0
+FORWARDED_ARGS=()
+CONTAINER_ARGS=()
 
 msg() {
   printf '\n==> %s\n' "$*" >&2
@@ -72,18 +81,26 @@ Common options passed through to create-appimage.sh:
   --skip-build         Reuse binaries from BINARY_DIR
   --appdir-only        Stop after creating the AppDir
   --without-bsread     Exclude the bsread controlsystem plugin
-  --no-download-tools  Require linuxdeploy tools to be available locally
+  --no-download-tools  Require AppImage tools to be available locally
   --help, -h           Show this help and exit
+
+Docker wrapper options:
+  --buildx-bake        Build the Docker image with 'docker buildx bake'
+  --buildx-builder NAME Use a specific buildx builder for --buildx-bake
+  --buildx-output OUT  Set buildx bake output, e.g. type=docker
+  --copy-source        Copy source into the container instead of bind-mounting
 
 Environment overrides:
   DOCKER_IMAGE      Image tag to build/use (default: $DOCKER_IMAGE)
   DOCKER_NO_BUILD   Set to 1 to skip rebuilding the image
   DOCKER_NETWORK    Docker network mode (default: $DOCKER_NETWORK)
+  BUILDX_BUILDER    Optional buildx builder name (default: ${BUILDX_BUILDER:-unset})
+  BUILDX_BAKE_OUTPUT Buildx bake output (default: ${BUILDX_BAKE_OUTPUT:-unset})
+  DOCKER_COPY_SOURCE Copy source into the container instead of bind-mounting (default: $DOCKER_COPY_SOURCE)
   OUTPUT_DIR        Where to write the final AppImage (default: $OUTPUT_DIR)
   QT_VERSION        Qt version built into the image (default: $QT_VERSION)
   QT_BUILD_JOBS     Parallel jobs for the Qt source build (default: $QT_BUILD_JOBS)
   OPENSSL_VERSION   OpenSSL version built into the image (default: $OPENSSL_VERSION)
-  PATCHELF_VERSION  patchelf version built into the image (default: $PATCHELF_VERSION)
   QWT_VERSION       Qwt version built into the image (default: $QWT_VERSION)
   QWT_REF           Qwt git tag or branch (default: $QWT_REF)
   QWT_REPOSITORY    Qwt git repository URL (default: $QWT_REPOSITORY)
@@ -94,36 +111,241 @@ Examples:
   $(basename "$0")
   $(basename "$0") --branch Development
   $(basename "$0") --no-checkout --without-bsread
+  $(basename "$0") --buildx-bake --buildx-builder remote-docker --branch Development
+  $(basename "$0") --buildx-bake --buildx-builder remote-docker --copy-source --no-checkout
+
+For remote Docker builds, use a Docker context/buildx builder backed by the
+remote Docker daemon and leave BUILDX_BAKE_OUTPUT unset. Do not use --load for
+that case; --load streams a large image back through the client session.
+Checkout-based builds copy only the AppImage packaging files and clone the
+repository inside the container. Use --copy-source explicitly for --no-checkout
+or --source builds with a remote Docker daemon, because remote daemons cannot see
+local bind mounts. Local Docker --no-checkout continues to use a bind mount.
 EOF
 }
 
 parse_args() {
-  local arg
-
-  for arg in "$@"; do
-    case "$arg" in
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
       --help|-h)
         usage
         exit 0
         ;;
+      --buildx-bake)
+        USE_BUILDX_BAKE=1
+        ;;
+      --buildx-builder)
+        [ "$#" -ge 2 ] || die "--buildx-builder requires a name"
+        BUILDX_BUILDER="$2"
+        shift
+        ;;
+      --buildx-output)
+        [ "$#" -ge 2 ] || die "--buildx-output requires a value"
+        BUILDX_BAKE_OUTPUT="$2"
+        shift
+        ;;
+      --copy-source)
+        DOCKER_COPY_SOURCE=1
+        DOCKER_COPY_SOURCE_EXPLICIT=1
+        ;;
+      *)
+        FORWARDED_ARGS+=("$1")
+        ;;
+    esac
+    shift
+  done
+}
+
+forwarded_args_need_local_source() {
+  local arg
+
+  for arg in "${FORWARDED_ARGS[@]}"; do
+    case "$arg" in
+      --source|--source=*)
+        return 0
+        ;;
     esac
   done
+
+  return 1
+}
+
+select_source_transport() {
+  [ "$DOCKER_COPY_SOURCE_EXPLICIT" = "0" ] || return 0
+
+  # Checkout-based buildx runs only need the packaging scripts/assets locally;
+  # create-appimage.sh clones the source inside the container. Local Docker
+  # --no-checkout keeps using bind mounts unless --copy-source is explicit.
+  if forwarded_args_need_local_source; then
+    [ "$USE_BUILDX_BAKE" = "1" ] && DOCKER_COPY_SOURCE=1
+  elif forwarded_args_include_no_checkout; then
+    [ "$USE_BUILDX_BAKE" = "1" ] && DOCKER_COPY_SOURCE=1
+  else
+    DOCKER_COPY_SOURCE=1
+  fi
+}
+
+validate_source_transport() {
+  if [ "$USE_BUILDX_BAKE" = "1" ] \
+    && forwarded_args_include_no_checkout \
+    && [ "$DOCKER_COPY_SOURCE_EXPLICIT" = "0" ]; then
+    die "--buildx-bake --no-checkout requires --copy-source. Without --copy-source, buildx mode clones the repository inside the container, which contradicts --no-checkout."
+  fi
+}
+
+forwarded_args_have_option() {
+  local option="$1"
+  local arg
+
+  for arg in "${FORWARDED_ARGS[@]}"; do
+    case "$arg" in
+      "$option"|"$option"=*)
+        return 0
+        ;;
+    esac
+  done
+
+  return 1
+}
+
+forwarded_args_include_no_checkout() {
+  forwarded_args_have_option --no-checkout
+}
+
+copy_packaging_only() {
+  if [ "$USE_BUILDX_BAKE" = "1" ] \
+    && [ "$DOCKER_COPY_SOURCE_EXPLICIT" = "0" ] \
+    && ! forwarded_args_need_local_source \
+    && ! forwarded_args_include_no_checkout; then
+    return 0
+  fi
+
+  return 1
+}
+
+current_git_branch() {
+  local branch
+  branch="$(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
+  [ -n "$branch" ] && [ "$branch" != HEAD ] || return 1
+  printf '%s\n' "$branch"
+}
+
+current_git_remote() {
+  git -C "$REPO_ROOT" remote get-url origin 2>/dev/null || true
+}
+
+prepare_container_args() {
+  local arg
+  local remote
+  local branch
+
+  CONTAINER_ARGS=()
+  for arg in "${FORWARDED_ARGS[@]}"; do
+    [ "$arg" = --no-checkout ] && copy_packaging_only && continue
+    CONTAINER_ARGS+=("$arg")
+  done
+
+  if forwarded_args_include_no_checkout && copy_packaging_only; then
+    if ! forwarded_args_have_option --repo; then
+      remote="$(current_git_remote)"
+      [ -n "$remote" ] && CONTAINER_ARGS+=(--repo "$remote")
+    fi
+
+    if ! forwarded_args_have_option --branch; then
+      branch="$(current_git_branch || true)"
+      [ -n "$branch" ] && CONTAINER_ARGS+=(--branch "$branch")
+    fi
+  fi
 }
 
 require_docker() {
   command -v docker >/dev/null 2>&1 || die "docker is required but was not found"
 }
 
+buildx_driver() {
+  if [ -n "$BUILDX_BUILDER" ]; then
+    docker buildx inspect "$BUILDX_BUILDER"
+  else
+    docker buildx inspect
+  fi | sed -n 's/^Driver:[[:space:]]*//p' | head -n 1
+}
+
+validate_buildx_bake_output() {
+  local driver
+
+  [ "$USE_BUILDX_BAKE" = "1" ] || return 0
+  [ -z "$BUILDX_BAKE_OUTPUT" ] || return 0
+
+  driver="$(buildx_driver)"
+  [ -n "$driver" ] || die "could not determine buildx builder driver"
+
+  if [ "$driver" != "docker" ]; then
+    die "--buildx-bake without --buildx-output requires a buildx builder using the docker driver; current driver is '$driver'. Your current builder can only leave the image in BuildKit cache, so docker run cannot find it. Use a remote Docker-context builder created with '--driver docker', or set --buildx-output explicitly."
+  fi
+}
+
+hcl_quote() {
+  local value="$1"
+  value="${value//\\/\\\\}"
+  value="${value//\"/\\\"}"
+  printf '"%s"' "$value"
+}
+
+write_buildx_bake_file() {
+  local bake_file="$1"
+
+  {
+    printf 'target "appimage" {\n'
+    printf '  context = '; hcl_quote "$SCRIPT_DIR"; printf '\n'
+    printf '  dockerfile = "Dockerfile"\n'
+    printf '  tags = ['; hcl_quote "$DOCKER_IMAGE"; printf ']\n'
+    if [ -n "$BUILDX_BAKE_OUTPUT" ]; then
+      printf '  output = ['; hcl_quote "$BUILDX_BAKE_OUTPUT"; printf ']\n'
+    fi
+    printf '  args = {\n'
+    printf '    QT_VERSION = '; hcl_quote "$QT_VERSION"; printf '\n'
+    printf '    QT_BUILD_JOBS = '; hcl_quote "$QT_BUILD_JOBS"; printf '\n'
+    printf '    OPENSSL_VERSION = '; hcl_quote "$OPENSSL_VERSION"; printf '\n'
+    printf '    QWT_VERSION = '; hcl_quote "$QWT_VERSION"; printf '\n'
+    printf '    QWT_REF = '; hcl_quote "$QWT_REF"; printf '\n'
+    printf '    QWT_REPOSITORY = '; hcl_quote "$QWT_REPOSITORY"; printf '\n'
+    printf '    EPICS_VERSION_TAG = '; hcl_quote "$EPICS_VERSION_TAG"; printf '\n'
+    printf '    GCC_TOOLSET = '; hcl_quote "$GCC_TOOLSET"; printf '\n'
+    printf '  }\n'
+    printf '}\n'
+  } > "$bake_file"
+}
+
+build_image_with_buildx_bake() {
+  local bake_file
+  local bake_args=()
+  bake_file="$(mktemp "${TMPDIR:-/tmp}/caqtdm-appimage-bake.XXXXXX.hcl")"
+
+  write_buildx_bake_file "$bake_file"
+  bake_args+=(--file "$bake_file")
+  [ -z "$BUILDX_BUILDER" ] || bake_args+=(--builder "$BUILDX_BUILDER")
+  bake_args+=(--set "appimage.network=$DOCKER_NETWORK")
+  bake_args+=(appimage)
+
+  docker buildx bake "${bake_args[@]}"
+  rm -f "$bake_file"
+}
+
 build_image() {
   [ "$DOCKER_NO_BUILD" = "1" ] && return 0
 
   msg "Building Docker image $DOCKER_IMAGE (Rocky Linux 8 baseline)"
+  if [ "$USE_BUILDX_BAKE" = "1" ]; then
+    validate_buildx_bake_output
+    build_image_with_buildx_bake
+    return 0
+  fi
+
   docker build \
     --network "$DOCKER_NETWORK" \
     --build-arg "QT_VERSION=$QT_VERSION" \
     --build-arg "QT_BUILD_JOBS=$QT_BUILD_JOBS" \
     --build-arg "OPENSSL_VERSION=$OPENSSL_VERSION" \
-    --build-arg "PATCHELF_VERSION=$PATCHELF_VERSION" \
     --build-arg "QWT_VERSION=$QWT_VERSION" \
     --build-arg "QWT_REF=$QWT_REF" \
     --build-arg "QWT_REPOSITORY=$QWT_REPOSITORY" \
@@ -143,13 +365,18 @@ build_docker_run_args() {
     --rm
     --interactive
     --network "$DOCKER_NETWORK"
-    --volume "$REPO_ROOT:/src"
-    --volume "$OUTPUT_DIR:/output"
     --env "APPIMAGE_EXTRACT_AND_RUN=1"
     --env "OUTPUT_DIR=/output"
     --env "BUILD_DIR=/src/caQtDM_Viewer/package/appimage/build-docker"
     --env "TOOLS_DIR=/src/caQtDM_Viewer/package/appimage/tools"
   )
+
+  if [ "$DOCKER_COPY_SOURCE" != "1" ]; then
+    docker_run_args+=(
+      --volume "$REPO_ROOT:/src"
+      --volume "$OUTPUT_DIR:/output"
+    )
+  fi
 
   [ ! -t 1 ] || docker_run_args+=(--tty)
 
@@ -158,8 +385,77 @@ build_docker_run_args() {
   fi
 }
 
-run_container() {
+copy_source_to_container() {
+  local container_id="$1"
+  local tar_excludes=(
+    --exclude=.git
+    --exclude=.idea
+    --exclude=caQtDM_Viewer/package/appimage/build
+    --exclude=caQtDM_Viewer/package/appimage/build-docker
+    --exclude=caQtDM_Viewer/package/appimage/squashfs-root
+    --exclude=caQtDM_Viewer/package/appimage/tools
+    --exclude=caQtDM_Viewer/package/appimage/work
+    --exclude='caQtDM_Viewer/package/appimage/*.AppImage'
+    --exclude='caQtDM_Viewer/package/appimage/*.AppImage.zsync'
+  )
+
+  msg "Copying source tree into Docker container"
+  tar "${tar_excludes[@]}" -C "$REPO_ROOT" -cf - . | docker cp - "$container_id:/src"
+}
+
+copy_packaging_to_container() {
+  local container_id="$1"
+  local paths=(
+    caQtDM_Viewer/package/appimage/create-appimage.sh
+    caQtDM_Viewer/package/appimage/io.github.caqtdm.caqtdm.desktop
+    caQtDM_Viewer/package/appimage/io.github.caqtdm.caqtdm.metainfo.xml
+    caQtDM_Viewer/package/appimage/icons
+  )
+
+  msg "Copying AppImage packaging scripts into Docker container"
+  tar -C "$REPO_ROOT" -cf - "${paths[@]}" | docker cp - "$container_id:/src"
+}
+
+run_container_with_copied_source() {
+  local container_id
+  local create_args=()
+  local arg
+
   build_docker_run_args
+  docker image inspect "$DOCKER_IMAGE" >/dev/null 2>&1 || die "Docker image is not available to docker run: $DOCKER_IMAGE"
+
+  for arg in "${docker_run_args[@]}"; do
+    [ "$arg" = --rm ] && continue
+    create_args+=("$arg")
+  done
+
+  prepare_container_args
+  msg "Creating AppImage build container from $DOCKER_IMAGE"
+  container_id="$(docker create "${create_args[@]}" --entrypoint /bin/sh "$DOCKER_IMAGE" -lc 'exec /src/caQtDM_Viewer/package/appimage/create-appimage.sh "$@"' sh "${CONTAINER_ARGS[@]}")"
+  trap 'docker rm -f "$container_id" >/dev/null 2>&1 || true' RETURN
+
+  if copy_packaging_only; then
+    copy_packaging_to_container "$container_id"
+  else
+    copy_source_to_container "$container_id"
+  fi
+  msg "Running AppImage build inside $DOCKER_IMAGE"
+  docker start --attach "$container_id"
+
+  mkdir -p "$OUTPUT_DIR"
+  docker cp "$container_id:/output/." "$OUTPUT_DIR/"
+  docker rm -f "$container_id" >/dev/null
+  trap - RETURN
+}
+
+run_container() {
+  if [ "$DOCKER_COPY_SOURCE" = "1" ]; then
+    run_container_with_copied_source
+    return 0
+  fi
+
+  build_docker_run_args
+  docker image inspect "$DOCKER_IMAGE" >/dev/null 2>&1 || die "Docker image is not available to docker run: $DOCKER_IMAGE"
   msg "Running AppImage build inside $DOCKER_IMAGE"
   docker run "${docker_run_args[@]}" "$DOCKER_IMAGE" "$@"
 }
@@ -171,10 +467,12 @@ print_output_summary() {
 
 main() {
   parse_args "$@"
+  select_source_transport
+  validate_source_transport
   require_docker
   build_image
   resolve_output_dir
-  run_container "$@"
+  run_container "${FORWARDED_ARGS[@]}"
   print_output_summary
 }
 

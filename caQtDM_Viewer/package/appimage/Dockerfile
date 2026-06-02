@@ -13,7 +13,6 @@ FROM rockylinux:8
 
 ARG GCC_TOOLSET=15
 ARG OPENSSL_VERSION=3.5.1
-ARG PATCHELF_VERSION=0.18.0
 ARG QT_VERSION=6.11.1
 ARG QT_BUILD_JOBS=auto
 
@@ -66,20 +65,6 @@ RUN dnf -y install dnf-plugins-core epel-release \
     && python3 -m pip install --no-cache-dir jinja2 lxml six \
     && dnf clean all
 
-# Rocky 8's patchelf is too old for GCC 15-linked objects and can corrupt
-# DT_INIT when changing RPATHs. linuxdeploy uses patchelf internally, so install
-# a current upstream version before packaging anything.
-RUN set -eux; \
-    cd /tmp; \
-    wget -q "https://github.com/NixOS/patchelf/releases/download/${PATCHELF_VERSION}/patchelf-${PATCHELF_VERSION}.tar.gz"; \
-    tar -xzf "patchelf-${PATCHELF_VERSION}.tar.gz"; \
-    cd "patchelf-${PATCHELF_VERSION}"; \
-    ./configure --prefix=/usr/local; \
-    make -j"$(nproc)"; \
-    make install; \
-    test "$(patchelf --version)" = "patchelf ${PATCHELF_VERSION}"; \
-    rm -rf "/tmp/patchelf-${PATCHELF_VERSION}" "/tmp/patchelf-${PATCHELF_VERSION}.tar.gz"
-
 # Development headers required by QtBase platform plugins, QtSvg, QtPositioning,
 # QtSerialBus, QtOpcUa, and the caQtDM build.
 RUN dnf -y --setopt=install_weak_deps=False install \
@@ -109,6 +94,8 @@ RUN dnf -y --setopt=install_weak_deps=False install \
       mesa-libGLU-devel \
       sqlite-devel \
       systemd-devel \
+      wayland-devel \
+      wayland-protocols-devel \
       xcb-util-cursor-devel \
       xcb-util-devel \
       xcb-util-image-devel \
@@ -137,7 +124,8 @@ RUN set -eux; \
 
 # Qt from source. The selected modules cover caQtDM's Qt requirements:
 # Widgets, Designer/UiTools, SVG, SerialPort, SerialBus, Positioning, OPC UA,
-# Qt5Compat/QTextCodec, OpenGL, PrintSupport, XCB platform and image plugins.
+# QtWayland, Qt5Compat/QTextCodec, OpenGL, PrintSupport, XCB platform and image
+# plugins.
 RUN set -eux; \
     cd /tmp; \
     wget -q "https://download.qt.io/official_releases/qt/${QT_VERSION%.*}/${QT_VERSION}/single/qt-everywhere-src-${QT_VERSION}.tar.xz"; \
@@ -150,7 +138,7 @@ RUN set -eux; \
       -release -shared \
       -no-pch \
       -nomake examples -nomake tests \
-      -submodules qtbase,qttools,qtsvg,qtserialport,qtserialbus,qtpositioning,qtopcua,qt5compat,qtimageformats \
+      -submodules qtbase,qttools,qtsvg,qtserialport,qtserialbus,qtpositioning,qtopcua,qtwayland,qt5compat,qtimageformats \
       -openssl-linked \
       -feature-open62541-security \
       -feature-gds \
@@ -169,19 +157,32 @@ RUN set -eux; \
     if [ "${QT_BUILD_JOBS}" = auto ]; then QT_BUILD_JOBS="$(nproc)"; fi; \
     cmake --build . --parallel "${QT_BUILD_JOBS}"; \
     cmake --install .; \
+    rm -rf "/tmp/qt-everywhere-src-${QT_VERSION}" "/tmp/qt-everywhere-src-${QT_VERSION}.tar.xz" /tmp/qt-build
+
+# Validate the installed Qt layer separately so failed assertions do not force a
+# full Qt rebuild.
+RUN set -eux; \
     test "$(${QT_PREFIX}/bin/qmake6 -query QT_VERSION)" = "${QT_VERSION}"; \
     test -x "${QT_PREFIX}/bin/designer"; \
     test -f "${QT_PREFIX}/lib/libQt6OpcUa.so.6"; \
+    test -f "${QT_PREFIX}/lib/libQt6WaylandClient.so.6"; \
     test -f "${QT_PREFIX}/plugins/opcua/libopen62541_backend.so"; \
+    compgen -G "${QT_PREFIX}/plugins/platforms/libqwayland*.so" >/dev/null; \
+    test -d "${QT_PREFIX}/plugins/wayland-shell-integration"; \
+    find "${QT_PREFIX}/plugins/platforms" -maxdepth 1 -name 'libqwayland*.so' -print; \
+    find "${QT_PREFIX}/plugins/wayland-shell-integration" -maxdepth 1 -type f -print; \
     test -f "${QT_PREFIX}/include/QtOpcUa/QOpcUaX509CertificateSigningRequest"; \
     strings "${QT_PREFIX}/plugins/opcua/libopen62541_backend.so" | grep -q 'SecurityPolicy#Basic256Sha256'; \
     ldd -r "${QT_PREFIX}/lib/libQt6OpcUa.so.6"; \
+    ldd -r "${QT_PREFIX}/lib/libQt6WaylandClient.so.6"; \
     ldd -r "${QT_PREFIX}/plugins/opcua/libopen62541_backend.so"; \
+    for plugin in "${QT_PREFIX}"/plugins/platforms/libqwayland*.so; do ldd -r "$plugin"; done; \
     ln -sf "${QT_PREFIX}/bin/qmake6" /usr/local/bin/qmake6; \
     ln -sf "${QT_PREFIX}/bin/qmake6" /usr/local/bin/qmake; \
+    ln -sf "${QT_PREFIX}/bin/qmake6" /usr/bin/qmake6; \
+    ln -sf "${QT_PREFIX}/bin/qmake6" /usr/bin/qmake; \
     echo "${QT_PREFIX}/lib" > /etc/ld.so.conf.d/caqtdm-qt.conf; \
-    ldconfig; \
-    rm -rf "/tmp/qt-everywhere-src-${QT_VERSION}" "/tmp/qt-everywhere-src-${QT_VERSION}.tar.xz" /tmp/qt-build
+    ldconfig
 
 # Qwt 6 built against the cached Qt build.
 ARG QWT_VERSION=6.3.0

@@ -895,7 +895,7 @@ build_caqtdm() {
   (
     cd "$SOURCE_DIR"
     "$QMAKE_BIN" ./all.pro "${qmake_args[@]}"
-    make -j"$JOBS"
+    make -j"$JOBS" QMAKE="$QMAKE_BIN"
   )
 
   [ -x "$BINARY_DIR/caQtDM" ] || die "build finished but $BINARY_DIR/caQtDM was not created"
