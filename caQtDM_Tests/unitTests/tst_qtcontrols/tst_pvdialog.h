@@ -1,7 +1,11 @@
 #ifndef TST_PVDIALOG_H
 #define TST_PVDIALOG_H
 
+#include "fakeformwindow.h"
+#include <pvdialog.h>
+
 #include <QObject>
+#include <QTest>
 
 class TestPVDialog : public QObject
 {
@@ -14,8 +18,23 @@ private slots:
     void init();
     void cleanupTestCase();
     void cleanup();
-    void test1();
-    void test2();
+    void savesPlainChannelIfNothingIsSet();
+    void savesPrefix();
+    void savesDeadband();
+    void savesMaxDisplayRate();
+    void savesDecimation();
+    void savesArray();
+    void savesSync();
+    void savesTs();
+    void savesEverythingAtOnce();
+    void savesNothingWithoutPV();
+
+private:
+    void parseChannel(const QString &channel, QString &outPv, QJsonObject &outJson);
+    QString getChannelData();
+
+    PVDialog *m_dialog;
+    FakeFormWindow *m_formWindow;
 };
 
 #endif // TST_PVDIALOG_H

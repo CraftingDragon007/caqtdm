@@ -6,6 +6,7 @@
 int main(int argc, char **argv)
 {
     qputenv("QT_QPA_PLATFORM", QByteArrayLiteral("offscreen"));
+    qputenv("QT_QPA_FONTDIR", QByteArrayLiteral("."));
 
     QApplication app(argc, argv);
     QApplication::setOrganizationName("Paul Scherrer Institut");

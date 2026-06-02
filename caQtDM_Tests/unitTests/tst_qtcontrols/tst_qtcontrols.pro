@@ -13,7 +13,8 @@ TEMPLATE = app
 SOURCES += tst_qtcontrols.cpp \
     tst_pvdialog.cpp
 
-HEADERS += tst_pvdialog.h
+HEADERS += tst_pvdialog.h \
+    fakeformwindow.h
 
 # --- Tested classes below ---
 
