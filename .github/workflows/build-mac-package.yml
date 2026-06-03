@@ -152,7 +152,8 @@ jobs:
             -DWITH_PERF_TOOL=OFF \
             -DZMQ_BUILD_TESTS=OFF \
             -DBUILD_SHARED=ON \
-            -DBUILD_STATIC=OFF
+            -DBUILD_STATIC=OFF \
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.5
           cmake --build . --config Release -j"$(sysctl -n hw.ncpu)"
           cmake --install . --config Release
 
