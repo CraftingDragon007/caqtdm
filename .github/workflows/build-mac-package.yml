@@ -1,0 +1,273 @@
+name: caQtDM macOS Package Build
+
+on:
+  workflow_dispatch:
+  pull_request:
+  schedule: # Daily at 2am
+    - cron: '0 2 * * *'
+
+env:
+  QT_MODULES: 'qtserialbus qtpositioning qt5compat qtserialport qtmultimedia qtsensors qtwebsockets qtimageformats qtwebview'
+
+  DEPS_INSTALL_ROOT: ${{ github.workspace }}/deps
+  QWT_INSTALL_DIR: ${{ github.workspace }}/deps/qwt
+  ZEROMQ_INSTALL_DIR: ${{ github.workspace }}/deps/zeromq
+  EPICS_BASE_DIR: ${{ github.workspace }}/deps/epics-base
+  CAQTDM_DIR: ${{ github.workspace }}/caqtdm
+
+jobs:
+  build:
+    name: Build macOS package
+    runs-on: ${{ matrix.macos-version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        macos-version: ['macos-15']
+        qt-version: ['6.9.3']
+        qwt-version: ['6.3']
+        zeromq-version: ['4.3.5']
+        epics-version: ['R7.0.9']
+
+    defaults:
+      run:
+        shell: bash
+
+    permissions:
+      contents: read
+      actions: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          path: caqtdm
+          fetch-depth: 0
+
+      - name: Determine EPICS host arch
+        run: |
+          set -euo pipefail
+          ARCH="$(uname -m)"
+          if [ "$ARCH" = "arm64" ]; then
+            echo "EPICS_HOST_ARCH=darwin-aarch64" >> "$GITHUB_ENV"
+          else
+            echo "EPICS_HOST_ARCH=darwin-x86" >> "$GITHUB_ENV"
+          fi
+          echo "Detected machine arch: $ARCH"
+
+      - name: Install Qt ${{ matrix.qt-version }}
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ matrix.qt-version }}
+          modules: ${{ env.QT_MODULES }}
+          host: mac
+          target: desktop
+          set-env: true
+          cache: true
+
+      - name: Install build tools (OpenSSL for Qt OPC UA)
+        run: |
+          set -euo pipefail
+          brew update
+          brew install openssl@3 || true
+          echo "OPENSSL_ROOT_DIR=$(brew --prefix openssl@3)" >> "$GITHUB_ENV"
+
+      - name: Create dependencies install directory
+        run: mkdir -p "${{ env.DEPS_INSTALL_ROOT }}"
+
+      # -------------------------------------------------------------------
+      # Qt OPC UA (built against the installed Qt)
+      # -------------------------------------------------------------------
+      - name: Clone and build Qt OPC UA
+        run: |
+          set -euo pipefail
+          QTOPCUA_SRC="${{ github.workspace }}/qtopcua-src"
+          rm -rf "$QTOPCUA_SRC"
+          git clone https://code.qt.io/qt/qtopcua.git "$QTOPCUA_SRC"
+          cd "$QTOPCUA_SRC"
+          git checkout "v${{ matrix.qt-version }}"
+          mkdir build && cd build
+          cmake .. -G Ninja \
+            -DCMAKE_PREFIX_PATH="$QT_ROOT_DIR" \
+            -DQt6_DIR="$QT_ROOT_DIR/lib/cmake/Qt6" \
+            -DOPENSSL_ROOT_DIR="${OPENSSL_ROOT_DIR}" \
+            -DCMAKE_INSTALL_PREFIX="$QT_ROOT_DIR"
+          cmake --build . --config Release --target install
+
+      # -------------------------------------------------------------------
+      # Qwt (built as a macOS framework)
+      # -------------------------------------------------------------------
+      - name: Cache Qwt
+        id: cache-qwt
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.QWT_INSTALL_DIR }}
+          key: qwt-${{ matrix.qwt-version }}-qt${{ matrix.qt-version }}-${{ matrix.macos-version }}-${{ runner.arch }}
+          restore-keys: |
+            qwt-${{ matrix.qwt-version }}-qt${{ matrix.qt-version }}-${{ matrix.macos-version }}-
+
+      - name: Clone Qwt
+        if: steps.cache-qwt.outputs.cache-hit != 'true'
+        run: git clone https://git.code.sf.net/p/qwt/git --single-branch --branch qwt-${{ matrix.qwt-version }} qwt-src
+        working-directory: ${{ github.workspace }}
+
+      - name: Configure, Build and Install Qwt
+        if: steps.cache-qwt.outputs.cache-hit != 'true'
+        working-directory: ${{ github.workspace }}/qwt-src
+        run: |
+          set -euo pipefail
+          # Install into our deps dir and trim parts we do not need in CI
+          sed -i '' -E "s|^\s*QWT_INSTALL_PREFIX\s*=.*|    QWT_INSTALL_PREFIX = ${{ env.QWT_INSTALL_DIR }}|" qwtconfig.pri
+          sed -i '' -E 's|^QWT_CONFIG\s*\+=\s*QwtExamples.*|# QWT_CONFIG += QwtExamples|' qwtconfig.pri
+          sed -i '' -E 's|^QWT_CONFIG\s*\+=\s*QwtPlayground.*|# QWT_CONFIG += QwtPlayground|' qwtconfig.pri
+          sed -i '' -E 's|^QWT_CONFIG\s*\+=\s*QwtTests.*|# QWT_CONFIG += QwtTests|' qwtconfig.pri
+          sed -i '' -E 's|^QWT_CONFIG\s*\+=\s*QwtDesigner.*|# QWT_CONFIG += QwtDesigner|' qwtconfig.pri
+          qmake qwt.pro
+          make -j"$(sysctl -n hw.ncpu)"
+          make install
+
+      # -------------------------------------------------------------------
+      # ZeroMQ
+      # -------------------------------------------------------------------
+      - name: Cache ZeroMQ
+        id: cache-zeromq
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.ZEROMQ_INSTALL_DIR }}
+          key: zeromq-${{ matrix.zeromq-version }}-${{ matrix.macos-version }}-${{ runner.arch }}
+          restore-keys: |
+            zeromq-${{ matrix.zeromq-version }}-${{ matrix.macos-version }}-
+
+      - name: Clone, Build and Install ZeroMQ
+        if: steps.cache-zeromq.outputs.cache-hit != 'true'
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -euo pipefail
+          git clone https://github.com/zeromq/libzmq.git libzmq-src
+          cd libzmq-src
+          git checkout "v${{ matrix.zeromq-version }}"
+          mkdir build && cd build
+          cmake .. \
+            -DCMAKE_INSTALL_PREFIX="${{ env.ZEROMQ_INSTALL_DIR }}" \
+            -DZMQ_BUILD_PROGRAMS=OFF \
+            -DWITH_PERF_TOOL=OFF \
+            -DZMQ_BUILD_TESTS=OFF \
+            -DBUILD_SHARED=ON \
+            -DBUILD_STATIC=OFF
+          cmake --build . --config Release -j"$(sysctl -n hw.ncpu)"
+          cmake --install . --config Release
+
+      # -------------------------------------------------------------------
+      # EPICS Base
+      # -------------------------------------------------------------------
+      - name: Cache EPICS Base
+        id: cache-epics
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.EPICS_BASE_DIR }}
+          key: epics-${{ matrix.epics-version }}-${{ matrix.macos-version }}-${{ runner.arch }}
+          restore-keys: |
+            epics-${{ matrix.epics-version }}-${{ matrix.macos-version }}-
+
+      - name: Clone and Build EPICS Base
+        if: steps.cache-epics.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p "${{ env.EPICS_BASE_DIR }}"
+          git clone https://github.com/epics-base/epics-base.git --branch "${{ matrix.epics-version }}" --depth 1 "${{ env.EPICS_BASE_DIR }}"
+          cd "${{ env.EPICS_BASE_DIR }}"
+          git submodule update --init --recursive --jobs "$(sysctl -n hw.ncpu)"
+          make -j"$(sysctl -n hw.ncpu)" EPICS_HOST_ARCH="${EPICS_HOST_ARCH}"
+
+      # -------------------------------------------------------------------
+      # caQtDM build environment
+      # -------------------------------------------------------------------
+      - name: Set caQtDM build environment variables
+        run: |
+          set -euo pipefail
+          {
+            echo "QTHOME=${QT_ROOT_DIR}"
+            echo "QWTHOME=${{ env.QWT_INSTALL_DIR }}"
+            echo "QWTLIB=${{ env.QWT_INSTALL_DIR }}/lib"
+            echo "QWTINCLUDE=${{ env.QWT_INSTALL_DIR }}/lib/qwt.framework/Headers"
+            echo "QWTVERSION=${{ matrix.qwt-version }}"
+            echo "QWTLIBNAME=qwt"
+            echo "EPICS_BASE=${{ env.EPICS_BASE_DIR }}"
+            echo "EPICSINCLUDE=${{ env.EPICS_BASE_DIR }}/include"
+            echo "EPICSLIB=${{ env.EPICS_BASE_DIR }}/lib/${EPICS_HOST_ARCH}"
+            echo "ZMQ=${{ env.ZEROMQ_INSTALL_DIR }}"
+            echo "ZMQINC=${{ env.ZEROMQ_INSTALL_DIR }}/include"
+            echo "ZMQLIB=${{ env.ZEROMQ_INSTALL_DIR }}/lib"
+            echo "ZMQ_VERSION=${{ matrix.zeromq-version }}"
+            echo "QTCONTROLS_LIBS=${{ env.CAQTDM_DIR }}/caQtDM_Binaries"
+            echo "CAQTDM_COLLECT=${{ env.CAQTDM_DIR }}/caQtDM_Binaries"
+            echo "QTBASE=${{ env.CAQTDM_DIR }}/caQtDM_Binaries"
+            echo "CAQTDM_CA_ARCHIVELIBS=${{ env.CAQTDM_DIR }}/caQtDM_Binaries"
+            echo "CAQTDM_LOGGING_ARCHIVELIBS=${{ env.CAQTDM_DIR }}/caQtDM_Binaries"
+          } >> "$GITHUB_ENV"
+
+      - name: Set Qt version mapping
+        run: |
+          set -euo pipefail
+          MAJOR="$(echo '${{ matrix.qt-version }}' | cut -d. -f1)"
+          echo "CAQTDMQTVER=QT${MAJOR}" >> "$GITHUB_ENV"
+
+      - name: Create caQtDM binaries directories
+        working-directory: ${{ env.CAQTDM_DIR }}
+        run: mkdir -p caQtDM_Binaries/designer caQtDM_Binaries/controlsystems
+
+      - name: Configure and Build caQtDM
+        working-directory: ${{ env.CAQTDM_DIR }}
+        run: |
+          set -euo pipefail
+          export PATH="${QTHOME}/bin:$PATH"
+          timerstart=$(date +%s)
+          qmake all.pro
+          make -j"$(sysctl -n hw.ncpu)"
+          timerstop=$(date +%s)
+          echo "caQtDM compile time: $((timerstop - timerstart)) seconds"
+
+      # -------------------------------------------------------------------
+      # Bundle / deploy
+      # -------------------------------------------------------------------
+      - name: Create macOS application bundle
+        working-directory: ${{ env.CAQTDM_DIR }}
+        run: |
+          set -euo pipefail
+          export PATH="${QTHOME}/bin:$PATH"
+          APP="caQtDM_Binaries/caQtDM.app"
+          if [ ! -d "$APP" ]; then
+            echo "Expected application bundle not found at $APP" >&2
+            ls -la caQtDM_Binaries || true
+            exit 1
+          fi
+          mkdir -p "$APP/Contents/PlugIns/platforms" \
+                   "$APP/Contents/PlugIns/imageformats"
+          cp "${QTHOME}"/plugins/imageformats/*.dylib "$APP/Contents/PlugIns/imageformats/" 2>/dev/null || true
+          rm -f "$APP"/Contents/PlugIns/imageformats/*_debug.dylib || true
+          cp "${QTHOME}/plugins/platforms/libqcocoa.dylib" "$APP/Contents/PlugIns/platforms/" 2>/dev/null || true
+          macdeployqt "$APP" \
+            -executable="$APP/Contents/MacOS/caQtDM" \
+            -libpath="${{ env.CAQTDM_DIR }}/caQtDM_Binaries" \
+            -libpath="${EPICSLIB}" \
+            -libpath="${QWTLIB}" \
+            -libpath="${ZMQLIB}" || true
+
+      - name: Create DMG image
+        working-directory: ${{ env.CAQTDM_DIR }}
+        run: |
+          set -euo pipefail
+          APP="caQtDM_Binaries/caQtDM.app"
+          hdiutil create -volname "caQtDM" -srcfolder "$APP" -ov -format UDZO \
+            "${{ github.workspace }}/caQtDM.dmg"
+
+      - name: Upload caQtDM macOS app artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: caQtDM_macos_${{ matrix.macos-version }}_qt${{ matrix.qt-version }}_qwt${{ matrix.qwt-version }}_zmq${{ matrix.zeromq-version }}_epics${{ matrix.epics-version }}
+          path: ${{ env.CAQTDM_DIR }}/caQtDM_Binaries/caQtDM.app
+
+      - name: Upload caQtDM macOS DMG artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: caQtDM_macos_dmg_${{ matrix.macos-version }}_qt${{ matrix.qt-version }}_qwt${{ matrix.qwt-version }}_zmq${{ matrix.zeromq-version }}_epics${{ matrix.epics-version }}
+          path: ${{ github.workspace }}/caQtDM.dmg
