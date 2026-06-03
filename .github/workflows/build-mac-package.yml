@@ -103,16 +103,16 @@ jobs:
           path: ${{ env.QWT_INSTALL_DIR }}
           key: qwt-${{ matrix.qwt-version }}-qt${{ matrix.qt-version }}-${{ matrix.macos-version }}-${{ runner.arch }}
           restore-keys: |
-            qwt-${{ matrix.qwt-version }}-qt${{ matrix.qt-version }}-${{ matrix.macos-version }}-
+            qwt-${{ matrix.qwt-version }}-qt${{ matrix.qt-version }}-${{ matrix.macos-version }}-${{ runner.arch }}
 
       - name: Clone Qwt
         if: steps.cache-qwt.outputs.cache-hit != 'true'
-        run: git clone https://git.code.sf.net/p/qwt/git --single-branch --branch qwt-${{ matrix.qwt-version }} qwt-src
+        run: git clone https://git.code.sf.net/p/qwt/git --single-branch --branch qwt-${{ matrix.qwt-version }} qwt
         working-directory: ${{ github.workspace }}
 
       - name: Configure, Build and Install Qwt
         if: steps.cache-qwt.outputs.cache-hit != 'true'
-        working-directory: ${{ github.workspace }}/qwt-src
+        working-directory: ${{ github.workspace }}/qwt
         run: |
           set -euo pipefail
           # Install into our deps dir and trim parts we do not need in CI
