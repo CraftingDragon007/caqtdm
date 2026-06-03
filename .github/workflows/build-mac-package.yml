@@ -135,7 +135,7 @@ jobs:
           path: ${{ env.ZEROMQ_INSTALL_DIR }}
           key: zeromq-${{ matrix.zeromq-version }}-${{ matrix.macos-version }}-${{ runner.arch }}
           restore-keys: |
-            zeromq-${{ matrix.zeromq-version }}-${{ matrix.macos-version }}-
+            zeromq-${{ matrix.zeromq-version }}-${{ matrix.macos-version }}-${{ runner.arch }}
 
       - name: Clone, Build and Install ZeroMQ
         if: steps.cache-zeromq.outputs.cache-hit != 'true'
@@ -167,7 +167,7 @@ jobs:
           path: ${{ env.EPICS_BASE_DIR }}
           key: epics-${{ matrix.epics-version }}-${{ matrix.macos-version }}-${{ runner.arch }}
           restore-keys: |
-            epics-${{ matrix.epics-version }}-${{ matrix.macos-version }}-
+            epics-${{ matrix.epics-version }}-${{ matrix.macos-version }}-${{ runner.arch }}
 
       - name: Clone and Build EPICS Base
         if: steps.cache-epics.outputs.cache-hit != 'true'
@@ -190,14 +190,18 @@ jobs:
           if [ ! -f "${QWT_HEADERS_DIR}/qwt_plot.h" ]; then
             echo "ERROR: qwt headers not found ${{ env.QWT_INSTALL_DIR }}" >&2
             find "${{ env.QWT_INSTALL_DIR }}" -maxdepth 5 -name "qwt*.h" 2>/dev/null | head -n 20 || true
-            exit 1
+	    if [ -f "/usr/local/qwt/include/qwt_plot.h" ]; then
+               QWT_HEADERS_DIR=/usr/local/qwt
+            else 
+              exit 1
+            fi
           fi
           echo "Using QWTINCLUDE=${QWT_HEADERS_DIR}"
           {
             echo "QTHOME=${QT_ROOT_DIR}"
             echo "QWTHOME=/usr/local/qwt"
             echo "QWTLIB=/usr/local/qwt/lib"
-            echo "QWTINCLUDE=/usr/local/qwt/include"
+            echo "QWTINCLUDE=${QWT_HEADERS_DIR}"
             echo "QWTVERSION=6.1"
             echo "QWTLIBNAME=qwt"
             echo "EPICS_BASE=${{ env.EPICS_BASE_DIR }}"
