@@ -24,7 +24,7 @@ jobs:
       fail-fast: false
       matrix:
         qt-version: ['6.9.3']
-        qwt-version: ['6.3']
+        qwt-version: ['v6.3.0']
         zeromq-version: ['4.3.5']
         epics-version: ['R7.0.9']
 
@@ -116,11 +116,11 @@ jobs:
         run: |
           set -euo pipefail
           # Install into our deps dir and trim parts we do not need in CI
-          sed -i '' -E "s|^\s*QWT_INSTALL_PREFIX\s*=.*|    QWT_INSTALL_PREFIX = ${{ env.QWT_INSTALL_DIR }}|" qwtconfig.pri
-          sed -i '' -E 's|^QWT_CONFIG\s*\+=\s*QwtExamples.*|# QWT_CONFIG += QwtExamples|' qwtconfig.pri
-          sed -i '' -E 's|^QWT_CONFIG\s*\+=\s*QwtPlayground.*|# QWT_CONFIG += QwtPlayground|' qwtconfig.pri
-          sed -i '' -E 's|^QWT_CONFIG\s*\+=\s*QwtTests.*|# QWT_CONFIG += QwtTests|' qwtconfig.pri
-          sed -i '' -E 's|^QWT_CONFIG\s*\+=\s*QwtDesigner.*|# QWT_CONFIG += QwtDesigner|' qwtconfig.pri
+          sed -i '' -E "s|^[[:space:]]*QWT_INSTALL_PREFIX[[:space:]]*=.*|    QWT_INSTALL_PREFIX = /usr/local/qwt|" qwtconfig.pri
+          sed -i '' -E 's|^QWT_CONFIG[[:space:]]*\+=[[:space:]]*QwtExamples.*|# QWT_CONFIG += QwtExamples|' qwtconfig.pri
+          sed -i '' -E 's|^QWT_CONFIG[[:space:]]*\+=[[:space:]]*QwtPlayground.*|# QWT_CONFIG += QwtPlayground|' qwtconfig.pri
+          sed -i '' -E 's|^QWT_CONFIG[[:space:]]*\+=[[:space:]]*QwtTests.*|# QWT_CONFIG += QwtTests|' qwtconfig.pri
+          sed -i '' -E 's|^QWT_CONFIG[[:space:]]*\+=[[:space:]]*QwtDesigner.*|# QWT_CONFIG += QwtDesigner|' qwtconfig.pri
           qmake qwt.pro
           make -j"$(sysctl -n hw.ncpu)"
           sudo make install
@@ -195,10 +195,10 @@ jobs:
           echo "Using QWTINCLUDE=${QWT_HEADERS_DIR}"
           {
             echo "QTHOME=${QT_ROOT_DIR}"
-            echo "QWTHOME=${{ env.QWT_INSTALL_DIR }}"
-            echo "QWTLIB=${{ env.QWT_INSTALL_DIR }}/lib"
-            echo "QWTINCLUDE=${QWT_HEADERS_DIR}"
-            echo "QWTVERSION=${{ matrix.qwt-version }}"
+            echo "QWTHOME=/usr/local/qwt"
+            echo "QWTLIB=/usr/local/qwt/lib"
+            echo "QWTINCLUDE=/usr/local/qwt/include"
+            echo "QWTVERSION=6.1"
             echo "QWTLIBNAME=qwt"
             echo "EPICS_BASE=${{ env.EPICS_BASE_DIR }}"
             echo "EPICSINCLUDE=${{ env.EPICS_BASE_DIR }}/include"
