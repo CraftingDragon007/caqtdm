@@ -39,7 +39,7 @@ void TestPVDialog::init()
 
     m_formWindow = new FakeFormWindow();
     caLed *entry = new caLed(m_formWindow);
-    m_dialog = new PVDialog(entry, nullptr);
+    m_dialog = new PVDialog(entry, Q_NULLPTR);
 }
 
 void TestPVDialog::cleanupTestCase()
@@ -220,16 +220,30 @@ void TestPVDialog::savesEverythingAtOnce()
     parseChannel(channel, pv, json);
 
     QCOMPARE(pv, QString("TEST:PV:ALL"));
-    QVERIFY(json.contains("dbnd"));
-    QVERIFY(json.contains("caqtdm_monitor"));
-    QVERIFY(json.contains("dec"));
-    QVERIFY(json.contains("arr"));
-    QVERIFY(json.contains("sync"));
-    QVERIFY(json.contains("ts"));
 
-    QCOMPARE(json["dec"].toObject()["n"].toInt(), 4);
+    QVERIFY(json.contains("dbnd"));
+    QJsonObject dbndObj = json["dbnd"].toObject();
+    QVERIFY2(dbndObj.contains("abs"), "Expected 'abs' key inside dbnd");
+    QCOMPARE(dbndObj["abs"].toDouble(), 1.23);
+
+    QVERIFY(json.contains("caqtdm_monitor"));
     QCOMPARE(json["caqtdm_monitor"].toObject()["maxdisplayrate"].toInt(), 50);
-    QCOMPARE(json["arr"].toObject()["e"].toInt(), 99);
+
+    QVERIFY(json.contains("dec"));
+    QCOMPARE(json["dec"].toObject()["n"].toInt(), 4);
+
+    QVERIFY(json.contains("arr"));
+    QJsonObject arrObj = json["arr"].toObject();
+    QCOMPARE(arrObj["s"].toInt(), 2);
+    QCOMPARE(arrObj["i"].toInt(), 3);
+    QCOMPARE(arrObj["e"].toInt(), 99);
+
+    QVERIFY(json.contains("sync"));
+    QJsonObject syncObj = json["sync"].toObject();
+    QCOMPARE(syncObj.keys().size(), 1);
+
+    QVERIFY(json.contains("ts"));
+    QVERIFY2(json["ts"].toObject().isEmpty(), "'ts' value should be an empty JSON object");
 }
 
 void TestPVDialog::savesNothingWithoutPV()
@@ -243,4 +257,135 @@ void TestPVDialog::savesNothingWithoutPV()
     QVERIFY2(channel.isEmpty(), "Channel must be empty when PV text is empty");
 
     m_dialog->rateCheckBox->setChecked(false);
+}
+
+void TestPVDialog::constructorParsesPlainChannel()
+{
+    caLed entry(Q_NULLPTR);
+    entry.setPV("TEST:PV:PLAIN");
+    PVDialog dlg(&entry, Q_NULLPTR);
+
+    QCOMPARE(dlg.pvLine->toPlainText(), QString("TEST:PV:PLAIN"));
+    QVERIFY2(!dlg.dbndCheckBox->isChecked(), "deadband should be off");
+    QVERIFY2(!dlg.rateCheckBox->isChecked(), "rate should be off");
+    QVERIFY2(!dlg.decCheckBox->isChecked(), "decimation should be off");
+    QVERIFY2(!dlg.arrayCheckBox->isChecked(), "array should be off");
+    QVERIFY2(!dlg.syncCheckBox->isChecked(), "sync should be off");
+    QVERIFY2(!dlg.tsCheckBox->isChecked(), "ts should be off");
+}
+
+void TestPVDialog::constructorParsesSomeFilters()
+{
+    caLed entry(Q_NULLPTR);
+    entry.setPV(R"(TEST:PV:SOME.{"dbnd":{"abs":1.5},"dec":{"n":7}})");
+    PVDialog dlg(&entry, Q_NULLPTR);
+
+    QCOMPARE(dlg.pvLine->toPlainText(), QString("TEST:PV:SOME"));
+
+    QVERIFY2(dlg.dbndCheckBox->isChecked(), "deadband should be on");
+    QCOMPARE(dlg.dbndComboBox->currentText(), QString("abs"));
+    QCOMPARE(dlg.dbndDoubleValue->value(), 1.5);
+
+    QVERIFY2(dlg.decCheckBox->isChecked(), "decimation should be on");
+    QCOMPARE(dlg.decIntValue->value(), 7);
+
+    QVERIFY2(!dlg.rateCheckBox->isChecked(), "rate should be off");
+    QVERIFY2(!dlg.arrayCheckBox->isChecked(), "array should be off");
+    QVERIFY2(!dlg.syncCheckBox->isChecked(), "sync should be off");
+    QVERIFY2(!dlg.tsCheckBox->isChecked(), "ts should be off");
+}
+
+void TestPVDialog::constructorParsesAllFilters()
+{
+    caLed entry(Q_NULLPTR);
+    entry.setPV(
+        R"(epics3://TEST:PV:ALL.{"dbnd":{"rel":0.25},"caqtdm_monitor":{"maxdisplayrate":30},"dec":{"n":5},"arr":{"s":2,"i":3,"e":99},"sync":{"while":"SYNC:TRIGGER:PV"},"ts":{}})");
+    PVDialog dlg(&entry, Q_NULLPTR);
+
+    QCOMPARE(dlg.pvLine->toPlainText(), QString("TEST:PV:ALL"));
+    QCOMPARE(dlg.prefixComboBox->currentText(), QString("epics3"));
+
+    QVERIFY2(dlg.dbndCheckBox->isChecked(), "deadband should be on");
+    QCOMPARE(dlg.dbndComboBox->currentText(), QString("rel"));
+    QCOMPARE(dlg.dbndDoubleValue->value(), 0.25);
+
+    QVERIFY2(dlg.rateCheckBox->isChecked(), "rate should be on");
+    QCOMPARE(dlg.rateIntValue->value(), 30);
+
+    QVERIFY2(dlg.decCheckBox->isChecked(), "decimation should be on");
+    QCOMPARE(dlg.decIntValue->value(), 5);
+
+    QVERIFY2(dlg.arrayCheckBox->isChecked(), "array should be on");
+    QCOMPARE(dlg.arrayIntValue_s->value(), 2);
+    QCOMPARE(dlg.arrayIntValue_i->value(), 3);
+    QCOMPARE(dlg.arrayIntValue_e->value(), 99);
+
+    QVERIFY2(dlg.syncCheckBox->isChecked(), "sync should be on");
+    QCOMPARE(dlg.syncComboBox->currentText(), QString("while"));
+    QCOMPARE(dlg.syncLine->text(), QString("SYNC:TRIGGER:PV"));
+
+    QVERIFY2(dlg.tsCheckBox->isChecked(), "ts should be on");
+    QVERIFY2(dlg.msgLine->text().isEmpty(), "no parse errors expected");
+}
+
+void TestPVDialog::roundTripSaveThenParse()
+{
+    // save phase: configure m_dialog and call saveState
+    m_dialog->pvLine->setPlainText("TEST:PV:ROUNDTRIP");
+    m_dialog->prefixComboBox->setCurrentText("epics4");
+
+    m_dialog->dbndCheckBox->setChecked(true);
+    m_dialog->dbndComboBox->setCurrentText("abs");
+    m_dialog->dbndDoubleValue->setValue(0.75);
+
+    m_dialog->rateCheckBox->setChecked(true);
+    m_dialog->rateIntValue->setValue(20);
+
+    m_dialog->decCheckBox->setChecked(true);
+    m_dialog->decIntValue->setValue(6);
+
+    m_dialog->arrayCheckBox->setChecked(true);
+    m_dialog->arrayIntValue_s->setValue(1);
+    m_dialog->arrayIntValue_i->setValue(2);
+    m_dialog->arrayIntValue_e->setValue(50);
+
+    m_dialog->syncCheckBox->setChecked(true);
+    m_dialog->syncComboBox->setCurrentText("last");
+    m_dialog->syncLine->setText("ROUND:TRIP:PV");
+
+    m_dialog->tsCheckBox->setChecked(true);
+
+    m_formWindow->fakeCursor()->properties.clear();
+    m_dialog->saveState();
+    QString channel = getChannelData();
+
+    // parse phase: feed the saved channel back into a new PVDialog
+    caLed entry(Q_NULLPTR);
+    entry.setPV(channel);
+    PVDialog dlg(&entry, Q_NULLPTR);
+
+    QCOMPARE(dlg.pvLine->toPlainText(), QString("TEST:PV:ROUNDTRIP"));
+    QCOMPARE(dlg.prefixComboBox->currentText(), QString("epics4"));
+
+    QVERIFY(dlg.dbndCheckBox->isChecked());
+    QCOMPARE(dlg.dbndComboBox->currentText(), QString("abs"));
+    QCOMPARE(dlg.dbndDoubleValue->value(), 0.75);
+
+    QVERIFY(dlg.rateCheckBox->isChecked());
+    QCOMPARE(dlg.rateIntValue->value(), 20);
+
+    QVERIFY(dlg.decCheckBox->isChecked());
+    QCOMPARE(dlg.decIntValue->value(), 6);
+
+    QVERIFY(dlg.arrayCheckBox->isChecked());
+    QCOMPARE(dlg.arrayIntValue_s->value(), 1);
+    QCOMPARE(dlg.arrayIntValue_i->value(), 2);
+    QCOMPARE(dlg.arrayIntValue_e->value(), 50);
+
+    QVERIFY(dlg.syncCheckBox->isChecked());
+    QCOMPARE(dlg.syncComboBox->currentText(), QString("last"));
+    QCOMPARE(dlg.syncLine->text(), QString("ROUND:TRIP:PV"));
+
+    QVERIFY(dlg.tsCheckBox->isChecked());
+    QVERIFY2(dlg.msgLine->text().isEmpty(), "no parse errors expected after round-trip");
 }

@@ -28,6 +28,10 @@ private slots:
     void savesTs();
     void savesEverythingAtOnce();
     void savesNothingWithoutPV();
+    void constructorParsesPlainChannel();
+    void constructorParsesSomeFilters();
+    void constructorParsesAllFilters();
+    void roundTripSaveThenParse();
 
 private:
     void parseChannel(const QString &channel, QString &outPv, QJsonObject &outJson);
