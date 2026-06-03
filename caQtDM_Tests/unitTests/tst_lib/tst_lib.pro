@@ -29,6 +29,6 @@ LIBS += \
     -lcaQtDM_Lib \
     -lqtcontrols \
     -L$$(EPICS_BASE)/lib/$$(EPICS_HOST_ARCH) \
-    -lca -lCOM \
+    -lca -lCom \
     -L$$(QWTHOME)/lib \
     -l$$(QWTLIBNAME)

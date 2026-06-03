@@ -2,6 +2,7 @@
 #define FAKEFILEOPENWINDOW_H
 
 #include <QMainWindow>
+#include <QDebug>
 
 class FakeFileOpenWindow : public QMainWindow
 {
