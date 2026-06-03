@@ -123,7 +123,7 @@ jobs:
           sed -i '' -E 's|^QWT_CONFIG\s*\+=\s*QwtDesigner.*|# QWT_CONFIG += QwtDesigner|' qwtconfig.pri
           qmake qwt.pro
           make -j"$(sysctl -n hw.ncpu)"
-          make install
+          sudo make install
 
       # -------------------------------------------------------------------
       # ZeroMQ
