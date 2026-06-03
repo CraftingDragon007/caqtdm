@@ -18,11 +18,10 @@ env:
 jobs:
   build:
     name: Build macOS package
-    runs-on: ${{ matrix.macos-version }}
+    runs-on: macos-latest
     strategy:
       fail-fast: false
       matrix:
-        macos-version: ['macos-15']
         qt-version: ['6.9.3']
         qwt-version: ['6.3']
         zeromq-version: ['4.3.5']
