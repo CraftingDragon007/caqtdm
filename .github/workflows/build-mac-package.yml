@@ -116,7 +116,7 @@ jobs:
         run: |
           set -euo pipefail
           # Install into our deps dir and trim parts we do not need in CI
-          sed -i '' -E "s|^[[:space:]]*QWT_INSTALL_PREFIX[[:space:]]*=.*|    QWT_INSTALL_PREFIX = /usr/local/qwt|" qwtconfig.pri
+          sed -i '' -E "s|^[[:space:]]*QWT_INSTALL_PREFIX[[:space:]]*=.*|    QWT_INSTALL_PREFIX = ${{ env.QWT_INSTALL_DIR }}|" qwtconfig.pri
           sed -i '' -E 's|^QWT_CONFIG[[:space:]]*\+=[[:space:]]*QwtExamples.*|# QWT_CONFIG += QwtExamples|' qwtconfig.pri
           sed -i '' -E 's|^QWT_CONFIG[[:space:]]*\+=[[:space:]]*QwtPlayground.*|# QWT_CONFIG += QwtPlayground|' qwtconfig.pri
           sed -i '' -E 's|^QWT_CONFIG[[:space:]]*\+=[[:space:]]*QwtTests.*|# QWT_CONFIG += QwtTests|' qwtconfig.pri
@@ -185,22 +185,12 @@ jobs:
       - name: Set caQtDM build environment variables
         run: |
           set -euo pipefail
-          # search Qwt headers
-          QWT_HEADERS_DIR="$(dirname "$(find -L "${{ env.QWT_INSTALL_DIR }}" -name qwt_plot.h -print 2>/dev/null | head -n1)")"
-          if [ ! -f "${QWT_HEADERS_DIR}/qwt_plot.h" ]; then
-            if [ -f "/usr/local/qwt/include/qwt_plot.h" ]; then
-               QWT_HEADERS_DIR=/usr/local/qwt/include
-            else
-              echo "ERROR: qwt headers not found ${{ env.QWT_INSTALL_DIR }}" >&2
-              exit 1
-            fi
-          fi
-          echo "Using QWTINCLUDE=${QWT_HEADERS_DIR}"
+          echo "Using QWTINCLUDE=${{ env.QWT_INSTALL_DIR }}/include"
           {
             echo "QTHOME=${QT_ROOT_DIR}"
-            echo "QWTHOME=/usr/local/qwt"
-            echo "QWTLIB=/usr/local/qwt/lib"
-            echo "QWTINCLUDE=${QWT_HEADERS_DIR}"
+            echo "QWTHOME=${{ env.QWT_INSTALL_DIR }}"
+            echo "QWTLIB=${{ env.QWT_INSTALL_DIR }}/lib"
+            echo "QWTINCLUDE=${{ env.QWT_INSTALL_DIR }}/include"
             echo "QWTVERSION=6.1"
             echo "QWTLIBNAME=qwt"
             echo "EPICS_BASE=${{ env.EPICS_BASE_DIR }}"
