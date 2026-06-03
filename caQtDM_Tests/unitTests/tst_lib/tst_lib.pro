@@ -15,6 +15,8 @@ HEADERS += ../../../caQtDM_Lib/src/caqtdm_lib.h
 
 SOURCES += ../../../caQtDM_Lib/src/caqtdm_lib.cpp
 
+FORMS += ../../../caQtDM_Viewer/src/main.ui
+
 INCLUDEPATH += ../../../caQtDM_QtControls/src \
     ../../../caQtDM_Lib \
     ../../../caQtDM_Lib/src \
@@ -28,7 +30,12 @@ LIBS += \
     -L$$(CAQTDM_COLLECT) \
     -lcaQtDM_Lib \
     -lqtcontrols \
-    -L$$(EPICS_BASE)/lib/$$(EPICS_HOST_ARCH) \
-    -lca -lCom \
     -L$$(QWTHOME)/lib \
     -l$$(QWTLIBNAME)
+
+_EPICSLIB = $$(EPICSLIB)
+!isEmpty(_EPICSLIB) {
+    LIBS += -L$$(EPICSLIB) -lca -lCom
+} else {
+    LIBS += -L$$(EPICS_BASE)/lib/$$(EPICS_HOST_ARCH) -lca -lCom
+}
