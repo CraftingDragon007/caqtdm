@@ -188,11 +188,10 @@ jobs:
           # search Qwt headers
           QWT_HEADERS_DIR="$(dirname "$(find -L "${{ env.QWT_INSTALL_DIR }}" -name qwt_plot.h -print 2>/dev/null | head -n1)")"
           if [ ! -f "${QWT_HEADERS_DIR}/qwt_plot.h" ]; then
-            echo "ERROR: qwt headers not found ${{ env.QWT_INSTALL_DIR }}" >&2
-            find "${{ env.QWT_INSTALL_DIR }}" -maxdepth 5 -name "qwt*.h" 2>/dev/null | head -n 20 || true
             if [ -f "/usr/local/qwt/include/qwt_plot.h" ]; then
                QWT_HEADERS_DIR=/usr/local/qwt/include
-            else 
+            else
+              echo "ERROR: qwt headers not found ${{ env.QWT_INSTALL_DIR }}" >&2
               exit 1
             fi
           fi
