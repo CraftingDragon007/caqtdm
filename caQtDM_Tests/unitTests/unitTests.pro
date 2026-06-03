@@ -1,3 +1,3 @@
 TEMPLATE = subdirs
 
-SUBDIRS += tst_logging tst_qtcontrols
+SUBDIRS += tst_logging tst_qtcontrols tst_lib

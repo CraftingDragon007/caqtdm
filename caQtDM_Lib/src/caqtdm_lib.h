@@ -110,6 +110,12 @@ namespace Ui {
 class CaQtDM_Lib;
 }
 
+#ifdef UNIT_TESTING
+#define CaQtDM_Lib CaQtDM_Lib_TEST
+#define CAQTDM_LIBSHARED_EXPORT
+#endif
+
+
 class CAQTDM_LIBSHARED_EXPORT CaQtDM_Lib : public QMainWindow, public CaQtDM_Lib_Interface
 {
     Q_OBJECT
@@ -270,7 +276,11 @@ public:
         }
     }
 
+#ifndef UNIT_TESTING
 protected:
+#else
+public:
+#endif
     virtual void timerEvent(QTimerEvent *e);
     void resizeEvent ( QResizeEvent * event );
     void mousePressEvent(QMouseEvent *event);
@@ -288,7 +298,12 @@ signals:
     void Signal_ReloadAllWindows();
     void fileChanged(const QString&);
 
+#ifndef UNIT_TESTING
 private:
+#else
+public:
+#endif
+
 #if !defined(useElapsedTimer)
     double rTime();
 #endif
@@ -505,7 +520,11 @@ private:
 public slots:
     void messageWindowOutput(const QtMsgType type, const QString &message);
 
+#ifndef UNIT_TESTING
 private slots:
+#else
+public slots:
+#endif
     void Callback_CaCalc(double value) ;
     void Callback_UndefinedMacrowindowExit();
     void Callback_GlobalShortcutWindowExit();

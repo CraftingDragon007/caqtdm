@@ -1,14 +1,7 @@
-include(../unitTests.pri)
 include (../../../caQtDM_Viewer/qtdefs.pri)
+include(../unitTests.pri)
 
-DEFINES += BUILDVERSION=\\\"UNITTEST\\\"
-
-QT += testlib network gui widgets designer
-
-CONFIG += qt console warn_on depend_includepath testcase moc build_always
-CONFIG -= app_bundle
-
-TEMPLATE = app
+QT += network gui widgets designer
 
 SOURCES += tst_qtcontrols.cpp \
     tst_pvdialog.cpp
@@ -29,5 +22,3 @@ INCLUDEPATH += ../../../caQtDM_QtControls/src \
 LIBS += \
     -L$$(CAQTDM_COLLECT) \
     -lqtcontrols
-
-LIBS += -Wl,-rpath,$$(CAQTDM_COLLECT)

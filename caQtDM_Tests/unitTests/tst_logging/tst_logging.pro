@@ -1,14 +1,7 @@
 include(../unitTests.pri)
 
-DEFINES += BUILDVERSION=\\\"UNITTEST\\\"
-
-QT += testlib network
+QT += network
 QT -= gui
-
-CONFIG += qt console warn_on depend_includepath testcase moc build_always
-CONFIG -= app_bundle
-
-TEMPLATE = app
 
 SOURCES +=  tst_logging.cpp \
     tst_consoleloghandler.cpp \
