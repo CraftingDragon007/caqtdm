@@ -107,7 +107,7 @@ jobs:
 
       - name: Clone Qwt
         if: steps.cache-qwt.outputs.cache-hit != 'true'
-        run: git clone https://git.code.sf.net/p/qwt/git --single-branch --branch qwt-${{ matrix.qwt-version }} qwt
+        run: git clone https://git.code.sf.net/p/qwt/git --single-branch --branch ${{ matrix.qwt-version }} qwt
         working-directory: ${{ github.workspace }}
 
       - name: Configure, Build and Install Qwt
