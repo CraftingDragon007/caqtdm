@@ -121,6 +121,7 @@ jobs:
           sed -i '' -E 's|^QWT_CONFIG[[:space:]]*\+=[[:space:]]*QwtPlayground.*|# QWT_CONFIG += QwtPlayground|' qwtconfig.pri
           sed -i '' -E 's|^QWT_CONFIG[[:space:]]*\+=[[:space:]]*QwtTests.*|# QWT_CONFIG += QwtTests|' qwtconfig.pri
           sed -i '' -E 's|^QWT_CONFIG[[:space:]]*\+=[[:space:]]*QwtDesigner.*|# QWT_CONFIG += QwtDesigner|' qwtconfig.pri
+          sed -i '' -E 's|^[[:space:]]*QWT_CONFIG[[:space:]]*\+=[[:space:]]*QwtFramework.*|# QWT_CONFIG += QwtFramework|' qwtconfig.pri
           qmake qwt.pro
           make -j"$(sysctl -n hw.ncpu)"
           sudo make install
