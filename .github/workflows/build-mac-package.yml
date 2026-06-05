@@ -23,7 +23,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        macos-version: ['macos-26']
+        macos-version: ['macos-26','macos-26-intel','macos-15','macos-15-intel' ]
         qt-version: ['6.11.1']
         qwt-version: ['v6.3.0']
         zeromq-version: ['4.3.5']
@@ -81,6 +81,7 @@ jobs:
         run: |
           set -euo pipefail
           brew update
+          brew upgrade
           brew install openssl@3 || true
           echo "OPENSSL_ROOT_DIR=$(brew --prefix openssl@3)" >> "$GITHUB_ENV"
 
