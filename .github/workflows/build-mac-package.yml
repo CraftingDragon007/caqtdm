@@ -55,6 +55,18 @@ jobs:
           fi
           echo "Detected machine arch: $ARCH"
 
+      - name: Derive macOS deployment target from matrix
+        run: |
+          set -euo pipefail
+          LABEL="${{ matrix.macos-version }}"
+          VER="$(printf '%s' "$LABEL" | sed -E 's/^macos-([0-9]+).*/\1/')"
+          if ! printf '%s' "$VER" | grep -qE '^[0-9]+$'; then
+            echo "Cannot derive a numeric macOS version from '${LABEL}', falling back to 26" >&2
+            VER=26
+          fi
+          echo "MACOSX_DEPLOYMENT_TARGET=${VER}.0" >> "$GITHUB_ENV"
+          echo "Using MACOSX_DEPLOYMENT_TARGET=${VER}.0 (from ${LABEL})"
+
       - name: Install Qt ${{ matrix.qt-version }}
         uses: jurplel/install-qt-action@v4
         with:
@@ -91,6 +103,7 @@ jobs:
             -DCMAKE_PREFIX_PATH="$QT_ROOT_DIR" \
             -DQt6_DIR="$QT_ROOT_DIR/lib/cmake/Qt6" \
             -DOPENSSL_ROOT_DIR="${OPENSSL_ROOT_DIR}" \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET}" \
             -DCMAKE_INSTALL_PREFIX="$QT_ROOT_DIR"
           cmake --build . --config Release --target install
 
@@ -123,7 +136,7 @@ jobs:
           sed -i '' -E 's|^QWT_CONFIG[[:space:]]*\+=[[:space:]]*QwtTests.*|# QWT_CONFIG += QwtTests|' qwtconfig.pri
           sed -i '' -E 's|^QWT_CONFIG[[:space:]]*\+=[[:space:]]*QwtDesigner.*|# QWT_CONFIG += QwtDesigner|' qwtconfig.pri
           # sed -i '' -E 's|^[[:space:]]*QWT_CONFIG[[:space:]]*\+=[[:space:]]*QwtFramework.*|# QWT_CONFIG += QwtFramework|' qwtconfig.pri
-          qmake qwt.pro
+          qmake qwt.pro QMAKE_MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET}"
           make -j"$(sysctl -n hw.ncpu)"
           sudo make install
 
@@ -150,6 +163,7 @@ jobs:
           mkdir build && cd build
           cmake .. \
             -DCMAKE_INSTALL_PREFIX="${{ env.ZEROMQ_INSTALL_DIR }}" \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET}" \
             -DZMQ_BUILD_PROGRAMS=OFF \
             -DWITH_PERF_TOOL=OFF \
             -DZMQ_BUILD_TESTS=OFF \
@@ -225,7 +239,7 @@ jobs:
           set -euo pipefail
           export PATH="${QTHOME}/bin:$PATH"
           timerstart=$(date +%s)
-          qmake all.pro
+          qmake all.pro QMAKE_MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET}"
           make -j"$(sysctl -n hw.ncpu)"
           timerstop=$(date +%s)
           echo "caQtDM compile time: $((timerstop - timerstart)) seconds"
