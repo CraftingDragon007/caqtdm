@@ -263,12 +263,43 @@ jobs:
           cp "${QTHOME}"/plugins/imageformats/*.dylib "$APP/Contents/PlugIns/imageformats/" 2>/dev/null || true
           rm -f "$APP"/Contents/PlugIns/imageformats/*_debug.dylib || true
           cp "${QTHOME}/plugins/platforms/libqcocoa.dylib" "$APP/Contents/PlugIns/platforms/" 2>/dev/null || true
+          QWT_NEWID=""
+          QWT_BIN="$(find "$APP/Contents/Frameworks/qwt.framework/Versions" -type f -name qwt 2>/dev/null | head -n1 || true)"
+          if [ -n "$QWT_BIN" ]; then
+            QWT_NEWID="@rpath/${QWT_BIN#"$APP/Contents/Frameworks/"}"
+            codesign --remove-signature "$APP/Contents/Frameworks/qwt.framework" 2>/dev/null || true
+            install_name_tool -id "$QWT_NEWID" "$QWT_BIN" 2>/dev/null || true
+            echo "qwt framework id -> $QWT_NEWID"
+          fi
+
+          PLUGIN_EXECS=()
+          while IFS= read -r f; do
+            [ -n "$f" ] || continue
+            file "$f" | grep -q "Mach-O" || continue
+            if [ -n "$QWT_NEWID" ]; then
+              dep="$(otool -L "$f" 2>/dev/null | awk '/qwt\.framework\/.*qwt$/{print $1; exit}' || true)"
+              [ -n "$dep" ] && install_name_tool -change "$dep" "$QWT_NEWID" "$f" 2>/dev/null || true
+            fi
+            case "$f" in
+              */PlugIns/controlsystems/*.dylib)
+                install_name_tool -id "@rpath/$(basename "$f")" "$f" 2>/dev/null || true
+                PLUGIN_EXECS+=( -executable="$f" )
+                ;;
+            esac
+          done <<< "$(find "$APP/Contents/MacOS" "$APP/Contents/Frameworks" "$APP/Contents/PlugIns" -type f 2>/dev/null || true)"
+
           macdeployqt "$APP" \
             -executable="$APP/Contents/MacOS/caQtDM" \
+            ${PLUGIN_EXECS[@]+"${PLUGIN_EXECS[@]}"} \
             -libpath="${{ env.CAQTDM_DIR }}/caQtDM_Binaries" \
             -libpath="${EPICSLIB}" \
             -libpath="${QWTLIB}" \
             -libpath="${ZMQLIB}" || true
+
+          codesign --force --sign - "$APP/Contents/Frameworks/qwt.framework" 2>/dev/null || true
+          find "$APP/Contents/PlugIns" -name '*.dylib' -exec codesign --force --sign - {} \; 2>/dev/null || true
+          codesign --force --deep --sign - "$APP" 2>/dev/null || true
+          codesign --verify --verbose=2 "$APP" 2>&1 || echo "codesign verify reported issues (non-fatal)"
 
       - name: Create DMG image
         working-directory: ${{ env.CAQTDM_DIR }}
