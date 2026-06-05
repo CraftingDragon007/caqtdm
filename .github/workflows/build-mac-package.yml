@@ -19,10 +19,11 @@ env:
 jobs:
   build:
     name: Build macOS package
-    runs-on: macos-latest
+    runs-on: ${{ matrix.macos-version }}
     strategy:
       fail-fast: false
       matrix:
+        macos-version: ['macos-26-intel','macos-26']
         qt-version: ['6.9.3']
         qwt-version: ['v6.3.0']
         zeromq-version: ['4.3.5']
@@ -121,7 +122,7 @@ jobs:
           sed -i '' -E 's|^QWT_CONFIG[[:space:]]*\+=[[:space:]]*QwtPlayground.*|# QWT_CONFIG += QwtPlayground|' qwtconfig.pri
           sed -i '' -E 's|^QWT_CONFIG[[:space:]]*\+=[[:space:]]*QwtTests.*|# QWT_CONFIG += QwtTests|' qwtconfig.pri
           sed -i '' -E 's|^QWT_CONFIG[[:space:]]*\+=[[:space:]]*QwtDesigner.*|# QWT_CONFIG += QwtDesigner|' qwtconfig.pri
-          sed -i '' -E 's|^[[:space:]]*QWT_CONFIG[[:space:]]*\+=[[:space:]]*QwtFramework.*|# QWT_CONFIG += QwtFramework|' qwtconfig.pri
+          # sed -i '' -E 's|^[[:space:]]*QWT_CONFIG[[:space:]]*\+=[[:space:]]*QwtFramework.*|# QWT_CONFIG += QwtFramework|' qwtconfig.pri
           qmake qwt.pro
           make -j"$(sysctl -n hw.ncpu)"
           sudo make install
@@ -191,7 +192,7 @@ jobs:
             echo "QTHOME=${QT_ROOT_DIR}"
             echo "QWTHOME=${{ env.QWT_INSTALL_DIR }}"
             echo "QWTLIB=${{ env.QWT_INSTALL_DIR }}/lib"
-            echo "QWTINCLUDE=${{ env.QWT_INSTALL_DIR }}/include"
+            echo "QWTINCLUDE=${{ env.QWT_INSTALL_DIR }}/lib/qwt.framework/Headers"
             echo "QWTVERSION=6.1"
             echo "QWTLIBNAME=qwt"
             echo "EPICS_BASE=${{ env.EPICS_BASE_DIR }}"
