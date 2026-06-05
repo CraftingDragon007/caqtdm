@@ -233,6 +233,20 @@ jobs:
         working-directory: ${{ env.CAQTDM_DIR }}
         run: mkdir -p caQtDM_Binaries/designer caQtDM_Binaries/controlsystems
 
+      - name: Normalize Qwt framework install id
+        run: |
+          set -euo pipefail
+          FWDIR="${{ env.QWT_INSTALL_DIR }}/lib"
+          BIN="$(find "$FWDIR/qwt.framework/Versions" -type f -name qwt 2>/dev/null | head -n1 || true)"
+          if [ -n "$BIN" ]; then
+            NEWID="@rpath/${BIN#"$FWDIR/"}"
+            sudo install_name_tool -id "$NEWID" "$BIN" 2>/dev/null || true
+            sudo codesign --force --sign - "$FWDIR/qwt.framework" 2>/dev/null || true
+            echo "Normalized qwt framework id -> $NEWID"
+          else
+            echo "qwt framework binary not found under $FWDIR" >&2
+          fi
+
       - name: Configure and Build caQtDM
         working-directory: ${{ env.CAQTDM_DIR }}
         run: |
