@@ -25,7 +25,7 @@ env:
   QWT_REPOSITORY: https://git.code.sf.net/p/qwt/git
   EPICS_VERSION_TAG: R7.0.10
   GCC_TOOLSET: "15"
-  DOCKER_IMAGE: caqtdm-appimage-builder:rhel8-gcc15-qt6.11.1-wayland
+  DOCKER_IMAGE: caqtdm-appimage-builder:rhel8-gcc15-qt6.11.1
   OUTPUT_DIR: ${{ github.workspace }}/artifacts/appimage
 
 jobs:
