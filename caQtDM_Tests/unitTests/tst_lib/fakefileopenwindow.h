@@ -21,6 +21,9 @@ public slots:
     {
         qInfo() << "Callback_OpenNewFile";
     }
+
+signals:
+    void themeChanged();
 };
 
 #endif // FAKEFILEOPENWINDOW_H

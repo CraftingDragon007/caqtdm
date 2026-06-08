@@ -683,7 +683,7 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
 
     setContextMenuPolicy(Qt::CustomContextMenu);
     connect(this, SIGNAL(customContextMenuRequested(const QPoint&)), this, SLOT(ShowContextMenu(const QPoint&)));
-    connect(this, SIGNAL(themeChanged), this, SLOT(themeChanged));
+    connect(parent, SIGNAL(themeChanged()), this, SLOT(themeChanged()));
 #ifndef MOBILE
     this->globalEventFilter = new HMIApplicationEventFilter(this);
 
