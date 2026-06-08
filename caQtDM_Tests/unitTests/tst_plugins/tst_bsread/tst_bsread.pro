@@ -25,21 +25,21 @@ INCLUDEPATH += ../../../../caQtDM_QtControls/src \
 
 LIBS += \
     -L$$(CAQTDM_COLLECT) \
-    -lcaQtDM_Lib \
     -lqtcontrols \
+    -lcaQtDM_Lib \
     -L$(CAQTDM_COLLECT)/controlsystems \
     -lbsread_Plugin
 
 _EPICSLIB = $$(EPICSLIB)
 !isEmpty(_EPICSLIB) {
-    LIBS += -Wl,-rpath,$$(EPICSLIB)
+    QMAKE_RPATHDIR += $$(EPICSLIB)
     LIBS += -L$$(EPICSLIB) -lca -lCom
 } else {
-    LIBS += -Wl,-rpath,$$(EPICS_BASE)/lib/$$(EPICS_HOST_ARCH)
+    QMAKE_RPATHDIR += $$(EPICS_BASE)/lib/$$(EPICS_HOST_ARCH)
     LIBS += -L$$(EPICS_BASE)/lib/$$(EPICS_HOST_ARCH) -lca -lCom
 }
 
-LIBS += -Wl,-rpath,$$(ZMQLIB)
-
 CONFIG += Define_ZMQ_Lib caqtdm_rpath
 include(../../../../caQtDM.pri)
+
+QMAKE_RPATHDIR += $$(CAQTDM_COLLECT)
