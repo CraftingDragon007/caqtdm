@@ -9624,21 +9624,13 @@ int CaQtDM_Lib::parseForDisplayRate(QString &inputc, int &rate)
                     qCDebug(caQtDMLibLog) << "decode value =" << rate;
                     success = true;
                 }
+                root.remove("caqtdm_monitor");
+                document = QJsonDocument(root);
+                inputc = QString::fromUtf8(document.toJson(QJsonDocument::Compact));
             }
         }
     }
 
-    // we have to take this json string out of the global json string given for epics 3.15 and higher
-    // get rid of first { and last }
-    // in the call we append the resulting string to the pv
-
-    qCDebug(caQtDMLibLog) << "before1" << inputc;
-    QString pattern=",?\\s*.caqtdm_monitor.:\\{([^}]+)\\}\\s*,?";
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    inputc.remove(QRegExp(",?\\s*.caqtdm_monitor.:\\{([^}]+)\\}\\s*,?", Qt::CaseInsensitive));
-#else
-    inputc.remove(QRegularExpression(pattern, QRegularExpression::CaseInsensitiveOption));
-#endif
     return success;
 }
 
