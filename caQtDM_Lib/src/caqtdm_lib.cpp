@@ -2530,7 +2530,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         thisPalette.setColor(QPalette::Light, thisLightColor);
         thisPalette.setColor(QPalette::Dark, thisDarkColor);
         thisPalette.setColor(QPalette::Window, thisFrameColor);
-        //if (m_boxLayout) includeWidget->setLayout(m_boxLayout);
+        if (m_boxLayout) includeWidget->setLayout(m_boxLayout);
         if (m_boxLayout) m_boxLayout->addWidget(frame);
 
         if(gridLayout) frame->setLayout(gridLayout);
