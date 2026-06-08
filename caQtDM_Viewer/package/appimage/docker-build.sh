@@ -19,6 +19,7 @@
 #   BUILDX_BUILDER    Optional buildx builder name for --buildx-bake
 #   BUILDX_BAKE_OUTPUT Buildx bake output, e.g. type=docker or type=oci,dest=...
 #   DOCKER_COPY_SOURCE Copy source into the container instead of bind-mounting
+#   DOCKER_CURRENT     Clone the current git remote and branch in checkout mode
 #   OUTPUT_DIR        Where to write the final AppImage (default: script dir)
 #   QT_VERSION        Qt version built into the image (default: 6.11.1)
 #   QT_BUILD_JOBS     Parallel jobs for the Qt source build (default: auto)
@@ -48,6 +49,7 @@ DOCKER_NO_BUILD="${DOCKER_NO_BUILD:-${DOCKER_NO_PULL:-0}}"
 DOCKER_NETWORK="${DOCKER_NETWORK:-host}"
 BUILDX_BUILDER="${BUILDX_BUILDER:-}"
 BUILDX_BAKE_OUTPUT="${BUILDX_BAKE_OUTPUT:-}"
+DOCKER_CURRENT="${DOCKER_CURRENT:-0}"
 DOCKER_COPY_SOURCE_EXPLICIT=0
 [ "${DOCKER_COPY_SOURCE+x}" = x ] && DOCKER_COPY_SOURCE_EXPLICIT=1
 DOCKER_COPY_SOURCE="${DOCKER_COPY_SOURCE:-0}"
@@ -90,6 +92,7 @@ Docker wrapper options:
   --buildx-builder NAME Use a specific buildx builder for --buildx-bake
   --buildx-output OUT  Set buildx bake output, e.g. type=docker
   --copy-source        Copy source into the container instead of bind-mounting
+  --current            In checkout mode, clone the current git remote and branch
 
 Environment overrides:
   DOCKER_IMAGE      Image tag to build/use (default: $DOCKER_IMAGE)
@@ -97,6 +100,7 @@ Environment overrides:
   DOCKER_NETWORK    Docker network mode (default: $DOCKER_NETWORK)
   BUILDX_BUILDER    Optional buildx builder name (default: ${BUILDX_BUILDER:-unset})
   BUILDX_BAKE_OUTPUT Buildx bake output (default: ${BUILDX_BAKE_OUTPUT:-unset})
+  DOCKER_CURRENT    Clone the current git remote and branch in checkout mode (default: $DOCKER_CURRENT)
   DOCKER_COPY_SOURCE Copy source into the container instead of bind-mounting (default: $DOCKER_COPY_SOURCE)
   OUTPUT_DIR        Where to write the final AppImage (default: $OUTPUT_DIR)
   QT_VERSION        Qt version built into the image (default: $QT_VERSION)
@@ -112,16 +116,19 @@ Examples:
   $(basename "$0")
   $(basename "$0") --branch Development
   $(basename "$0") --no-checkout --without-bsread
-  $(basename "$0") --buildx-bake --buildx-builder remote-docker --branch Development
+  $(basename "$0") --buildx-bake --buildx-builder remote-docker
+  $(basename "$0") --buildx-bake --buildx-builder remote-docker --current
   $(basename "$0") --buildx-bake --buildx-builder remote-docker --copy-source --no-checkout
 
 For remote Docker builds, use a Docker context/buildx builder backed by the
 remote Docker daemon and leave BUILDX_BAKE_OUTPUT unset. Do not use --load for
 that case; --load streams a large image back through the client session.
 Checkout-based builds copy only the AppImage packaging files and clone the
-repository inside the container. Use --copy-source explicitly for --no-checkout
-or --source builds with a remote Docker daemon, because remote daemons cannot see
-local bind mounts. Local Docker --no-checkout continues to use a bind mount.
+default upstream repository and Development branch inside the container. Use
+--current to clone the current git remote and branch instead. Use --copy-source
+explicitly for --no-checkout or --source builds with a remote Docker daemon,
+because remote daemons cannot see local bind mounts. Local Docker --no-checkout
+continues to use a bind mount.
 EOF
 }
 
@@ -148,6 +155,9 @@ parse_args() {
       --copy-source)
         DOCKER_COPY_SOURCE=1
         DOCKER_COPY_SOURCE_EXPLICIT=1
+        ;;
+      --current)
+        DOCKER_CURRENT=1
         ;;
       *)
         FORWARDED_ARGS+=("$1")
@@ -201,6 +211,14 @@ validate_source_transport() {
     && [ "$SOURCE_TRANSPORT" != copy-source ]; then
     die "--buildx-bake --no-checkout requires --copy-source. Without --copy-source, buildx mode clones the repository inside the container, which contradicts --no-checkout."
   fi
+
+  if [ "$DOCKER_CURRENT" = "1" ] && forwarded_args_include_no_checkout; then
+    die "--current cannot be combined with --no-checkout"
+  fi
+
+  if [ "$DOCKER_CURRENT" = "1" ] && forwarded_args_include_source; then
+    die "--current cannot be combined with --source"
+  fi
 }
 
 current_git_branch() {
@@ -224,7 +242,7 @@ prepare_container_args() {
     CONTAINER_ARGS+=("$arg")
   done
 
-  [ "$SOURCE_TRANSPORT" = copy-packaging ] || return 0
+  [ "$DOCKER_CURRENT" = "1" ] || return 0
 
   if ! forwarded_args_have_option --repo; then
     remote="$(current_git_remote)"
