@@ -1,0 +1,105 @@
+name: caQtDM AppImage Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      repository:
+        description: Git repository to clone inside the AppImage build. Leave empty to build this checkout.
+        required: false
+        type: string
+      ref:
+        description: Git branch or tag to clone when repository is set.
+        required: false
+        default: Development
+        type: string
+  pull_request:
+  schedule:
+    - cron: '0 2 * * *'
+
+env:
+  QT_VERSION: 6.11.1
+  QT_BUILD_JOBS: auto
+  OPENSSL_VERSION: 3.5.1
+  QWT_VERSION: 6.3.0
+  QWT_REF: v6.3.0
+  QWT_REPOSITORY: https://git.code.sf.net/p/qwt/git
+  EPICS_VERSION_TAG: R7.0.10
+  GCC_TOOLSET: "15"
+  DOCKER_IMAGE: caqtdm-appimage-builder:rhel8-gcc15-qt6.11.1
+  OUTPUT_DIR: ${{ github.workspace }}/artifacts/appimage
+
+jobs:
+  build:
+    name: Build AppImage
+    runs-on: ubuntu-24.04
+
+    permissions:
+      contents: read
+      actions: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build AppImage Docker image
+        uses: docker/build-push-action@v7
+        with:
+          context: caQtDM_Viewer/package/appimage
+          file: caQtDM_Viewer/package/appimage/Dockerfile
+          load: true
+          tags: ${{ env.DOCKER_IMAGE }}
+          build-args: |
+            QT_VERSION=${{ env.QT_VERSION }}
+            QT_BUILD_JOBS=${{ env.QT_BUILD_JOBS }}
+            OPENSSL_VERSION=${{ env.OPENSSL_VERSION }}
+            QWT_VERSION=${{ env.QWT_VERSION }}
+            QWT_REF=${{ env.QWT_REF }}
+            QWT_REPOSITORY=${{ env.QWT_REPOSITORY }}
+            EPICS_VERSION_TAG=${{ env.EPICS_VERSION_TAG }}
+            GCC_TOOLSET=${{ env.GCC_TOOLSET }}
+          cache-from: |
+            type=gha,scope=appimage-qt-${{ env.QT_VERSION }}
+            type=gha,scope=appimage-deps-qt-${{ env.QT_VERSION }}-openssl-${{ env.OPENSSL_VERSION }}-qwt-${{ env.QWT_REF }}-epics-${{ env.EPICS_VERSION_TAG }}
+          cache-to: type=gha,mode=max,scope=appimage-deps-qt-${{ env.QT_VERSION }}-openssl-${{ env.OPENSSL_VERSION }}-qwt-${{ env.QWT_REF }}-epics-${{ env.EPICS_VERSION_TAG }}
+
+      - name: Build AppImage from current checkout
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.repository == '' }}
+        env:
+          DOCKER_NO_BUILD: "1"
+        run: |
+          set -euo pipefail
+          caQtDM_Viewer/package/appimage/docker-build.sh --no-checkout
+
+      - name: Build AppImage from selected repository
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.repository != '' }}
+        env:
+          DOCKER_NO_BUILD: "1"
+          SELECTED_REPOSITORY: ${{ inputs.repository }}
+          SELECTED_REF: ${{ inputs.ref }}
+        run: |
+          set -euo pipefail
+          caQtDM_Viewer/package/appimage/docker-build.sh \
+            --repo "${SELECTED_REPOSITORY}" \
+            --branch "${SELECTED_REF}"
+
+      - name: Verify AppImage artifact
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          appimages=("${OUTPUT_DIR}"/*.AppImage)
+          if [ "${#appimages[@]}" -ne 1 ]; then
+            printf 'Expected exactly one AppImage in %s, found %s\n' "${OUTPUT_DIR}" "${#appimages[@]}" >&2
+            exit 1
+          fi
+          file "${appimages[0]}"
+          APPIMAGE_EXTRACT_AND_RUN=1 "${appimages[0]}" --appimage-help >/dev/null
+
+      - name: Upload AppImage artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: caqtdm-appimage-${{ runner.os }}-x86_64
+          path: ${{ env.OUTPUT_DIR }}/*.AppImage
+          if-no-files-found: error
