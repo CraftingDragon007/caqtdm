@@ -42,5 +42,4 @@ _EPICSLIB = $$(EPICSLIB)
 CONFIG += Define_ZMQ_Lib caqtdm_rpath
 include(../../../../caQtDM.pri)
 
-QMAKE_RPATHDIR += $$(CAQTDM_COLLECT)
 QMAKE_LFLAGS += -Wl,--disable-new-dtags
