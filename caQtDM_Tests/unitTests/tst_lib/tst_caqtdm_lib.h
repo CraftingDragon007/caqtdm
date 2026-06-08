@@ -1,6 +1,8 @@
 #ifndef TST_CAQTDM_LIB_H
 #define TST_CAQTDM_LIB_H
 
+#include "fakefileopenwindow.h"
+
 #include <caqtdm_lib.h>
 
 #include <QObject>
@@ -17,8 +19,15 @@ private slots:
     void init();
     void cleanupTestCase();
     void cleanup();
-    void test1();
+    void checkJsonStringWorks();
+    void parseForDisplayRateWorks();
+    void parseForQRectConstWorks();
+    void treatMacroWorks();
+
 private:
+    FakeFileOpenWindow *m_fakeFileOpenWindow;
+    MutexKnobData *m_mutexKnobData;
+    CaQtDM_Lib *m_caQtDM_Lib;
 };
 
 #endif // TST_CAQTDM_LIB_H
