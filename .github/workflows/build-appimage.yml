@@ -61,9 +61,9 @@ jobs:
             EPICS_VERSION_TAG=${{ env.EPICS_VERSION_TAG }}
             GCC_TOOLSET=${{ env.GCC_TOOLSET }}
           cache-from: |
-            type=gha,scope=appimage-qt-${{ env.QT_VERSION }}-wayland
-            type=gha,scope=appimage-deps-qt-${{ env.QT_VERSION }}-wayland-openssl-${{ env.OPENSSL_VERSION }}-qwt-${{ env.QWT_REF }}-epics-${{ env.EPICS_VERSION_TAG }}
-          cache-to: type=gha,mode=max,scope=appimage-deps-qt-${{ env.QT_VERSION }}-wayland-openssl-${{ env.OPENSSL_VERSION }}-qwt-${{ env.QWT_REF }}-epics-${{ env.EPICS_VERSION_TAG }}
+            type=gha,scope=appimage-qt-${{ env.QT_VERSION }}
+            type=gha,scope=appimage-deps-qt-${{ env.QT_VERSION }}-openssl-${{ env.OPENSSL_VERSION }}-qwt-${{ env.QWT_REF }}-epics-${{ env.EPICS_VERSION_TAG }}
+          cache-to: type=gha,mode=max,scope=appimage-deps-qt-${{ env.QT_VERSION }}-openssl-${{ env.OPENSSL_VERSION }}-qwt-${{ env.QWT_REF }}-epics-${{ env.EPICS_VERSION_TAG }}
 
       - name: Build AppImage from current checkout
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.repository == '' }}
