@@ -34,7 +34,11 @@
 #include "bsread_channeldata.h"
 #include "bsread_wfhandling.h"
 
-class bsread_Decode : public QObject
+#ifdef UNIT_TESTING
+#define bsread_Decode bsread_Decode_TEST
+#endif
+
+class CAQTDM_PLUGINSSHARED_EXPORT bsread_Decode : public QObject
 {
     Q_OBJECT
 public:
@@ -66,7 +70,11 @@ public slots:
     void process();
 signals:
     void finished();
+#ifndef UNIT_TESTING
 private:
+#else
+public:
+#endif
     QMutex mutex;
     void * context;
     void * zmqsocket;

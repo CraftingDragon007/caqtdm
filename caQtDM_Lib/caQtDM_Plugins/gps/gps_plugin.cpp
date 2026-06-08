@@ -26,7 +26,7 @@
 #include <QThread>
 
 #include "gps_plugin.h"
-#include "loggingcategories.h"
+#include "caQtDM_Plugins_global.h"
 
 Q_LOGGING_CATEGORY(gpsLog, "caqtdm.plugins.gps")
 

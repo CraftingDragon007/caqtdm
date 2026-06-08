@@ -31,7 +31,7 @@
 #include <QtConcurrent/QtConcurrent>
 #include "alarmdefs.h"
 #include "fileFunctions.h"
-#include "loggingcategories.h"
+#include "caQtDM_Plugins_global.h"
 #include "opcua_core.h"
 #include "searchfile.h"
 

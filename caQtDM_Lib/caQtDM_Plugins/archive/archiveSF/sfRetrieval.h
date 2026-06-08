@@ -32,7 +32,7 @@
 #include <QTableWidget>
 #include <QMessageBox>
 #include <QEventLoop>
-#include "loggingcategories.h"
+#include "caQtDM_Plugins_global.h"
 
 class QNetworkAccessManager;
 

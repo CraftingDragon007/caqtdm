@@ -28,7 +28,7 @@
 #include "zmq.h"
 #include "bsread_decode.h"
 #include "bsread_dispatchercontrol.h"
-#include "loggingcategories.h"
+#include "caQtDM_Plugins_global.h"
 
 // as defined in knobDefines.h
 //caType {caSTRING	= 0, caINT = 1, caFLOAT = 2, caENUM = 3, caCHAR = 4, caLONG = 5, caDOUBLE = 6};

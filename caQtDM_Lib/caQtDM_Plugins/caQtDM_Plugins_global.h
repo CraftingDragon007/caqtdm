@@ -1,5 +1,19 @@
-#ifndef LOGGINGCATEGORIES_H
-#define LOGGINGCATEGORIES_H
+#ifndef CAQTDM_PLUGINS_GLOBAL_H
+#define CAQTDM_PLUGINS_GLOBAL_H
+
+#if defined(UNIT_TESTING)
+#define CAQTDM_PLUGINSSHARED_EXPORT
+#else
+#if defined(_MSC_VER)
+#if defined(CAQTDM_PLUGIN_LIBRARY)
+#define CAQTDM_PLUGINSSHARED_EXPORT __declspec(dllexport)
+#else
+#define CAQTDM_PLUGINSSHARED_EXPORT __declspec(dllimport)
+#endif
+#else
+#define CAQTDM_PLUGINSSHARED_EXPORT
+#endif
+#endif
 
 #include <QLoggingCategory>
 Q_DECLARE_LOGGING_CATEGORY(archiveHTTPLog)
@@ -13,4 +27,4 @@ Q_DECLARE_LOGGING_CATEGORY(gpsLog)
 Q_DECLARE_LOGGING_CATEGORY(modbusLog)
 Q_DECLARE_LOGGING_CATEGORY(opcuaLog)
 
-#endif // LOGGINGCATEGORIES_H
+#endif // CAQTDM_PLUGINS_GLOBAL_H

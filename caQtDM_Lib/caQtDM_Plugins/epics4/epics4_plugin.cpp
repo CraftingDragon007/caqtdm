@@ -32,7 +32,7 @@
 #include "epics4_plugin.h"
 #include <epicsThread.h>
 #include <ctime>
-#include "loggingcategories.h"
+#include "caQtDM_Plugins_global.h"
 
 Q_LOGGING_CATEGORY(epics4Log, "caqtdm.plugins.epics.4")
 

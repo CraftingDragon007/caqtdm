@@ -30,7 +30,7 @@
 #include <QJsonDocument>
 #include <QNetworkAccessManager>
 #include <QSslConfiguration>
-#include "loggingcategories.h"
+#include "caQtDM_Plugins_global.h"
 #include "qtcontrols_global.h"
 
 bsread_dispatchercontrol::bsread_dispatchercontrol()

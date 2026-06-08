@@ -26,7 +26,7 @@
 #include <QThread>
 #include "demo_plugin.h"
 // You need to modify this file to add a plugin-specific logging category
-#include "loggingcategories.h"
+#include "caQtDM_Plugins_global.h"
 
 // as defined in knobDefines.h
 //caType {caSTRING	= 0, caINT = 1, caFLOAT = 2, caENUM = 3, caCHAR = 4, caLONG = 5, caDOUBLE = 6};

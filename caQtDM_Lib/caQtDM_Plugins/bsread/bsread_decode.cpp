@@ -38,7 +38,7 @@
 #include "knobData.h"
 #include "bsread_channeldata.h"
 #include "bsread_wfhandling.h"
-#include "loggingcategories.h"
+#include "caQtDM_Plugins_global.h"
 
 enum Alarms {NO_ALARM=0, MINOR_ALARM, MAJOR_ALARM, INVALID_ALARM, NOTCONNECTED=99};
 

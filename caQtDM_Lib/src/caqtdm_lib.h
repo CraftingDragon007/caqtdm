@@ -115,7 +115,6 @@ class CaQtDM_Lib;
 #define CAQTDM_LIBSHARED_EXPORT
 #endif
 
-
 class CAQTDM_LIBSHARED_EXPORT CaQtDM_Lib : public QMainWindow, public CaQtDM_Lib_Interface
 {
     Q_OBJECT

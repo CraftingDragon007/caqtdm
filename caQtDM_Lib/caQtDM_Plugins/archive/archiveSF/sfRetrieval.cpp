@@ -35,7 +35,7 @@
 #include <QTimer>
 
 #include "sfRetrieval.h"
-#include "loggingcategories.h"
+#include "caQtDM_Plugins_global.h"
 #include <QDebug>
 #include <QThread>
 #include <QTime>

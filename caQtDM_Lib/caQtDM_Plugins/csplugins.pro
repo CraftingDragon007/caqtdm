@@ -5,7 +5,6 @@ error("Use at least Qt 4.6.")
 }
 include (../../caQtDM_Viewer/qtdefs.pri)
 
-
 TEMPLATE = subdirs
 SUBDIRS = demo epics3 archive environment
 

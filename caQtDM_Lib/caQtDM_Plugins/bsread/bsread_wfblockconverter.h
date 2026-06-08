@@ -1,12 +1,14 @@
 #ifndef BSREAD_WFBLOCKCONVERTER
 #define BSREAD_WFBLOCKCONVERTER
-#include <QThread>
 #include <QDebug>
 #include <QRunnable>
 #include <QSysInfo>
+#include <QThread>
+#include "bsread_channeldata.h"
+#include "caQtDM_Plugins_global.h"
 
 template <class T_BSREAD,class T_CAQTDM>
-class bsread_wfblockconverter :public QObject, public QRunnable
+class CAQTDM_PLUGINSSHARED_EXPORT bsread_wfblockconverter :public QObject, public QRunnable
 {
     void run()
      {
