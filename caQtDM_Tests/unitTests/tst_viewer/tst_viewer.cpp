@@ -1,16 +1,16 @@
 #include <QCoreApplication>
 #include <QTest>
 
-#include "tst_consoleloghandler.h"
-#include "tst_fileloghandler.h"
-#include "tst_generalloghandler.h"
-#include "tst_logstashloghandler.h"
+#include "tst_logging/tst_consoleloghandler.h"
+#include "tst_logging/tst_fileloghandler.h"
+#include "tst_logging/tst_generalloghandler.h"
+#include "tst_logging/tst_logstashloghandler.h"
 
 int main(int argc, char **argv)
 {
     QCoreApplication app(argc, argv);
     QCoreApplication::setOrganizationName("Paul Scherrer Institut");
-    QCoreApplication::setApplicationName("caQtDM-UnitTests-Logging");
+    QCoreApplication::setApplicationName("caQtDM-UnitTests-Viewer");
     int status = 0;
 
     {

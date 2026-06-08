@@ -3,17 +3,17 @@ include(../unitTests.pri)
 QT += network
 QT -= gui
 
-SOURCES +=  tst_logging.cpp \
-    tst_consoleloghandler.cpp \
-    tst_fileloghandler.cpp \
-    tst_generalloghandler.cpp \
-    tst_logstashloghandler.cpp
+SOURCES +=  tst_viewer.cpp \
+    tst_logging/tst_consoleloghandler.cpp \
+    tst_logging/tst_fileloghandler.cpp \
+    tst_logging/tst_generalloghandler.cpp \
+    tst_logging/tst_logstashloghandler.cpp
 
 HEADERS += \
-    tst_consoleloghandler.h \
-    tst_fileloghandler.h \
-    tst_generalloghandler.h \
-    tst_logstashloghandler.h
+    tst_logging/tst_consoleloghandler.h \
+    tst_logging/tst_fileloghandler.h \
+    tst_logging/tst_generalloghandler.h \
+    tst_logging/tst_logstashloghandler.h
 
 # --- Tested classes below ---
 
