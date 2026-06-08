@@ -1,3 +1,7 @@
+include(../../../caQtDM_Viewer/qtdefs.pri)
+
 TEMPLATE = subdirs
 
-SUBDIRS += tst_bsread
+bsread: {
+    SUBDIRS += tst_bsread
+}
