@@ -35,7 +35,10 @@ LIBS += \
 
 _EPICSLIB = $$(EPICSLIB)
 !isEmpty(_EPICSLIB) {
+    LIBS += -Wl,-rpath,$$(EPICSLIB)
     LIBS += -L$$(EPICSLIB) -lca -lCom
 } else {
+    LIBS += -Wl,-rpath,$$(EPICS_BASE)/lib/$$(EPICS_HOST_ARCH)
     LIBS += -L$$(EPICS_BASE)/lib/$$(EPICS_HOST_ARCH) -lca -lCom
 }
+
