@@ -204,7 +204,7 @@ is_elf_file() {
   readelf -h "$1" >/dev/null 2>&1
 }
 
-is_patchable_elf() {
+is_runtime_elf() {
   local header
   header="$(readelf -h "$1" 2>/dev/null)" || return 1
 
@@ -239,7 +239,7 @@ validate_appdir_elf_init_tags() {
   local file
 
   while IFS= read -r -d '' file; do
-    is_patchable_elf "$file" || continue
+    is_runtime_elf "$file" || continue
     validate_elf_init_tag "$file"
   done < <(find "$APPDIR" -type f -print0)
 }
@@ -294,7 +294,7 @@ copy_runtime_library() {
   install -Dm755 "$source" "$APPDIR/usr/lib/$name"
 }
 
-copy_blacklisted_runtime_libraries() {
+copy_extra_runtime_libraries() {
   local library
 
   if compgen -G "$APPDIR/usr/lib/libhogweed.so*" >/dev/null || \
@@ -364,7 +364,7 @@ bundle_elf_dependencies_once() {
   local dependency_library_path="$app_lib_dir:$app_lib_dir/controlsystems:$app_lib_dir/designer:$APPDIR/usr/lib:${EPICSLIB:-}:${LD_LIBRARY_PATH:-}"
 
   while IFS= read -r -d '' file; do
-    is_patchable_elf "$file" || continue
+    is_runtime_elf "$file" || continue
     while IFS= read -r dep; do
       [ -n "$dep" ] || continue
       [ -e "$APPDIR/usr/lib/$(basename "$dep")" ] && continue
@@ -630,6 +630,20 @@ detect_python_path() {
   python3 -c 'import sysconfig, sys; print(sysconfig.get_path(sys.argv[1]) or "")' "$name" 2>/dev/null || true
 }
 
+detect_epics_host_arch() {
+  local epics_base="$1"
+
+  if [ -f "$epics_base/src/tools/EpicsHostArch.pl" ] && command -v perl >/dev/null 2>&1; then
+    (
+      cd "$epics_base"
+      perl -CSD src/tools/EpicsHostArch.pl
+    )
+    return
+  fi
+
+  printf 'linux-%s\n' "$(uname -m)"
+}
+
 install_python_runtime() {
   local stdlib platstdlib dest python_dir_name
 
@@ -845,8 +859,8 @@ setup_build_env() {
   export QWTLIB="${QWTLIB:-$(detect_libdir "lib${QWTLIBNAME}.so*" "$QWTHOME/lib" "$QWTHOME/lib64" /usr/lib /usr/lib64 ${triplet:+"/usr/lib/$triplet"} || printf '/usr/lib')}"
   export QWTVERSION="${QWTVERSION:-6.1}"
 
-  export EPICS_HOST_ARCH="${EPICS_HOST_ARCH:-linux-$(uname -m)}"
   export EPICS_BASE="${EPICS_BASE:-${EPICS_BASE_TARGET:-$(detect_existing_dir /usr/lib/epics /usr/local/epics/base-7.0.10 /usr/local/epics/base-7.0.9 /usr || printf '/usr')}}"
+  export EPICS_HOST_ARCH="${EPICS_HOST_ARCH:-$(detect_epics_host_arch "$EPICS_BASE")}"
   export EPICSINCLUDE="${EPICSINCLUDE:-$(detect_existing_dir "$EPICS_BASE/include/epics/include" "$EPICS_BASE/include" || printf '%s/include' "$EPICS_BASE")}"
   export EPICSLIB="${EPICSLIB:-$(detect_existing_dir "$EPICS_BASE/lib/$EPICS_HOST_ARCH" "$EPICS_BASE/lib/epics/lib/$EPICS_HOST_ARCH" "$EPICS_BASE/lib" || printf '%s/lib' "$EPICS_BASE")}"
   export EPICSEXTENSIONS="${EPICSEXTENSIONS:-$EPICS_BASE/extensions}"
@@ -1014,9 +1028,6 @@ create_appdir() {
   install_designer_plugin_links "$qt_dir" "$app_lib_dir"
   install_appdir_documentation
 
-  if [ "$APPDIR_ONLY" -eq 1 ]; then
-    finalize_appdir
-  fi
 }
 
 install_appdir_launchers() {
@@ -1056,21 +1067,13 @@ install_appdir_metadata() {
   if [ -f "$metadata_dir/$DESKTOP_ID.desktop" ]; then
     install -Dm644 "$metadata_dir/$DESKTOP_ID.desktop" "$APPDIR/usr/share/applications/$DESKTOP_ID.desktop"
   else
-    cat > "$APPDIR/usr/share/applications/$DESKTOP_ID.desktop" <<EOF
-[Desktop Entry]
-Version=1.0
-Type=Application
-Name=caQtDM
-Comment=caQtDM is a popular Epics framework for developing panels
-Categories=Science;DataVisualization;
-Icon=$DESKTOP_ID
-Exec=caQtDM
-Terminal=false
-EOF
+    die "AppImage desktop metadata not found: $metadata_dir/$DESKTOP_ID.desktop"
   fi
 
   if [ -f "$metadata_dir/$DESKTOP_ID.metainfo.xml" ]; then
     install -Dm644 "$metadata_dir/$DESKTOP_ID.metainfo.xml" "$APPDIR/usr/share/metainfo/$DESKTOP_ID.appdata.xml"
+  else
+    die "AppImage AppStream metadata not found: $metadata_dir/$DESKTOP_ID.metainfo.xml"
   fi
 
   if [ -d "$metadata_dir/icons" ]; then
@@ -1092,29 +1095,18 @@ finalize_appdir() {
 }
 
 make_appimage() {
-  if [ "$APPDIR_ONLY" -ne 0 ]; then
-    return 0
-  fi
-
   require_command readelf
   require_command ldd
 
   local arch="$(tool_arch)"
-  local appimagetool_path
-  appimagetool_path="$(ensure_tool APPIMAGETOOL "appimagetool-$arch.AppImage" "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-$arch.AppImage")"
-
-  msg "Creating AppImage in $OUTPUT_DIR"
-  mkdir -p "$OUTPUT_DIR"
-
   local qt_dir="qt${QT_MAJOR}"
   local app_lib_dir="$APPDIR/usr/lib/caqtdm/$qt_dir"
   local desktop_file="$APPDIR/usr/share/applications/$DESKTOP_ID.desktop"
   local root_icon_file="$APPDIR/$DESKTOP_ID.png"
   local qt_plugin_dir
-  local output_file
   qt_plugin_dir="$(prepare_qt_plugin_tree)"
-  output_file="$OUTPUT_DIR/caQtDM-${PACKAGE_VERSION}-${arch}.AppImage"
   disable_non_elf_executables "$app_lib_dir"
+  mkdir -p "$OUTPUT_DIR"
 
   (
     cd "$OUTPUT_DIR"
@@ -1122,12 +1114,24 @@ make_appimage() {
     export VERSION="$PACKAGE_VERSION"
     setup_appimage_strip_env
     install_qt_plugins "$qt_plugin_dir"
-    copy_blacklisted_runtime_libraries
+    copy_extra_runtime_libraries
     bundle_elf_dependencies
     finalize_appdir
     [ -f "$desktop_file" ] || die "AppImage desktop file was not created: $desktop_file"
     [ -f "$root_icon_file" ] || die "AppImage icon file was not created: $root_icon_file"
     validate_appdir_elf_init_tags
+
+    if [ "$APPDIR_ONLY" -ne 0 ]; then
+      return 0
+    fi
+
+    local appimagetool_path
+    local output_file
+    appimagetool_path="$(ensure_tool APPIMAGETOOL "appimagetool-$arch.AppImage" "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-$arch.AppImage")"
+    output_file="$OUTPUT_DIR/caQtDM-${PACKAGE_VERSION}-${arch}.AppImage"
+
+    msg "Creating AppImage in $OUTPUT_DIR"
+    mkdir -p "$OUTPUT_DIR"
 
     rm -f "$output_file"
     ARCH="$arch" "$appimagetool_path" "$APPDIR" "$output_file"

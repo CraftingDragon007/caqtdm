@@ -3,7 +3,7 @@ Version=1.0
 Type=Application
 
 Name=caQtDM
-Comment=caQtDM is a popular Epics framework for developing panels
+Comment=caQtDM is a popular EPICS framework for developing panels
 Categories=Science;DataVisualization;
 
 Icon=io.github.caqtdm.caqtdm

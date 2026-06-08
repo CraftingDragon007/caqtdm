@@ -14,3 +14,4 @@ squashfs-root/
 *.AppImage
 *.AppImage.zsync
 *.log
+*.abi.log

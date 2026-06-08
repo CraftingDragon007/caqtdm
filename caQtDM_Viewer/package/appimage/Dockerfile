@@ -113,7 +113,7 @@ RUN set -eux; \
     wget -q "https://github.com/openssl/openssl/releases/download/openssl-${OPENSSL_VERSION}/openssl-${OPENSSL_VERSION}.tar.gz"; \
     tar -xzf "openssl-${OPENSSL_VERSION}.tar.gz"; \
     cd "openssl-${OPENSSL_VERSION}"; \
-    ./Configure linux-x86_64 shared zlib \
+    ./config shared zlib \
       --prefix="${OPENSSL_PREFIX}" \
       --openssldir="${OPENSSL_PREFIX}/ssl"; \
     make -j"$(nproc)"; \
@@ -208,7 +208,6 @@ ENV QWTLIB=/usr/lib64
 ENV QWTLIBNAME=qwt
 ENV QWTVERSION=6.3
 ENV EPICS_BASE=/usr/lib/epics
-ENV EPICS_HOST_ARCH=linux-x86_64
 
 # EPICS Base 7.0.10.
 ARG EPICS_VERSION_TAG=R7.0.10
@@ -217,9 +216,10 @@ RUN set -eux; \
     git clone --depth 1 --branch "${EPICS_VERSION_TAG}" https://github.com/epics-base/epics-base.git "${EPICS_BASE}"; \
     cd "${EPICS_BASE}"; \
     git submodule update --init --recursive --jobs "$(nproc)"; \
-    printf 'GNU_DIR = /opt/rh/gcc-toolset-%s/root/usr\nAR = /usr/bin/ar -rc\nLD = /usr/bin/ld -r\nRANLIB = /usr/bin/ranlib\n' "${GCC_TOOLSET}" >> configure/os/CONFIG_SITE.linux-x86_64.linux-x86_64; \
-    make -j"$(nproc)" XSUBPP=; \
-    echo "${EPICS_BASE}/lib/${EPICS_HOST_ARCH}" > /etc/ld.so.conf.d/caqtdm-epics.conf; \
+    epics_host_arch="$(perl -CSD src/tools/EpicsHostArch.pl)"; \
+    printf 'GNU_DIR = /opt/rh/gcc-toolset-%s/root/usr\nAR = /usr/bin/ar -rc\nLD = /usr/bin/ld -r\nRANLIB = /usr/bin/ranlib\n' "${GCC_TOOLSET}" >> "configure/os/CONFIG_SITE.${epics_host_arch}.${epics_host_arch}"; \
+    make -j"$(nproc)" XSUBPP= EPICS_HOST_ARCH="${epics_host_arch}"; \
+    echo "${EPICS_BASE}/lib/${epics_host_arch}" > /etc/ld.so.conf.d/caqtdm-epics.conf; \
     ldconfig
 
 WORKDIR /src

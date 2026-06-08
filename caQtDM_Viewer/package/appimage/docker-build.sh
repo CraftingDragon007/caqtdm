@@ -53,6 +53,7 @@ DOCKER_COPY_SOURCE_EXPLICIT=0
 DOCKER_COPY_SOURCE="${DOCKER_COPY_SOURCE:-0}"
 OUTPUT_DIR="${OUTPUT_DIR:-$SCRIPT_DIR}"
 USE_BUILDX_BAKE=0
+SOURCE_TRANSPORT=bind
 FORWARDED_ARGS=()
 CONTAINER_ARGS=()
 
@@ -156,43 +157,6 @@ parse_args() {
   done
 }
 
-forwarded_args_need_local_source() {
-  local arg
-
-  for arg in "${FORWARDED_ARGS[@]}"; do
-    case "$arg" in
-      --source|--source=*)
-        return 0
-        ;;
-    esac
-  done
-
-  return 1
-}
-
-select_source_transport() {
-  [ "$DOCKER_COPY_SOURCE_EXPLICIT" = "0" ] || return 0
-
-  # Checkout-based buildx runs only need the packaging scripts/assets locally;
-  # create-appimage.sh clones the source inside the container. Local Docker
-  # --no-checkout keeps using bind mounts unless --copy-source is explicit.
-  if forwarded_args_need_local_source; then
-    [ "$USE_BUILDX_BAKE" = "1" ] && DOCKER_COPY_SOURCE=1
-  elif forwarded_args_include_no_checkout; then
-    [ "$USE_BUILDX_BAKE" = "1" ] && DOCKER_COPY_SOURCE=1
-  else
-    DOCKER_COPY_SOURCE=1
-  fi
-}
-
-validate_source_transport() {
-  if [ "$USE_BUILDX_BAKE" = "1" ] \
-    && forwarded_args_include_no_checkout \
-    && [ "$DOCKER_COPY_SOURCE_EXPLICIT" = "0" ]; then
-    die "--buildx-bake --no-checkout requires --copy-source. Without --copy-source, buildx mode clones the repository inside the container, which contradicts --no-checkout."
-  fi
-}
-
 forwarded_args_have_option() {
   local option="$1"
   local arg
@@ -212,15 +176,31 @@ forwarded_args_include_no_checkout() {
   forwarded_args_have_option --no-checkout
 }
 
-copy_packaging_only() {
-  if [ "$USE_BUILDX_BAKE" = "1" ] \
-    && [ "$DOCKER_COPY_SOURCE_EXPLICIT" = "0" ] \
-    && ! forwarded_args_need_local_source \
-    && ! forwarded_args_include_no_checkout; then
-    return 0
+forwarded_args_include_source() {
+  forwarded_args_have_option --source
+}
+
+resolve_source_transport() {
+  SOURCE_TRANSPORT=bind
+
+  if [ "$DOCKER_COPY_SOURCE" = "1" ]; then
+    SOURCE_TRANSPORT=copy-source
+  elif [ "$USE_BUILDX_BAKE" = "1" ]; then
+    SOURCE_TRANSPORT=copy-packaging
+    DOCKER_COPY_SOURCE=1
+  fi
+}
+
+validate_source_transport() {
+  if [ "$USE_BUILDX_BAKE" = "1" ] && forwarded_args_include_source; then
+    die "--buildx-bake does not support --source. Use checkout mode, or use --copy-source --no-checkout to build the local tree."
   fi
 
-  return 1
+  if [ "$USE_BUILDX_BAKE" = "1" ] \
+    && forwarded_args_include_no_checkout \
+    && [ "$SOURCE_TRANSPORT" != copy-source ]; then
+    die "--buildx-bake --no-checkout requires --copy-source. Without --copy-source, buildx mode clones the repository inside the container, which contradicts --no-checkout."
+  fi
 }
 
 current_git_branch() {
@@ -241,20 +221,19 @@ prepare_container_args() {
 
   CONTAINER_ARGS=()
   for arg in "${FORWARDED_ARGS[@]}"; do
-    [ "$arg" = --no-checkout ] && copy_packaging_only && continue
     CONTAINER_ARGS+=("$arg")
   done
 
-  if forwarded_args_include_no_checkout && copy_packaging_only; then
-    if ! forwarded_args_have_option --repo; then
-      remote="$(current_git_remote)"
-      [ -n "$remote" ] && CONTAINER_ARGS+=(--repo "$remote")
-    fi
+  [ "$SOURCE_TRANSPORT" = copy-packaging ] || return 0
 
-    if ! forwarded_args_have_option --branch; then
-      branch="$(current_git_branch || true)"
-      [ -n "$branch" ] && CONTAINER_ARGS+=(--branch "$branch")
-    fi
+  if ! forwarded_args_have_option --repo; then
+    remote="$(current_git_remote)"
+    [ -n "$remote" ] && CONTAINER_ARGS+=(--repo "$remote")
+  fi
+
+  if ! forwarded_args_have_option --branch; then
+    branch="$(current_git_branch || true)"
+    [ -n "$branch" ] && CONTAINER_ARGS+=(--branch "$branch")
   fi
 }
 
@@ -371,7 +350,7 @@ build_docker_run_args() {
     --env "TOOLS_DIR=/src/caQtDM_Viewer/package/appimage/tools"
   )
 
-  if [ "$DOCKER_COPY_SOURCE" != "1" ]; then
+  if [ "$SOURCE_TRANSPORT" = bind ]; then
     docker_run_args+=(
       --volume "$REPO_ROOT:/src"
       --volume "$OUTPUT_DIR:/output"
@@ -434,11 +413,11 @@ run_container_with_copied_source() {
   container_id="$(docker create "${create_args[@]}" --entrypoint /bin/sh "$DOCKER_IMAGE" -lc 'exec /src/caQtDM_Viewer/package/appimage/create-appimage.sh "$@"' sh "${CONTAINER_ARGS[@]}")"
   trap 'docker rm -f "$container_id" >/dev/null 2>&1 || true' RETURN
 
-  if copy_packaging_only; then
-    copy_packaging_to_container "$container_id"
-  else
-    copy_source_to_container "$container_id"
-  fi
+  case "$SOURCE_TRANSPORT" in
+    copy-packaging) copy_packaging_to_container "$container_id" ;;
+    copy-source) copy_source_to_container "$container_id" ;;
+    *) die "internal error: copied-source runner used with source transport '$SOURCE_TRANSPORT'" ;;
+  esac
   msg "Running AppImage build inside $DOCKER_IMAGE"
   docker start --attach "$container_id"
 
@@ -449,7 +428,7 @@ run_container_with_copied_source() {
 }
 
 run_container() {
-  if [ "$DOCKER_COPY_SOURCE" = "1" ]; then
+  if [ "$SOURCE_TRANSPORT" != bind ]; then
     run_container_with_copied_source
     return 0
   fi
@@ -467,7 +446,7 @@ print_output_summary() {
 
 main() {
   parse_args "$@"
-  select_source_transport
+  resolve_source_transport
   validate_source_transport
   require_docker
   build_image
