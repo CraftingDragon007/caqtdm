@@ -37,6 +37,7 @@ bsread_dispatchercontrol::bsread_dispatchercontrol()
 {
     loop = new QEventLoop(this);
     mutexknobdataP = Q_NULLPTR;
+    messagewindowP = Q_NULLPTR;
     //Special Channels
     bsreadChannels.append("bsread:hash");
     bsreadChannels.append("bsread:pulse_id");
@@ -108,7 +109,7 @@ void bsread_dispatchercontrol::process()
     msg.append(Dispatcher);
 
 
-    messagewindowP->postMsgEvent(QtDebugMsg,(char*) msg.toLatin1().constData());
+    if (messagewindowP != (MessageWindow *) Q_NULLPTR) messagewindowP->postMsgEvent(QtDebugMsg,(char*) msg.toLatin1().constData());
     qCDebug(bsreadLog) << "bsread Dispatcher: Start ThreadID: " << QThread::currentThreadId();
     //Update and reconection handling
 
@@ -282,7 +283,7 @@ void bsread_dispatchercontrol::process()
                 msg="Dispatcher Request (";
                 msg.append(QString::number(Channels.count()));
                 msg.append(")");
-                messagewindowP->postMsgEvent(QtDebugMsg,(char*) msg.toLatin1().constData());
+                if (messagewindowP != (MessageWindow *) Q_NULLPTR) messagewindowP->postMsgEvent(QtDebugMsg,(char*) msg.toLatin1().constData());
 
 
                 qCDebug(bsreadLog) << "Send Test Data" << StreamDispatcher << transferdata;
@@ -673,10 +674,9 @@ void bsread_dispatchercontrol::finishReplyConnect()
     msg.append(httpdata);
 
     if (msg.contains("exception")){
-        messagewindowP->postMsgEvent(QtCriticalMsg,(char*) msg.toLatin1().constData());
+        if (messagewindowP != (MessageWindow *) Q_NULLPTR) messagewindowP->postMsgEvent(QtCriticalMsg,(char*) msg.toLatin1().constData());
     }else{
-
-        messagewindowP->postMsgEvent(QtDebugMsg,(char*) msg.toLatin1().constData());
+        if (messagewindowP != (MessageWindow *) Q_NULLPTR) messagewindowP->postMsgEvent(QtDebugMsg,(char*) msg.toLatin1().constData());
     }
     if (parseError.error == QJsonParseError::NoError){
         if(MainMessageJ.isObject()) {
@@ -946,11 +946,11 @@ void bsread_dispatchercontrol::finishVerification()
     if (ChannelsToBeApprovePipeline.count()>0){
         QString msg_not="bsread: Not approved channels ";
         msg_not.append(QString("%1").arg(ChannelsToBeApprovePipeline.count()));
-        messagewindowP->postMsgEvent(QtCriticalMsg,(char*) msg_not.toLatin1().constData());
+        if (messagewindowP != (MessageWindow *) Q_NULLPTR) messagewindowP->postMsgEvent(QtCriticalMsg,(char*) msg_not.toLatin1().constData());
     }
 
     if (msg.contains("exception")){
-        messagewindowP->postMsgEvent(QtCriticalMsg,(char*) msg.toLatin1().constData());
+        if (messagewindowP != (MessageWindow *) Q_NULLPTR) messagewindowP->postMsgEvent(QtCriticalMsg,(char*) msg.toLatin1().constData());
         // Request all channels we have, and see what will come
         ChannelsApprovePipeline+=ChannelsToBeApprovePipeline;
         ChannelsToBeApprovePipeline.clear();
