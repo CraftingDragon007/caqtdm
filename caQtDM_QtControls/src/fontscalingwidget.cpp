@@ -131,9 +131,9 @@ double FontScalingWidget::calculateFontPointSizeF(const QString& text, const QSi
             while(((txtHeight > borderH1) && f.pointSizeF() > MIN_FONT_SIZE)&&(watchdog<1000)) {
                 if(f.pointSizeF() <= 0.0) f.setPointSizeF(1.0);
                 f.setPointSizeF(f.pointSizeF() - 0.5);
-                qCDebug(fontScalingWidgetLog) << "\e[1;36m -- DECREASING font size for object" << "\"" << d_widget->objectName() << "\""
+                qCDebug(fontScalingWidgetLog) << " -- DECREASING font size for object" << "\"" << d_widget->objectName() << "\""
                                               << ":text" << "\"" << text << "\""
-                                              << "height" << txtHeight << "- point size" << f.pointSizeF() << "- h:" << borderH1 << "\e[0m";
+                                              << "height" << txtHeight << "- point size" << f.pointSizeF() << "- h:" << borderH1;
                 QFontMetricsF tmpFm(f);
                 txtHeight = linecnt * tmpFm.lineSpacing();
                 watchdog++;
@@ -142,9 +142,9 @@ double FontScalingWidget::calculateFontPointSizeF(const QString& text, const QSi
             while((txtHeight < borderH2)&&(watchdog<1000)) {
                 if(f.pointSizeF() <= 0.0) f.setPointSizeF(0.5);
                 f.setPointSizeF(f.pointSizeF() + 0.5);
-                qCDebug(fontScalingWidgetLog) << "\e[1;35m ++ INCREASING font size for object" << "\"" << d_widget->objectName() << "\""
+                qCDebug(fontScalingWidgetLog) << " ++ INCREASING font size for object" << "\"" << d_widget->objectName() << "\""
                                               << ":text" << "\"" << text << "\""
-                                              << "height" << txtHeight << "- point size" << f.pointSizeF() << "- h:" << borderH2 << "\e[0m";
+                                              << "height" << txtHeight << "- point size" << f.pointSizeF() << "- h:" << borderH2;
                 QFontMetricsF tmpFm(f);
                 txtHeight = linecnt * tmpFm.lineSpacing();
                 watchdog++;
@@ -163,10 +163,10 @@ double FontScalingWidget::calculateFontPointSizeF(const QString& text, const QSi
         while(((txtWidth > borderW2) && f.pointSizeF() > MIN_FONT_SIZE)&&(watchdog<1000) ){
             if(f.pointSizeF() <= 0.0) f.setPointSizeF(1.0);
             f.setPointSizeF(f.pointSizeF() - 0.5);
-            qCDebug(fontScalingWidgetLog) << "\e[1;36m -- next DECREASING font size" << "\"" << d_widget->objectName() << "\""
+            qCDebug(fontScalingWidgetLog) << " -- next DECREASING font size" << "\"" << d_widget->objectName() << "\""
                                           << ":text" << "\"" << text << "\""
                                           << "width" << txtWidth << "height" << txtHeight
-                                          << "- point size" << f.pointSizeF() << "- w:" << borderW2 << "\e[0m";
+                                          << "- point size" << f.pointSizeF() << "- w:" << borderW2;
             if(!richText) {
                 QFontMetricsF tmpFm(f);
                 txtWidth = QMETRIC_QT456_FONT_WIDTH(tmpFm,longestLine);
@@ -191,9 +191,9 @@ double FontScalingWidget::calculateFontPointSizeF(const QString& text, const QSi
             while(((txtHeight > borderH1) && f.pointSizeF() > MIN_FONT_SIZE)&&(watchdog<1000) ) {
                 if(f.pointSizeF() <= 0.0) f.setPointSizeF(1.0);
                 f.setPointSizeF(f.pointSizeF() - 0.5);
-                qCDebug(fontScalingWidgetLog) << "\e[1;36m -- DECREASING font size" << "\"" << widget()->objectName() << "\""
+                qCDebug(fontScalingWidgetLog) << " -- DECREASING font size" << "\"" << widget()->objectName() << "\""
                                               << ":text" << "\"" << text << "\""
-                                              << "height" << txtHeight << "- point size" << f.pointSizeF() << "- h:" << borderH1 << "\e[0m";
+                                              << "height" << txtHeight << "- point size" << f.pointSizeF() << "- h:" << borderH1;
                 QFontMetricsF tmpFm(f);
                 txtHeight = linecnt * tmpFm.lineSpacing();
                 watchdog++;
@@ -202,9 +202,9 @@ double FontScalingWidget::calculateFontPointSizeF(const QString& text, const QSi
             while((txtHeight < borderH2)&&(watchdog<1000) ) {
                 if(f.pointSizeF() <= 0.0) f.setPointSizeF(0.5);
                 f.setPointSizeF(f.pointSizeF() + 0.5);
-                qCDebug(fontScalingWidgetLog) << "\e[1;35m ++ INCREASING font size" << "\"" << widget()->objectName() << "\""
+                qCDebug(fontScalingWidgetLog) << " ++ INCREASING font size" << "\"" << widget()->objectName() << "\""
                                               << ":text" << "\"" << text << "\""
-                                              << "height" << txtHeight << "- point size" << f.pointSizeF() << "- h:" << borderH2 << "\e[0m";
+                                              << "height" << txtHeight << "- point size" << f.pointSizeF() << "- h:" << borderH2;
                 QFontMetricsF tmpFm(f);
                 txtHeight = linecnt * tmpFm.lineSpacing();
                 watchdog++;
@@ -253,16 +253,16 @@ double FontScalingWidget::calculateVertFontPointSizeF(const QString& text, const
          /* first scale according to height (same algorithme as below) and then verify width */
         if(txtHeight == (borderW1 + 1) || txtHeight == (borderW1)) {
              qCDebug(fontScalingWidgetLog) << "good: text for <" << widget()->objectName() << "> :text" << "\"" << text << "\""
-                                           << txtHeight << "\e[0m | borderH1:" << borderH1 << "borderH2:" << borderH2
+                                           << txtHeight << " | borderH1:" << borderH1 << "borderH2:" << borderH2
                                            << "pointSizeF" << f.pointSizeF() << "h:" << borderH1;
 
         } else {
             while((txtHeight > borderW1) && f.pointSizeF() > MIN_FONT_SIZE) {
                 if(f.pointSizeF() <= 0.0) f.setPointSizeF(1.0);
                 f.setPointSizeF(f.pointSizeF() - 0.5);
-                qCDebug(fontScalingWidgetLog) << "\e[1;36m -- DECREASING font size for object" << "\"" << d_widget->objectName() << "\""
+                qCDebug(fontScalingWidgetLog) << " -- DECREASING font size for object" << "\"" << d_widget->objectName() << "\""
                                               << ":text" << "\"" << text << "\""
-                                              << "height" << txtHeight << "- point size" << f.pointSizeF() << "- h:" << borderH1 << "\e[0m";
+                                              << "height" << txtHeight << "- point size" << f.pointSizeF() << "- h:" << borderH1;
                 QFontMetricsF tmpFm(f);
                 txtHeight = linecnt * tmpFm.lineSpacing();
             }
@@ -270,9 +270,9 @@ double FontScalingWidget::calculateVertFontPointSizeF(const QString& text, const
             while(txtHeight < borderW2) {
                 if(f.pointSizeF() <= 0.0) f.setPointSizeF(0.5);
                 f.setPointSizeF(f.pointSizeF() + 0.5);
-                qCDebug(fontScalingWidgetLog) << "\e[1;35m ++ INCREASING font size for object" << "\"" << d_widget->objectName() << "\""
+                qCDebug(fontScalingWidgetLog) << " ++ INCREASING font size for object" << "\"" << d_widget->objectName() << "\""
                                               << ":text" << "\"" << text << "\""
-                                              << "height" << txtHeight << "- point size" << f.pointSizeF() << "- h:" << borderH2 << "\e[0m";
+                                              << "height" << txtHeight << "- point size" << f.pointSizeF() << "- h:" << borderH2;
                 QFontMetricsF tmpFm(f);
                 txtHeight = linecnt * tmpFm.lineSpacing();
             }
@@ -284,10 +284,10 @@ double FontScalingWidget::calculateVertFontPointSizeF(const QString& text, const
         while((txtWidth > borderH2) && f.pointSizeF() > MIN_FONT_SIZE) {
             if(f.pointSizeF() <= 0.0) f.setPointSizeF(1.0);
             f.setPointSizeF(f.pointSizeF() - 0.5);
-            qCDebug(fontScalingWidgetLog) << "\e[1;36m -- next DECREASING font size" << "\"" << d_widget->objectName() << "\""
+            qCDebug(fontScalingWidgetLog) << " -- next DECREASING font size" << "\"" << d_widget->objectName() << "\""
                                           << ":text" << "\"" << text << "\""
                                           << "width" << txtWidth << "height" << txtHeight
-                                          << "- point size" << f.pointSizeF() << "- w:" << borderW2 << "\e[0m";
+                                          << "- point size" << f.pointSizeF() << "- w:" << borderW2;
             QFontMetricsF tmpFm(f);
             txtWidth = QMETRIC_QT456_FONT_WIDTH(tmpFm,longestLine);
             //txtHeight = linecnt * tmpFm.lineSpacing();
@@ -297,16 +297,16 @@ double FontScalingWidget::calculateVertFontPointSizeF(const QString& text, const
     } else {
 
         if(txtHeight == (borderW1 + 1) || txtHeight == (borderW1)) {
-            qCDebug(fontScalingWidgetLog) << "good: text h" << txtHeight << "\e[0m | borderH1:" << borderH1 << "borderH2:" << borderH2
+            qCDebug(fontScalingWidgetLog) << "good: text h" << txtHeight << "| borderH1:" << borderH1 << "borderH2:" << borderH2
                                           << "pointSizeF" << f.pointSizeF() << "h:" << borderH1;
 
         } else {
             while((txtHeight > borderW1) && f.pointSizeF() > MIN_FONT_SIZE) {
                 if(f.pointSizeF() <= 0.0) f.setPointSizeF(1.0);
                 f.setPointSizeF(f.pointSizeF() - 0.5);
-                qCDebug(fontScalingWidgetLog) << "\e[1;36m -- DECREASING font size" << "\"" << widget()->objectName() << "\""
+                qCDebug(fontScalingWidgetLog) << " -- DECREASING font size" << "\"" << widget()->objectName() << "\""
                                               << ":text" << "\"" << text << "\""
-                                              << "height" << txtHeight << "- point size" << f.pointSizeF() << "- h:" << borderH1 << "\e[0m";
+                                              << "height" << txtHeight << "- point size" << f.pointSizeF() << "- h:" << borderH1;
                 QFontMetricsF tmpFm(f);
                 txtHeight = linecnt * tmpFm.lineSpacing();
             }
@@ -314,9 +314,9 @@ double FontScalingWidget::calculateVertFontPointSizeF(const QString& text, const
             while(txtHeight < borderW2) {
                 if(f.pointSizeF() <= 0.0) f.setPointSizeF(0.5);
                 f.setPointSizeF(f.pointSizeF() + 0.5);
-                qCDebug(fontScalingWidgetLog) << "\e[1;35m ++ INCREASING font size" << "\"" << widget()->objectName() << "\""
+                qCDebug(fontScalingWidgetLog) << " ++ INCREASING font size" << "\"" << widget()->objectName() << "\""
                                               << ":text" << "\"" << text << "\""
-                                              << "height" << txtHeight << "- point size" << f.pointSizeF() << "- h:" << borderH2 << "\e[0m";
+                                              << "height" << txtHeight << "- point size" << f.pointSizeF() << "- h:" << borderH2;
                 QFontMetricsF tmpFm(f);
                 txtHeight = linecnt * tmpFm.lineSpacing();
             }
