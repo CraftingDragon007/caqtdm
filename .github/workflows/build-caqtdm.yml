@@ -42,6 +42,7 @@ jobs:
           qt6-positioning \
           qt6-serialbus \
           qt6-tools \
+          qt6-3d \
           qwt \
           zeromq \
           git \
