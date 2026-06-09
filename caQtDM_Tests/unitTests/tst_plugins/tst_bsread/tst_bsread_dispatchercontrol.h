@@ -17,12 +17,12 @@ private slots:
     void init();
     void cleanupTestCase();
     void cleanup();
-    void test1();
-    void test2();
-    void test3();
-    void test4();
+    void finishReplyConnectWorks();
+    void finishVerificationWorks();
 
 private:
+    bsread_dispatchercontrol *m_dispatchercontrol;
+    void *m_zmqContext;
 };
 
 #endif // TST_BSREAD_DISPATCHERCONTROL_H

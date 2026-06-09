@@ -6,7 +6,7 @@
 #include <QObject>
 #include <QTest>
 
-    class Testbsread_Decode : public QObject
+class Testbsread_Decode : public QObject
 {
     Q_OBJECT
 public:
@@ -17,12 +17,12 @@ private slots:
     void init();
     void cleanupTestCase();
     void cleanup();
-    void test1();
-    void test2();
-    void test3();
-    void test4();
+    void parsesMainHeader();
+    void parsesHeader();
 
 private:
+    bsread_Decode *m_decode;
+    void *m_zmqContext;
 };
 
 #endif // TST_BSREAD_DECODE_H

@@ -5,6 +5,7 @@ SOURCES += tst_bsread.cpp \
     tst_bsread_dispatchercontrol.cpp
 
 HEADERS += \
+    fakenetworkreply.h \
     tst_bsread_decode.h \
     tst_bsread_dispatchercontrol.h
 
@@ -42,4 +43,6 @@ _EPICSLIB = $$(EPICSLIB)
 CONFIG += Define_ZMQ_Lib caqtdm_rpath
 include(../../../../caQtDM.pri)
 
-QMAKE_LFLAGS += -Wl,--disable-new-dtags
+linux {
+    QMAKE_LFLAGS += -Wl,--disable-new-dtags
+}

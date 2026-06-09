@@ -52,6 +52,9 @@ class CAQTDM_PLUGINSSHARED_EXPORT bsread_dispatchercontrol : public QObject
 {
 Q_OBJECT
 
+#ifdef UNIT_TESTING
+public:
+#endif
     int filldispatcherchannels(QString channel);
     int filldispatcherchannels2(bsread_internalchannel *channel,int index);
 
