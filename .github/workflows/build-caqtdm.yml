@@ -112,7 +112,7 @@ jobs:
       run: |
         set -euo pipefail
         WORKSPACE_DIR="${GITHUB_WORKSPACE:-$PWD}"
-        sudo -u builder env WORKSPACE_DIR="$WORKSPACE_DIR" CAQTDM_REPO_URL="file://$WORKSPACE_DIR" bash -lc 'cd "$WORKSPACE_DIR/caQtDM_Viewer/package/archlinux/caqtdm" && makepkg --noconfirm --cleanbuild'
+        sudo -u builder env WORKSPACE_DIR="$WORKSPACE_DIR" CAQTDM_REPO_URL="file://$WORKSPACE_DIR" bash -lc 'cd "$WORKSPACE_DIR/caQtDM_Viewer/package/archlinux/caqtdm" && makepkg --noconfirm --cleanbuild --check'
 
     - name: Upload package artifact
       uses: actions/upload-artifact@v7
