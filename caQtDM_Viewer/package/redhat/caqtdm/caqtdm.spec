@@ -349,6 +349,37 @@ export CAQTDM_LOGGING_ARCHIVELIBS=/opt/caqtdm-archiver/lib
 popd
 %endif
 
+%check
+EPICS_BASE="/usr/local/epics/base%{EPICS_TARGET_VERSION}"
+EPICS_HOST_ARCH="$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)"
+EPICSLIB="${EPICS_BASE}/lib/${EPICS_HOST_ARCH}"
+ZMQLIB="/usr/lib64"
+
+%if 0%{?qt5}
+pushd %{_target_platform}-qt5
+export LD_LIBRARY_PATH="%{_builddir}/%{name}-%{version}/build/opt/caqtdm/lib/qt5:${EPICSLIB}:${ZMQLIB}:${LD_LIBRARY_PATH}"
+make -C caQtDM_Tests/unitTests
+popd
+%endif
+
+%if 0%{?qt4}
+pushd %{_target_platform}-qt4
+export LD_LIBRARY_PATH="%{_builddir}/%{name}-%{version}/build/opt/caqtdm/lib/qt4:${EPICSLIB}:${ZMQLIB}:${LD_LIBRARY_PATH}"
+make -C caQtDM_Tests/unitTests
+popd
+%endif
+
+%if 0%{?qt6}
+pushd %{_target_platform}-qt6
+%ifarch aarch64
+EPICS_HOST_ARCH="linux-aarch64"
+EPICSLIB="${EPICS_BASE}/lib/${EPICS_HOST_ARCH}"
+%endif
+export LD_LIBRARY_PATH="%{_builddir}/%{name}-%{version}/build/opt/caqtdm/lib/qt6:${EPICSLIB}:${ZMQLIB}:${LD_LIBRARY_PATH}"
+make -C caQtDM_Tests/unitTests
+popd
+%endif
+
 %install
 	mkdir -p %{buildroot}/opt/caqtdm/doc
 	mkdir -p %{buildroot}/usr/local/bin

@@ -311,19 +311,6 @@ export CAQTDM_LOGGING_ARCHIVELIBS=/opt/caqtdm-archiver/lib
 popd
 %endif
 
-%check
-%if 0%{?qt4}
-make -C %{_target_platform}-qt4/caQtDM_Tests/unitTests
-%endif
-
-%if 0%{?qt5}
-make -C %{_target_platform}-qt5/caQtDM_Tests/unitTests
-%endif
-
-%if 0%{?qt6}
-make -C %{_target_platform}-qt6/caQtDM_Tests/unitTests
-%endif
-
 %install
 	mkdir -p %{buildroot}/opt/caqtdm/doc
 	mkdir -p %{buildroot}/usr/local/bin
