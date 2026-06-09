@@ -62,7 +62,7 @@ public:
     bool bsread_DataMonitorConnection(QString channel,int index);
     bool bsread_DataMonitorConnection(knobData *kData);
     bool bsread_DataMonitorUnConnect(knobData *kData);
-    void setTerminate();
+    void setTerminate(bool doTerminate = true);
     void bsread_createConnection(int rc);
     QString getStreamConnectionPoint() const;
 

@@ -709,9 +709,9 @@ void bsread_dispatchercontrol::finishReplyConnect()
                         bsreadconnections.last()->bsread_DataMonitorConnection(key,value);
                     }
 
-
                 bsreadconnections.last()->moveToThread(bsreadThreads.last());
                 qCDebug(bsreadLog) << "Create bsread_Decode:" << bsreadconnections.last();
+                bsreadconnections.last()->setTerminate(false);
                 connect(bsreadThreads.last(), SIGNAL(started()), bsreadconnections.last(), SLOT(process()));
                 connect(bsreadconnections.last(), SIGNAL(finished()), bsreadThreads.last(), SLOT(quit()));
                 //connect(bsreadThreads.last(), SIGNAL(finished()), bsreadThreads.last(), SLOT(deleteLater()));

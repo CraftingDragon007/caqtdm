@@ -157,6 +157,7 @@ int bsreadPlugin::initCommunicationLayer(MutexKnobData *data, MessageWindow *mes
                 bsreadThreads.append(new QThread(this));
                 bsreadconnections.last()->setKnobData(mutexknobdataP);
                 bsreadconnections.last()->moveToThread(bsreadThreads.last());
+                bsreadconnections.last()->setTerminate(false);
                 connect(bsreadThreads.last(), SIGNAL(started()), bsreadconnections.last(), SLOT(process()));
                 connect(bsreadconnections.last(), SIGNAL(finished()), bsreadThreads.last(), SLOT(quit()));
                 connect(bsreadThreads.last(), SIGNAL(finished()), bsreadThreads.last(), SLOT(deleteLater()));

@@ -60,10 +60,6 @@ bsread_Decode::bsread_Decode(void * Context,QString ConnectionPoint,QString Conn
    BlockPool=Q_NULLPTR;
 }
 
-
-
-
-
 bsread_Decode::~bsread_Decode()
 {
     QMutexLocker locker(&mutex);
@@ -122,8 +118,6 @@ void bsread_Decode::process()
     size_t msg_size;
 
     rc = zmq_msg_init (&msg);
-    terminate=false;
-
 
     qCDebug(bsreadLog) << "bsreadDecode: ConnectionPoint :"<< StreamConnectionPoint << StreamConnectionType ;
     qCDebug(bsreadLog) << "bsreadDecode: start ThreadID" << QThread::currentThreadId();
@@ -218,7 +212,7 @@ void bsread_Decode::process()
                     }
                 }
 
-                qCCritical(bsreadLog) << "error in zmq_recvmsg(Main Massage):" << zmq_strerror (errno);
+                qCDebug(bsreadLog) << "error in zmq_recvmsg(Main Massage):" << zmq_strerror (errno);
 
             }
 
@@ -1015,10 +1009,9 @@ void bsread_Decode::bsread_EndofData()
 
 }
 
-void bsread_Decode::setTerminate()
+void bsread_Decode::setTerminate(bool doTerminate)
 {
-    terminate = true;
-
+    terminate = doTerminate;
 }
 
 void bsread_Decode::bsread_DataTimeOut(){
