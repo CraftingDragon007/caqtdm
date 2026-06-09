@@ -321,6 +321,27 @@ caIncludeInterface::caIncludeInterface(QObject* parent) : CustomWidgetInterface_
     d_icon = qpixmap.scaled(70, 70, Qt::IgnoreAspectRatio, Qt::FastTransformation);
 }
 
+QWidget *ca3DWidgetInterface::createWidget(QWidget* parent)
+{
+    return new ca3DWidget(parent);
+}
+
+ca3DWidgetInterface::ca3DWidgetInterface(QObject* parent) : CustomWidgetInterface_Graphics(parent)
+{
+    strng name[1], type[1] = {""};
+    longtext text[1] = {"sceneConfig: 3D scene configuration. Use the custom editor for normal editing."};
+
+    strcpy(name[0], "sceneConfig");
+    strcpy(type[0], "multiline");
+
+    d_domXml = XmlFunc("ca3DWidget", "ca3dwidget", 0, 0, 300, 200, name, type, text, 1);
+    d_name = "ca3DWidget";
+    d_include = "ca3DWidget";
+    d_toolTip = "[3D widget with 2D include fallback]";
+    QPixmap qpixmap = QPixmap(":pixmaps/3d.png");
+    d_icon = qpixmap.scaled(70, 70, Qt::IgnoreAspectRatio, Qt::FastTransformation);
+}
+
 QWidget *caDoubleTabWidgetInterface::createWidget(QWidget* parent)
 {
     caDoubleTabWidget *widget = new caDoubleTabWidget(parent);
@@ -374,6 +395,7 @@ CustomWidgetCollectionInterface_Graphics::CustomWidgetCollectionInterface_Graphi
     d_plugins.append(new caPolyLineInterface(this));
     d_plugins.append(new caImageInterface(this));
     d_plugins.append(new caIncludeInterface(this));
+    d_plugins.append(new ca3DWidgetInterface(this));
     d_plugins.append(new caDoubleTabWidgetInterface(this));
     d_plugins.append(new caClockInterface(this));
 }

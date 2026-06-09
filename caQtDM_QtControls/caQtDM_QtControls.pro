@@ -27,6 +27,7 @@ contains(QT_VER_MAJ, 5) {
 }
 contains(QT_VER_MAJ, 6) {
       QT += widgets concurrent opengl core network xml
+      QT += 3dcore 3drender 3dinput 3dlogic 3dextras
       !android {
         QT += uitools
       }
@@ -81,6 +82,7 @@ cahmi{
 SOURCES	+= \
     src/caframe.cpp \
     src/cainclude.cpp \
+    src/ca3dwidget.cpp \
     src/caimage.cpp \
     src/cagraphics.cpp \
     src/capolyline.cpp \
@@ -213,6 +215,7 @@ contains(QWT_VER_MIN, 0) {
 HEADERS	+= \
     src/caframe.h \
     src/cainclude.h \
+    src/ca3dwidget.h \
     src/caimage.h \
     src/cagraphics.h \
     src/capolyline.h \

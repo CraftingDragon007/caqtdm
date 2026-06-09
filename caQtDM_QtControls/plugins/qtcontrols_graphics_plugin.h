@@ -167,6 +167,16 @@ public:
     virtual QWidget* createWidget(QWidget* parent);
 };
 
+class ca3DWidgetInterface : public CustomWidgetInterface_Graphics
+{
+    Q_OBJECT
+    Q_INTERFACES(QDesignerCustomWidgetInterface)
+
+public:
+    ca3DWidgetInterface(QObject* parent);
+    virtual QWidget* createWidget(QWidget* parent);
+};
+
 class caDoubleTabWidgetInterface : public CustomWidgetInterface_Graphics
 {
     Q_OBJECT
