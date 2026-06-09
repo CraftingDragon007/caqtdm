@@ -3,7 +3,13 @@
 
 #############################################################################
 # special EPICS things
+%if ! 0%{?EPICS_TARGET_VERSION:1}
+%if "%{getenv:EPICS_TARGET_VERSION}" == ""
 %define EPICS_TARGET_VERSION -7.0.10
+%else
+%define EPICS_TARGET_VERSION %{getenv:EPICS_TARGET_VERSION}
+%endif
+%endif
 #############################################################################
 
 # build qt4 support (or not)
