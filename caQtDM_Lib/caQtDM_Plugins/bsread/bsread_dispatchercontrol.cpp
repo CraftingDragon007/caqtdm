@@ -252,7 +252,8 @@ void bsread_dispatchercontrol::process()
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
             QSet<QString> keys=QSet<QString>::fromList(Channels.keys());
 #else
-            QSet<QString> keys(Channels.keys().begin(),Channels.keys().end());
+            QList keysList = Channels.keys();
+            QSet<QString> keys(keysList.begin(), keysList.end());
 #endif
             foreach( QString key,keys){
                 if (!key.startsWith("bsread:")){ //removes all header channels
@@ -696,11 +697,11 @@ void bsread_dispatchercontrol::finishReplyConnect()
 
                 bsreadconnections.last()->setKnobData(mutexknobdataP);
 
-
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
             QSet<QString> keys=QSet<QString>::fromList(Channels.keys());
 #else
-            QSet<QString> keys(Channels.keys().begin(),Channels.keys().end());
+            QList keysList = Channels.keys();
+            QSet<QString> keys(keysList.begin(), keysList.end());
 #endif
                 foreach( QString key,keys)
                     foreach(int value,Channels.values(key)){
@@ -844,9 +845,10 @@ void bsread_dispatchercontrol::ChannelVerification(QNetworkAccessManager* manage
     }
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-            QSet<QString> keys=QSet<QString>::fromList(ChannelsToBeApprovePipeline.keys());
+    QSet<QString> keys=QSet<QString>::fromList(ChannelsToBeApprovePipeline.keys());
 #else
-            QSet<QString> keys(ChannelsToBeApprovePipeline.keys().begin(),ChannelsToBeApprovePipeline.keys().end());
+    QList keysList = ChannelsToBeApprovePipeline.keys();
+    QSet<QString> keys(keysList.begin(), keysList.end());
 #endif
     foreach( QString key,keys){
         if (!key.startsWith("bsread:")){ //removes all header channels
