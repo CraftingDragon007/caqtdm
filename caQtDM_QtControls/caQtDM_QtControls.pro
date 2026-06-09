@@ -205,6 +205,11 @@ HEADERS += \
 
 SOURCES += src/networkaccess.cpp src/fileFunctions.cpp
 
+contains(QT_VER_MAJ, 6) {
+    SOURCES += src/ca3doverlaywidgetmanager.cpp
+    HEADERS += src/ca3doverlaywidgetmanager.h
+}
+
 contains(QWT_VER_MIN, 0) {
    HEADERS	+= src/qwt_thermo_marker.h
    SOURCES	+= src/qwt_thermo_marker.cpp

@@ -159,6 +159,8 @@ public:
     caInclude( QWidget *parent = 0 );
     ~caInclude();
 
+    void setLoadIncludes(bool load) { loadIncludes = load; }
+
     QString getFileName() const {return newFileName;}
     void setFileName(QString const &filename);
 

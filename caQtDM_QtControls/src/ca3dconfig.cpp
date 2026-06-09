@@ -7,6 +7,7 @@
 #include "searchfile.h"
 
 #include <QFileInfo>
+#include <QColor>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -64,6 +65,33 @@ QString inferMeshType(const QString &mesh)
     return QString();
 }
 
+QColor colorFromValue(const QJsonValue &value, const QColor &fallback, const QString &fieldName, QStringList *errors)
+{
+    if (value.isUndefined() || value.isNull()) {
+        return fallback;
+    }
+
+    if (value.isString()) {
+        const QColor color(value.toString());
+        if (color.isValid()) {
+            return color;
+        }
+    } else if (value.isArray()) {
+        const QJsonArray array = value.toArray();
+        if (array.size() == 3) {
+            const QColor color(array.at(0).toInt(), array.at(1).toInt(), array.at(2).toInt());
+            if (color.isValid()) {
+                return color;
+            }
+        }
+    }
+
+    if (errors) {
+        errors->append(QStringLiteral("%1 must be a valid color string or [r,g,b] array").arg(fieldName));
+    }
+    return fallback;
+}
+
 ca3DOverlayConfig::VisibilityMode visibilityModeFromString(const QString &value, QStringList *errors)
 {
     const QString mode = value.trimmed();
@@ -96,6 +124,7 @@ void ca3DSceneConfig::clear()
     objects.clear();
     overlays.clear();
     cameraPresets.clear();
+    backgroundColor = QColor(30, 34, 40);
 }
 
 bool ca3DSceneConfig::isEmpty() const
@@ -128,6 +157,10 @@ bool ca3DConfigParser::parse(const QString &json, ca3DSceneConfig *config, QStri
     }
 
     const QJsonObject root = document.object();
+    config->backgroundColor = colorFromValue(root.value(QStringLiteral("backgroundColor")),
+                                             config->backgroundColor,
+                                             QStringLiteral("backgroundColor"),
+                                             errors);
 
     const QJsonArray objects = root.value(QStringLiteral("objects")).toArray();
     for (const QJsonValue &value : objects) {
@@ -142,6 +175,24 @@ bool ca3DConfigParser::parse(const QString &json, ca3DSceneConfig *config, QStri
         }
         item.texture = stringFromObject(object, QStringLiteral("texture"));
         item.textureResolved = resolveDisplayFile(item.texture);
+        const QJsonValue materialColorValue = object.value(QStringLiteral("materialColor"));
+        if (!materialColorValue.isUndefined() && !materialColorValue.isNull()) {
+            item.materialColor = colorFromValue(materialColorValue,
+                                               item.materialColor,
+                                               QStringLiteral("object.materialColor"),
+                                               errors);
+            item.hasMaterialColor = item.materialColor.isValid();
+        }
+        if (object.value(QStringLiteral("material")).isObject()) {
+            const QJsonValue nestedMaterialColorValue = object.value(QStringLiteral("material")).toObject().value(QStringLiteral("color"));
+            if (!nestedMaterialColorValue.isUndefined() && !nestedMaterialColorValue.isNull()) {
+                item.materialColor = colorFromValue(nestedMaterialColorValue,
+                                                   item.materialColor,
+                                                   QStringLiteral("object.material.color"),
+                                                   errors);
+                item.hasMaterialColor = item.materialColor.isValid();
+            }
+        }
         item.position = vectorFromArray(object.value(QStringLiteral("position")), QStringLiteral("object.position"), errors);
         item.rotation = vectorFromArray(object.value(QStringLiteral("rotation")), QStringLiteral("object.rotation"), errors);
         item.configuredOriginPosition = vectorFromArray(object.value(QStringLiteral("configuredOriginPosition")), QStringLiteral("object.configuredOriginPosition"), errors);

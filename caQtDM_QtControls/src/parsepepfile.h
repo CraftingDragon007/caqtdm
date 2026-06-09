@@ -28,7 +28,7 @@
 
 #include <qtcontrols_global.h>
 #include <QMap>
-#include <QBuffer>
+#include <QtCore/QBuffer>
 #include <QDataStream>
 #include <QSharedMemory>
 #include <QWidget>

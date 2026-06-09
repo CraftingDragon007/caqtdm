@@ -6,6 +6,7 @@
 #define CA3DCONFIG_H
 
 #include <QList>
+#include <QColor>
 #include <QRect>
 #include <QString>
 #include <QStringList>
@@ -30,6 +31,8 @@ struct QTCON_EXPORT ca3DObjectConfig
     QString type;
     QString texture;
     QString textureResolved;
+    QColor materialColor;
+    bool hasMaterialColor = false;
     QVector3D position;
     QVector3D rotation;
     QVector3D configuredOriginPosition;
@@ -69,6 +72,7 @@ struct QTCON_EXPORT ca3DSceneConfig
     QList<ca3DObjectConfig> objects;
     QList<ca3DOverlayConfig> overlays;
     QList<ca3DCameraPresetConfig> cameraPresets;
+    QColor backgroundColor = QColor(30, 34, 40);
 
     void clear();
     bool isEmpty() const;
