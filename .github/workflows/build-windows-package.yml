@@ -347,15 +347,28 @@ jobs:
         shell: pwsh
         working-directory: ${{ env.CAQTDM_DIR }}\caQtDM_Tests\unitTests
         run: |
-          $env:PATH = @(
+          $env:PATH = (@(
            "$env:EPICS_BASE\bin\$env:EPICS_HOST_ARCH"
            "$env:ZMQBIN"
            "$env:QWTHOME\lib"
            "$env:CAQTDM_COLLECT"
            "$env:CAQTDM_COLLECT\controlsystems"
-          ) -join ';' + ';' + $env:PATH
+           "$env:QTHOME\bin"
+          ) -join ';') + ';' + $env:PATH
           
-          jom check
+          # --- DEBUG BLOCK START ---
+	  Write-Host "--- Direct Test Execution Debug ---"
+	  cd "D:\a\caqtdm\caqtdm\caqtdm\caQtDM_Tests\unitTests\tst_lib"
+	  
+	  cat .\target_wrapper.bat
+	  
+	  & ".\release\tst_lib.exe"
+	  Write-Host "tst_lib.exe exited with code: $LASTEXITCODE (Hex: $('0x{0:X}' -f $LASTEXITCODE))"
+	  # --- DEBUG BLOCK END ---
+	  
+	  cd ${{ env.CAQTDM_DIR }}\caQtDM_Tests\unitTests
+          
+          jom -j 1 check
           
           if ($LASTEXITCODE -ne 0) {
             throw "Unit tests failed"
