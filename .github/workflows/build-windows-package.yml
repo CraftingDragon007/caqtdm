@@ -357,7 +357,6 @@ jobs:
           ) -join ';') + ';' + $env:PATH
           
           $env:QT_FORCE_STDERR_LOGGING = "1"
-          $env:QT_ASSUME_STDERR_HAS_CONSOLE = "1"
           $env:QT_LOGGING_TO_CONSOLE = "1"
           
           jom check
