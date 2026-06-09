@@ -349,7 +349,7 @@ jobs:
         run: |
           $env:PATH = @(
             "${{ env.QT_ROOT_DIR }}\bin",
-            "${{ env.ZEROMQ_INSTALL_DIR }}\lib",
+            "${{ env.ZEROMQ_INSTALL_DIR }}\bin",
             "${{ env.QWT_INSTALL_DIR }}\lib",
             "${{ env.EPICS_BASE  }}\bin\windows-x64",
             "${{ env.CAQTDM_DIR }}\caQtDM_Binaries",
