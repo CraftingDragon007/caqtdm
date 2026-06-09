@@ -51,6 +51,23 @@ QRect rectFromArray(const QJsonValue &value, const QString &fieldName, QStringLi
     return QRect(array.at(0).toInt(), array.at(1).toInt(), array.at(2).toInt(), array.at(3).toInt());
 }
 
+QSizeF sizeFromArray(const QJsonValue &value, const QString &fieldName, QStringList *errors)
+{
+    if (value.isUndefined() || value.isNull()) {
+        return QSizeF();
+    }
+
+    const QJsonArray array = value.toArray();
+    if (array.size() != 2) {
+        if (errors) {
+            errors->append(QStringLiteral("%1 must contain exactly 2 numbers").arg(fieldName));
+        }
+        return QSizeF();
+    }
+
+    return QSizeF(array.at(0).toDouble(), array.at(1).toDouble());
+}
+
 QString stringFromObject(const QJsonObject &object, const QString &name)
 {
     return object.value(name).toString().trimmed();
@@ -167,13 +184,17 @@ bool ca3DConfigParser::parse(const QString &json, ca3DSceneConfig *config, QStri
         const QJsonObject object = value.toObject();
         ca3DObjectConfig item;
         item.id = stringFromObject(object, QStringLiteral("id"));
-        item.mesh = stringFromObject(object, QStringLiteral("mesh"));
+        item.mesh = object.contains(QStringLiteral("mesh"))
+                    ? stringFromObject(object, QStringLiteral("mesh"))
+                    : stringFromObject(object, QStringLiteral("meshFile"));
         item.meshResolved = resolveDisplayFile(item.mesh);
         item.type = stringFromObject(object, QStringLiteral("type"));
         if (item.type.isEmpty()) {
             item.type = inferMeshType(item.mesh);
         }
-        item.texture = stringFromObject(object, QStringLiteral("texture"));
+        item.texture = object.contains(QStringLiteral("texture"))
+                       ? stringFromObject(object, QStringLiteral("texture"))
+                       : stringFromObject(object, QStringLiteral("textureFile"));
         item.textureResolved = resolveDisplayFile(item.texture);
         const QJsonValue materialColorValue = object.value(QStringLiteral("materialColor"));
         if (!materialColorValue.isUndefined() && !materialColorValue.isNull()) {
@@ -195,6 +216,7 @@ bool ca3DConfigParser::parse(const QString &json, ca3DSceneConfig *config, QStri
         }
         item.position = vectorFromArray(object.value(QStringLiteral("position")), QStringLiteral("object.position"), errors);
         item.rotation = vectorFromArray(object.value(QStringLiteral("rotation")), QStringLiteral("object.rotation"), errors);
+        item.scale = object.value(QStringLiteral("scale")).toDouble(1.0);
         item.configuredOriginPosition = vectorFromArray(object.value(QStringLiteral("configuredOriginPosition")), QStringLiteral("object.configuredOriginPosition"), errors);
         item.configuredOriginRotation = vectorFromArray(object.value(QStringLiteral("configuredOriginRotation")), QStringLiteral("object.configuredOriginRotation"), errors);
 
@@ -234,7 +256,11 @@ bool ca3DConfigParser::parse(const QString &json, ca3DSceneConfig *config, QStri
         item.includeFileResolved = resolveDisplayFile(item.includeFile);
         item.position = vectorFromArray(object.value(QStringLiteral("position")), QStringLiteral("overlay.position"), errors);
         item.rotation = vectorFromArray(object.value(QStringLiteral("rotation")), QStringLiteral("overlay.rotation"), errors);
-        item.visibilityMode = visibilityModeFromString(stringFromObject(object, QStringLiteral("visibilityMode")), errors);
+        item.size = sizeFromArray(object.value(QStringLiteral("size")), QStringLiteral("overlay.size"), errors);
+        const QString visibility = object.contains(QStringLiteral("visibilityMode"))
+                                   ? stringFromObject(object, QStringLiteral("visibilityMode"))
+                                   : stringFromObject(object, QStringLiteral("visibility"));
+        item.visibilityMode = visibilityModeFromString(visibility, errors);
         item.cameraPreset = object.value(QStringLiteral("cameraPreset")).toInt(0);
         item.fallbackGeometry = rectFromArray(object.value(QStringLiteral("fallbackGeometry")), QStringLiteral("overlay.fallbackGeometry"), errors);
         item.transparentBackground = object.value(QStringLiteral("transparentBackground")).toBool(true);
@@ -256,8 +282,14 @@ bool ca3DConfigParser::parse(const QString &json, ca3DSceneConfig *config, QStri
         item.id = object.value(QStringLiteral("id")).toInt(0);
         item.name = stringFromObject(object, QStringLiteral("name"));
         item.position = vectorFromArray(object.value(QStringLiteral("position")), QStringLiteral("cameraPreset.position"), errors);
+        item.hasViewCenter = object.contains(QStringLiteral("viewCenter"));
+        item.viewCenter = vectorFromArray(object.value(QStringLiteral("viewCenter")), QStringLiteral("cameraPreset.viewCenter"), errors);
+        if (object.contains(QStringLiteral("upVector"))) {
+            item.upVector = vectorFromArray(object.value(QStringLiteral("upVector")), QStringLiteral("cameraPreset.upVector"), errors);
+        }
         item.yaw = object.value(QStringLiteral("yaw")).toDouble(0.0);
         item.pitch = object.value(QStringLiteral("pitch")).toDouble(0.0);
+        item.fov = object.value(QStringLiteral("fov")).toDouble(45.0);
         item.snapshot = stringFromObject(object, QStringLiteral("snapshot"));
         item.snapshotResolved = resolveDisplayFile(item.snapshot);
 

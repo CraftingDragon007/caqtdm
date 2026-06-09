@@ -53,6 +53,18 @@ public:
 
 public slots:
     void setCameraPreset(int preset);
+    void setCameraPosition(double x, double y, double z);
+    void moveCamera(double dx, double dy, double dz);
+    void moveCameraForward(double distance);
+    void moveCameraBackward(double distance);
+    void moveCameraRight(double distance);
+    void moveCameraLeft(double distance);
+    void setCameraRotation(double yaw, double pitch);
+    void turnCameraUp(double angle);
+    void turnCameraDown(double angle);
+    void turnCameraRight(double angle);
+    void turnCameraLeft(double angle);
+    void setCameraViewCenter(double x, double y, double z);
     void setObjectAxisValue(const QString &objectId, const QString &axisId, double value);
     void setObjectTranslation(const QString &objectId, double x, double y, double z);
     void setObjectRotation(const QString &objectId, double rx, double ry, double rz);
@@ -72,6 +84,7 @@ protected:
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     void maybeInitialize3DView();
     void initialize3DView();
+    bool shouldUse2DFallback() const;
     void rebuild3DOverlays();
     void clear3DOverlays();
     void apply3DOverlayVisibility(int preset);
@@ -98,6 +111,8 @@ protected:
     Qt3DCore::QEntity *thisRootEntity;
     QMap<QString, Qt3DCore::QTransform*> thisObjectTransforms;
     QMap<QString, Qt3DCore::QEntity*> this3DOverlayEntities;
+    QMap<QString, ca3DOverlayWidgetManager*> this3DOverlayManagersById;
+    QMap<QString, QObject*> this3DOverlayEventFiltersById;
     QList<ca3DOverlayWidgetManager*> this3DOverlayManagers;
     QList<QObject*> this3DOverlayEventFilters;
     QMap<QString, QVector3D> thisDynamicTranslations;

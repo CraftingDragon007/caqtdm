@@ -13,8 +13,12 @@
 #include <QApplication>
 #include <QKeyEvent>
 #include <QLabel>
+#include <QLoggingCategory>
 #include <QMatrix4x4>
 #include <QMouseEvent>
+#include <QOffscreenSurface>
+#include <QOpenGLContext>
+#include <QOpenGLFunctions>
 #include <QPainter>
 #include <QQuaternion>
 #include <QResizeEvent>
@@ -22,6 +26,7 @@
 #include <QVBoxLayout>
 #include <QtMath>
 #include <cmath>
+#include <memory>
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 #include <QtDesigner/QDesignerFormWindowInterface>
@@ -41,6 +46,8 @@
 #include <Qt3DRender/QTextureImage>
 #include <QUrl>
 #endif
+
+Q_LOGGING_CATEGORY(ca3DWidgetLog, "caqtdm.widgets.ca3dwidget")
 
 namespace
 {
@@ -113,12 +120,13 @@ public:
         , thisOverlayFocused(false)
         , thisForwardingKeyEvent(false)
     {
+        setProperty("ca3DOverlayActive", false);
     }
 
 protected:
     bool eventFilter(QObject *watched, QEvent *event) override
     {
-        if (!thisCamera || !thisOverlayManager) {
+        if (!thisCamera || !thisOverlayManager || !property("ca3DOverlayActive").toBool()) {
             return QObject::eventFilter(watched, event);
         }
 
@@ -252,6 +260,76 @@ private:
     bool thisOverlayFocused;
     bool thisForwardingKeyEvent;
 };
+
+bool overlayIsInCameraView(Qt3DRender::QCamera *camera, const ca3DOverlayConfig &overlay)
+{
+    if (!camera) {
+        return false;
+    }
+
+    const QVector3D toOverlay = overlay.position - camera->position();
+    if (toOverlay.lengthSquared() <= 0.0f) {
+        return false;
+    }
+
+    const QVector3D viewDirection = normalizedOrFallback(camera->viewCenter() - camera->position(), QVector3D(0.0f, 0.0f, -1.0f));
+    const QVector3D overlayDirection = toOverlay.normalized();
+    const float alignment = QVector3D::dotProduct(viewDirection, overlayDirection);
+    if (alignment <= 0.0f) {
+        return false;
+    }
+
+    const float fovRadians = qDegreesToRadians(camera->lens()->fieldOfView());
+    const float angleRadians = std::acos(qBound(-1.0f, alignment, 1.0f));
+    return angleRadians <= (fovRadians * 0.5f);
+}
+
+QVector3D cameraForward(Qt3DRender::QCamera *camera)
+{
+    return normalizedOrFallback(camera->viewCenter() - camera->position(), QVector3D(0.0f, 0.0f, -1.0f));
+}
+
+QVector3D cameraRight(Qt3DRender::QCamera *camera)
+{
+    return normalizedOrFallback(QVector3D::crossProduct(cameraForward(camera), camera->upVector()), QVector3D(1.0f, 0.0f, 0.0f));
+}
+
+void moveCameraAlong(Qt3DRender::QCamera *camera, const QVector3D &direction, double distance)
+{
+    const QVector3D delta = direction * static_cast<float>(distance);
+    camera->setPosition(camera->position() + delta);
+    camera->setViewCenter(camera->viewCenter() + delta);
+}
+
+void turnCameraBy(Qt3DRender::QCamera *camera, double yawDelta, double pitchDelta)
+{
+    const float viewDistance = qMax((camera->viewCenter() - camera->position()).length(), 1.0f);
+    QVector3D forward = cameraForward(camera);
+    if (!qFuzzyIsNull(yawDelta)) {
+        forward = QQuaternion::fromAxisAndAngle(camera->upVector(), static_cast<float>(yawDelta)).rotatedVector(forward);
+    }
+    if (!qFuzzyIsNull(pitchDelta)) {
+        forward = QQuaternion::fromAxisAndAngle(cameraRight(camera), static_cast<float>(pitchDelta)).rotatedVector(forward);
+    }
+
+    camera->setViewCenter(camera->position() + normalizedOrFallback(forward, QVector3D(0.0f, 0.0f, -1.0f)) * viewDistance);
+    camera->setUpVector(QVector3D(0.0f, 1.0f, 0.0f));
+}
+
+QString cameraDebugState(Qt3DRender::QCamera *camera)
+{
+    if (!camera) {
+        return QStringLiteral("camera=null");
+    }
+
+    const QVector3D position = camera->position();
+    const QVector3D viewCenter = camera->viewCenter();
+    const QVector3D upVector = camera->upVector();
+    return QStringLiteral("position=(%1,%2,%3) viewCenter=(%4,%5,%6) upVector=(%7,%8,%9)")
+        .arg(position.x()).arg(position.y()).arg(position.z())
+        .arg(viewCenter.x()).arg(viewCenter.y()).arg(viewCenter.z())
+        .arg(upVector.x()).arg(upVector.y()).arg(upVector.z());
+}
 #endif
 }
 
@@ -326,7 +404,9 @@ void ca3DWidget::setSceneConfig(const QString &config)
 
 void ca3DWidget::setCameraPreset(int preset)
 {
+    qCDebug(ca3DWidgetLog) << "setCameraPreset" << preset;
     if (preset < 0) {
+        qCWarning(ca3DWidgetLog) << "setCameraPreset ignored negative preset" << preset;
         return;
     }
 
@@ -344,14 +424,254 @@ void ca3DWidget::setCameraPreset(int preset)
         }
     }
     if (!presetFound) {
+        qCWarning(ca3DWidgetLog) << "setCameraPreset ignored unknown preset" << preset;
         return;
     }
     apply3DOverlayVisibility(thisCameraPreset);
+    qCDebug(ca3DWidgetLog) << "setCameraPreset applied" << preset
+                            << cameraDebugState(this3DView ? this3DView->camera() : Q_NULLPTR);
 #else
     thisCameraPreset = preset;
 #endif
     applyFallbackPreset(thisCameraPreset);
     updatePlaceholderText();
+}
+
+void ca3DWidget::setCameraPosition(double x, double y, double z)
+{
+    qCDebug(ca3DWidgetLog) << "setCameraPosition" << x << y << z;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    if (!this3DView) {
+        qCDebug(ca3DWidgetLog) << "setCameraPosition ignored: 3D view not initialized";
+        return;
+    }
+
+    Qt3DRender::QCamera *camera = this3DView->camera();
+    const QVector3D position(static_cast<float>(x), static_cast<float>(y), static_cast<float>(z));
+    const QVector3D delta = position - camera->position();
+    camera->setPosition(position);
+    camera->setViewCenter(camera->viewCenter() + delta);
+    apply3DOverlayVisibility(thisCameraPreset);
+    qCDebug(ca3DWidgetLog) << "setCameraPosition applied" << cameraDebugState(camera);
+#else
+    Q_UNUSED(x);
+    Q_UNUSED(y);
+    Q_UNUSED(z);
+#endif
+}
+
+void ca3DWidget::moveCamera(double dx, double dy, double dz)
+{
+    qCDebug(ca3DWidgetLog) << "moveCamera" << dx << dy << dz;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    if (!this3DView) {
+        qCDebug(ca3DWidgetLog) << "moveCamera ignored: 3D view not initialized";
+        return;
+    }
+
+    Qt3DRender::QCamera *camera = this3DView->camera();
+    const QVector3D delta(static_cast<float>(dx), static_cast<float>(dy), static_cast<float>(dz));
+    camera->setPosition(camera->position() + delta);
+    camera->setViewCenter(camera->viewCenter() + delta);
+    apply3DOverlayVisibility(thisCameraPreset);
+    qCDebug(ca3DWidgetLog) << "moveCamera applied" << cameraDebugState(camera);
+#else
+    Q_UNUSED(dx);
+    Q_UNUSED(dy);
+    Q_UNUSED(dz);
+#endif
+}
+
+void ca3DWidget::moveCameraForward(double distance)
+{
+    qCDebug(ca3DWidgetLog) << "moveCameraForward" << distance;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    if (!this3DView) {
+        qCDebug(ca3DWidgetLog) << "moveCameraForward ignored: 3D view not initialized";
+        return;
+    }
+
+    Qt3DRender::QCamera *camera = this3DView->camera();
+    moveCameraAlong(camera, cameraForward(camera), distance);
+    apply3DOverlayVisibility(thisCameraPreset);
+    qCDebug(ca3DWidgetLog) << "moveCameraForward applied" << cameraDebugState(camera);
+#else
+    Q_UNUSED(distance);
+#endif
+}
+
+void ca3DWidget::moveCameraBackward(double distance)
+{
+    qCDebug(ca3DWidgetLog) << "moveCameraBackward" << distance;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    if (!this3DView) {
+        qCDebug(ca3DWidgetLog) << "moveCameraBackward ignored: 3D view not initialized";
+        return;
+    }
+
+    Qt3DRender::QCamera *camera = this3DView->camera();
+    moveCameraAlong(camera, -cameraForward(camera), distance);
+    apply3DOverlayVisibility(thisCameraPreset);
+    qCDebug(ca3DWidgetLog) << "moveCameraBackward applied" << cameraDebugState(camera);
+#else
+    Q_UNUSED(distance);
+#endif
+}
+
+void ca3DWidget::moveCameraRight(double distance)
+{
+    qCDebug(ca3DWidgetLog) << "moveCameraRight" << distance;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    if (!this3DView) {
+        qCDebug(ca3DWidgetLog) << "moveCameraRight ignored: 3D view not initialized";
+        return;
+    }
+
+    Qt3DRender::QCamera *camera = this3DView->camera();
+    moveCameraAlong(camera, cameraRight(camera), distance);
+    apply3DOverlayVisibility(thisCameraPreset);
+    qCDebug(ca3DWidgetLog) << "moveCameraRight applied" << cameraDebugState(camera);
+#else
+    Q_UNUSED(distance);
+#endif
+}
+
+void ca3DWidget::moveCameraLeft(double distance)
+{
+    qCDebug(ca3DWidgetLog) << "moveCameraLeft" << distance;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    if (!this3DView) {
+        qCDebug(ca3DWidgetLog) << "moveCameraLeft ignored: 3D view not initialized";
+        return;
+    }
+
+    Qt3DRender::QCamera *camera = this3DView->camera();
+    moveCameraAlong(camera, -cameraRight(camera), distance);
+    apply3DOverlayVisibility(thisCameraPreset);
+    qCDebug(ca3DWidgetLog) << "moveCameraLeft applied" << cameraDebugState(camera);
+#else
+    Q_UNUSED(distance);
+#endif
+}
+
+void ca3DWidget::setCameraRotation(double yaw, double pitch)
+{
+    qCDebug(ca3DWidgetLog) << "setCameraRotation" << yaw << pitch;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    if (!this3DView) {
+        qCDebug(ca3DWidgetLog) << "setCameraRotation ignored: 3D view not initialized";
+        return;
+    }
+
+    const float yawRadians = qDegreesToRadians(static_cast<float>(yaw));
+    const float pitchRadians = qDegreesToRadians(static_cast<float>(pitch));
+    const float cosPitch = qCos(pitchRadians);
+    const QVector3D forward(qSin(yawRadians) * cosPitch,
+                            qSin(pitchRadians),
+                            -qCos(yawRadians) * cosPitch);
+
+    Qt3DRender::QCamera *camera = this3DView->camera();
+    camera->setViewCenter(camera->position() + forward * 100.0f);
+    camera->setUpVector(QVector3D(0.0f, 1.0f, 0.0f));
+    apply3DOverlayVisibility(thisCameraPreset);
+    qCDebug(ca3DWidgetLog) << "setCameraRotation applied" << cameraDebugState(camera);
+#else
+    Q_UNUSED(yaw);
+    Q_UNUSED(pitch);
+#endif
+}
+
+void ca3DWidget::turnCameraUp(double angle)
+{
+    qCDebug(ca3DWidgetLog) << "turnCameraUp" << angle;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    if (!this3DView) {
+        qCDebug(ca3DWidgetLog) << "turnCameraUp ignored: 3D view not initialized";
+        return;
+    }
+
+    Qt3DRender::QCamera *camera = this3DView->camera();
+    turnCameraBy(camera, 0.0, angle);
+    apply3DOverlayVisibility(thisCameraPreset);
+    qCDebug(ca3DWidgetLog) << "turnCameraUp applied" << cameraDebugState(camera);
+#else
+    Q_UNUSED(angle);
+#endif
+}
+
+void ca3DWidget::turnCameraDown(double angle)
+{
+    qCDebug(ca3DWidgetLog) << "turnCameraDown" << angle;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    if (!this3DView) {
+        qCDebug(ca3DWidgetLog) << "turnCameraDown ignored: 3D view not initialized";
+        return;
+    }
+
+    Qt3DRender::QCamera *camera = this3DView->camera();
+    turnCameraBy(camera, 0.0, -angle);
+    apply3DOverlayVisibility(thisCameraPreset);
+    qCDebug(ca3DWidgetLog) << "turnCameraDown applied" << cameraDebugState(camera);
+#else
+    Q_UNUSED(angle);
+#endif
+}
+
+void ca3DWidget::turnCameraRight(double angle)
+{
+    qCDebug(ca3DWidgetLog) << "turnCameraRight" << angle;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    if (!this3DView) {
+        qCDebug(ca3DWidgetLog) << "turnCameraRight ignored: 3D view not initialized";
+        return;
+    }
+
+    Qt3DRender::QCamera *camera = this3DView->camera();
+    turnCameraBy(camera, angle, 0.0);
+    apply3DOverlayVisibility(thisCameraPreset);
+    qCDebug(ca3DWidgetLog) << "turnCameraRight applied" << cameraDebugState(camera);
+#else
+    Q_UNUSED(angle);
+#endif
+}
+
+void ca3DWidget::turnCameraLeft(double angle)
+{
+    qCDebug(ca3DWidgetLog) << "turnCameraLeft" << angle;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    if (!this3DView) {
+        qCDebug(ca3DWidgetLog) << "turnCameraLeft ignored: 3D view not initialized";
+        return;
+    }
+
+    Qt3DRender::QCamera *camera = this3DView->camera();
+    turnCameraBy(camera, -angle, 0.0);
+    apply3DOverlayVisibility(thisCameraPreset);
+    qCDebug(ca3DWidgetLog) << "turnCameraLeft applied" << cameraDebugState(camera);
+#else
+    Q_UNUSED(angle);
+#endif
+}
+
+void ca3DWidget::setCameraViewCenter(double x, double y, double z)
+{
+    qCDebug(ca3DWidgetLog) << "setCameraViewCenter" << x << y << z;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    if (!this3DView) {
+        qCDebug(ca3DWidgetLog) << "setCameraViewCenter ignored: 3D view not initialized";
+        return;
+    }
+
+    Qt3DRender::QCamera *camera = this3DView->camera();
+    camera->setViewCenter(QVector3D(static_cast<float>(x), static_cast<float>(y), static_cast<float>(z)));
+    camera->setUpVector(QVector3D(0.0f, 1.0f, 0.0f));
+    apply3DOverlayVisibility(thisCameraPreset);
+    qCDebug(ca3DWidgetLog) << "setCameraViewCenter applied" << cameraDebugState(camera);
+#else
+    Q_UNUSED(x);
+    Q_UNUSED(y);
+    Q_UNUSED(z);
+#endif
 }
 
 void ca3DWidget::resizeEvent(QResizeEvent *event)
@@ -364,6 +684,7 @@ void ca3DWidget::resizeEvent(QResizeEvent *event)
 
 void ca3DWidget::setObjectAxisValue(const QString &objectId, const QString &axisId, double value)
 {
+    qCDebug(ca3DWidgetLog) << "setObjectAxisValue" << objectId << axisId << value;
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     for (const ca3DObjectConfig &object : thisConfig.objects) {
         if (object.id != objectId) {
@@ -381,9 +702,11 @@ void ca3DWidget::setObjectAxisValue(const QString &objectId, const QString &axis
                 thisDynamicTranslations[objectId] = axis.vector * static_cast<float>(value * axis.factor);
             }
             applyObjectTransform(objectId);
+            qCDebug(ca3DWidgetLog) << "setObjectAxisValue applied" << objectId << axisId << value;
             return;
         }
     }
+    qCWarning(ca3DWidgetLog) << "setObjectAxisValue ignored unknown object/axis" << objectId << axisId;
 #else
     Q_UNUSED(objectId);
     Q_UNUSED(axisId);
@@ -393,9 +716,11 @@ void ca3DWidget::setObjectAxisValue(const QString &objectId, const QString &axis
 
 void ca3DWidget::setObjectTranslation(const QString &objectId, double x, double y, double z)
 {
+    qCDebug(ca3DWidgetLog) << "setObjectTranslation" << objectId << x << y << z;
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     thisDynamicTranslations[objectId] = QVector3D(static_cast<float>(x), static_cast<float>(y), static_cast<float>(z));
     applyObjectTransform(objectId);
+    qCDebug(ca3DWidgetLog) << "setObjectTranslation applied" << objectId;
 #else
     Q_UNUSED(objectId);
     Q_UNUSED(x);
@@ -406,9 +731,11 @@ void ca3DWidget::setObjectTranslation(const QString &objectId, double x, double 
 
 void ca3DWidget::setObjectRotation(const QString &objectId, double rx, double ry, double rz)
 {
+    qCDebug(ca3DWidgetLog) << "setObjectRotation" << objectId << rx << ry << rz;
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     thisDynamicRotations[objectId] = QVector3D(static_cast<float>(rx), static_cast<float>(ry), static_cast<float>(rz));
     applyObjectTransform(objectId);
+    qCDebug(ca3DWidgetLog) << "setObjectRotation applied" << objectId;
 #else
     Q_UNUSED(objectId);
     Q_UNUSED(rx);
@@ -467,8 +794,15 @@ void ca3DWidget::rebuildScene()
 
     for (const ca3DObjectConfig &object : thisConfig.objects) {
         if (object.meshResolved.isEmpty()) {
+            qCWarning(ca3DWidgetLog) << "rebuildScene skipping object without resolved mesh" << object.id << object.mesh;
             continue;
         }
+        qCDebug(ca3DWidgetLog) << "rebuildScene create object" << object.id
+                                << "mesh" << object.meshResolved
+                                << "texture" << object.textureResolved
+                                << "position" << object.position
+                                << "rotation" << object.rotation
+                                << "scale" << object.scale;
 
         Qt3DCore::QEntity *entity = new Qt3DCore::QEntity(thisRootEntity);
         Qt3DRender::QMesh *mesh = new Qt3DRender::QMesh(entity);
@@ -660,12 +994,22 @@ void ca3DWidget::maybeInitialize3DView()
 {
     thisDesignerMode = isDesignerMode();
     if (thisDesignerMode) {
+        qCDebug(ca3DWidgetLog) << "maybeInitialize3DView using 2D fallback: designer edit mode";
         thisFallbackMode = true;
         updatePlaceholderText();
         return;
     }
 
+    if (shouldUse2DFallback()) {
+        qCWarning(ca3DWidgetLog) << "maybeInitialize3DView using 2D fallback: OpenGL unavailable or software renderer detected";
+        thisFallbackMode = true;
+        rebuildFallbackView();
+        updatePlaceholderText();
+        return;
+    }
+
     if (!this3DView) {
+        qCDebug(ca3DWidgetLog) << "maybeInitialize3DView creating Qt3D view";
         initialize3DView();
         rebuildScene();
     }
@@ -679,6 +1023,40 @@ void ca3DWidget::initialize3DView()
     thisViewContainer->setMinimumSize(120, 80);
     thisViewContainer->setFocusPolicy(Qt::StrongFocus);
     layout()->addWidget(thisViewContainer);
+}
+
+bool ca3DWidget::shouldUse2DFallback() const
+{
+    if (qEnvironmentVariableIntValue("CAQTDM_3D_FORCE_FALLBACK") > 0) {
+        qCWarning(ca3DWidgetLog) << "shouldUse2DFallback forced by CAQTDM_3D_FORCE_FALLBACK";
+        return true;
+    }
+
+    QOpenGLContext context;
+    if (!context.create()) {
+        qCWarning(ca3DWidgetLog) << "shouldUse2DFallback no OpenGL context";
+        return true;
+    }
+
+    QOffscreenSurface surface;
+    surface.setFormat(context.format());
+    surface.create();
+    if (!surface.isValid() || !context.makeCurrent(&surface)) {
+        qCWarning(ca3DWidgetLog) << "shouldUse2DFallback invalid offscreen OpenGL surface";
+        return true;
+    }
+
+    QOpenGLFunctions *functions = context.functions();
+    const char *rendererRaw = reinterpret_cast<const char *>(functions->glGetString(GL_RENDERER));
+    const QString renderer = rendererRaw ? QString::fromLatin1(rendererRaw).toLower() : QString();
+    context.doneCurrent();
+    qCDebug(ca3DWidgetLog) << "shouldUse2DFallback OpenGL renderer" << renderer;
+
+    return renderer.isEmpty()
+           || renderer.contains(QStringLiteral("llvmpipe"))
+           || renderer.contains(QStringLiteral("softpipe"))
+           || renderer.contains(QStringLiteral("software"))
+           || renderer.contains(QStringLiteral("swrast"));
 }
 
 void ca3DWidget::rebuild3DOverlays()
@@ -701,11 +1079,18 @@ void ca3DWidget::rebuild3DOverlays()
             continue;
         }
 
-        const float overlayWidth = static_cast<float>(overlay.fallbackGeometry.width() > 0 ? overlay.fallbackGeometry.width() : designSize.width());
-        const float overlayHeight = static_cast<float>(overlay.fallbackGeometry.height() > 0 ? overlay.fallbackGeometry.height() : designSize.height());
-        const QQuaternion rotation = rotationFromEuler(overlay.rotation);
-        const QVector3D right = normalizedOrFallback(rotation.rotatedVector(QVector3D(1.0f, 0.0f, 0.0f)), QVector3D(1.0f, 0.0f, 0.0f));
-        const QVector3D up = normalizedOrFallback(rotation.rotatedVector(QVector3D(0.0f, 0.0f, 1.0f)), QVector3D(0.0f, 1.0f, 0.0f));
+        const float overlayWidth = static_cast<float>(overlay.size.width() > 0.0 ? overlay.size.width() : 1.5);
+        const float overlayHeight = static_cast<float>(overlay.size.height() > 0.0 ? overlay.size.height() : 1.0);
+        const QQuaternion overlayRotation = rotationFromEuler(overlay.rotation);
+        const QQuaternion planeLocalToUprightPlane = QQuaternion::fromAxisAndAngle(1.0f, 0.0f, 0.0f, -90.0f);
+        const QQuaternion renderRotation = overlayRotation * planeLocalToUprightPlane;
+        const QVector3D right = normalizedOrFallback(overlayRotation.rotatedVector(QVector3D(1.0f, 0.0f, 0.0f)), QVector3D(1.0f, 0.0f, 0.0f));
+        const QVector3D up = normalizedOrFallback(overlayRotation.rotatedVector(QVector3D(0.0f, 1.0f, 0.0f)), QVector3D(0.0f, 1.0f, 0.0f));
+        qCDebug(ca3DWidgetLog) << "rebuild3DOverlays create overlay" << overlay.id
+                                << "position" << overlay.position
+                                << "rotation" << overlay.rotation
+                                << "size" << overlayWidth << overlayHeight
+                                << "designSize" << designSize;
 
         Qt3DCore::QEntity *overlayEntity = new Qt3DCore::QEntity(thisRootEntity);
         Qt3DExtras::QPlaneMesh *plane = new Qt3DExtras::QPlaneMesh(overlayEntity);
@@ -724,9 +1109,13 @@ void ca3DWidget::rebuild3DOverlays()
 
         QTimer *liveTextureTimer = new QTimer(overlayManager);
         liveTextureTimer->setTimerType(Qt::CoarseTimer);
+        const std::shared_ptr<int> textureTimerTick(new int(0));
         connect(liveTextureTimer, &QTimer::timeout, overlayManager,
-                [overlayManager, textureImage]() {
-                    if (!overlayManager->takeTextureDirty()) {
+                [overlayManager, textureImage, textureTimerTick]() {
+                    ++(*textureTimerTick);
+                    const bool refreshForCaret = overlayManager->hasFocusedTextInput() && (*textureTimerTick % 5 == 0);
+                    const bool refreshIdle = *textureTimerTick % 20 == 0;
+                    if (!overlayManager->takeTextureDirty() && !refreshForCaret && !refreshIdle) {
                         return;
                     }
                     textureImage->setImage(overlayManager->renderSnapshot(kOverlayTextureScale).flipped(Qt::Horizontal));
@@ -739,7 +1128,7 @@ void ca3DWidget::rebuild3DOverlays()
 
         Qt3DCore::QTransform *transform = new Qt3DCore::QTransform(overlayEntity);
         transform->setTranslation(overlay.position);
-        transform->setRotation(rotation);
+        transform->setRotation(renderRotation);
 
         overlayEntity->addComponent(plane);
         overlayEntity->addComponent(material);
@@ -761,6 +1150,8 @@ void ca3DWidget::rebuild3DOverlays()
 
         this3DOverlayManagers.append(overlayManager);
         this3DOverlayEventFilters.append(interactionFilter);
+        this3DOverlayManagersById.insert(overlay.id, overlayManager);
+        this3DOverlayEventFiltersById.insert(overlay.id, interactionFilter);
         this3DOverlayEntities.insert(overlay.id, overlayEntity);
     }
 
@@ -789,6 +1180,8 @@ void ca3DWidget::clear3DOverlays()
         delete manager;
     }
     this3DOverlayManagers.clear();
+    this3DOverlayManagersById.clear();
+    this3DOverlayEventFiltersById.clear();
     this3DOverlayEntities.clear();
 }
 
@@ -816,12 +1209,28 @@ void ca3DWidget::apply3DOverlayVisibility(int preset)
             continue;
         }
 
+        const bool presetMatches = selectedPreset
+                                   && (selectedPreset->overlays.contains(overlay.id)
+                                       || (overlay.cameraPreset > 0 && overlay.cameraPreset == selectedPreset->id));
+        const bool inView = overlayIsInCameraView(this3DView ? this3DView->camera() : Q_NULLPTR, overlay);
+
         bool visible = thisConfig.cameraPresets.isEmpty();
         if (selectedPreset) {
-            visible = selectedPreset->overlays.contains(overlay.id)
-                      || (overlay.cameraPreset > 0 && overlay.cameraPreset == selectedPreset->id);
+            visible = presetMatches;
+        }
+        if (overlay.visibilityMode == ca3DOverlayConfig::InView || overlay.visibilityMode == ca3DOverlayConfig::AlwaysWhenInView) {
+            visible = inView;
         }
         entity->setEnabled(visible);
+
+        QObject *filter = this3DOverlayEventFiltersById.value(overlay.id, Q_NULLPTR);
+        if (filter) {
+            filter->setProperty("ca3DOverlayActive", visible);
+        }
+        ca3DOverlayWidgetManager *manager = this3DOverlayManagersById.value(overlay.id, Q_NULLPTR);
+        if (!visible && manager) {
+            manager->clearOverlayFocus();
+        }
     }
 }
 
@@ -840,9 +1249,13 @@ void ca3DWidget::applyCameraPresetConfig(const ca3DCameraPresetConfig &preset)
 
     Qt3DRender::QCamera *camera = this3DView->camera();
     camera->setPosition(preset.position);
-    camera->setViewCenter(preset.position + forward * 100.0f);
-    camera->setUpVector(QVector3D(0.0f, 1.0f, 0.0f));
-    camera->lens()->setPerspectiveProjection(45.0f, 16.0f / 9.0f, 0.1f, 100000.0f);
+    camera->setViewCenter(preset.hasViewCenter ? preset.viewCenter : preset.position + forward * 100.0f);
+    camera->setUpVector(normalizedOrFallback(preset.upVector, QVector3D(0.0f, 1.0f, 0.0f)));
+    camera->lens()->setPerspectiveProjection(static_cast<float>(preset.fov), 16.0f / 9.0f, 0.1f, 100000.0f);
+    qCDebug(ca3DWidgetLog) << "applyCameraPresetConfig" << preset.id
+                            << "hasViewCenter" << preset.hasViewCenter
+                            << "fov" << preset.fov
+                            << cameraDebugState(camera);
 }
 
 void ca3DWidget::applyObjectTransform(const QString &objectId)
@@ -857,15 +1270,16 @@ void ca3DWidget::applyObjectTransform(const QString &objectId)
             continue;
         }
 
-        const QVector3D translation = object.position
-                                      + object.configuredOriginPosition
-                                      + thisDynamicTranslations.value(objectId);
-        const QVector3D rotation = object.rotation
-                                   + object.configuredOriginRotation
-                                   + thisDynamicRotations.value(objectId);
-        transform->setTranslation(translation);
-        transform->setRotation(rotationFromEuler(rotation));
-        return;
-    }
+    const QVector3D translation = object.position
+                                  + object.configuredOriginPosition
+                                  + thisDynamicTranslations.value(objectId);
+    const QVector3D rotation = object.rotation
+                               + object.configuredOriginRotation
+                               + thisDynamicRotations.value(objectId);
+    transform->setTranslation(translation);
+    transform->setRotation(rotationFromEuler(rotation));
+    transform->setScale(static_cast<float>(object.scale));
+    return;
+}
 }
 #endif

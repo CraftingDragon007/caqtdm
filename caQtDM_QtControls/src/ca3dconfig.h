@@ -8,6 +8,7 @@
 #include <QList>
 #include <QColor>
 #include <QRect>
+#include <QSizeF>
 #include <QString>
 #include <QStringList>
 #include <QVector3D>
@@ -35,6 +36,7 @@ struct QTCON_EXPORT ca3DObjectConfig
     bool hasMaterialColor = false;
     QVector3D position;
     QVector3D rotation;
+    double scale = 1.0;
     QVector3D configuredOriginPosition;
     QVector3D configuredOriginRotation;
     QList<ca3DAxisConfig> axes;
@@ -49,6 +51,7 @@ struct QTCON_EXPORT ca3DOverlayConfig
     QString includeFileResolved;
     QVector3D position;
     QVector3D rotation;
+    QSizeF size;
     VisibilityMode visibilityMode = PresetOnly;
     int cameraPreset = 0;
     QRect fallbackGeometry;
@@ -60,8 +63,12 @@ struct QTCON_EXPORT ca3DCameraPresetConfig
     int id = 0;
     QString name;
     QVector3D position;
+    QVector3D viewCenter;
+    QVector3D upVector = QVector3D(0.0f, 1.0f, 0.0f);
     double yaw = 0.0;
     double pitch = 0.0;
+    double fov = 45.0;
+    bool hasViewCenter = false;
     QString snapshot;
     QString snapshotResolved;
     QStringList overlays;
