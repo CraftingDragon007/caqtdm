@@ -23,6 +23,7 @@
 #include <cachoice.h>
 #include <capolyline.h>
 #include <cainclude.h>
+#include <ca3dconfig.h>
 #include <ca3dwidget.h>
 #include <carelateddisplay.h>
 #include <cashellcommand.h>

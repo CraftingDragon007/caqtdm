@@ -82,6 +82,7 @@ cahmi{
 SOURCES	+= \
     src/caframe.cpp \
     src/cainclude.cpp \
+    src/ca3dconfig.cpp \
     src/ca3dwidget.cpp \
     src/caimage.cpp \
     src/cagraphics.cpp \
@@ -215,6 +216,7 @@ contains(QWT_VER_MIN, 0) {
 HEADERS	+= \
     src/caframe.h \
     src/cainclude.h \
+    src/ca3dconfig.h \
     src/ca3dwidget.h \
     src/caimage.h \
     src/cagraphics.h \

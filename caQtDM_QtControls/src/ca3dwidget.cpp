@@ -17,6 +17,7 @@ ca3DWidget::ca3DWidget(QWidget *parent)
 #else
     , thisFallbackMode(false)
 #endif
+    , thisConfigValid(true)
 {
     setMinimumSize(120, 80);
     setAutoFillBackground(true);
@@ -46,6 +47,7 @@ void ca3DWidget::setSceneConfig(const QString &config)
     }
 
     thisSceneConfig = config;
+    thisConfigValid = ca3DConfigParser::parse(thisSceneConfig, &thisConfig, &thisConfigErrors);
     updatePlaceholderText();
 }
 
@@ -87,10 +89,13 @@ void ca3DWidget::updatePlaceholderText()
     const QString mode = thisFallbackMode ? QStringLiteral("2D fallback") : QStringLiteral("Qt6 3D");
     const QString configState = thisSceneConfig.trimmed().isEmpty()
                                 ? QStringLiteral("no sceneConfig")
-                                : QStringLiteral("sceneConfig set");
+                                : (thisConfigValid ? QStringLiteral("sceneConfig ok") : QStringLiteral("sceneConfig errors: %1").arg(thisConfigErrors.count()));
 
-    thisStatusLabel->setText(QStringLiteral("ca3DWidget\n%1\nPreset: %2\n%3")
+    thisStatusLabel->setText(QStringLiteral("ca3DWidget\n%1\nPreset: %2\nObjects: %3  Overlays: %4  Cameras: %5\n%6")
                              .arg(mode)
                              .arg(thisCameraPreset)
+                             .arg(thisConfig.objects.count())
+                             .arg(thisConfig.overlays.count())
+                             .arg(thisConfig.cameraPresets.count())
                              .arg(configState));
 }
