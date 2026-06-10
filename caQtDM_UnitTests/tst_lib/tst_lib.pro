@@ -1,4 +1,4 @@
-include(../../../caQtDM_Viewer/qtdefs.pri)
+include(../../caQtDM_Viewer/qtdefs.pri)
 include(../unitTests.pri)
 
 QT += network gui widgets designer uitools printsupport
