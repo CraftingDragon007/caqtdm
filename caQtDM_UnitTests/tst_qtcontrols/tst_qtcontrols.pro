@@ -22,3 +22,8 @@ INCLUDEPATH += ../../caQtDM_QtControls/src \
 LIBS += \
     -L$$(CAQTDM_COLLECT) \
     -lqtcontrols
+
+macx {
+    LIBS += -lz
+    LIBS += -F$$(QWTLIB) -framework $$(QWTLIBNAME)
+}

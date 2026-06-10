@@ -2,8 +2,7 @@ name: caQtDM macOS Package Build
 
 on:
   workflow_dispatch:
-  push:
-    branches: [feature/mac-pipeline]
+  pull_request:
   schedule: # Daily at 2am
     - cron: '0 2 * * *'
 

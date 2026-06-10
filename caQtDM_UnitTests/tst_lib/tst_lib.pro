@@ -29,9 +29,18 @@ INCLUDEPATH += ../../caQtDM_QtControls/src \
 LIBS += \
     -L$$(CAQTDM_COLLECT) \
     -lcaQtDM_Lib \
-    -lqtcontrols \
-    -L$$(QWTHOME)/lib \
-    -l$$(QWTLIBNAME)
+    -lqtcontrols
+
+macx {
+    LIBS += -lz
+    LIBS += -F$$(QWTLIB) -framework $$(QWTLIBNAME)
+    LIBS += $$(EPICSLIB)/libCom.dylib
+    LIBS += $$(EPICSLIB)/libca.dylib
+} else {
+    LIBS += \
+        -L$$(QWTHOME)/lib \
+        -l$$(QWTLIBNAME)
+}
 
 _EPICSLIB = $$(EPICSLIB)
 !isEmpty(_EPICSLIB) {
