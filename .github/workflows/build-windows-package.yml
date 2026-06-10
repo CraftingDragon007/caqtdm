@@ -345,7 +345,7 @@ jobs:
 
       - name: Run unit tests
         shell: pwsh
-        working-directory: ${{ env.CAQTDM_DIR }}\caQtDM_Tests\unitTests
+        working-directory: ${{ env.CAQTDM_DIR }}\caQtDM_UnitTests
         run: |
           $env:PATH = (@(
            "$env:EPICS_BASE\bin\$env:EPICS_HOST_ARCH"

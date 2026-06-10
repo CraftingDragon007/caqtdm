@@ -358,14 +358,14 @@ ZMQLIB="/usr/lib64"
 %if 0%{?qt5}
 pushd %{_target_platform}-qt5
 export LD_LIBRARY_PATH="%{_builddir}/%{name}-%{version}/build/opt/caqtdm/lib/qt5:${EPICSLIB}:${ZMQLIB}:${LD_LIBRARY_PATH}"
-make -C caQtDM_Tests/unitTests check
+make -C caQtDM_UnitTests check
 popd
 %endif
 
 %if 0%{?qt4}
 pushd %{_target_platform}-qt4
 export LD_LIBRARY_PATH="%{_builddir}/%{name}-%{version}/build/opt/caqtdm/lib/qt4:${EPICSLIB}:${ZMQLIB}:${LD_LIBRARY_PATH}"
-make -C caQtDM_Tests/unitTests check
+make -C caQtDM_UnitTests check
 popd
 %endif
 
@@ -376,7 +376,7 @@ EPICS_HOST_ARCH="linux-aarch64"
 EPICSLIB="${EPICS_BASE}/lib/${EPICS_HOST_ARCH}"
 %endif
 export LD_LIBRARY_PATH="%{_builddir}/%{name}-%{version}/build/opt/caqtdm/lib/qt6:${EPICSLIB}:${ZMQLIB}:${LD_LIBRARY_PATH}"
-make -C caQtDM_Tests/unitTests check
+make -C caQtDM_UnitTests check
 popd
 %endif
 

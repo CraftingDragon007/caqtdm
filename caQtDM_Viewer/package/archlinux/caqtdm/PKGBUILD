@@ -160,5 +160,5 @@ EOF
 check() {
     cd "$srcdir/$_pkgsrc"
     export LD_LIBRARY_PATH="$srcdir/binaries:$LD_LIBRARY_PATH"
-    make -C caQtDM_Tests/unitTests check
+    make -C caQtDM_UnitTests check
 }
