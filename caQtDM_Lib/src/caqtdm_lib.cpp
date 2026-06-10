@@ -326,7 +326,7 @@ static bool fileListEntryResolves(const QString &fileName)
 
     QString fileNameUi = fileName;
     if (fileName.endsWith(".edl") || fileName.endsWith(".adl")) {
-        fileNameUi.replace(".adl", ".ui").replace(".edl",".ui");
+        fileNameUi.replace(".edl", ".ui").replace(".adl", ".ui");
     } else if (!fileName.endsWith(".ui")) {
         fileNameUi.append(".ui");
     }
@@ -2635,14 +2635,20 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
         QApplication::processEvents();
 
-        searchFile *s = new searchFile(fileName);
+        // First, check if original filename is now available after download
+        searchFile *s = new searchFile(providedFileName);
         QString fileNameFound = s->findFile();
-        if(fileNameFound.isNull()) {
+        if (fileNameFound.isNull()) {
+            delete s;
+            s = new searchFile(fileName);
+            fileNameFound = s->findFile();
+        }
+        if (fileNameFound.isNull()) {
             includeData value;
             value.count = 0;
             value.ms = 0;
             value.text="does not exist";
-            includeFilesList.insert(fileName, value);
+            includeFilesList.insert(providedFileName, value);
         } else {
             qCDebug(caIncludeLog) << "filenameFound" << fileNameFound;
             qCDebug(caIncludeLog) << "use file" << fileName << "for" << includeWidget;
