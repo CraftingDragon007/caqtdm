@@ -19,6 +19,7 @@ CONFIG         += plugin
 INCLUDEPATH    += .
 INCLUDEPATH    += ../
 INCLUDEPATH    += ../../src
+INCLUDEPATH    += ../../../caQtDM_QtControls/src
 INCLUDEPATH    += $(EPICSINCLUDE)
 
 HEADERS         = epics3_plugin.h ../controlsinterface.h ../caQtDM_Plugins_global.h

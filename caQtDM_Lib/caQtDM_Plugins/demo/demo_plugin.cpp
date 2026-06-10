@@ -219,7 +219,7 @@ int DemoPlugin::pvGetTimeStamp(char *pv, char *timestamp) {
     Q_UNUSED(pv);
     Q_UNUSED(timestamp);
     qCDebug(demoLog) << "pvgetTimeStamp";
-    strcpy(timestamp, "timestamp in epics format");
+    qstrncpy(timestamp, "timestamp in epics format", TIMESTAMP_STRING_LENGTH);
     return true;
 }
 
@@ -228,7 +228,7 @@ int DemoPlugin::pvGetDescription(char *pv, char *description) {
     Q_UNUSED(pv);
     Q_UNUSED(description);
     qCDebug(demoLog) << "pvGetDescription";
-    strcpy(description, "hello, I am a double");
+    qstrncpy(description, "hello, I am a double", MAX_STRING_LENGTH);
     return true;
 }
 

@@ -393,9 +393,8 @@ void caInclude::setFileName(QString const &filename)
                 // load new file
                 QFile *file = new QFile;
                 file->setFileName(fileNameFound);
-                file->open(QFile::ReadOnly);
                 //symtomatic AFS check
-                if (!file->isOpen()){
+                if (!(file->open(QFile::ReadOnly) && file->isOpen())){
                     qCDebug(caIncludeLog) << "can't open file" << fileName;
                 }else{
                     if (file->size()==0){

@@ -305,7 +305,7 @@ int gpsPlugin::pvGetTimeStamp(char *pv, char *timestamp) {
     Q_UNUSED(pv);
     Q_UNUSED(timestamp);
     qCDebug(gpsLog) << "gpsPlugin:pvgetTimeStamp";
-    strcpy(timestamp, "timestamp in epics format");
+    qstrncpy(timestamp, "timestamp in epics format", TIMESTAMP_STRING_LENGTH);
     return true;
 }
 
@@ -317,7 +317,7 @@ int gpsPlugin::pvGetDescription(char *pv, char *description) {
 
     QString data=pos_data_source->sourceName();
     data="Datasource: "+data;
-    strcpy(description,  data.toLatin1().data());
+    qstrncpy(description,  data.toLatin1().data(), MAX_STRING_LENGTH);
     return true;
 }
 

@@ -531,9 +531,8 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
 
         if(filename.lastIndexOf(".ui") != -1) {
 
-            file->open(QFile::ReadOnly);
             //symtomatic AFS check
-            if (!file->isOpen()){
+            if (!(file->open(QFile::ReadOnly) && file->isOpen())){
                 postMessage(QtDebugMsg, (char*) qasc(tr("can't open file %1 ").arg(filename)));
             }else{
                 if (file->size()==0){
@@ -601,6 +600,7 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
             if (!myWidget) {
                 QMessageBox::warning(this, tr("caQtDM"), tr("Error loading %1. Use designer to find errors").arg(filename));
                 this->deleteLater();
+                delete otherFile;
                 return;
             }
             delete otherFile;
@@ -828,16 +828,17 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
             qCInfo(fileIOLog) << "caQtDM -- custom stylesheet found:" << fileNameFound;
             if(!fileNameFound.isEmpty()) {
                 QFile file(fileNameFound);
-                file.open(QFile::ReadOnly);
-                QString StyleSheet = QLatin1String(file.readAll());
-                printdata=StyleSheet;
-                qCInfo(fileIOLog) << "caQtDM -- custom stylesheet file:" << fileNameFound << "reloaded stylesheet";
-                if (stylereload.contains("later",Qt::CaseInsensitive)){
-                    QTimer::singleShot(3000, this, [this,StyleSheet] () {
-                            this->setStyleSheet(StyleSheet);
-                        });
-                }else setStyleSheet(StyleSheet);
-                file.close();
+                if (file.open(QFile::ReadOnly)) {
+                    QString StyleSheet = QLatin1String(file.readAll());
+                    printdata=StyleSheet;
+                    qCInfo(fileIOLog) << "caQtDM -- custom stylesheet file:" << fileNameFound << "reloaded stylesheet";
+                    if (stylereload.contains("later",Qt::CaseInsensitive)){
+                        QTimer::singleShot(3000, this, [this,StyleSheet] () {
+                                this->setStyleSheet(StyleSheet);
+                            });
+                    }else setStyleSheet(StyleSheet);
+                    file.close();
+                }
             }
             delete searchDefaultStyleSheet;
         }
@@ -1403,7 +1404,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
     if(firstPass) {
         if(caCalc* calcWidget = qobject_cast<caCalc *>(w1)) {
 
-            bool doit;
+            //bool doit;
             w1->setProperty("ObjectType", caCalc_Widget);
             QWidget *tabWidget = getTabParent(w1);
             w1->setProperty("parentTab",QVariant::fromValue(tabWidget) );
@@ -1486,12 +1487,12 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
             // softchannels calculating with themselves are done first
             else if(SoftPVusesItsself(calcWidget, map) && treatPrimary) {
-                doit=true;
+                //doit=true;
                 qCDebug(caCalcLog) << "softchannels calculating with themselves have to be done first: doit";
 
             // softchannels not using themselves are done second
             } else if(!SoftPVusesItsself(calcWidget, map) && !treatPrimary) {
-                doit=true;
+                //doit=true;
                 qCDebug(caCalcLog) << "softchannels not using themselves are done second: doit";
 
             // softchannels not using themselves, but that just define themselves
@@ -2610,7 +2611,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 #endif
 
         // ui file or prc file or other file?
-        if((openFile.count() > 1) && fileName.contains(".prc")) {
+        if((openFile.size() > 1) && fileName.contains(".prc")) {
             qCDebug(caIncludeLog) << "prc file";
             prcFile = true;
 
@@ -2718,9 +2719,8 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
                     QFile *file = new QFile;
                     // open and load ui file
                     file->setFileName(fileName);
-                    file->open(QFile::ReadOnly);
                     //symtomatic AFS check
-                    if (!file->isOpen()){
+                    if (!(file->open(QFile::ReadOnly) && file->isOpen())){
                         postMessage(QtDebugMsg, (char*) qasc(tr("can't open file %1 ").arg(providedFileName)));
                     }else{
                         if (file->size()==0){
@@ -6383,7 +6383,7 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
                         imageWidget->setInvalid(Qt::black);
                         qCDebug(caImageLog) << "no valid frame";
                     } else {
-                        qCDebug(caImageLog) << "frame ok=", (int)(result +.5);
+                        qCDebug(caImageLog) << "frame ok=" << (int)(result +.5);
                         imageWidget->setFrame((int)(result +.5));
                     }
                 } else {
@@ -7939,20 +7939,20 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
 
     } else if(caGraphics* graphicsWidget = qobject_cast<caGraphics *>(w)) {
         GetDefinedCalcString(caGraphics, graphicsWidget, calcString);
-        if(graphicsWidget->getColorMode() == caGraphics::Alarm) qstrncpy(colMode, "Alarm",20);
-        else qstrncpy(colMode, "Static",20);
+        if(graphicsWidget->getColorMode() == caGraphics::Alarm) qstrncpy(colMode, "Alarm", sizeof(colMode));
+        else qstrncpy(colMode, "Static", sizeof(colMode));
 
     } else if(caPolyLine* polylineWidget = qobject_cast<caPolyLine *>(w)) {
         GetDefinedCalcString(caPolyLine, polylineWidget, calcString);
-        if(polylineWidget->getColorMode() == caPolyLine::Alarm) qstrncpy(colMode, "Alarm",20);
-        else qstrncpy(colMode, "Static",20);
+        if(polylineWidget->getColorMode() == caPolyLine::Alarm) qstrncpy(colMode, "Alarm", sizeof(colMode));
+        else qstrncpy(colMode, "Static", sizeof(colMode));
 
     } else if(caCalc* calcWidget = qobject_cast<caCalc *>(w)) {
         calcString = calcWidget->getCalc();
 
     } else if(caChoice* choiceWidget = qobject_cast<caChoice *>(w)) {
-        if(choiceWidget->getColorMode() == caChoice::Alarm) qstrncpy(colMode, "Alarm",20);
-        else qstrncpy(colMode, "Static",20);
+        if(choiceWidget->getColorMode() == caChoice::Alarm) qstrncpy(colMode, "Alarm", sizeof(colMode));
+        else qstrncpy(colMode, "Static", sizeof(colMode));
 
     } else if(caLineEdit* lineeditWidget = qobject_cast<caLineEdit *>(w)) {
         if(lineeditWidget->getPrecisionMode() == caLineEdit::User) {
@@ -7964,14 +7964,14 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
             limitsMax = lineeditWidget->getMaxValue();
             limitsMin = lineeditWidget->getMinValue();
         }
-        if(lineeditWidget->getColorMode() == caLineEdit::Alarm_Default) qstrncpy(colMode, "Alarm",20);
-        else if(lineeditWidget->getColorMode() == caLineEdit::Alarm_Static) qstrncpy(colMode, "Alarm",20);
-        else qstrncpy(colMode, "Static",20);
+        if(lineeditWidget->getColorMode() == caLineEdit::Alarm_Default) qstrncpy(colMode, "Alarm", sizeof(colMode));
+        else if(lineeditWidget->getColorMode() == caLineEdit::Alarm_Static) qstrncpy(colMode, "Alarm", sizeof(colMode));
+        else qstrncpy(colMode, "Static", sizeof(colMode));
 
     } else if(caMultiLineString* multilinestringWidget = qobject_cast<caMultiLineString *>(w)) {
-        if(multilinestringWidget->getColorMode() == caMultiLineString::Alarm_Default) qstrncpy(colMode, "Alarm",20);
-        else if(multilinestringWidget->getColorMode() == caMultiLineString::Alarm_Static) qstrncpy(colMode, "Alarm",20);
-        else qstrncpy(colMode, "Static",20);
+        if(multilinestringWidget->getColorMode() == caMultiLineString::Alarm_Default) qstrncpy(colMode, "Alarm", sizeof(colMode));
+        else if(multilinestringWidget->getColorMode() == caMultiLineString::Alarm_Static) qstrncpy(colMode, "Alarm", sizeof(colMode));
+        else qstrncpy(colMode, "Static", sizeof(colMode));
 
     } else if (caApplyNumeric* applynumericWidget = qobject_cast<caApplyNumeric *>(w)) {
         if(applynumericWidget->getPrecisionMode() == caApplyNumeric::User) {
@@ -8020,8 +8020,8 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
             knobData *kPtr = mutexKnobDataP->GetMutexKnobDataPtr(dataIndex);
             if(kPtr != (knobData *) Q_NULLPTR) Precision =  kPtr->edata.precision;
         }
-        if((sliderWidget->getColorMode() == caSlider::Alarm_Default) || (sliderWidget->getColorMode() == caSlider::Alarm_Static)) strcpy(colMode, "Alarm");
-        else strcpy(colMode, "Static");
+        if((sliderWidget->getColorMode() == caSlider::Alarm_Default) || (sliderWidget->getColorMode() == caSlider::Alarm_Static)) qstrncpy(colMode, "Alarm", sizeof(colMode));
+        else qstrncpy(colMode, "Static", sizeof(colMode));
 
     } else if(caThermo* thermoWidget = qobject_cast<caThermo *>(w)) {
         if(thermoWidget->getLimitsMode() == caThermo::User) {
@@ -8040,16 +8040,16 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
                }
             }
         }
-        if((thermoWidget->getColorMode() == caThermo::Alarm_Default) || (thermoWidget->getColorMode() == caThermo::Alarm_Static)) strcpy(colMode, "Alarm");
-        else strcpy(colMode, "Static");
+        if((thermoWidget->getColorMode() == caThermo::Alarm_Default) || (thermoWidget->getColorMode() == caThermo::Alarm_Static)) qstrncpy(colMode, "Alarm", sizeof(colMode));
+        else qstrncpy(colMode, "Static", sizeof(colMode));
 
     } else if(caByte* byteWidget = qobject_cast<caByte *>(w)) {
-        if(byteWidget->getColorMode() == caByte::Alarm) strcpy(colMode, "Alarm");
-        else strcpy(colMode, "Static");
+        if(byteWidget->getColorMode() == caByte::Alarm) qstrncpy(colMode, "Alarm", sizeof(colMode));
+        else qstrncpy(colMode, "Static", sizeof(colMode));
 
     } else if(caByteController* bytecontrollerWidget = qobject_cast<caByteController *>(w)) {
-        if(bytecontrollerWidget->getColorMode() == caByteController::Alarm) strcpy(colMode, "Alarm");
-        else strcpy(colMode, "Static");
+        if(bytecontrollerWidget->getColorMode() == caByteController::Alarm) qstrncpy(colMode, "Alarm", sizeof(colMode));
+        else qstrncpy(colMode, "Static", sizeof(colMode));
 
     } else if(caScriptButton* scriptbuttonWidget =  qobject_cast< caScriptButton *>(w)) {
         Q_UNUSED(scriptbuttonWidget);
@@ -8316,7 +8316,7 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
 
                 if((kPtr != (knobData *) Q_NULLPTR)) {
                     char asc[MAX_STRING_LENGTH] = {'\0'};
-                    char timestamp[50] = {'\0'};
+                    char timestamp[TIMESTAMP_STRING_LENGTH] = {'\0'};
                     char description[MAX_STRING_LENGTH] = {'\0'};
                     info.append("<br>");
                     info.append(kPtr->pv);
@@ -8373,7 +8373,7 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
                         const std::string edataUnits = QString::fromLatin1((const char*)&kPtr->edata.units,strlen(kPtr->edata.units)).toStdString();
                         switch (kPtr->edata.fieldtype) {
                         case caCHAR:
-                            snprintf(asc, MAX_STRING_LENGTH, "%ld (0x%x)", kPtr->edata.ivalue, kPtr->edata.ivalue);
+                            snprintf(asc, MAX_STRING_LENGTH, "%ld (0x%lx)", kPtr->edata.ivalue, kPtr->edata.ivalue);
                             info.append(asc);
                             break;
                         case caSTRING:
@@ -8408,7 +8408,7 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
                         }
                         case caINT:
                         case caLONG:
-                            snprintf(asc, MAX_STRING_LENGTH, "%ld (0x%x) %s", kPtr->edata.ivalue, kPtr->edata.ivalue, edataUnits.c_str());
+                            snprintf(asc, MAX_STRING_LENGTH, "%ld (0x%lx) %s", kPtr->edata.ivalue, kPtr->edata.ivalue, edataUnits.c_str());
                             info.append(asc);
                             break;
                         case caFLOAT:
@@ -9290,7 +9290,7 @@ void CaQtDM_Lib::TreatRequestedValue(QString pvo, QString text, FormatType fType
     case caENUM:
     case caINT:
     case caLONG:
-        strcpy(textValue, qasc(text));
+        qstrncpy(textValue, qasc(text), sizeof(textValue));
         // Check for an enum text
         match = false;
         if(kPtr->edata.dataB != (void*)0 && kPtr->edata.enumCount > 0) {
@@ -11105,12 +11105,14 @@ QStringList CaQtDM_Lib::treat_read_MacroCommand(QStringList args){
                     else {
                         snprintf(asc, MAX_STRING_LENGTH, "macro definition file %s loaded for related display", qasc(macroFile));
                         postMessage(QtWarningMsg, asc);
+                        QString macroString;
                         QFile file(fileNameFound);
-                        file.open(QFile::ReadOnly);
-                        QString macroString = QLatin1String(file.readAll());
-                        macroString = macroString.simplified().trimmed();
-                        macroString.replace(" ",",");
-                        file.close();
+                        if (file.open(QFile::ReadOnly)) {
+                            macroString = QLatin1String(file.readAll());
+                            macroString = macroString.simplified().trimmed();
+                            macroString.replace(" ",",");
+                            file.close();
+                        }
                         QStringList macro_list_from_file = macroString.split(",");
                         macro_list_expanded = macro_list_expanded + macro_list_from_file;
                     }
@@ -11273,7 +11275,7 @@ extern "C"  {
         QList<QWidget *> all = myWidget->findChildren<QWidget *>();
         foreach(QWidget* widget, all) {
             if(widget->objectName().contains(object)) {
-                if(pvMaxLength > 0) strcpy(pv, " " );
+                if(pvMaxLength > 1) qstrncpy(pv, " ",(size_t) pvMaxLength);
                 if (caSlider *w = qobject_cast<caSlider *>(widget)) {
                     *value = w->getSliderValue();
                     qstrncpy(pv,  qasc(w->getPV()),(size_t) pvMaxLength);

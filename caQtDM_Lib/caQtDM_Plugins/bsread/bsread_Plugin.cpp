@@ -269,7 +269,7 @@ int bsreadPlugin::pvSetWave(char *pv, float *fdata, double *ddata, int16_t *data
 int bsreadPlugin::pvGetTimeStamp(char *pv, char *timestamp) {
     Q_UNUSED(pv);
     qCDebug(bsreadLog) << "bsreadPlugin:pvgetTimeStamp";
-    strcpy(timestamp, "timestamp in epics format");
+    qstrncpy(timestamp, "timestamp in epics format", TIMESTAMP_STRING_LENGTH);
     return true;
 }
 
@@ -277,7 +277,7 @@ int bsreadPlugin::pvGetTimeStamp(char *pv, char *timestamp) {
 int bsreadPlugin::pvGetDescription(char *pv, char *description) {
     Q_UNUSED(pv);
     qCDebug(bsreadLog) << "bsreadPlugin:pvGetDescription";
-    strcpy(description, "no Description available BSREAD data transfer");
+    qstrncpy(description, "no Description available BSREAD data transfer", MAX_STRING_LENGTH);
     return true;
 }
 

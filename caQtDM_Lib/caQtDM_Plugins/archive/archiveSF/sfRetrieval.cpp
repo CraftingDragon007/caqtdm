@@ -169,13 +169,15 @@ void sfRetrieval::finishReply(QNetworkReply *reply)
     if(aborted) return;
     qCDebug(archiveSFLog) << QTime::currentTime().toString() << this << PV << "reply received";
     int count = 0;
+    double seconds;
+#ifdef CSV
     int valueIndex = 2;
     int expected = 3;
-    double seconds;
     if(isBinned) {
         valueIndex = 3;
         expected = 5;
     }
+#endif
 
     QVariant status =  reply->attribute(QNetworkRequest::HttpStatusCodeAttribute);
 
@@ -301,7 +303,7 @@ void sfRetrieval::finishReply(QNetworkReply *reply)
                         if (root2["name"].isString()) {
                             QString data = root2["name"].toString();
                             char *channel = new char[data.size()+1];
-                            sprintf(channel,"%s", qasc(data));
+                            snprintf(channel,data.size()+1,"%s", qasc(data));
                             //qCDebug(archiveSFLog) << "channel name found" << root2["name"]->toString() << channel;
                             delete[] channel;
                         }
@@ -310,7 +312,7 @@ void sfRetrieval::finishReply(QNetworkReply *reply)
                         if (root2["backend"].isString()) {
                             QString data = root2["backend"].toString();
                             char *backend = new char[data.size()+1];
-                            sprintf(backend,"%s", qasc(data));
+                            snprintf(backend,data.size()+1,"%s", qasc(data));
                             Backend = QString(backend);
                             Backend = Backend.replace("\"", "");
                             //qCDebug(archiveSFLog) << "backend name found" << root2["backend"]->toString() << backend;

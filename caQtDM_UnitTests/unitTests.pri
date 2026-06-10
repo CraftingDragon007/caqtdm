@@ -17,3 +17,8 @@ contains(QT_VER_MAJ, 5) {
 contains(QT_VER_MAJ, 6) {
     DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x050000
 }
+
+win32-msvc* {
+    # C4005: macro redefinition - this is intentionally used
+    QMAKE_CXXFLAGS += /wd4005
+}

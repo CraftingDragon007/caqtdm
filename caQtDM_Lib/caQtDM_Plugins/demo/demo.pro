@@ -20,6 +20,7 @@ CONFIG         += plugin
 INCLUDEPATH    += .
 INCLUDEPATH    += ../
 INCLUDEPATH    += ../../src
+INCLUDEPATH    += ../../../caQtDM_QtControls/src
 HEADERS         = demo_plugin.h ../controlsinterface.h ../caQtDM_Plugins_global.h
 SOURCES         = demo_plugin.cpp
 TARGET          = demo_plugin

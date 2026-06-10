@@ -1,6 +1,8 @@
 #ifndef CAQTDM_PLUGINS_GLOBAL_H
 #define CAQTDM_PLUGINS_GLOBAL_H
 
+#include "qtdefinitions.h"
+
 #if defined(UNIT_TESTING)
 #define CAQTDM_PLUGINSSHARED_EXPORT
 #else
