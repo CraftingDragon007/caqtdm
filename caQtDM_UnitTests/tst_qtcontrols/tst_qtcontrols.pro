@@ -26,4 +26,5 @@ LIBS += \
 macx {
     LIBS += -lz
     LIBS += -F$$(QWTLIB) -framework $$(QWTLIBNAME)
+    QMAKE_RPATHDIR += $$(QWTLIB)
 }
