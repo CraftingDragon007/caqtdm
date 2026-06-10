@@ -2573,13 +2573,13 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
         // define the file to use
         QString providedFileName = includeWidget->getFileName().trimmed();
+        QString fileName = providedFileName;
 
-        if (QFileInfo(providedFileName).isRelative()){
-          providedFileName = cainclude_path + providedFileName;
+        if (QFileInfo(fileName).isRelative()){
+          fileName = cainclude_path + fileName;
         }
 
-        reaffectText(map, &providedFileName, w1);
-        QString fileName = providedFileName;
+        reaffectText(map, &fileName, w1);
 
         QString openFile = "";
         int found = fileName.lastIndexOf(".");
@@ -2624,10 +2624,10 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
             fileName = openFile.append(".ui");
 
         }
-        qCDebug(caIncludeLog) << "use2 file" << fileName << openFile;
+        qCDebug(caIncludeLog) << "use2 file" << providedFileName << openFile;
         // this will check for file existence and when an url is defined, download the file from a http server
         fileFunctions filefunction;
-        filefunction.checkFileAndDownload(fileName);
+        filefunction.checkFileAndDownload(providedFileName);
         if(messageWindowP != (MessageWindow *) Q_NULLPTR) {
             if(filefunction.lastInfo().length() > 0) messageWindowP->postMsgEvent(QtWarningMsg, (char*) qasc(filefunction.lastInfo()));
             if(filefunction.lastError().length() > 0)  messageWindowP->postMsgEvent(QtCriticalMsg, (char*) qasc(filefunction.lastError()));
