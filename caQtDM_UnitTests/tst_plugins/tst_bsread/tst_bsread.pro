@@ -46,3 +46,10 @@ include(../../../caQtDM.pri)
 linux {
     QMAKE_LFLAGS += -Wl,--disable-new-dtags
 }
+
+macos {
+    QMAKE_RPATHDIR += $$(EPICSLIB)
+    QMAKE_RPATHDIR += $$(CAQTDM_COLLECT)
+    QMAKE_RPATHDIR += $$(CAQTDM_COLLECT)/controlsystems
+    QMAKE_RPATHDIR += $$(ZMQLIB)
+}
