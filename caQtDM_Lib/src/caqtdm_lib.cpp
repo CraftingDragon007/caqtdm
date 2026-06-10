@@ -4902,8 +4902,11 @@ bool CaQtDM_Lib::CalcVisibility(QWidget *w, double &result, bool &valid)
                         break;
                     }
                 }
-               QString scancalc = calc->getCalc();
-                parseForQRectConst(scancalc,valueArray);
+                QString qrectscan=calc->getCalc();
+                qrectscan=qrectscan.right(qrectscan.length()-6);
+                if (!qrectscan.isEmpty()){
+                    parseForQRectConst(qrectscan,valueArray);
+                }
 
                 if(somethingToSend) {
                     if (calc->getTextLine()!="%QRect"){
