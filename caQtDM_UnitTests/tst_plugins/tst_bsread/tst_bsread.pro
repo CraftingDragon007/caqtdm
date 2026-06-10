@@ -11,16 +11,16 @@ HEADERS += \
 
 # --- Tested classes below ---
 
-HEADERS += ../../../../caQtDM_Lib/caQtDM_Plugins/bsread/bsread_dispatchercontrol.h \
-    ../../../../caQtDM_Lib/caQtDM_Plugins/bsread/bsread_decode.h
+HEADERS += ../../../caQtDM_Lib/caQtDM_Plugins/bsread/bsread_dispatchercontrol.h \
+    ../../../caQtDM_Lib/caQtDM_Plugins/bsread/bsread_decode.h
 
-SOURCES += ../../../../caQtDM_Lib/caQtDM_Plugins/bsread/bsread_dispatchercontrol.cpp \
-    ../../../../caQtDM_Lib/caQtDM_Plugins/bsread/bsread_decode.cpp
+SOURCES += ../../../caQtDM_Lib/caQtDM_Plugins/bsread/bsread_dispatchercontrol.cpp \
+    ../../../caQtDM_Lib/caQtDM_Plugins/bsread/bsread_decode.cpp
 
-INCLUDEPATH += ../../../../caQtDM_QtControls/src \
-    ../../../../caQtDM_Lib/src \
-    ../../../../caQtDM_Lib/caQtDM_Plugins \
-    ../../../../caQtDM_Lib/caQtDM_Plugins/bsread \
+INCLUDEPATH += ../../../caQtDM_QtControls/src \
+    ../../../caQtDM_Lib/src \
+    ../../../caQtDM_Lib/caQtDM_Plugins \
+    ../../../caQtDM_Lib/caQtDM_Plugins/bsread \
     $$(EPICSINCLUDE) \
     $$(ZMQINC)
 
@@ -41,7 +41,7 @@ _EPICSLIB = $$(EPICSLIB)
 }
 
 CONFIG += Define_ZMQ_Lib caqtdm_rpath
-include(../../../../caQtDM.pri)
+include(../../../caQtDM.pri)
 
 linux {
     QMAKE_LFLAGS += -Wl,--disable-new-dtags

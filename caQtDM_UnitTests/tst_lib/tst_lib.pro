@@ -11,18 +11,18 @@ HEADERS += tst_caqtdm_lib.h \
 
 # --- Tested classes below ---
 
-HEADERS += ../../../caQtDM_Lib/src/caqtdm_lib.h
+HEADERS += ../../caQtDM_Lib/src/caqtdm_lib.h
 
-SOURCES += ../../../caQtDM_Lib/src/caqtdm_lib.cpp
+SOURCES += ../../caQtDM_Lib/src/caqtdm_lib.cpp
 
-FORMS += ../../../caQtDM_Viewer/src/main.ui
+FORMS += ../../caQtDM_Viewer/src/main.ui
 
-INCLUDEPATH += ../../../caQtDM_QtControls/src \
-    ../../../caQtDM_Lib \
-    ../../../caQtDM_Lib/src \
-    ../../../caQtDM_Lib/caQtDM_Plugins \
-    ../../../caQtDM_Parsers/adlParserSrc \
-    ../../../caQtDM_Parsers/edlParserSrc \
+INCLUDEPATH += ../../caQtDM_QtControls/src \
+    ../../caQtDM_Lib \
+    ../../caQtDM_Lib/src \
+    ../../caQtDM_Lib/caQtDM_Plugins \
+    ../../caQtDM_Parsers/adlParserSrc \
+    ../../caQtDM_Parsers/edlParserSrc \
     $$(QWTINCLUDE) \
     $$(EPICSINCLUDE)
 

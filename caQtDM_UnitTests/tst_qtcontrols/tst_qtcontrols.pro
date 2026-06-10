@@ -1,4 +1,4 @@
-include (../../../caQtDM_Viewer/qtdefs.pri)
+include (../../caQtDM_Viewer/qtdefs.pri)
 include(../unitTests.pri)
 
 QT += network gui widgets designer
@@ -11,12 +11,12 @@ HEADERS += tst_pvdialog.h \
 
 # --- Tested classes below ---
 
-HEADERS += ../../../caQtDM_QtControls/src/pvdialog.h
+HEADERS += ../../caQtDM_QtControls/src/pvdialog.h
 
-SOURCES += ../../../caQtDM_QtControls/src/pvdialog.cpp
+SOURCES += ../../caQtDM_QtControls/src/pvdialog.cpp
 
-INCLUDEPATH += ../../../caQtDM_QtControls/src \
-    ../../../caQtDM_Lib/src \
+INCLUDEPATH += ../../caQtDM_QtControls/src \
+    ../../caQtDM_Lib/src \
     $$(QWTINCLUDE)
 
 LIBS += \
