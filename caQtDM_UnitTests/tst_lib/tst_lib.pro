@@ -31,20 +31,6 @@ LIBS += \
     -lcaQtDM_Lib \
     -lqtcontrols
 
-macx {
-    LIBS += -lz
-    LIBS += -F$$(QWTLIB) -framework $$(QWTLIBNAME)
-    LIBS += $$(EPICSLIB)/libCom.dylib
-    LIBS += $$(EPICSLIB)/libca.dylib
-    QMAKE_RPATHDIR += $$(QWTLIB)
-    QMAKE_RPATHDIR += $$(EPICSLIB)
-    QMAKE_RPATHDIR += $$(CAQTDM_COLLECT)
-} else {
-    LIBS += \
-        -L$$(QWTHOME)/lib \
-        -l$$(QWTLIBNAME)
-}
-
 _EPICSLIB = $$(EPICSLIB)
 !isEmpty(_EPICSLIB) {
     QMAKE_RPATHDIR += $$(EPICSLIB)
@@ -54,3 +40,16 @@ _EPICSLIB = $$(EPICSLIB)
     LIBS += -L$$(EPICS_BASE)/lib/$$(EPICS_HOST_ARCH) -lca -lCom
 }
 
+macx {
+#    LIBS += -lz
+    LIBS += -F$$(QWTLIB) -framework $$(QWTLIBNAME)
+    LIBS += $$(EPICSLIB)/libCom.dylib
+    LIBS += $$(EPICSLIB)/libca.dylib
+    QMAKE_RPATHDIR += $$(QWTLIB)
+#    QMAKE_RPATHDIR += $$(EPICSLIB)
+#    QMAKE_RPATHDIR += $$(CAQTDM_COLLECT)
+} else {
+    LIBS += \
+        -L$$(QWTHOME)/lib \
+        -l$$(QWTLIBNAME)
+}

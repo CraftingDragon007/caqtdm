@@ -48,9 +48,9 @@ linux {
 }
 
 macos {
-    QMAKE_RPATHDIR += $$(EPICSLIB)
-    QMAKE_RPATHDIR += $$(CAQTDM_COLLECT)
-    QMAKE_RPATHDIR += $$(CAQTDM_COLLECT)/controlsystems
-    QMAKE_RPATHDIR += $$(ZMQLIB)
+#    QMAKE_RPATHDIR += $$(EPICSLIB)
+#    QMAKE_RPATHDIR += $$(CAQTDM_COLLECT)
+#    QMAKE_RPATHDIR += $$(CAQTDM_COLLECT)/controlsystems
+#    QMAKE_RPATHDIR += $$(ZMQLIB)
     QMAKE_RPATHDIR += $$(QWTLIB)
 }
