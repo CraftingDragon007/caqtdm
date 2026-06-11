@@ -665,6 +665,8 @@ caQtDM_Lib {
                 message( $$OUT_PWD )
                 CONFIG += staticlib console
                 CONFIG += release
+                SOURCES +=     fingerswipegesture.cpp
+      		HEADERS +=     fingerswipegesture.h
                 INCLUDEPATH += ./caQtDM_Plugins
 		ios {
       			INCLUDEPATH += $(EPICSINCLUDE)/os/iOS

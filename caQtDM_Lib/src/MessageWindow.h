@@ -40,56 +40,8 @@ public:
     MsgTextEdit() {
     }
 
-#if defined(MOBILE)
-    bool event(QEvent *event) override
-    {
-        if (blockInteractionEvent(event)) {
-            event->accept();
-            return true;
-        }
-        return QTextEdit::event(event);
-    }
-
-protected:
-    bool viewportEvent(QEvent *event) override
-    {
-        if (blockInteractionEvent(event)) {
-            event->accept();
-            return true;
-        }
-        return QTextEdit::viewportEvent(event);
-    }
-
-private:
-    static bool blockInteractionEvent(QEvent *event)
-    {
-        if (event == nullptr) {
-            return false;
-        }
-        switch (event->type()) {
-        case QEvent::TouchBegin:
-        case QEvent::TouchUpdate:
-        case QEvent::TouchEnd:
-        case QEvent::TouchCancel:
-        case QEvent::MouseButtonPress:
-        case QEvent::MouseButtonRelease:
-        case QEvent::MouseButtonDblClick:
-        case QEvent::MouseMove:
-        case QEvent::ContextMenu:
-        case QEvent::Gesture:
-            return true;
-        default:
-            return false;
-        }
-    }
-#endif
-
     void contextMenuEvent(QContextMenuEvent *event)
     {
-#ifdef MOBILE
-        Q_UNUSED(event);
-        return;
-#else
         QMenu *menu = createStandardContextMenu();
         menu->addAction(tr("Clear"));
 
@@ -101,7 +53,6 @@ private:
            }
         }
         delete menu;
-#endif
     }
 
 private:

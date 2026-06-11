@@ -165,8 +165,6 @@ void caMessageButton::setAccessW(bool access)
 
 bool caMessageButton::eventFilter(QObject *obj, QEvent *event)
 {
-    Q_UNUSED(obj);
-
     if (event->type() == QEvent::Enter) {
         if(!_AccessW) {
             QApplication::setOverrideCursor(QCursor(Qt::ForbiddenCursor));
@@ -201,3 +199,6 @@ bool caMessageButton::eventFilter(QObject *obj, QEvent *event)
 
     return QObject::eventFilter(obj, event);
 }
+
+
+
