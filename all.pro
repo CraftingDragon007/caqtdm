@@ -51,7 +51,9 @@ SUBDIRS += qtcontrols_controllers qtcontrols_graphics qtcontrols_monitors qtcont
 SUBDIRS += caQtDM_Plugins caQtDM_Parsers
 
 caqtdm_with_tests {
-  SUBDIRS +=  caQtDM_Tests/unitTests
+  SUBDIRS += caQtDM_UnitTests
+  caQtDM_UnitTests.file = caQtDM_UnitTests/caQtDM_UnitTests.pro
+  caQtDM_UnitTests.depends = caQtDM_Viewer
 }
 
 qtcontrols_controllers.file = caQtDM_QtControls/plugins/qtcontrols_controllers.pro 
@@ -66,10 +68,9 @@ qtcontrols_monitors.depends = caQtDM_QtControls caQtDM_Lib
 qtcontrols_utilities.file = caQtDM_QtControls/plugins/qtcontrols_utilities.pro
 qtcontrols_utilities.depends = caQtDM_QtControls caQtDM_Lib
 
-caQtDM_Plugins.file = caQtDM_Lib/caQtDM_Plugins/csplugins.pro 
-caQtDM_Plugins.depends = caQtDM_Lib
+INCLUDEPATH += ./caQtDM_Plugins
 
-unitTests.depends = caQtDM_Viewer
+caQtDM_Plugins.depends = caQtDM_Lib
 
 !MOBILE {
    SUBDIRS +=   parser
@@ -103,4 +104,5 @@ QMAKE_IOS_DEVICE_ARCHS = $$iosArchitectures
 # QMAKE_IOS_DEPLOYMENT_TARGET = $$iosTarget
 
 # Set "Devices" (1=iPhone, 2=iPad, 1,2=Universal)
-QMAKE_IOS_TARGETED_DEVICE_FAMILY = 2
+# QMAKE_IOS_TARGETED_DEVICE_FAMILY = 2
+

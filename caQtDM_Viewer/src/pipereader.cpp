@@ -32,7 +32,7 @@ PipeReader::PipeReader(QEventLoop *loop, QObject *parent) : QObject(parent)
 {
     evLoop = loop;
     std_in = new QFile();
-    std_in->open(0,QIODevice::ReadOnly);
+    if (!std_in->open(0,QIODevice::ReadOnly)) qCCritical(pipeReaderLog) << "couldn't open stdin, proceeding for now, but may fail...";
     notifier = new QSocketNotifier(0, QSocketNotifier::Read);
     connect(notifier,SIGNAL(activated(int)),this,SLOT(DataReadyOnStdin()));
 

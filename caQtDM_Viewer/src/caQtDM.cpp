@@ -74,7 +74,7 @@
         #include <X11/Xatom.h>
 #endif //CAQTDM_X11
 
-#ifdef MOBILE_ANDROID
+#ifdef MOBILE
 #include <QStyleFactory>
 #endif
 
@@ -573,11 +573,12 @@ int main(int argc, char *argv[])
         qCInfo(caQtDMLog) << QString("caQtDM -- file <caQtDM_stylesheet.qss> could not be loaded, is 'CAQTDM_DISPLAY_PATH' <%1> defined?").arg(searchDefaultStyleSheet->displayPath());
     } else {
         QFile file(fileNameFound);
-        file.open(QFile::ReadOnly);
-        QString StyleSheet = QLatin1String(file.readAll());
-        qCInfo(caQtDMLog) << "caQtDM -- file <caQtDM_stylesheet.qss> loaded as the default application stylesheet";
-        app.setStyleSheet(StyleSheet);
-        file.close();
+        if (file.open(QFile::ReadOnly)) {
+            QString StyleSheet = QLatin1String(file.readAll());
+            qCInfo(caQtDMLog) << "caQtDM -- file <caQtDM_stylesheet.qss> loaded as the default application stylesheet";
+            app.setStyleSheet(StyleSheet);
+            file.close();
+        }
     }
     delete searchDefaultStyleSheet;
 
@@ -614,13 +615,13 @@ int main(int argc, char *argv[])
             qCInfo(caQtDMLog) << QString("caQtDM -- custom stylesheet file <%1> could not be loaded, is 'CAQTDM_DISPLAY_PATH' <%2> defined?").arg(fileNameStylesheet).arg(searchCustomStyleSheet->displayPath());
         } else {
             QFile file(fileNameFound);
-            file.open(QFile::ReadOnly);
-            QString StyleSheet = QLatin1String(file.readAll());
-            qCInfo(caQtDMLog) << QString("caQtDM -- custom stylesheet file <%1> replaced the default stylesheet").arg(fileNameStylesheet);
-            fflush(stdout);
-            app.setStyleSheet(StyleSheet);
-            qApp->setProperty("user_defined_stylesheet", fileNameStylesheet);
-            file.close();
+            if (file.open(QFile::ReadOnly)) {
+                QString StyleSheet = QLatin1String(file.readAll());
+                qCInfo(caQtDMLog) << QString("caQtDM -- custom stylesheet file <%1> replaced the default stylesheet").arg(fileNameStylesheet);
+                app.setStyleSheet(StyleSheet);
+                qApp->setProperty("user_defined_stylesheet", fileNameStylesheet);
+                file.close();
+            }
         }
         delete searchCustomStyleSheet;
     }
@@ -633,11 +634,12 @@ int main(int argc, char *argv[])
             qCInfo(caQtDMLog) << QString("caQtDM -- custom macro file <%1> could not be loaded, is 'CAQTDM_DISPLAY_PATH' <%2> defined?").arg(macroFile).arg(searchMacroFile->displayPath());
         } else {
             QFile file(fileNameFound);
-            file.open(QFile::ReadOnly);
-            qCInfo(caQtDMLog) << QString("caQtDM -- macro definitions were read from custom macro file <%1>").arg(macroFile);
-            macroString = QLatin1String(file.readAll());
-            macroString = macroString.simplified().trimmed();
-            file.close();
+            if (file.open(QFile::ReadOnly)) {
+                qCInfo(caQtDMLog) << QString("caQtDM -- macro definitions were read from custom macro file <%1>").arg(macroFile);
+                macroString = QLatin1String(file.readAll());
+                macroString = macroString.simplified().trimmed();
+                file.close();
+            }
         }
         delete searchMacroFile;
     }

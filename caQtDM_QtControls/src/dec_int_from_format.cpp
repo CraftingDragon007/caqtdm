@@ -53,7 +53,7 @@ bool DecIntFromFormat::decode()
     int posV2 = - 1;
     int posV3 = - 1;
 	QStringList captures;
-    qCDebug(decIntFromFormatLog) << "\e[1;36mdecode() format" << d_format << "\e[0m";
+    qCDebug(decIntFromFormatLog) << "decode() format" << d_format;
     if(d_format == "%d")
 	{
 		d_decDefaults = false;

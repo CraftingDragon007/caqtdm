@@ -31,11 +31,13 @@ contains(QT_VER_MAJ, 5) {
 }
 
 contains(QT_VER_MAJ, 6) {
-    QT += widgets  uitools opengl
+    QT += widgets uitools opengl xml
+
     web {
         QT += websockets
         DEFINES += WEB
     }
+
     !ios:!android {
        message("caQtDM_Lib -- printsupport added")
        QT += printsupport
@@ -57,7 +59,7 @@ UI_DIR += ./
 
 INCLUDEPATH += .
 INCLUDEPATH += ./src
-INCLUDEPATH += ./caQtDM_Plugins
+INCLUDEPATH += ../caQtDM_Plugins
 INCLUDEPATH += ../caQtDM_QtControls/src
 INCLUDEPATH += ../caQtDM_Parsers/adlParserSrc
 INCLUDEPATH += ../caQtDM_Parsers/edlParserSrc

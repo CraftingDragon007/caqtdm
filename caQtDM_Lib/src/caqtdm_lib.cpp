@@ -48,6 +48,9 @@
 #endif
 
 #include <QObject>
+
+#include <QJsonDocument>
+#include <QJsonArray>
 #include <QToolBar>
 #include <QUuid>
 #include <QHostInfo>
@@ -326,7 +329,7 @@ static bool fileListEntryResolves(const QString &fileName)
 
     QString fileNameUi = fileName;
     if (fileName.endsWith(".edl") || fileName.endsWith(".adl")) {
-        fileNameUi.replace(".adl", ".ui").replace(".edl",".ui");
+        fileNameUi.replace(".edl", ".ui").replace(".adl", ".ui");
     } else if (!fileName.endsWith(".ui")) {
         fileNameUi.append(".ui");
     }
@@ -362,8 +365,20 @@ bool fixFileListRelative(const QString &cainclude_path, QString *filelist, bool 
         // Windows is not treated, as relative files might not have anything to differentiate from files on  and "./" is invalid on windows.
         QString fileName = files.at(i).trimmed();
         if (QFileInfo(fileName).isRelative() && (!shell || fileName.startsWith("./") || fileName.startsWith("../")) && !fileListEntryResolves(fileName)) {
-            files[i] = QFileInfo(cainclude_path + fileName).absoluteFilePath();
-            affected = true;
+            QFileInfo relativeFile(cainclude_path + fileName);
+            QFileInfo relativeFileUi = relativeFile;
+            if (relativeFileUi.absoluteFilePath().endsWith(".adl") || relativeFileUi.absoluteFilePath().endsWith(".edl")) {
+                relativeFileUi.setFile(relativeFileUi.absoluteFilePath().replace(".adl", ".ui").replace(".edl", ".ui"));
+            } else if (!relativeFileUi.absoluteFilePath().endsWith(".ui")) {
+                relativeFileUi.setFile(relativeFileUi.absoluteFilePath() + ".ui");
+            }
+
+            if (relativeFile.exists() || relativeFileUi.exists()) {
+                // We only process the file path here, not the extension conversion.
+                // So even if it is found with a different extension, keep the specified one.
+                files[i] = relativeFile.absoluteFilePath();
+                affected = true;
+            }
         }
     }
 
@@ -430,6 +445,7 @@ static QString webOpenPathFromDisplayPath(const QString &path)
 #endif
 
 Q_LOGGING_CATEGORY(caQtDMLibLog, "caqtdm.lib.lib")
+Q_LOGGING_CATEGORY(fileIOLog, "caqtdm.lib.fileio")
 Q_LOGGING_CATEGORY(caHMILog, "caqtdm.lib.cahmi")
 Q_LOGGING_CATEGORY(caRelatedDisplayLog, "caqtdm.widgets.carelateddislay")
 Q_LOGGING_CATEGORY(caShellCommandLog, "caqtdm.widgets.cashellcommand")
@@ -566,7 +582,7 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
         myWidget = parentAS;
     }
 
-    qCDebug(caQtDMLibLog) << "open file" << filename << "with macro" << macro;
+    qCDebug(fileIOLog) << "open file" << filename << "with macro" << macro;
     setAttribute(Qt::WA_DeleteOnClose);
 
     // define a layout
@@ -592,9 +608,8 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
 
         if(filename.lastIndexOf(".ui") != -1) {
 
-            file->open(QFile::ReadOnly);
             //symtomatic AFS check
-            if (!file->isOpen()){
+            if (!(file->open(QFile::ReadOnly) && file->isOpen())){
                 postMessage(QtDebugMsg, (char*) qasc(tr("can't open file %1 ").arg(filename)));
             }else{
                 if (file->size()==0){
@@ -608,7 +623,7 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
 
                     myWidget = loader.load(buffer, this);
                     delete buffer;
-                    qCDebug(caQtDMLibLog) << "load= " << filename;
+                    qCDebug(fileIOLog) << "load= " << filename;
                 }
             }
             if (!myWidget) {
@@ -662,12 +677,13 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
             if (!myWidget) {
                 QMessageBox::warning(this, tr("caQtDM"), tr("Error loading %1. Use designer to find errors").arg(filename));
                 this->deleteLater();
+                delete otherFile;
                 return;
             }
             delete otherFile;
 #endif
         } else {
-            qCCritical(caQtDMLibLog) << "caQtDM -- internal error with fileName= " << filename;
+            qCCritical(fileIOLog) << "caQtDM -- internal error with fileName= " << filename;
             this->deleteLater();
             return;
         }
@@ -749,7 +765,7 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
 
     setContextMenuPolicy(Qt::CustomContextMenu);
     connect(this, SIGNAL(customContextMenuRequested(const QPoint&)), this, SLOT(ShowContextMenu(const QPoint&)));
-    connect(this, SIGNAL(themeChanged), this, SLOT(themeChanged));
+    connect(parent, SIGNAL(themeChanged()), this, SLOT(themeChanged()));
 #ifndef MOBILE
     this->globalEventFilter = new HMIApplicationEventFilter(this);
 
@@ -891,27 +907,28 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
         splash->deleteLater();
     }
     // reapply a globally loaded user stylesheet, cainlude seems to disable it
-    qCInfo(caQtDMLibLog) << "caQtDM -- user_defined_stylesheet:" << qApp->property("user_defined_stylesheet").toString();
+    qCInfo(fileIOLog) << "caQtDM -- user_defined_stylesheet:" << qApp->property("user_defined_stylesheet").toString();
     if (qApp->property("user_defined_stylesheet").isValid() && (!qApp->property("user_defined_stylesheet").toString().isEmpty())){
         QString printdata=qApp->styleSheet();
         QString stylereload = (QString)  qgetenv("CAQTDM_STYLESHEET_RELOAD");
         if (stylereload.contains("file",Qt::CaseInsensitive)){
-            qCInfo(caQtDMLibLog) << "caQtDM -- search for:" << qApp->property("user_defined_stylesheet").toString();
+            qCInfo(fileIOLog) << "caQtDM -- search for:" << qApp->property("user_defined_stylesheet").toString();
             searchFile *searchDefaultStyleSheet = new searchFile(qApp->property("user_defined_stylesheet").toString());
             QString fileNameFound = searchDefaultStyleSheet->findFile();
-            qCInfo(caQtDMLibLog) << "caQtDM -- custom stylesheet found:" << fileNameFound;
+            qCInfo(fileIOLog) << "caQtDM -- custom stylesheet found:" << fileNameFound;
             if(!fileNameFound.isEmpty()) {
                 QFile file(fileNameFound);
-                file.open(QFile::ReadOnly);
-                QString StyleSheet = QLatin1String(file.readAll());
-                printdata=StyleSheet;
-                qCInfo(caQtDMLibLog) << "caQtDM -- custom stylesheet file:" << fileNameFound << "reloaded stylesheet";
-                if (stylereload.contains("later",Qt::CaseInsensitive)){
-                    QTimer::singleShot(3000, this, [this,StyleSheet] () {
-                            this->setStyleSheet(StyleSheet);
-                        });
-                }else setStyleSheet(StyleSheet);
-                file.close();
+                if (file.open(QFile::ReadOnly)) {
+                    QString StyleSheet = QLatin1String(file.readAll());
+                    printdata=StyleSheet;
+                    qCInfo(fileIOLog) << "caQtDM -- custom stylesheet file:" << fileNameFound << "reloaded stylesheet";
+                    if (stylereload.contains("later",Qt::CaseInsensitive)){
+                        QTimer::singleShot(3000, this, [this,StyleSheet] () {
+                                this->setStyleSheet(StyleSheet);
+                            });
+                    }else setStyleSheet(StyleSheet);
+                    file.close();
+                }
             }
             delete searchDefaultStyleSheet;
         }
@@ -920,7 +937,7 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
         }
 
         if (stylereload.contains("print",Qt::CaseInsensitive)){
-            qCInfo(caQtDMLibLog) << "caQtDM -- custom stylesheet file data:" << printdata;
+            qCInfo(fileIOLog) << "caQtDM -- custom stylesheet file data:" << printdata;
         }
     }
 
@@ -1472,7 +1489,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
     if(firstPass) {
         if(caCalc* calcWidget = qobject_cast<caCalc *>(w1)) {
 
-            bool doit;
+            //bool doit;
             w1->setProperty("ObjectType", caCalc_Widget);
             QWidget *tabWidget = getTabParent(w1);
             w1->setProperty("parentTab",QVariant::fromValue(tabWidget) );
@@ -1555,12 +1572,12 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
             // softchannels calculating with themselves are done first
             else if(SoftPVusesItsself(calcWidget, map) && treatPrimary) {
-                doit=true;
+                //doit=true;
                 qCDebug(caCalcLog) << "softchannels calculating with themselves have to be done first: doit";
 
             // softchannels not using themselves are done second
             } else if(!SoftPVusesItsself(calcWidget, map) && !treatPrimary) {
-                doit=true;
+                //doit=true;
                 qCDebug(caCalcLog) << "softchannels not using themselves are done second: doit";
 
             // softchannels not using themselves, but that just define themselves
@@ -1629,11 +1646,11 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         QString fileName = browserWidget->source().path();
 
         if(!fileName.isEmpty()) {
-            qCInfo(caQtDMLibLog) << "caQtDM -- watch file" << source;
+            qCInfo(fileIOLog) << "caQtDM -- watch file" << source;
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
             bool success = watcher->addPath(fileName);
-            if(!success) qCWarning(caQtDMLibLog) << fileName << "can not be watched for changes";
-            else qCInfo(caQtDMLibLog) << fileName << "is watched for changes";
+            if(!success) qCWarning(fileIOLog) << fileName << "can not be watched for changes";
+            else qCInfo(fileIOLog) << fileName << "is watched for changes";
 #else
             watcher->addPath(fileName);
 #endif
@@ -1645,7 +1662,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
             if(list.count() > 0 && list.at(0).contains("http")) {
                 QUrl url = QUrl::fromUserInput(list.at(0));
                  if (!url.isValid()) {
-                      qCWarning(caQtDMLibLog) << QString("Invalid URL: %1").arg(url.toString());
+                      qCWarning(fileIOLog) << QString("Invalid URL: %1").arg(url.toString());
                  // try to load from that url
                  } else {
                      fileFunctions filefunction;
@@ -2106,7 +2123,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
                     ControlsInterface * plugininterface = (ControlsInterface *) ptr;
                     if(plugininterface != (ControlsInterface *) Q_NULLPTR) {
                         if(plugininterface->pluginName().contains("bsread")) {
-                            qCInfo(caLineEditLog) << "bread detected";
+                            qCInfo(caLineEditLog) << "bsread detected";
                             pv.append(".EGU");
                             specData[0] = 1;
                             if(pv.contains("bsread://")) pv.replace("bsread://", "epics3://");
@@ -2592,9 +2609,9 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         QUiLoader loader;
         bool prcFile = false;
 
-        QHBoxLayout *boxLayout = includeWidget->getIncludeboxLayout();//new QHBoxLayout;
-        if (boxLayout) SETMARGIN_QT456(boxLayout,0);
-        if (boxLayout) boxLayout->setSpacing(0);
+        QHBoxLayout *m_boxLayout = includeWidget->getIncludeboxLayout();//new QHBoxLayout;
+        if (m_boxLayout) SETMARGIN_QT456(m_boxLayout,0);
+        if (m_boxLayout) m_boxLayout->setSpacing(0);
         QFrame *frame = includeWidget->getIncludeFrame();//new QFrame();
         // define a layout for adding the includes
         QGridLayout *gridLayout =  includeWidget->getIncludegridLayout();//new QGridLayout;
@@ -2614,8 +2631,8 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         thisPalette.setColor(QPalette::Light, thisLightColor);
         thisPalette.setColor(QPalette::Dark, thisDarkColor);
         thisPalette.setColor(QPalette::Window, thisFrameColor);
-        if (boxLayout) includeWidget->setLayout(boxLayout);
-        if (boxLayout) boxLayout->addWidget(frame);
+        if (m_boxLayout) includeWidget->setLayout(m_boxLayout);
+        if (m_boxLayout) m_boxLayout->addWidget(frame);
 
         if(gridLayout) frame->setLayout(gridLayout);
 
@@ -2653,13 +2670,13 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
         // define the file to use
         QString providedFileName = includeWidget->getFileName().trimmed();
+        QString fileName = providedFileName;
 
-        if (QFileInfo(providedFileName).isRelative()){
-          providedFileName = cainclude_path + providedFileName;
+        if (QFileInfo(fileName).isRelative()){
+          fileName = cainclude_path + fileName;
         }
 
-        reaffectText(map, &providedFileName, w1);
-        QString fileName = providedFileName;
+        reaffectText(map, &fileName, w1);
 
         QString openFile = "";
         int found = fileName.lastIndexOf(".");
@@ -2691,7 +2708,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 #endif
 
         // ui file or prc file or other file?
-        if((openFile.count() > 1) && fileName.contains(".prc")) {
+        if((openFile.size() > 1) && fileName.contains(".prc")) {
             qCDebug(caIncludeLog) << "prc file";
             prcFile = true;
 
@@ -2704,23 +2721,31 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
             fileName = openFile.append(".ui");
 
         }
-        qCDebug(caIncludeLog) << "use2 file" << fileName << openFile;
+        qCDebug(caIncludeLog) << "use2 file" << providedFileName << openFile;
         // this will check for file existence and when an url is defined, download the file from a http server
         fileFunctions filefunction;
-        filefunction.checkFileAndDownload(fileName);
+        filefunction.checkFileAndDownload(providedFileName);
         if(messageWindowP != (MessageWindow *) Q_NULLPTR) {
             if(filefunction.lastInfo().length() > 0) messageWindowP->postMsgEvent(QtWarningMsg, (char*) qasc(filefunction.lastInfo()));
             if(filefunction.lastError().length() > 0)  messageWindowP->postMsgEvent(QtCriticalMsg, (char*) qasc(filefunction.lastError()));
         }
 
-        searchFile *s = new searchFile(fileName);
+        QApplication::processEvents();
+
+        // First, check if original filename is now available after download
+        searchFile *s = new searchFile(providedFileName);
         QString fileNameFound = s->findFile();
-        if(fileNameFound.isNull()) {
+        if (fileNameFound.isNull()) {
+            delete s;
+            s = new searchFile(fileName);
+            fileNameFound = s->findFile();
+        }
+        if (fileNameFound.isNull()) {
             includeData value;
             value.count = 0;
             value.ms = 0;
             value.text="does not exist";
-            includeFilesList.insert(fileName, value);
+            includeFilesList.insert(providedFileName, value);
         } else {
             qCDebug(caIncludeLog) << "filenameFound" << fileNameFound;
             qCDebug(caIncludeLog) << "use file" << fileName << "for" << includeWidget;
@@ -2797,9 +2822,8 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
                     QFile *file = new QFile;
                     // open and load ui file
                     file->setFileName(fileName);
-                    file->open(QFile::ReadOnly);
                     //symtomatic AFS check
-                    if (!file->isOpen()){
+                    if (!(file->open(QFile::ReadOnly) && file->isOpen())){
                         postMessage(QtDebugMsg, (char*) qasc(tr("can't open file %1 ").arg(providedFileName)));
                     }else{
                         if (file->size()==0){
@@ -2817,7 +2841,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
                                 buffer->seek(0);
 
                                 thisW = loader.load(buffer, this);
-
+                                QApplication::processEvents();
                                 //qDebug() << "iload= " << fileName << buffer->size() << md5Gen.result().toHex();
                                 //qDebug() << thisW->findChildren<QWidget *>();
                                 //foreach(QWidget *w1, thisW->findChildren<QWidget *>()) {
@@ -3038,6 +3062,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
                     } else
 #endif
                     splash->setProgress(splashCounter++);
+                    QApplication::processEvents();
                     break;
                 }
             }
@@ -3869,7 +3894,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 void CaQtDM_Lib::handleFileChanged(const QString &file)
 {
     Q_UNUSED(file);
-    qCDebug(caQtDMLibLog) << "update" << file;
+    qCDebug(fileIOLog) << "update" << file;
     updateTextBrowser();
 }
 
@@ -4022,37 +4047,32 @@ QString CaQtDM_Lib::treatMacro(QMap<QString, QString> map, const QString& text, 
                     while (position!=(-1)){
                         qCDebug(caQtDMLibLog) << "position" <<position;
                         if ((position>=0)&&(position<newText.length())){
-                            int json_start=(position-1)+tofind.length();
-                            int json_end  =newText.indexOf(QString("})"),json_start);
+                            int json_start = (position-1)+tofind.length();
+                            int json_end = newText.indexOf(QString("})"),json_start);
 
                             qCDebug(caQtDMLibLog) << "newText.mid(): " << newText.mid(json_start,json_end-json_start+1);
-                            QString macro_regex="";
-                            QString macro_value="Parsing Error";
-                            bool macro_value_found=false;
+                            QString macro_regex = "";
+                            QString macro_value = "Parsing Error";
+                            bool macro_value_found = false;
 
-                            JSONObject jsonobj;
-                            JSONValue *MacroDataJ = JSON::Parse(newText.mid(json_start,json_end-json_start+1).toStdString().c_str());
-                            if (MacroDataJ!=Q_NULLPTR){
-                                if(!MacroDataJ->IsObject()) {
-                                    delete(MacroDataJ);
-                                } else {
-                                    jsonobj=MacroDataJ->AsObject();
-                                    if (jsonobj.find(L"regex") != jsonobj.end() && jsonobj[L"regex"]->IsString()) {
-                                        macro_regex=QString::fromWCharArray(jsonobj[L"regex"]->AsString().c_str());
+                            QJsonParseError parseError;
+                            QJsonDocument jsonDocument = QJsonDocument::fromJson(newText.mid(json_start,json_end-json_start+1).toUtf8(), &parseError);
+                            if (parseError.error == QJsonParseError::NoError){
+                                if(jsonDocument.isObject()) {
+                                    QJsonObject jsonobj = jsonDocument.object();
+                                    if (jsonobj["regex"].isString()) {
+                                        macro_regex = jsonobj["regex"].toString();
                                     }
 
-                                    if (jsonobj.find(L"value") != jsonobj.end() && jsonobj[L"value"]->IsString()) {
-                                        macro_value=QString::fromWCharArray(jsonobj[L"value"]->AsString().c_str());
-                                        macro_value_found=true;
+                                    if (jsonobj["value"].isString()) {
+                                        macro_value = jsonobj["value"].toString();
+                                        macro_value_found = true;
                                     }
-                                    delete(MacroDataJ);
                                 }
-                            }else{
-                                snprintf(asc, MAX_STRING_LENGTH, "JSON Error in (%s)", qasc(newText.mid(json_start,json_end-json_start+1)));
+                            } else {
+                                snprintf(asc, MAX_STRING_LENGTH, "JSON Error in (%s): %s", qasc(newText.mid(json_start,json_end-json_start+1)), qasc(parseError.errorString()));
                                 postMessage(QtWarningMsg, asc);
-
                             }
-
 
                             QString toReplace = "$(" + i.key() + newText.mid(json_start,json_end-json_start+1) + ")";
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -5002,8 +5022,11 @@ bool CaQtDM_Lib::CalcVisibility(QWidget *w, double &result, bool &valid)
                         break;
                     }
                 }
-               QString scancalc = calc->getCalc();
-                parseForQRectConst(scancalc,valueArray);
+                QString qrectscan=calc->getCalc();
+                qrectscan=qrectscan.right(qrectscan.length()-6);
+                if (!qrectscan.isEmpty()){
+                    parseForQRectConst(qrectscan,valueArray);
+                }
 
                 if(somethingToSend) {
                     if (calc->getTextLine()!="%QRect"){
@@ -6483,7 +6506,7 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
                         imageWidget->setInvalid(Qt::black);
                         qCDebug(caImageLog) << "no valid frame";
                     } else {
-                        qCDebug(caImageLog) << "frame ok=", (int)(result +.5);
+                        qCDebug(caImageLog) << "frame ok=" << (int)(result +.5);
                         imageWidget->setFrame((int)(result +.5));
                     }
                 } else {
@@ -8340,20 +8363,20 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
 
     } else if(caGraphics* graphicsWidget = qobject_cast<caGraphics *>(w)) {
         GetDefinedCalcString(caGraphics, graphicsWidget, calcString);
-        if(graphicsWidget->getColorMode() == caGraphics::Alarm) qstrncpy(colMode, "Alarm",20);
-        else qstrncpy(colMode, "Static",20);
+        if(graphicsWidget->getColorMode() == caGraphics::Alarm) qstrncpy(colMode, "Alarm", sizeof(colMode));
+        else qstrncpy(colMode, "Static", sizeof(colMode));
 
     } else if(caPolyLine* polylineWidget = qobject_cast<caPolyLine *>(w)) {
         GetDefinedCalcString(caPolyLine, polylineWidget, calcString);
-        if(polylineWidget->getColorMode() == caPolyLine::Alarm) qstrncpy(colMode, "Alarm",20);
-        else qstrncpy(colMode, "Static",20);
+        if(polylineWidget->getColorMode() == caPolyLine::Alarm) qstrncpy(colMode, "Alarm", sizeof(colMode));
+        else qstrncpy(colMode, "Static", sizeof(colMode));
 
     } else if(caCalc* calcWidget = qobject_cast<caCalc *>(w)) {
         calcString = calcWidget->getCalc();
 
     } else if(caChoice* choiceWidget = qobject_cast<caChoice *>(w)) {
-        if(choiceWidget->getColorMode() == caChoice::Alarm) qstrncpy(colMode, "Alarm",20);
-        else qstrncpy(colMode, "Static",20);
+        if(choiceWidget->getColorMode() == caChoice::Alarm) qstrncpy(colMode, "Alarm", sizeof(colMode));
+        else qstrncpy(colMode, "Static", sizeof(colMode));
 
     } else if(caLineEdit* lineeditWidget = qobject_cast<caLineEdit *>(w)) {
         if(lineeditWidget->getPrecisionMode() == caLineEdit::User) {
@@ -8365,14 +8388,14 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
             limitsMax = lineeditWidget->getMaxValue();
             limitsMin = lineeditWidget->getMinValue();
         }
-        if(lineeditWidget->getColorMode() == caLineEdit::Alarm_Default) qstrncpy(colMode, "Alarm",20);
-        else if(lineeditWidget->getColorMode() == caLineEdit::Alarm_Static) qstrncpy(colMode, "Alarm",20);
-        else qstrncpy(colMode, "Static",20);
+        if(lineeditWidget->getColorMode() == caLineEdit::Alarm_Default) qstrncpy(colMode, "Alarm", sizeof(colMode));
+        else if(lineeditWidget->getColorMode() == caLineEdit::Alarm_Static) qstrncpy(colMode, "Alarm", sizeof(colMode));
+        else qstrncpy(colMode, "Static", sizeof(colMode));
 
     } else if(caMultiLineString* multilinestringWidget = qobject_cast<caMultiLineString *>(w)) {
-        if(multilinestringWidget->getColorMode() == caMultiLineString::Alarm_Default) qstrncpy(colMode, "Alarm",20);
-        else if(multilinestringWidget->getColorMode() == caMultiLineString::Alarm_Static) qstrncpy(colMode, "Alarm",20);
-        else qstrncpy(colMode, "Static",20);
+        if(multilinestringWidget->getColorMode() == caMultiLineString::Alarm_Default) qstrncpy(colMode, "Alarm", sizeof(colMode));
+        else if(multilinestringWidget->getColorMode() == caMultiLineString::Alarm_Static) qstrncpy(colMode, "Alarm", sizeof(colMode));
+        else qstrncpy(colMode, "Static", sizeof(colMode));
 
     } else if (caApplyNumeric* applynumericWidget = qobject_cast<caApplyNumeric *>(w)) {
         if(applynumericWidget->getPrecisionMode() == caApplyNumeric::User) {
@@ -8421,8 +8444,8 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
             knobData *kPtr = mutexKnobDataP->GetMutexKnobDataPtr(dataIndex);
             if(kPtr != (knobData *) Q_NULLPTR) Precision =  kPtr->edata.precision;
         }
-        if((sliderWidget->getColorMode() == caSlider::Alarm_Default) || (sliderWidget->getColorMode() == caSlider::Alarm_Static)) strcpy(colMode, "Alarm");
-        else strcpy(colMode, "Static");
+        if((sliderWidget->getColorMode() == caSlider::Alarm_Default) || (sliderWidget->getColorMode() == caSlider::Alarm_Static)) qstrncpy(colMode, "Alarm", sizeof(colMode));
+        else qstrncpy(colMode, "Static", sizeof(colMode));
 
     } else if(caThermo* thermoWidget = qobject_cast<caThermo *>(w)) {
         if(thermoWidget->getLimitsMode() == caThermo::User) {
@@ -8441,16 +8464,16 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
                }
             }
         }
-        if((thermoWidget->getColorMode() == caThermo::Alarm_Default) || (thermoWidget->getColorMode() == caThermo::Alarm_Static)) strcpy(colMode, "Alarm");
-        else strcpy(colMode, "Static");
+        if((thermoWidget->getColorMode() == caThermo::Alarm_Default) || (thermoWidget->getColorMode() == caThermo::Alarm_Static)) qstrncpy(colMode, "Alarm", sizeof(colMode));
+        else qstrncpy(colMode, "Static", sizeof(colMode));
 
     } else if(caByte* byteWidget = qobject_cast<caByte *>(w)) {
-        if(byteWidget->getColorMode() == caByte::Alarm) strcpy(colMode, "Alarm");
-        else strcpy(colMode, "Static");
+        if(byteWidget->getColorMode() == caByte::Alarm) qstrncpy(colMode, "Alarm", sizeof(colMode));
+        else qstrncpy(colMode, "Static", sizeof(colMode));
 
     } else if(caByteController* bytecontrollerWidget = qobject_cast<caByteController *>(w)) {
-        if(bytecontrollerWidget->getColorMode() == caByteController::Alarm) strcpy(colMode, "Alarm");
-        else strcpy(colMode, "Static");
+        if(bytecontrollerWidget->getColorMode() == caByteController::Alarm) qstrncpy(colMode, "Alarm", sizeof(colMode));
+        else qstrncpy(colMode, "Static", sizeof(colMode));
 
     } else if(caScriptButton* scriptbuttonWidget =  qobject_cast< caScriptButton *>(w)) {
         Q_UNUSED(scriptbuttonWidget);
@@ -8721,7 +8744,7 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
 
                 if((kPtr != (knobData *) Q_NULLPTR)) {
                     char asc[MAX_STRING_LENGTH] = {'\0'};
-                    char timestamp[50] = {'\0'};
+                    char timestamp[TIMESTAMP_STRING_LENGTH] = {'\0'};
                     char description[MAX_STRING_LENGTH] = {'\0'};
                     info.append("<br>");
                     info.append(kPtr->pv);
@@ -8778,7 +8801,7 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
                         const std::string edataUnits = QString::fromLatin1((const char*)&kPtr->edata.units,strlen(kPtr->edata.units)).toStdString();
                         switch (kPtr->edata.fieldtype) {
                         case caCHAR:
-                            snprintf(asc, MAX_STRING_LENGTH, "%ld (0x%x)", kPtr->edata.ivalue, kPtr->edata.ivalue);
+                            snprintf(asc, MAX_STRING_LENGTH, "%ld (0x%lx)", kPtr->edata.ivalue, kPtr->edata.ivalue);
                             info.append(asc);
                             break;
                         case caSTRING:
@@ -8813,7 +8836,7 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
                         }
                         case caINT:
                         case caLONG:
-                            snprintf(asc, MAX_STRING_LENGTH, "%ld (0x%x) %s", kPtr->edata.ivalue, kPtr->edata.ivalue, edataUnits.c_str());
+                            snprintf(asc, MAX_STRING_LENGTH, "%ld (0x%lx) %s", kPtr->edata.ivalue, kPtr->edata.ivalue, edataUnits.c_str());
                             info.append(asc);
                             break;
                         case caFLOAT:
@@ -9701,7 +9724,7 @@ void CaQtDM_Lib::TreatRequestedValue(QString pvo, QString text, FormatType fType
     case caENUM:
     case caINT:
     case caLONG:
-        strcpy(textValue, qasc(text));
+        qstrncpy(textValue, qasc(text), sizeof(textValue));
         // Check for an enum text
         match = false;
         if(kPtr->edata.dataB != (void*)0 && kPtr->edata.enumCount > 0) {
@@ -9981,38 +10004,26 @@ bool CaQtDM_Lib::parseForQRectConst(QString &inputc, double *valueArray)
 {
     // Parse data
     bool success = false;
-    char input[MAXPVLEN];
-    memset(&input,0,MAXPVLEN);
-    qstrncpy(input, qasc(inputc), MAXPVLEN-1);
 
-
-    JSONValue *value = JSON::Parse(input);
-    if (value == Q_NULLPTR) {
-        qCDebug(caQtDMLibLog) << "failed to parse:" << input;
+    QJsonParseError parseError;
+    QJsonDocument document = QJsonDocument::fromJson(inputc.toUtf8(), &parseError);
+    if (parseError.error != QJsonParseError::NoError) {
+        qCWarning(caQtDMLibLog) << "failed to parse:" << inputc << "with error:" << parseError.errorString();
     } else {
         // Retrieve the main object
-        JSONObject root;
-        if(!value->IsObject()) {
-            delete(value);
-        } else {
-
-            root = value->AsObject();
-            if (root.find(L"valueconst") != root.end() && root[L"valueconst"]->IsArray()) {
-                JSONArray jsonobj=root[L"valueconst"]->AsArray();
-                for (unsigned int j = 0; j < jsonobj.size(); j++){
-                    if (jsonobj[j]->IsNumber())
-                       valueArray[j]=(int)jsonobj[j]->AsNumber();
+        if (document.isObject()) {
+            QJsonObject root = document.object();
+            if (root["valueconst"].isArray()) {
+                QJsonArray jsonarr = root["valueconst"].toArray();
+                for (unsigned int j = 0; j < jsonarr.size(); j++){
+                    if (jsonarr[j].isDouble()) {
+                       valueArray[j] = static_cast<int>(jsonarr[j].toDouble());
+                    }
                 }
-                success =true;
-                // Did it go wrong?
-                } else {
-                    delete(value);
-                }
+                success = true;
             }
-
         }
-
-
+    }
 
     return success;
 }
@@ -10022,65 +10033,38 @@ int CaQtDM_Lib::parseForDisplayRate(QString &inputc, int &rate)
 {
     // Parse data
     bool success = false;
-    char input[MAXPVLEN];
-    memset(&input,0,MAXPVLEN);
-    qstrncpy(input,qasc(inputc), (size_t) MAXPVLEN-1);
 
-    JSONValue *value = JSON::Parse(input);
+    QJsonParseError parseError;
+    QJsonDocument document = QJsonDocument::fromJson(inputc.toUtf8(), &parseError);
     // Did it go wrong?
-    if (value == Q_NULLPTR) {
+    if (parseError.error != QJsonParseError::NoError) {
+        qCCritical(caQtDMLibLog) << "failed to parse:" << inputc << "with error:" << parseError.errorString();
         inputc = "{}";
-        qCCritical(caQtDMLibLog) << "Failed to parse:" << input;
         return success;
     } else {
         // Retrieve the main object
-        JSONObject root;
-        if(!value->IsObject()) {
+        if(!document.isObject()) {
             qCDebug(caQtDMLibLog) << "The root element is not an object";
-            delete(value);
         } else {
-
-            root = value->AsObject();
+            QJsonObject root = document.object();
             // check for monitor
-            if (root.find(L"caqtdm_monitor") != root.end() && root[L"caqtdm_monitor"]->IsObject()) {
+            if (root["caqtdm_monitor"].isObject()) {
                 qCDebug(caQtDMLibLog) << "monitor detected";
                 // Retrieve nested object
-                JSONValue *value1 = JSON::Parse(root[L"caqtdm_monitor"]->Stringify().c_str());
-                // Did it go wrong?
-                if ((value1 != Q_NULLPTR) && value1->IsObject()) {
-                    JSONObject root;
-                    root = value1->AsObject();
-                    if (root.find(L"maxdisplayrate") != root.end() && root[L"maxdisplayrate"]->IsNumber()) {
-                        int status;
-                        qCDebug(caQtDMLibLog) << "maxdisplayrate detected";
-                        status = swscanf(root[L"maxdisplayrate"]->Stringify().c_str(), L"%d", &rate);
-                        if(status != 1) return false;
-                        qCDebug(caQtDMLibLog) << status << "decode value=" << rate;
-                        delete(value1);
-                        delete(value);
-                        success = true;
-                    } else {
-                        delete(value1);
-                        delete(value);
-                    }
-                } else {
-                    delete(value);
+                QJsonObject obj = root["caqtdm_monitor"].toObject();
+                if (obj["maxdisplayrate"].isDouble()) {
+                    qCDebug(caQtDMLibLog) << "maxdisplayrate detected";
+                    rate = obj["maxdisplayrate"].toDouble();
+                    qCDebug(caQtDMLibLog) << "decode value =" << rate;
+                    success = true;
                 }
+                root.remove("caqtdm_monitor");
+                document = QJsonDocument(root);
+                inputc = QString::fromUtf8(document.toJson(QJsonDocument::Compact));
             }
         }
     }
 
-    // we have to take this json string out of the global json string given for epics 3.15 and higher
-    // get rid of first { and last }
-    // in the call we append the resulting string to the pv
-
-    qCDebug(caQtDMLibLog) << "before1" << inputc;
-    QString pattern=",?\\s*.caqtdm_monitor.:\\{([^}]+)\\}\\s*,?";
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    inputc.remove(QRegExp(",?\\s*.caqtdm_monitor.:\\{([^}]+)\\}\\s*,?", Qt::CaseInsensitive));
-#else
-    inputc.remove(QRegularExpression(pattern, QRegularExpression::CaseInsensitiveOption));
-#endif
     return success;
 }
 
@@ -10088,37 +10072,19 @@ bool CaQtDM_Lib::checkJsonString(QString &inputc)
 {
     // test if we have a valid json string
 
-    bool success = false;
-    char input[MAXPVLEN];
-    memset(&input,0,MAXPVLEN);
-    qstrncpy(input, (char*) qasc(inputc), (size_t) MAXPVLEN-1);
-    JSONValue *value = JSON::Parse(input);
+    QJsonParseError parseError;
+    QJsonDocument document = QJsonDocument::fromJson(inputc.toUtf8(), &parseError);;
+
+    qCDebug(caQtDMLibLog) << "checking" << inputc;
 
     // Did it go wrong?, when yes then get rid of it
-    if (value == Q_NULLPTR) {
-        success = false;
-        inputc ="{}";
-        qCDebug(caQtDMLibLog) << "checkJsonString -- failed to parse:" << input;
-    } else {
-        // however is seems the parsing does not take into account if the last bracket is missing
-        int nbBrackets = 0;
-        for(int counter = 0; counter < inputc.size();  counter++){
-                QString element = inputc.at(counter);
-                if(element.contains("{")) nbBrackets++;
-                else if(element.contains("}")) nbBrackets--;
-        }
-        qCDebug(caQtDMLibLog) << "number of brackets" << nbBrackets;
-        if(nbBrackets == 0) {
-            success = true;
-        } else {
-            success = false;
-            inputc = "{}";
-        }
+    if (parseError.error != QJsonParseError::NoError) {
+        inputc = "{}";
+        qCDebug(caQtDMLibLog) << "checkJsonString -- failed to parse:" << inputc << "with error:" << parseError.errorString();
+        return false;
     }
 
-    qCDebug(caQtDMLibLog) << "final2" << inputc;
-
-    return success;
+    return true;
 }
 
 void CaQtDM_Lib::allowResizing(bool allowresize)
@@ -10465,7 +10431,7 @@ void CaQtDM_Lib::send_delayed_popup_signal(){
             geometry =dynVars.toString();
         }
 
-        qCDebug(caQtDMLibLog) << Filename << Args <<w;
+        qCDebug(fileIOLog) << Filename << Args <<w;
         if(!Filename.isEmpty())  {
             qCDebug(caQtDMLibLog) << "delayed_popup_timer";
             emit Signal_OpenNewWFile(Filename, Args, geometry, "true ToolTip FramelessWindowHint PopUpWindow");
@@ -10512,7 +10478,7 @@ bool CaQtDM_Lib::eventFilter(QObject *obj, QEvent *event)
                             w->setProperty("delayed_popup_filename",Filename);
                             w->setProperty("delayed_popup_args",Args);
                             w->setProperty("delayed_popup_geometry",geometry);
-                            qCDebug(caQtDMLibLog) << Filename << Args <<w;
+                            qCDebug(fileIOLog) << Filename << Args <<w;
                             QTimer::singleShot(timeout, this, SLOT(send_delayed_popup_signal()));
 
                         }
@@ -11243,12 +11209,14 @@ QStringList CaQtDM_Lib::treat_read_MacroCommand(QStringList args){
                     else {
                         snprintf(asc, MAX_STRING_LENGTH, "macro definition file %s loaded for related display", qasc(macroFile));
                         postMessage(QtWarningMsg, asc);
+                        QString macroString;
                         QFile file(fileNameFound);
-                        file.open(QFile::ReadOnly);
-                        QString macroString = QLatin1String(file.readAll());
-                        macroString = macroString.simplified().trimmed();
-                        macroString.replace(" ",",");
-                        file.close();
+                        if (file.open(QFile::ReadOnly)) {
+                            macroString = QLatin1String(file.readAll());
+                            macroString = macroString.simplified().trimmed();
+                            macroString.replace(" ",",");
+                            file.close();
+                        }
                         QStringList macro_list_from_file = macroString.split(",");
                         macro_list_expanded = macro_list_expanded + macro_list_from_file;
                     }
@@ -11355,12 +11323,12 @@ extern "C"  {
         delete filecheck;
         if (FileName.isNull()) {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
-            qCFatal(caQtDMLibLog) << "file" << FileName << "could not be loaded -> exit";
+            qCFatal(fileIOLog) << "file" << FileName << "could not be loaded -> exit";
 #else
             qFatal("%s", qasc(QString("file " + FileName + " could not be loaded -> exit")));
 #endif
         } else {
-            qCInfo(caQtDMLibLog) << "file" << FileName << "will be loaded";
+            qCInfo(fileIOLog) << "file" << FileName << "will be loaded";
         }
 
         QMainWindow *widget = new QMainWindow;
@@ -11411,7 +11379,7 @@ extern "C"  {
         QList<QWidget *> all = myWidget->findChildren<QWidget *>();
         foreach(QWidget* widget, all) {
             if(widget->objectName().contains(object)) {
-                if(pvMaxLength > 0) strcpy(pv, " " );
+                if(pvMaxLength > 1) qstrncpy(pv, " ",(size_t) pvMaxLength);
                 if (caSlider *w = qobject_cast<caSlider *>(widget)) {
                     *value = w->getSliderValue();
                     qstrncpy(pv,  qasc(w->getPV()),(size_t) pvMaxLength);

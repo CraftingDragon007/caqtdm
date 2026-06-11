@@ -49,6 +49,7 @@ const QString fileFunctions::lastInfo()
 int fileFunctions::checkFileAndDownload(const QString &fileName, const QString &url)
 {
     QString displayPath;
+    bool succeeded = false;
     errorString = "";
     infoString = "";
 
@@ -74,23 +75,39 @@ int fileFunctions::checkFileAndDownload(const QString &fileName, const QString &
        displayPath = (QString)  qgetenv("CAQTDM_URL_DISPLAY_PATH");
     }
 
-    if(displayPath.length() < 1) return false;
+    if(displayPath.length() < 1) return succeeded;
 
     qCDebug(fileFunctionsLog) << "filename to download" << fileName;
 
     displayPath.append("/");
+    QString displayPathWithoutFile = displayPath;
     displayPath.append(fileName);
     QUrl displayUrl(displayPath);
     infoString = "download file " + displayPath;
 
     NetworkAccess *displayGet = new NetworkAccess();
-    if(!displayGet->requestUrl(displayUrl, fileName)) {
-        errorString = displayGet->lastError();
+    succeeded |= displayGet->requestUrl(displayUrl, fileName);
+    if (!succeeded && !fileName.endsWith(".ui")) {
+        QString secondTryFileName = fileName;
+        if (secondTryFileName.endsWith(".adl") || secondTryFileName.endsWith(".edl")) {
+            secondTryFileName.replace(".adl", ".ui").replace(".edl", ".ui");
+        } else {
+            secondTryFileName += ".ui";
+        }
+        displayUrl = QUrl(displayPathWithoutFile + secondTryFileName);
+
+        qCDebug(fileFunctionsLog) << "checkFileAndDownload second try with different extension: " << secondTryFileName;
         displayGet->deleteLater();
-        return false;
+        displayGet = new NetworkAccess();
+        succeeded |= displayGet->requestUrl(displayUrl, secondTryFileName);
     }
+
+    if(!succeeded) {
+        errorString = displayGet->lastError();
+    }
+
     displayGet->deleteLater();
-    return true;
+    return succeeded;
 }
 
 bool fileFunctions::removeFilesInTree(const QString &dirName)

@@ -27,9 +27,9 @@ diff '--color=auto' --unified --recursive --text src.orig/caqtdm/caQtDM_Lib/src/
  void MutexKnobData::UpdateWidget(int index, QWidget* w, char *units, char *fec, char *dataString, knobData knb)
  {
      QString unitsString;
-diff '--color=auto' --unified --recursive --text src.orig/aQtDM_Lib/caQtDM_Plugins/epics3/epicsSubs.c src.next/caqtdm/caQtDM_Lib/caQtDM_Plugins/epics3/epicsSubs.c
---- src.orig/caqtdm/caQtDM_Lib/caQtDM_Plugins/epics3/epicsSubs.c     2025-02-03 16:39:59.432507563 +0100
-+++ src.next/caqtdm/caQtDM_Lib/caQtDM_Plugins/epics3/epicsSubs.c 2025-05-06 15:14:51.833945563 +0200
+diff '--color=auto' --unified --recursive --text src.orig/aQtDM_Lib/caQtDM_Plugins/epics3/epicsSubs.c src.next/caqtdm/caQtDM_Plugins/epics3/epicsSubs.c
+--- src.orig/caqtdm/caQtDM_Plugins/epics3/epicsSubs.c     2025-02-03 16:39:59.432507563 +0100
++++ src.next/caqtdm/caQtDM_Plugins/epics3/epicsSubs.c 2025-05-06 15:14:51.833945563 +0200
 @@ -854,7 +854,7 @@
  
      //printf("we have to add an epics device <%s>\n", kData->pv);

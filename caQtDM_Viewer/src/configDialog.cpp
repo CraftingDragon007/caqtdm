@@ -29,13 +29,13 @@ configDialog::configDialog(const bool debugWindow, const QList<QString> &urls, c
 { 
     Specials specials;
     int height;
-    int width;
+    //int width;
     Q_UNUSED(debugWindow);
 
 #ifndef MOBILE
-    float COMBOHEIGHTFACTOR = 1.3;
+    float COMBOHEIGHTFACTOR = 1.3f;
 #else
-    float COMBOHEIGHTFACTOR = 1.0;
+    float COMBOHEIGHTFACTOR = 1.0f;
 #endif
 
     Qt::WindowFlags flags = Qt::Dialog;

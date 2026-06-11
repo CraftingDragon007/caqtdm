@@ -26,22 +26,22 @@ del .\caQtDM_Viewer\parser\Makefile*
 del .\caQtDM_Viewer\parserEDM\Makefile*
 del .\caQtDM_Lib\Makefile*
 
-del .\caQtDM_Lib\caQtDM_Plugins\Makefile*
-del .\caQtDM_Lib\caQtDM_Plugins\demo\Makefile*
-del .\caQtDM_Lib\caQtDM_Plugins\bsread\Makefile*
-del .\caQtDM_Lib\caQtDM_Plugins\epics3\Makefile*
-del .\caQtDM_Lib\caQtDM_Plugins\epics4\Makefile*
-del .\caQtDM_Lib\caQtDM_Plugins\modbus\Makefile*
-del .\caQtDM_Lib\caQtDM_Plugins\gps\Makefile*
-del .\caQtDM_Lib\caQtDM_Plugins\environment\Makefile*
+del .\caQtDM_Plugins\Makefile*
+del .\caQtDM_Plugins\demo\Makefile*
+del .\caQtDM_Plugins\bsread\Makefile*
+del .\caQtDM_Plugins\epics3\Makefile*
+del .\caQtDM_Plugins\epics4\Makefile*
+del .\caQtDM_Plugins\modbus\Makefile*
+del .\caQtDM_Plugins\gps\Makefile*
+del .\caQtDM_Plugins\environment\Makefile*
 
 
 
-del .\caQtDM_Lib\caQtDM_Plugins\archive\Makefile*
-del .\caQtDM_Lib\caQtDM_Plugins\archive\archiveSF\Makefile*
-del .\caQtDM_Lib\caQtDM_Plugins\archive\archiveHIPA\Makefile*
-del .\caQtDM_Lib\caQtDM_Plugins\archive\archiveHTTP\Makefile*
-del .\caQtDM_Lib\caQtDM_Plugins\archive\archivePro\Makefile*
+del .\caQtDM_Plugins\archive\Makefile*
+del .\caQtDM_Plugins\archive\archiveSF\Makefile*
+del .\caQtDM_Plugins\archive\archiveHIPA\Makefile*
+del .\caQtDM_Plugins\archive\archiveHTTP\Makefile*
+del .\caQtDM_Plugins\archive\archivePro\Makefile*
 
 del .\caQtDM_Parsers\Makefile*
 del .\caQtDM_Parsers\adlParserSharedLib\Makefile*
@@ -68,21 +68,21 @@ rmdir /S /Q .\caQtDM_Lib\release
 rmdir /S /Q .\caQtDM_Lib\debug
 rmdir /S /Q .\caQtDM_Lib\moc
 
-rmdir /S /Q .\caQtDM_Lib\caQtDM_Plugins\demo\release
-rmdir /S /Q .\caQtDM_Lib\caQtDM_Plugins\demo\debug
-rmdir /S /Q .\caQtDM_Lib\caQtDM_Plugins\demo\moc
+rmdir /S /Q .\caQtDM_Plugins\demo\release
+rmdir /S /Q .\caQtDM_Plugins\demo\debug
+rmdir /S /Q .\caQtDM_Plugins\demo\moc
 
-rmdir /S /Q .\caQtDM_Lib\caQtDM_Plugins\epics3\release
-rmdir /S /Q .\caQtDM_Lib\caQtDM_Plugins\epics3\debug
-rmdir /S /Q .\caQtDM_Lib\caQtDM_Plugins\epics3\moc
+rmdir /S /Q .\caQtDM_Plugins\epics3\release
+rmdir /S /Q .\caQtDM_Plugins\epics3\debug
+rmdir /S /Q .\caQtDM_Plugins\epics3\moc
 
-rmdir /S /Q .\caQtDM_Lib\caQtDM_Plugins\epics4\release
-rmdir /S /Q .\caQtDM_Lib\caQtDM_Plugins\epics4\debug
-rmdir /S /Q .\caQtDM_Lib\caQtDM_Plugins\epics4\moc
+rmdir /S /Q .\caQtDM_Plugins\epics4\release
+rmdir /S /Q .\caQtDM_Plugins\epics4\debug
+rmdir /S /Q .\caQtDM_Plugins\epics4\moc
 
-rmdir /S /Q .\caQtDM_Lib\caQtDM_Plugins\archive\archiveHTTP\release
-rmdir /S /Q .\caQtDM_Lib\caQtDM_Plugins\archive\archiveHTTP\debug
-rmdir /S /Q .\caQtDM_Lib\caQtDM_Plugins\archive\archiveHTTP\moc
+rmdir /S /Q .\caQtDM_Plugins\archive\archiveHTTP\release
+rmdir /S /Q .\caQtDM_Plugins\archive\archiveHTTP\debug
+rmdir /S /Q .\caQtDM_Plugins\archive\archiveHTTP\moc
 
 rmdir /S /Q .\caQtDM_Parsers\adlParserSharedLib\release
 rmdir /S /Q .\caQtDM_Parsers\adlParserSharedLib\debug

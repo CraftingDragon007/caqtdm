@@ -3,6 +3,9 @@ name: caQtDM Windows Package Build
 on:
   workflow_dispatch:
   pull_request:
+    paths-ignore:
+      - 'caQtDM_docs/**'
+      - 'caQtDM_Tests/**'
   schedule: # Daily at 2am
     - cron: '0 2 * * *'
 
@@ -343,6 +346,28 @@ jobs:
           $elapsed = $timerstop - $timerstart
           Write-Host "caQtDM compile time: $($elapsed.TotalSeconds) seconds -- $($elapsed.TotalMinutes) minutes"
 
+      - name: Run unit tests
+        shell: pwsh
+        working-directory: ${{ env.CAQTDM_DIR }}\caQtDM_UnitTests
+        run: |
+          $env:PATH = (@(
+           "$env:EPICS_BASE\bin\$env:EPICS_HOST_ARCH"
+           "$env:ZMQBIN"
+           "$env:QWTHOME\lib"
+           "$env:CAQTDM_COLLECT"
+           "$env:CAQTDM_COLLECT\controlsystems"
+           "$env:QTHOME\bin"
+          ) -join ';') + ';' + $env:PATH
+          
+          $env:QT_FORCE_STDERR_LOGGING = "1"
+          $env:QT_LOGGING_TO_CONSOLE = "1"
+          
+          jom check
+          
+          if ($LASTEXITCODE -ne 0) {
+            throw "Unit tests failed"
+          }
+
       - name: Set packaging environment variables
         run: |
           echo ZMQ=${{ env.ZEROMQ_INSTALL_DIR }}\lib>> %GITHUB_ENV%
@@ -351,7 +376,6 @@ jobs:
           echo SSLBIN=${{ env.OPENSSL_ROOT }}\bin>> %GITHUB_ENV%
           echo LIBSSL=libssl-3-x64.dll>> %GITHUB_ENV%
           echo LIBCRYPTO=libcrypto-3-x64.dll>> %GITHUB_ENV%
-
 
       - name: Create caQtDM Windows package
         working-directory: ${{ env.CAQTDM_DIR }}\caQtDM_Viewer\package\windows

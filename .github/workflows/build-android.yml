@@ -3,6 +3,9 @@ name: caQtDM Android Build
 on:
   workflow_dispatch:
   pull_request:
+    paths-ignore:
+      - 'caQtDM_docs/**'
+      - 'caQtDM_Tests/**'
   schedule: # Daily at 2am
     - cron: '0 2 * * *'
 
@@ -28,13 +31,16 @@ env:
 
   CAQTDM_NORPATH: "1"
   CAQTDM_GPS: "1"
-  CAQTDM_MODBUS: "0"
-  CAQTDM_OPCUA: "0"
+  CAQTDM_MODBUS: "1"
+  CAQTDM_OPCUA: "1"
 
 jobs:
   build-qt:
     name: Build Qt Cache
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: write
     steps:
       - name: Restore Qt source cache
         id: cache-qt
@@ -179,6 +185,9 @@ jobs:
     name: Build Android APK
     runs-on: ubuntu-24.04
     needs: build-qt
+    permissions:
+      contents: read
+      actions: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -194,6 +203,11 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+
+      - name: Set up Gradle cache
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
@@ -348,7 +362,6 @@ jobs:
             echo "ZMQINC=/usr/include"
             echo "ZMQLIB=/usr/lib"
             echo "SSLLIB=${OPENSSL_ANDROID_PREFIX}/lib"
-            echo "ANDROIDFUNCTIONSINCLUDE=${GITHUB_WORKSPACE}/caQtDM_AndroidFunctions/src"
           } >> "$GITHUB_ENV"
 
       - name: Build caQtDM
