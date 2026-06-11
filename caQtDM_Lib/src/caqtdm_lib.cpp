@@ -356,8 +356,20 @@ bool fixFileListRelative(const QString &cainclude_path, QString *filelist, bool 
         // Windows is not treated, as relative files might not have anything to differentiate from files on  and "./" is invalid on windows.
         QString fileName = files.at(i).trimmed();
         if (QFileInfo(fileName).isRelative() && (!shell || fileName.startsWith("./") || fileName.startsWith("../")) && !fileListEntryResolves(fileName)) {
-            files[i] = QFileInfo(cainclude_path + fileName).absoluteFilePath();
-            affected = true;
+            QFileInfo relativeFile(cainclude_path + fileName);
+            QFileInfo relativeFileUi = relativeFile;
+            if (relativeFileUi.absoluteFilePath().endsWith(".adl") || relativeFileUi.absoluteFilePath().endsWith(".edl")) {
+                relativeFileUi.setFile(relativeFileUi.absoluteFilePath().replace(".adl", ".ui").replace(".edl", ".ui"));
+            } else if (!relativeFileUi.absoluteFilePath().endsWith(".ui")) {
+                relativeFileUi.setFile(relativeFileUi.absoluteFilePath() + ".ui");
+            }
+
+            if (relativeFile.exists() || relativeFileUi.exists()) {
+                // We only process the file path here, not the extension conversion.
+                // So even if it is found with a different extension, keep the specified one.
+                files[i] = relativeFile.absoluteFilePath();
+                affected = true;
+            }
         }
     }
 
