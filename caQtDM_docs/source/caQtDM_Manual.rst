@@ -8,7 +8,7 @@ caQtDM Manual
 | CH-5232 Villigen
 | Switzerland
 |
-| ** and our co-worker:**
+| **and our co-worker:**
 | Yannik Wernle
 | Erik Schwarz
 | Julian Leon Houba
