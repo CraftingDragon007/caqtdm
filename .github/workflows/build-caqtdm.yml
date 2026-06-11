@@ -3,7 +3,13 @@ name: caQtDM Arch Linux Package Build
 on:
   workflow_dispatch:
   pull_request:
+    paths-ignore:
+      - 'caQtDM_docs/**'
+      - 'caQtDM_Tests/**'
   push:
+    paths-ignore:
+      - 'caQtDM_docs/**'
+      - 'caQtDM_Tests/**'
 
 jobs:
   build:

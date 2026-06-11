@@ -3,6 +3,9 @@ name: caQtDM DEB Package Build Debug
 on:
  workflow_dispatch:
  push:
+    paths-ignore:
+      - 'caQtDM_docs/**'
+      - 'caQtDM_Tests/**'
 
 jobs:
   build:

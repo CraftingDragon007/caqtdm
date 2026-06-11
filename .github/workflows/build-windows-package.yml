@@ -3,6 +3,9 @@ name: caQtDM Windows Package Build
 on:
   workflow_dispatch:
   pull_request:
+    paths-ignore:
+      - 'caQtDM_docs/**'
+      - 'caQtDM_Tests/**'
   schedule: # Daily at 2am
     - cron: '0 2 * * *'
 
