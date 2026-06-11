@@ -63,7 +63,7 @@
  class QSpinBox;
  class QWidget;
 
- class limitsDialog : public QWidget
+class CAQTDM_LIBSHARED_EXPORT limitsDialog : public QWidget
 {
      Q_OBJECT
 

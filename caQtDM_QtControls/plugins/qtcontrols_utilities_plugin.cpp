@@ -48,6 +48,8 @@ void CustomWidgetInterface_Utilities::initialize(QDesignerFormEditorInterface *)
     if (d_isInitialized)
         return;
 
+    QLoggingCategory::setFilterRules("*=false");
+
     // set this property in order to find out later if we use our controls through the designer or otherwise
     qApp->setProperty("APP_SOURCE", QVariant(QString("DESIGNER")));
 

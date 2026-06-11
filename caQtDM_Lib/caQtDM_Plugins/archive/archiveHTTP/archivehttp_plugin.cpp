@@ -28,7 +28,7 @@
 #include <QThreadPool>
 
 #include "archivehttp_plugin.h"
-#include "loggingcategories.h"
+#include "caQtDM_Plugins_global.h"
 #include "archiverGeneral.h"
 #include <QMetaType>
 

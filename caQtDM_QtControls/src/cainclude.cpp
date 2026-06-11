@@ -393,9 +393,8 @@ void caInclude::setFileName(QString const &filename)
                 // load new file
                 QFile *file = new QFile;
                 file->setFileName(fileNameFound);
-                file->open(QFile::ReadOnly);
                 //symtomatic AFS check
-                if (!file->isOpen()){
+                if (!(file->open(QFile::ReadOnly) && file->isOpen())){
                     qCDebug(caIncludeLog) << "can't open file" << fileName;
                 }else{
                     if (file->size()==0){
@@ -524,9 +523,6 @@ if (w){
 
 
 void caInclude::update_geometrysave(){
-//    foreach(QWidget *l, thisLoadedWidgets) {
-
-
     foreach(QWidget *l, this->getChildsList()) {
         if (l){
             QString className(l->metaObject()->className());
@@ -537,7 +533,7 @@ void caInclude::update_geometrysave(){
             integerList.insert(2, l->geometry().width()*(1/thisXresizefactor));
             integerList.insert(3, l->geometry().height()*(1/thisYresizefactor));
             l->setProperty("GeometryList", integerList);
-            qCDebug(caIncludeLog) << className<< l->objectName() << integerList;
+            //qCDebug(caIncludeLog) << className<< l->objectName() << integerList;
         }
     }
 
@@ -557,7 +553,7 @@ void caInclude::update_geometrysave(){
     integerList.insert(3, this->geometry().height()*(1/thisYresizefactor));
     if (frame) frame->setProperty("GeometryList", integerList);
 
-    qCDebug(caIncludeLog) << className << integerList;
+    //qCDebug(caIncludeLog) << className << integerList;
 
 }
 QRect caInclude::scanChildsneededArea(){

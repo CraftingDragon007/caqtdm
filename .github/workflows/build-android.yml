@@ -359,7 +359,6 @@ jobs:
             echo "ZMQINC=/usr/include"
             echo "ZMQLIB=/usr/lib"
             echo "SSLLIB=${OPENSSL_ANDROID_PREFIX}/lib"
-            echo "ANDROIDFUNCTIONSINCLUDE=${GITHUB_WORKSPACE}/caQtDM_AndroidFunctions/src"
           } >> "$GITHUB_ENV"
 
       - name: Build caQtDM

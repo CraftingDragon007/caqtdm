@@ -17,8 +17,9 @@ CONFIG         += plugin
 INCLUDEPATH    += .
 INCLUDEPATH    += ../
 INCLUDEPATH    += ../../src
+INCLUDEPATH    += ../../../caQtDM_QtControls/src
 
-HEADERS         = environment_plugin.h ../controlsinterface.h ../loggingcategories.h
+HEADERS         = environment_plugin.h ../controlsinterface.h ../caQtDM_Plugins_global.h
 
 SOURCES         = environment_plugin.cpp
 

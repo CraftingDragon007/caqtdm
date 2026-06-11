@@ -34,7 +34,7 @@
     #include <QRegularExpression>
 #endif
 #include "controlsinterface.h"
-#include "loggingcategories.h"
+#include "caQtDM_Plugins_global.h"
 #include "modbus_decode.h"
 #include <postfix.h>
 

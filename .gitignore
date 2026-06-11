@@ -37,5 +37,8 @@ qrc_caQtDM.cpp
 .qtc_clangd
 
 # Unit tests
-caQtDM_Tests/unitTests/tst_logging/target_wrapper.sh
-caQtDM_Tests/unitTests/tst_logging/tst_logging
+caQtDM_UnitTests/**/target_wrapper.sh
+caQtDM_UnitTests/tst_logging/tst_logging
+caQtDM_UnitTests/tst_qtcontrols/tst_qtcontrols
+caQtDM_UnitTests/tst_lib/tst_lib
+caQtDM_UnitTests/tst_plugins/tst_bsread/tst_bsread

@@ -1,4 +1,5 @@
 opcua_plugin {
+        CONFIG += caQtDM_Plugin
         CONFIG += Define_ControlsysTargetDir Define_Build_objDirs
 
         unix:!macx:!ios:!android {
@@ -45,6 +46,7 @@ opcua_plugin {
 
 #==========================================================================================================
 archive_plugin {
+        CONFIG += caQtDM_Plugin
         CONFIG += Define_ControlsysTargetDir Define_Build_objDirs
 
         unix:!macx:!ios:!android:!freebsd {
@@ -104,6 +106,7 @@ archive_plugin {
 
 #==========================================================================================================
 demo_plugin {
+        CONFIG += caQtDM_Plugin
         CONFIG += Define_ControlsysTargetDir Define_Build_objDirs
         
         unix:!macx:!ios:!android {
@@ -152,6 +155,7 @@ demo_plugin {
 
 #==========================================================================================================
 gps_plugin {
+        CONFIG += caQtDM_Plugin
         CONFIG += Define_ControlsysTargetDir Define_Build_objDirs
 
         unix:!macx:!ios:!android {
@@ -199,6 +203,7 @@ gps_plugin {
 }
 #==========================================================================================================
 bsread_Plugin {
+        CONFIG += caQtDM_Plugin
         message(“bsread_plugin configuration”)
         CONFIG += Define_ControlsysTargetDir Define_Build_objDirs Define_ZMQ_Lib
         
@@ -241,6 +246,7 @@ bsread_Plugin {
 
 #==========================================================================================================
 epics3_plugin {
+        CONFIG += caQtDM_Plugin
         CONFIG += Define_ControlsysTargetDir Define_Build_objDirs
 
         unix:!macx:!ios:!android:!freebsd {
@@ -316,6 +322,7 @@ epics3_plugin {
 }
 #==========================================================================================================
 environment_Plugin {
+        CONFIG += caQtDM_Plugin
         message(“environment_plugin configuration”)
         CONFIG += Define_ControlsysTargetDir Define_Build_objDirs
 
@@ -388,6 +395,7 @@ environment_Plugin {
 }
 #==========================================================================================================
 epics4_plugin {
+        CONFIG += caQtDM_Plugin
         CONFIG += Define_ControlsysTargetDir Define_Build_objDirs
 
         unix:!macx:!ios:!android:!freebsd {
@@ -533,6 +541,12 @@ epics4_plugin {
  		
  
 	}
+}
+
+caQtDM_Plugin {
+        win32-msvc* || msvc {
+                DEFINES += CAQTDM_PLUGIN_LIBRARY
+        }
 }
 
 #==========================================================================================================

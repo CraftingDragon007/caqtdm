@@ -19,7 +19,7 @@
 #include "mutexKnobData.h"
 #include "bsread_channeldata.h"
 #include "bsread_wfblockconverter.h"
-#include "loggingcategories.h"
+#include "caQtDM_Plugins_global.h"
 
 #ifndef QT_NO_CONCURRENT
 #include <QtConcurrentRun>
@@ -29,7 +29,7 @@
 
 
 template <class T_BSREAD,class T_CAQTDM>
-class bsread_wfConverter
+class CAQTDM_PLUGINSSHARED_EXPORT bsread_wfConverter
 {
 private:
     knobData* kDataP;

@@ -156,3 +156,9 @@ EOF
         "$srcdir/$_pkgsrc/caQtDM_QtControls/doc/"*.html \
         "$srcdir/$_pkgsrc/caQtDM_QtControls/doc/"*.css
 }
+
+check() {
+    cd "$srcdir/$_pkgsrc"
+    export LD_LIBRARY_PATH="$srcdir/binaries:$LD_LIBRARY_PATH"
+    make -C caQtDM_UnitTests check
+}

@@ -29,10 +29,10 @@
 #include <QList>
 #include <QAtomicInt>
 #include "knobData.h"
+#include "caQtDM_Plugins_global.h"
 #include <QMutex>
 
-
-class bsread_internalchannel : public QObject
+class CAQTDM_PLUGINSSHARED_EXPORT bsread_internalchannel : public QObject
 {
     Q_OBJECT
     Q_ENUMS(internal_types)
@@ -76,14 +76,6 @@ private:
     int internal_enum_index;
     void* data;
 
-
-
-
-
-
-signals:
-
-public slots:
 };
 
 

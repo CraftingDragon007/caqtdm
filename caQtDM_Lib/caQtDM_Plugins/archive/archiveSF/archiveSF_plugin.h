@@ -33,7 +33,7 @@
 #include <QThread>
 #include <qwt.h>
 #include "cacartesianplot.h"
-#include "loggingcategories.h"
+#include "caQtDM_Plugins_global.h"
 #include "controlsinterface.h"
 #include "archiveSF_plugin.h"
 #include "archiverCommon.h"

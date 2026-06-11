@@ -27,7 +27,7 @@
 #include <QString>
 #include <QApplication>
 #include "environment_plugin.h"
-#include "loggingcategories.h"
+#include "caQtDM_Plugins_global.h"
 
 // as defined in knobDefines.h
 //caType {caSTRING	= 0, caINT = 1, caFLOAT = 2, caENUM = 3, caCHAR = 4, caLONG = 5, caDOUBLE = 6};
@@ -201,14 +201,14 @@ int environmentPlugin::pvSetWave(char *pv, float *fdata, double *ddata, int16_t 
 // caQtDM_Lib will call this routine for getting a description of the monitor
 int environmentPlugin::pvGetTimeStamp(char *pv, char *timestamp) {
     Q_UNUSED(pv);
-    strcpy(timestamp, "timestamp in epics format");
+    qstrncpy(timestamp, "timestamp in epics format", TIMESTAMP_STRING_LENGTH);
     return true;
 }
 
 // caQtDM_Lib will call this routine for getting the timestamp for this monitor
 int environmentPlugin::pvGetDescription(char *pv, char *description) {
     Q_UNUSED(pv);
-    strcpy(description, "no Description available Environment data transfer");
+    qstrncpy(description, "no Description available Environment data transfer", MAX_STRING_LENGTH);
     return true;
 }
 
