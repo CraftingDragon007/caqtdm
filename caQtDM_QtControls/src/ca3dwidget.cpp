@@ -23,6 +23,7 @@
 #include <QQuaternion>
 #include <QResizeEvent>
 #include <QTimer>
+#include <QVector4D>
 #include <QVBoxLayout>
 #include <QtMath>
 #include <cmath>
@@ -267,21 +268,17 @@ bool overlayIsInCameraView(Qt3DRender::QCamera *camera, const ca3DOverlayConfig 
         return false;
     }
 
-    const QVector3D toOverlay = overlay.position - camera->position();
-    if (toOverlay.lengthSquared() <= 0.0f) {
+    const QMatrix4x4 viewProjection = camera->projectionMatrix() * camera->viewMatrix();
+    const QVector4D clip = viewProjection * QVector4D(overlay.position, 1.0f);
+    if (clip.w() <= 0.0f) {
         return false;
     }
 
-    const QVector3D viewDirection = normalizedOrFallback(camera->viewCenter() - camera->position(), QVector3D(0.0f, 0.0f, -1.0f));
-    const QVector3D overlayDirection = toOverlay.normalized();
-    const float alignment = QVector3D::dotProduct(viewDirection, overlayDirection);
-    if (alignment <= 0.0f) {
-        return false;
-    }
-
-    const float fovRadians = qDegreesToRadians(camera->lens()->fieldOfView());
-    const float angleRadians = std::acos(qBound(-1.0f, alignment, 1.0f));
-    return angleRadians <= (fovRadians * 0.5f);
+    const QVector3D ndc = clip.toVector3DAffine();
+    constexpr float margin = 1.05f;
+    return ndc.x() >= -margin && ndc.x() <= margin
+           && ndc.y() >= -margin && ndc.y() <= margin
+           && ndc.z() >= -margin && ndc.z() <= margin;
 }
 
 QVector3D cameraForward(Qt3DRender::QCamera *camera)
@@ -1082,7 +1079,7 @@ void ca3DWidget::rebuild3DOverlays()
         const float overlayWidth = static_cast<float>(overlay.size.width() > 0.0 ? overlay.size.width() : 1.5);
         const float overlayHeight = static_cast<float>(overlay.size.height() > 0.0 ? overlay.size.height() : 1.0);
         const QQuaternion overlayRotation = rotationFromEuler(overlay.rotation);
-        const QQuaternion planeLocalToUprightPlane = QQuaternion::fromAxisAndAngle(1.0f, 0.0f, 0.0f, -90.0f);
+        const QQuaternion planeLocalToUprightPlane = QQuaternion::fromAxisAndAngle(1.0f, 0.0f, 0.0f, 90.0f);
         const QQuaternion renderRotation = overlayRotation * planeLocalToUprightPlane;
         const QVector3D right = normalizedOrFallback(overlayRotation.rotatedVector(QVector3D(1.0f, 0.0f, 0.0f)), QVector3D(1.0f, 0.0f, 0.0f));
         const QVector3D up = normalizedOrFallback(overlayRotation.rotatedVector(QVector3D(0.0f, 1.0f, 0.0f)), QVector3D(0.0f, 1.0f, 0.0f));
@@ -1102,7 +1099,7 @@ void ca3DWidget::rebuild3DOverlays()
         texture->setMinificationFilter(Qt3DRender::QAbstractTexture::Linear);
         texture->setMagnificationFilter(Qt3DRender::QAbstractTexture::Linear);
         LiveWidgetTextureImage *textureImage = new LiveWidgetTextureImage(
-            overlayManager->renderSnapshot(kOverlayTextureScale).flipped(Qt::Horizontal), texture);
+            overlayManager->renderSnapshot(kOverlayTextureScale).flipped(Qt::Vertical), texture);
         texture->addTextureImage(textureImage);
         textureImage->update();
         overlayManager->takeTextureDirty();
@@ -1118,7 +1115,7 @@ void ca3DWidget::rebuild3DOverlays()
                     if (!overlayManager->takeTextureDirty() && !refreshForCaret && !refreshIdle) {
                         return;
                     }
-                    textureImage->setImage(overlayManager->renderSnapshot(kOverlayTextureScale).flipped(Qt::Horizontal));
+                    textureImage->setImage(overlayManager->renderSnapshot(kOverlayTextureScale).flipped(Qt::Vertical));
                 });
         liveTextureTimer->start(100);
 
@@ -1214,14 +1211,21 @@ void ca3DWidget::apply3DOverlayVisibility(int preset)
                                        || (overlay.cameraPreset > 0 && overlay.cameraPreset == selectedPreset->id));
         const bool inView = overlayIsInCameraView(this3DView ? this3DView->camera() : Q_NULLPTR, overlay);
 
-        bool visible = thisConfig.cameraPresets.isEmpty();
-        if (selectedPreset) {
-            visible = presetMatches;
-        }
-        if (overlay.visibilityMode == ca3DOverlayConfig::InView || overlay.visibilityMode == ca3DOverlayConfig::AlwaysWhenInView) {
+        bool visible = false;
+        if (overlay.visibilityMode == ca3DOverlayConfig::AlwaysWhenInView) {
             visible = inView;
+        } else if (overlay.visibilityMode == ca3DOverlayConfig::InView) {
+            visible = (thisConfig.cameraPresets.isEmpty() || presetMatches) && inView;
+        } else {
+            visible = thisConfig.cameraPresets.isEmpty() || presetMatches;
         }
         entity->setEnabled(visible);
+        qCDebug(ca3DWidgetLog) << "apply3DOverlayVisibility" << overlay.id
+                                << "preset" << preset
+                                << "mode" << overlay.visibilityMode
+                                << "presetMatches" << presetMatches
+                                << "inView" << inView
+                                << "visible" << visible;
 
         QObject *filter = this3DOverlayEventFiltersById.value(overlay.id, Q_NULLPTR);
         if (filter) {
