@@ -19,14 +19,9 @@ CONFIG         += plugin
 INCLUDEPATH    += .
 INCLUDEPATH    += ../
 INCLUDEPATH    += ../../caQtDM_Lib/src
+INCLUDEPATH    += ../../caQtDM_QtControls/src
 INCLUDEPATH    += $(EPICSINCLUDE)
 
-HEADERS         = epics3_plugin.h ../controlsinterface.h
+HEADERS         = epics3_plugin.h ../controlsinterface.h ../caQtDM_Plugins_global.h
 SOURCES         = epics3_plugin.cpp epicsSubs.c
 TARGET          = epics3_plugin
-android {
-   INCLUDEPATH += $(ANDROIDFUNCTIONSINCLUDE)
-}
-
-
-

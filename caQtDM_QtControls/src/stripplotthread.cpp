@@ -32,7 +32,7 @@ stripplotthread::stripplotthread(QObject *parent) : QThread(parent)
 void stripplotthread::threadSetTimer(int timeInterval)
 {
     interval = timeInterval;
-    //printf("new interval requested = %d\n", interval);
+    qCDebug(caStripPlotLog) << "new interval requested =" << interval;
 }
 
 void stripplotthread:: run(){

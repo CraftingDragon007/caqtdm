@@ -3,6 +3,9 @@ name: caQtDM Windows Package Build
 on:
   workflow_dispatch:
   pull_request:
+    paths-ignore:
+      - 'caQtDM_docs/**'
+      - 'caQtDM_Tests/**'
   schedule: # Daily at 2am
     - cron: '0 2 * * *'
 
@@ -17,6 +20,8 @@ env:
   CAQTDM_DIR: ${{ github.workspace }}\caqtdm
 
   OPENSSL_ROOT: C:\Program Files\OpenSSL
+
+  CAQTDM_OPCUA: 1
 
 jobs:
   build:
@@ -41,7 +46,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           path: caqtdm
 
@@ -57,7 +62,7 @@ jobs:
 
       - name: Cache Qwt
         id: cache-qwt
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ env.QWT_INSTALL_DIR }}
           key: qwt-${{ matrix.qwt-version }}-qt${{ matrix.qt-version }}-${{ matrix.windows-version }}-${{ runner.arch }}
@@ -66,7 +71,7 @@ jobs:
 
       - name: Cache ZeroMQ
         id: cache-zeromq
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ env.ZEROMQ_INSTALL_DIR }}
           key: zeromq-${{ matrix.zeromq-version }}-${{ matrix.windows-version }}-${{ runner.arch }}
@@ -75,7 +80,7 @@ jobs:
 
       - name: Cache EPICS Base
         id: cache-epics
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ env.EPICS_BASE_DIR }}
           key: epics-${{ matrix.epics-version }}-${{ matrix.windows-version }}-${{ runner.arch }}
@@ -84,7 +89,7 @@ jobs:
 
       - name: Cache JOM
         id: cache-jom
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ github.workspace }}\jom
           key: jom-1.1.4-${{ runner.os }}
@@ -148,7 +153,7 @@ jobs:
         shell: pwsh
         run: |
           choco feature enable -n=allowGlobalConfirmation
-          choco install openssl  -y --no-progress
+          choco install openssl --version=3.6.2 -y --no-progress
           Write-Host "OPENSSL_ROOT: $env:OPENSSL_ROOT"
           $defaultPaths = @(
             "C:\Program Files\OpenSSL-Win64",
@@ -262,7 +267,7 @@ jobs:
         shell: pwsh
         run : |
           $zmqVersionUnderscore = "${{ matrix.zeromq-version }}".Replace(".", "_")
-          Add-Content -Path $env:GITHUB_ENV -Value "ZMQLIBRARY=libzmq-${{ env.MSVC_SUFFIX }}-mt-$zmqVersionUnderscore.lib"
+          Add-Content -Path $env:GITHUB_ENV -Value "ZMQLIBRARY=libzmq-${{ env.MSVC_SUFFIX }}-mt-$zmqVersionUnderscore.dll"
           Add-Content -Path $env:GITHUB_ENV -Value "ZMQ_LIB_NAME=libzmq-${{ env.MSVC_SUFFIX }}-mt-$zmqVersionUnderscore.lib"
 
       - name: Create EPICS Base directory
@@ -309,6 +314,7 @@ jobs:
           echo ZMQ=${{ env.ZEROMQ_INSTALL_DIR }}>> %GITHUB_ENV%
           echo ZMQINC=${{ env.ZEROMQ_INSTALL_DIR }}\include>> %GITHUB_ENV%
           echo ZMQLIB=${{ env.ZEROMQ_INSTALL_DIR }}\lib>> %GITHUB_ENV%
+          echo ZMQBIN=${{ env.ZEROMQ_INSTALL_DIR }}\bin>> %GITHUB_ENV%
           echo ZMQ_VERSION=${{ matrix.zeromq-version }}>> %GITHUB_ENV%
           echo EPICSINCLUDE=${{ env.EPICS_BASE }}\include>> %GITHUB_ENV%
           echo QTCONTROLS_LIBS=${{ env.CAQTDM_DIR }}\caQtDM_Binaries>> %GITHUB_ENV%
@@ -340,10 +346,36 @@ jobs:
           $elapsed = $timerstop - $timerstart
           Write-Host "caQtDM compile time: $($elapsed.TotalSeconds) seconds -- $($elapsed.TotalMinutes) minutes"
 
+      - name: Run unit tests
+        shell: pwsh
+        working-directory: ${{ env.CAQTDM_DIR }}\caQtDM_UnitTests
+        run: |
+          $env:PATH = (@(
+           "$env:EPICS_BASE\bin\$env:EPICS_HOST_ARCH"
+           "$env:ZMQBIN"
+           "$env:QWTHOME\lib"
+           "$env:CAQTDM_COLLECT"
+           "$env:CAQTDM_COLLECT\controlsystems"
+           "$env:QTHOME\bin"
+          ) -join ';') + ';' + $env:PATH
+          
+          $env:QT_FORCE_STDERR_LOGGING = "1"
+          $env:QT_LOGGING_TO_CONSOLE = "1"
+          
+          jom check
+          
+          if ($LASTEXITCODE -ne 0) {
+            throw "Unit tests failed"
+          }
+
       - name: Set packaging environment variables
         run: |
           echo ZMQ=${{ env.ZEROMQ_INSTALL_DIR }}\lib>> %GITHUB_ENV%
-          echo LIBCRYPTO=${{ env.OPENSSL_ROOT }}\bin\libcrypto-3-x64.dll>> %GITHUB_ENV%
+          echo ZMQLIB=${{ env.ZEROMQ_INSTALL_DIR }}\lib>> %GITHUB_ENV%
+          echo ZMQBIN=${{ env.ZEROMQ_INSTALL_DIR }}\bin>> %GITHUB_ENV%
+          echo SSLBIN=${{ env.OPENSSL_ROOT }}\bin>> %GITHUB_ENV%
+          echo LIBSSL=libssl-3-x64.dll>> %GITHUB_ENV%
+          echo LIBCRYPTO=libcrypto-3-x64.dll>> %GITHUB_ENV%
 
       - name: Create caQtDM Windows package
         working-directory: ${{ env.CAQTDM_DIR }}\caQtDM_Viewer\package\windows
@@ -355,7 +387,7 @@ jobs:
           copy caQtDM_x64.msi ${{ github.workspace }}\caQtDM_x64.msi
 
       - name: Upload caQtDM Windows package artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: caQtDM_x64_${{ matrix.windows-version }}_qt${{ matrix.qt-version }}_qwt${{ matrix.qwt-version }}_zmq${{ matrix.zeromq-version }}_epics${{ matrix.epics-version }}
           path: ${{ github.workspace }}\caQtDM_x64.msi

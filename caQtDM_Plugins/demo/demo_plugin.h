@@ -38,6 +38,9 @@
 #include <QtConcurrentRun>
 #endif
 
+// This needs to be included everywhere qCDebug, qCWarning etc are used
+#include <QLoggingCategory>
+
 class Q_DECL_EXPORT DemoPlugin : public QObject, ControlsInterface
 {
     Q_OBJECT
@@ -49,6 +52,7 @@ class Q_DECL_EXPORT DemoPlugin : public QObject, ControlsInterface
 public:
     QString pluginName();
     DemoPlugin();
+    ~DemoPlugin();
 
     int initCommunicationLayer(MutexKnobData *data, MessageWindow *messageWindow, QMap<QString, QString> options);
     int pvAddMonitor(int index, knobData *kData, int rate, int skip);

@@ -44,8 +44,6 @@
 #include "certificatedialog.h"
 #endif
 
-#define VERBOSELOG(msg) qDebug().nospace() << "[" << __FUNCTION__ << "]: " << msg
-
 typedef struct
 {
     QString nodeid;
@@ -193,6 +191,8 @@ signals:
      * @param errorMsg: Explanation / status code
      */
     void attributeGotError(const QString &nodeId, const QString &errorMsg);
+
+    void userMessage(QtMsgType type, const QString &message);
 
 private:
     /**

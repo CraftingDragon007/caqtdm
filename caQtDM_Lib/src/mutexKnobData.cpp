@@ -35,6 +35,8 @@
 #include <QPair>
 #include "QtControls"
 
+Q_LOGGING_CATEGORY(mutexKnobDataLog, "caqtdm.lib.mutexknobdata")
+
 /**
  * this routine (re)allocates memory and copies the old data to the new memory
  */
@@ -43,8 +45,11 @@ MutexKnobData::MutexKnobData()
     KnobDataArraySize=500;
     KnobData = (knobData*) malloc(KnobDataArraySize * sizeof(knobData));
     if (KnobData==Q_NULLPTR) {
-        printf("caQtDM -- could not allocate memory -> exit\n");
-        exit(1);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+        qCFatal(mutexKnobDataLog) << "caQtDM -- could not allocate memory -> exit";
+#else
+        qFatal("caQtDM -- could not allocate memory -> exit");
+#endif
     }
     for(int i=0; i < KnobDataArraySize; i++){
         KnobData[i].index  = -1;
@@ -64,8 +69,7 @@ MutexKnobData::MutexKnobData()
     highestCountPerSecond = 0;
 
     suppressUpdates = false;
-    ftime(&last);
-    ftime(&monitorTiming);
+    monitorTimingMs = QDateTime::currentMSecsSinceEpoch();
 
     // start a timer with 10Hz
     prvRepetitionRate = DEFAULTRATE;
@@ -103,7 +107,7 @@ MutexKnobData::MutexKnobData()
     // Initialize QMaps for default unit replacement and user defined unit replacement.
     defaultReplaceUnitsPairList = createUnitReplacementPairList(defaultReplaceUnitString.split(";"));
     replaceUnitsPairList = createUnitReplacementPairList(replaceUnitsList);
-    //qDebug() << defaultReplaceUnitsPairList;
+    qCDebug(mutexKnobDataLog) << defaultReplaceUnitsPairList;
 }
 
 MutexKnobData:: ~MutexKnobData()
@@ -143,7 +147,7 @@ QList<QPair<QString, QString> > MutexKnobData::createUnitReplacementPairList(QSt
                 } else if (decOk) {
                     unitKey += QString(parsedValueDez);
                 } else {
-                    //qDebug() << "Argument from CAQTDM_CUSTOM_UNIT_REPLACEMENTS cannot be converted to UTF-8 Code, will be treated as string: " << QString(*unitPartsIterator);
+                    qCDebug(mutexKnobDataLog) << "Argument from CAQTDM_CUSTOM_UNIT_REPLACEMENTS cannot be converted to UTF-8 Code, will be treated as string: " << QString(*unitPartsIterator);
                     unitKey += QString(*unitPartsIterator);
                 }
             }
@@ -157,7 +161,7 @@ QList<QPair<QString, QString> > MutexKnobData::createUnitReplacementPairList(QSt
                 } else if (decOk) {
                     unitValue += QString(parsedValueDez);
                 } else {
-                    //qDebug() << "Argument from CAQTDM_CUSTOM_UNIT_REPLACEMENTS cannot be converted to UTF-8 Code, will be treated as string:  " << QString(*unitPartsIterator);
+                    qCDebug(mutexKnobDataLog) << "Argument from CAQTDM_CUSTOM_UNIT_REPLACEMENTS cannot be converted to UTF-8 Code, will be treated as string:  " << QString(*unitPartsIterator);
                     unitValue += QString(*unitPartsIterator);
                 }
             }
@@ -165,7 +169,7 @@ QList<QPair<QString, QString> > MutexKnobData::createUnitReplacementPairList(QSt
         }
     }
     return replaceUnitsPairList;
-    //qDebug() << "replaceUnitsMap: " << replaceUnitsMap;
+    qCDebug(mutexKnobDataLog) << "replaceUnitsPairList: " << replaceUnitsPairList;
 }
 
 /**
@@ -174,11 +178,14 @@ QList<QPair<QString, QString> > MutexKnobData::createUnitReplacementPairList(QSt
 void MutexKnobData::ReAllocate(int oldsize, int newsize, void **ptr)
 {
     void *tmp;
-    //printf("reallocate for %d size\n", newsize);
+    qCDebug(mutexKnobDataLog) << "reallocate for" << newsize << "size";
     tmp = (void *) malloc((size_t) newsize);
     if (tmp==Q_NULLPTR) {
-        printf("caQtDM -- could not allocate any more memory -> exit\n");
-        exit (1);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+        qCFatal(mutexKnobDataLog) << "caQtDM -- could not allocate any more memory -> exit";
+#else
+        qFatal("caQtDM -- could not allocate any more memory -> exit");
+#endif
     }
     if(oldsize > 0) {
         memcpy(tmp, *ptr, (size_t) oldsize);
@@ -200,9 +207,7 @@ void MutexKnobData::UpdateMechanism(UpdateType Type)
  */
 QString MutexKnobData::SoftPV_Name(QString pv, QWidget *w)
 {
-    //printf("%s\n",asc.toUtf8().constData());
-    //printf("%s_%p\n", qasc(pv),  w);
-    //fflush(stdout);
+    qCDebug(mutexKnobDataLog) << QString("%1_%2").arg(pv).arg((quintptr)w,QT_POINTER_SIZE * 2, 16, QChar('0'));
     return QString("%1_%2").arg(pv).arg((quintptr)w,QT_POINTER_SIZE * 2, 16, QChar('0'));
 }
 
@@ -223,12 +228,12 @@ void MutexKnobData::InsertSoftPV(QString pv, int num, QWidget *w)
 {
     int indx;
     //char asc[MAXPVLEN+20];
-    //sprintf(asc, "%s_%p", qasc(pv),  w);
+    qCDebug(mutexKnobDataLog) << pv << w;
     QMutexLocker locker(&mutex);
     QString asc=SoftPV_Name(pv, w);
     if(!getSoftPV(pv, &indx, (QWidget*) w)) {
         softPV_WidgetList.insert(asc, num);
-        //qDebug() << "insert softpv_widgetList" << asc;
+        qCDebug(mutexKnobDataLog) << "insert softpv_widgetList" << asc;
     }
 }
 
@@ -252,7 +257,7 @@ void  MutexKnobData::BuildSoftPVList(QWidget *w)
                 softstruct.index = KnobData[i].index;
                 softstruct.w = w;
                 softPV_List.insert(asc, softstruct);
-                //qDebug() << "insert softpv_list" << asc << KnobData[i].dispName ;
+                qCDebug(mutexKnobDataLog) << "insert softpv_list" << asc << KnobData[i].dispName ;
             }
         }
         // for softpvs that were not yet known as soft pv, add them
@@ -266,7 +271,7 @@ void  MutexKnobData::BuildSoftPVList(QWidget *w)
                 softstruct.w = w;
                 softPV_List.insert(asc, softstruct);
                 InsertSoftPV(KnobData[i].pv, KnobData[i].index, (QWidget *) KnobData[i].thisW);
-                //qDebug() << "insert untill now unknown pv" << asc << KnobData[i].index;
+                qCDebug(mutexKnobDataLog) << "insert until now unknown pv" << asc << KnobData[i].index;
                 mutex.lock();
             }
         }
@@ -279,7 +284,7 @@ void  MutexKnobData::BuildSoftPVList(QWidget *w)
         i.next();
         number++;
     }
-    qDebug() << "buildsoftpvlist=" << number;
+    qCDebug(mutexKnobDataLog) << "buildsoftpvlist=" << number;
 */
 }
 
@@ -303,12 +308,12 @@ void MutexKnobData::RemoveSoftPV(QString pv, QWidget *w, int indx)
 
 /*
      QMapIterator<QString, int> i(softPV_List);
-     qDebug() << "list start";
+     qCDebug(mutexKnobDataLog) << "list start";
      while (i.hasNext()) {
          i.next();
-         qDebug() <<  "list item=" << i.key() << i.value();
+         qCDebug(mutexKnobDataLog) <<  "list item=" << i.key() << i.value();
      }
-     qDebug() << "list end";
+     qCDebug(mutexKnobDataLog) << "list end";
 */
 }
 
@@ -332,7 +337,7 @@ void MutexKnobData::UpdateSoftPV(QString pv, double value, QWidget *w, int dataI
 
         // single value
         if(dataCount <= 1) {
-            //qDebug() << "updateSoftPV --  single" << ptr->index << "for name" << ptr->pv << "with value=" << value << "dataIndex=" << dataIndex << "dataCount=" << dataCount ;
+            qCDebug(mutexKnobDataLog) << "updateSoftPV --  single" << ptr->index << "for name" << ptr->pv << "with value=" << value << "dataIndex=" << dataIndex << "dataCount=" << dataCount ;
             ptr->edata.rvalue = value;
             ptr->edata.connected = true;
 
@@ -347,7 +352,7 @@ void MutexKnobData::UpdateSoftPV(QString pv, double value, QWidget *w, int dataI
             }
             ptr->edata.dataSize = dataCount * (int) sizeof(double);
             ptr->edata.valueCount = dataCount;
-            //qDebug() << "updateSoftPV -- pv" << pv << "wave dataindex" << dataIndex << "with value " << value << dataCount;
+            qCDebug(mutexKnobDataLog) << "updateSoftPV -- pv" << pv << "wave dataindex" << dataIndex << "with value " << value << dataCount;
             double *data = (double *) ptr->edata.dataB;
             if (data) data[dataIndex] = value;
         }
@@ -362,7 +367,7 @@ void MutexKnobData::UpdateSoftPV(QString pv, double value, QWidget *w, int dataI
         if(pv == softstruct.pv) {
             int indx = softstruct.index;
             if(KnobData[indx].index != -1 && KnobData[indx].pv == pv && softstruct.w == w) {
-                //qDebug() <<  "     update index=" << softstruct.index << i.key() <<  w << "with" << value;
+                qCDebug(mutexKnobDataLog) <<  "     update index=" << softstruct.index << i.key() <<  w << "with" << value;
 
                 // simple double
                 if(dataCount <= 1) {
@@ -496,13 +501,13 @@ knobData* MutexKnobData::getMutexKnobDataPV(QWidget *widget, QString pv)
 
                 if(loop == 1) {
                     if(kpv == pv) {
-                         //qDebug() << pv << "not exact match for" << widget;
+                         qCDebug(mutexKnobDataLog) << pv << "not exact match for" << widget;
                         return kPtr;
                     }
 
                 } else {
                     if(kpv == pv && widget == w) {
-                        //qDebug() << pv << "exact match for" << widget;
+                        qCDebug(mutexKnobDataLog) << pv << "exact match for" << widget;
                         return kPtr;
                     }
                 }
@@ -543,9 +548,14 @@ extern "C" MutexKnobData* C_DataLock(MutexKnobData* p, knobData *kData) {
     p->DataLock(kData);
     return p;
 }
+
 extern "C" MutexKnobData* C_DataUnlock(MutexKnobData* p, knobData *kData) {
     p->DataUnlock(kData);
     return p;
+}
+
+extern "C" long long C_CurrentTimeMs() {
+    return QDateTime::currentMSecsSinceEpoch();
 }
 
 /**
@@ -556,7 +566,6 @@ void MutexKnobData::SetMutexKnobDataReceived(knobData *kData) {
     char fec[40];
     char dataString[STRING_EXCHANGE_SIZE];
     double diff;
-    struct timeb now;
     QMutexLocker locker(&mutex);
     int index = kData->index;
     memcpy(&KnobData[index].edata, &kData->edata, sizeof(epicsData));
@@ -574,12 +583,10 @@ void MutexKnobData::SetMutexKnobDataReceived(knobData *kData) {
     }
 
     // calculate after 5 seconds our statistics
-    ftime(&now);
-    diff = ((double) now.time + (double) now.millitm / (double)1000) -
-            ((double) monitorTiming.time + (double) monitorTiming.millitm / (double)1000);
+    diff = QDateTime::currentMSecsSinceEpoch() / 1000.0 - monitorTimingMs / 1000.0;
 
     if(diff >= 5.0) {
-        ftime(&monitorTiming);
+        monitorTimingMs = QDateTime::currentMSecsSinceEpoch();
         nbMonitorsPerSecond = (int) (nbMonitors/diff);
         nbMonitors = 0;
         // remember monitor count for all monitors
@@ -619,7 +626,7 @@ void MutexKnobData::SetMutexKnobDataReceived(knobData *kData) {
             kData->edata.displayCount = kData->edata.monitorCount;
             locker.unlock();
             UpdateWidget(index, dispW, units, fec, dataString, KnobData[index]);
-            kData->edata.lastTime = now;
+            kData->edata.lastTimeMs = QDateTime::currentMSecsSinceEpoch();
             kData->edata.initialize = false;
             displayCount++;
         }
@@ -653,7 +660,7 @@ float MutexKnobData::getHighestCountPV(QString &pv)
 void MutexKnobData::initHighestCountPV()
 {
     QMutexLocker locker(&mutex);
-    ftime(&monitorTiming);
+    monitorTimingMs = QDateTime::currentMSecsSinceEpoch();
     highestCount = 0;
 }
 
@@ -676,10 +683,7 @@ void MutexKnobData::timerEvent(QTimerEvent *)
     char units[40];
     char fec[40];
     char dataString[STRING_EXCHANGE_SIZE];
-    struct timeb now;
     int repetitionRate = DEFAULTRATE;
-
-    ftime(&now);
 
     // do we have something that should go faster then 5 Hz, then change timer, but change back when nothing fast requested
     for(int i=0; i < GetMutexKnobDataSize(); i++) {
@@ -692,18 +696,16 @@ void MutexKnobData::timerEvent(QTimerEvent *)
     if(repetitionRate != prvRepetitionRate) {
         killTimer(timerId);
         timerId = startTimer(1000/repetitionRate);
-        //qDebug() << repetitionRate << prvRepetitionRate << 1000/repetitionRate << "ms";
+        qCDebug(mutexKnobDataLog) << repetitionRate << prvRepetitionRate << 1000/repetitionRate << "ms";
         prvRepetitionRate = repetitionRate;
     }
 
     //int number = 0;
-    //qDebug() << "============================================";
     for(int i=0; i < GetMutexKnobDataSize(); i++) {
         knobData *kPtr = (knobData*) &KnobData[i];
 
         if(kPtr->index != -1) {
-            diff = ((double) now.time + (double) now.millitm / (double)1000) -
-                    ((double) kPtr->edata.lastTime.time + (double) kPtr->edata.lastTime.millitm / (double)1000);
+            diff = QDateTime::currentMSecsSinceEpoch() / 1000.0 - kPtr->edata.lastTimeMs / 1000.0;
             if(kPtr->edata.repRate < 1) repRate = 1;
             else repRate = kPtr->edata.repRate;
         }
@@ -714,7 +716,7 @@ void MutexKnobData::timerEvent(QTimerEvent *)
 
             int indx;
 
-            //qDebug() << "I am a soft channel" << "pv=" << kPtr->pv << "index" << kPtr->index << "object" << kPtr->dispName << "value" << kPtr->edata.rvalue ;
+            qCDebug(mutexKnobDataLog) << "I am a soft channel" << "pv=" << kPtr->pv << "index" << kPtr->index << "object" << kPtr->dispName << "value" << kPtr->edata.rvalue ;
             // get for this soft pv the index of the corresponding caCalc into the knobData array where the data were updated
             if(getSoftPV(kPtr->pv, &indx, (QWidget*) kPtr->thisW)) {
 
@@ -748,7 +750,7 @@ void MutexKnobData::timerEvent(QTimerEvent *)
                         kPtr->edata.ivalue = (int) ptr->edata.rvalue;
                         if(kPtr->edata.oldsoftvalue != ptr->edata.rvalue) {
                             update = true;
-                            //qDebug() << "update" << kPtr->pv << kPtr->dispName << "old value" << kPtr->edata.oldsoftvalue << "new value" << ptr->edata.rvalue;
+                            qCDebug(mutexKnobDataLog) << "update" << kPtr->pv << kPtr->dispName << "old value" << kPtr->edata.oldsoftvalue << "new value" << ptr->edata.rvalue;
                         }
                     }
 
@@ -804,7 +806,7 @@ void MutexKnobData::timerEvent(QTimerEvent *)
                 kPtr->edata.displayCount = kPtr->edata.monitorCount;
                 locker.unlock();
                 UpdateWidget(index, dispW, units, fec, dataString, KnobData[index]);
-                kPtr->edata.lastTime = now;
+                kPtr->edata.lastTimeMs = QDateTime::currentMSecsSinceEpoch();
                 kPtr->edata.initialize = false;
                 displayCount++;
             }
@@ -820,7 +822,7 @@ void MutexKnobData::timerEvent(QTimerEvent *)
                 // brake unconnected displays
                 if(kPtr->edata.unconnectCount == 0) {
                     kPtr->edata.displayCount = kPtr->edata.monitorCount;
-                    kPtr->edata.lastTime = now;
+                    kPtr->edata.lastTimeMs = QDateTime::currentMSecsSinceEpoch();
                     displayIt = true;
                 }
                 kPtr->edata.unconnectCount++;

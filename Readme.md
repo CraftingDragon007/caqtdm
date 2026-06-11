@@ -11,36 +11,34 @@ In case of existing MEDM files, these can be translated to Qt xml files by using
 ## Linux
 For building and installing caqtdm following requirements have to met:
 
-1. Qt 4.8.2
-2. Qwt 6.0.1
-3. EPICS 3.12.2
+1. Qt 5.15.9
+2. Qwt 6.2.0
+3. EPICS 3.14.12
 4. Designer
 
 or
 
-1. Qt 6.4
-2. Qwt 6.2.0
-3. EPICS 7.0.6
+1. Qt 6.10
+2. Qwt 6.3.0
+3. EPICS 7.0.10
 4. Designer
 
 The latest version of caQtDM has build and installation procedure working for several linux platforms. First you will have to unpack the tar archive, which will create the necessary directories and files. In the upper directory you will find the necessary procedures to build the package, run it locally without installing and also an installation procedure.
 
-  1. you will have to install Qt-4.8 and qwt-6 when they are not already installed. On modern systems Qt4 should already be installed, but the qt4-designer not necessarily and you should install it (eventually with sudo apt-get install qt4-designer). qwt is normally not installed and you should install this too.
+  1. you will have to install Qt and qwt when they are not already installed. On modern systems Qt5/6 should already be installed, but the qt4-designer not necessarily and you should install it (eventually with sudo apt-get install qt-designer). qwt is normally not installed and you should install this too.
 
   2. you will have to install EPICS
 
   3. all the environment variables used for the installation will be defined in the script caQtDM_Env. When some of the variables are already defined in your environment, the script will use them, otherwise they will be defined. It is up to you to edit this file and adapt the variables to your environment.
 
-  4. the script caQtDM_BuildAll will build you the package now into the directory ./caQtDM_Binaries. You should obtain there adl2ui, caQtDM, libqtcontrols.so and libcaQtDM_Lib.so as well as a designer directory containing 3 files `libqtcontrols*_plugin.so`. If you encounter a problem when building due to some environment variable problem or while not everything was installed before, you may correct your problem and run the script again. In case you want to cleanup you use the script caQtDM_CleanAll, which will also delete the resulting binaries.
+  4. the script caQtDM_BuildAll will build you the package now into the directory ./caQtDM_Binaries. You should obtain there adl2ui, caQtDM, libqtcontrols.so and libcaQtDM_Lib.so as well as a designer directory containing 4 files `libqtcontrols*_plugin.so`. If you encounter a problem when building due to some environment variable problem or while not everything was installed before, you may correct your problem and run the script again. In case you want to cleanup you use the script caQtDM_CleanAll, which will also delete the resulting binaries.
 
   5. you may try to install the package: the package should normally be installed in the EPICS extensions and the environment variables are pointing to them.
 
 Running caQtDM: when the package has been successfully build into the directory ./caQtDM_Binaries, you can start caQtDM by using the script startDM_Local
 and the qt4-designer by the script qtdesigner (all located in the main directory where you expanded the tar file). These scripts will set some important environment variables in order to set the path, the plugin_path and to point to the test directory provided with the package (./caQtDM_Tests). In this directory also the stylesheets are located to be used for a nice rendering. You may call the test.ui file with the above mentioned scripts. In order to test the display some EPICS channels have to be defined. This can be done by running a soft-ioc shell called with run-epics also provided in the test directory.
 
-In case you have qwt 6.1 you will have to use in caQtDM_QtControls/src the files qwt_thermo_marker_61.* instead of qwt_thermo_marker.*
-
-In case you already use Qt5.15 with qwt6.1.5 the building should also be straight forward.
+In case you have greater qwt 6.1 you will have to use in caQtDM_QtControls/src the files qwt_thermo_marker_61.* instead of qwt_thermo_marker.*
 
 good luck and enjoy
 
@@ -49,11 +47,11 @@ In case of problems, please contact Helge Brands at PSI.
 ## Windows
 To compile and run caQtDM on Windows following requirements have to be met:
 
-1. Qt 4.8.2 - Qt 6.4.0
-2. Qwt 6.0.1 - Qwt 6.2.0
-3. EPICS 7.0.6
-4. MS Visual Studio 2013 and MS Visual Studio 2019 
-5. Wix 3.0.5419.0
+1. Qt 5.15.9 - Qt 6.10.0
+2. Qwt 6.2.0 - Qwt 6.3.0
+3. EPICS 7.0.10
+4. MS Visual Studio 2019 and MS Visual Studio 2022 
+5. Wix 3.14
 
 With caQtDM_Env.bat you can configure your system. All setting which are needed will be taken from here.
 

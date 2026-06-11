@@ -3,6 +3,9 @@ name: caQtDM DEB Package Build
 on:
   workflow_dispatch:
   pull_request:
+    paths-ignore:
+      - 'caQtDM_docs/**'
+      - 'caQtDM_Tests/**'
   schedule: # Daily at 2am
     - cron: '0 2 * * *'
 
@@ -13,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ubuntu-version: [ubuntu-22.04, ubuntu-24.04]
+        ubuntu-version: [ubuntu-22.04, ubuntu-24.04, ubuntu-latest]
 
     permissions:
       contents: read
@@ -21,13 +24,13 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
 
     - name: Set up build environment
       run: |
         sudo apt-get update
         sudo apt-get install -y build-essential devscripts dh-make debhelper
-
+    
     - name: Install dependencies
       run: |
         sudo apt-get install -y \
@@ -63,19 +66,19 @@ jobs:
         sudo dpkg -i *.deb
 
     - name: Upload Qt OPC UA package as artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: qtopcua_deb-package-${{ matrix.ubuntu-version }}
         path: caQtDM_Viewer/package/debian/qtopcua/*.deb
 
     - name: Upload epics-base package as artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: epics-base_deb-package-${{ matrix.ubuntu-version }}
         path: caQtDM_Viewer/package/debian/epics-base/*.deb
 
     - name: Upload DEB package as artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: caqtdm_deb-package-${{ matrix.ubuntu-version }}
         path: caQtDM_Viewer/package/debian/caqtdm_qt5/*.deb

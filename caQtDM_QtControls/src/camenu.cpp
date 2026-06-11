@@ -31,6 +31,8 @@
 #include <QMouseEvent>
 #include <QApplication>
 
+Q_LOGGING_CATEGORY(caMenuLog, "caqtdm.widgets.camenu")
+
 caMenu::caMenu(QWidget *parent) : QComboBox(parent)
 {
     // to start with, clear the stylesheet, so that playing around
@@ -128,7 +130,7 @@ void caMenu::setColors(QColor bg, QColor fg)
     }
 
     if(thisStyle != oldStyle || thisColorMode != oldColorMode) {
-        //printf("caMenu style update %i %i (%i) %s\n",(thisStyle != oldStyle),(thisColorMode != oldColorMode), alarmstatus, qasc(this->objectName()));
+        qCDebug(caMenuLog) << "caMenu style update" << (thisStyle != oldStyle) << (thisColorMode != oldColorMode) << "(" << alarmstatus << ")" << this->objectName();
         setStyleSheet(thisStyle);
         oldStyle = thisStyle;
     }
@@ -326,10 +328,10 @@ bool caMenu::event(QEvent *e)
           setStyleSheet("");
           QString c=  palette().color(QPalette::Base).name();
           defBackColor = QColor(c);
-          //printf("default back color %s %s\n", qasc(c), qasc(this->objectName()));
+          qCDebug(caMenuLog) << "default back color" << c << this->objectName();
           c=  palette().color(QPalette::Text).name();
           defForeColor = QColor(c);
-          //printf("default fore color %s %s\n", qasc(c), qasc(this->objectName()));
+          qCDebug(caMenuLog) << "default fore color" << c << this->objectName();
 
           if(!defBackColor.isValid()) defBackColor = QColor(255, 248, 220, 255);
           if(!defForeColor.isValid()) defForeColor = Qt::black;

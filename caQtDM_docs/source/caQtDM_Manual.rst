@@ -3,10 +3,15 @@ caQtDM Manual
 ==============
 
 | **Anton Mezger/Helge Brands**
-| **May 2025**
+| **June 2026**
 | Paul Scherrer Institute
 | CH-5232 Villigen
 | Switzerland
+|
+| **and our co-worker:**
+| Yannik Wernle
+| Erik Schwarz
+| Julian Leon Houba
 
 About this manual
 -----------------
@@ -389,10 +394,9 @@ Development history
 The following list describe the new features and bug fixes for every
 release. You can follow the development history and detect if a bug in
 the used version has been solved.
-
 .. container::
 
-   4.6.0
+   4.6.1
    
 - update fix for unconnected Channels
 - ``%read`` command for cainclude and caRelatedDisplay
@@ -2895,6 +2899,8 @@ Using this plugin you can access archived data from archivers available through 
 The plugin fetches data for a certain interval, trying to fetch all of it at once. If that fails, it refetches the missing data.
 It always refetches in a certain interval, and if any previously fetched data is still in the current timeframe, it is kept, as to reduce duplication.
 
+Building:
+	This plugin is always built. It has no additional dependencies. SSL is activated if Qt supports it and the ``CAQTDM_SSL_IGNORE`` environment variable is not defined.
 Channel Handling:
 	The plugin is meant to serve data that is a mapping between time and values. Thus, the returned data can be retrieved using virtual channels.
 	So instead of simply using ``archiveHTTP://CHANNEL`` you can do e.g. ``archiveHTTP://CHANNEL.X`` to get a one-dimensional array of the x-values. 
@@ -2980,6 +2986,7 @@ OPC UA Plugin
 Usage: ``opcua://CHANNEL``
 
 This plugin allows for direct access to OPC UA endpoints from your client.
+
 For a channel, you may use any OPC UA connection string (for the node you want to access), it should include the protocol (This must be ``opc.tcp://``),  hostname and port.
 The first part after the port needs to be either ``/ns=`` or ``/i=``.
 So including the plugin prefix, this is e.g. ``opcua://opc.tcp://localhost:4840/ns=10;i=12345``
@@ -2995,6 +3002,11 @@ You can also utilize this to have dynamic resolutions based on different transla
 This means you can use macros to construct the simple identifier, which is then checked for in the translation table, but you cannot use macros in the resolution specified in the resolution table.
 All loaded OPC UA translations are displayed in the caQtDM message window upon startup. Those translations are **ONLY** loaded upon caQtDM launch. Reloads have no effect.
 
+Building:
+	This plugin is NOT built by default. It is built only if the ``CAQTDM_OPCUA`` environment variable is set to be not empty. When building, make sure Qt has the QtOpcUa module available.
+	For it to build with encryption, it is neccessary that the QtOpcUa module was built with encryption. You can check this by searching for X509* headers (They exist = QtOpcUa was built with encryption). This is also how caQtDM detects at build-time whether or not to include the encryption stuff.
+	Since by default QtOpcUa with encryption has a dependency on the dynamic loading of openssl libraries, make sure these are also available at runtime. In the GitHub pipelines, as well as the packaging scripts, you can see what needs to be available. For this, especially qopensslbackend needs to be active in the TLS module, as well as libcrypto and libssl from openssl v3+.
+
 Certificate Creation:
 	In Qt-6 the certificate (and other pki stuff) is generated when caQtDM is started without such a configuration already existing. In Qt-5 it is not possible to auto-generate a certificate, thus secure communication as described below is impossible.
 	You can, however, generate your own certificate using the bash script provided in ``caQtDM_Plugins/opcua/create_certificate.sh``. This requires OpenSSL to be available on your system to run.
@@ -3002,7 +3014,7 @@ Certificate Creation:
 	CAUTION: Qt-5 does also not show very good errors, so if you see weird errors or simply a ``BadConnectionClosed``, it may be that your client certificate needs to be trusted first by the server. Qt-6 has dedicated error handling for that.
 
 Secure Communication using Signing / Encryption:
-	If your client was built with an encryption-enabled plugin, it will try to establish a secure connection first. If an endpoint or your client doesn't support a secure connection, a regular one will be used.
+	If your client was built with an encryption-enabled plugin, and the environment variable ``CAQTDM_OPCUA_ENABLE_CERTIFICATE`` is not empty, it will try to establish a secure connection first. If an endpoint or your client doesn't support a secure connection, a regular one will be used.
 	Generally speaking, the client will go through all available endpoints, choosing the one with the highest security to establish a connection.
 	Encryption & signing keys are generated the first time the plugin is loaded and stored in your local app data location. For signing, you may have to trust the client's certificate on the server first. For that, see the ``Certificate Authentication`` section below.
 	Due to a limitation in Qt-OpcUa, connections are currently only possible to endpoints supporting SecurityPolicy#None. This is because QtOpcUa always uses that SecurityPolicy for the initial connection, while discovering available endpoints. So even if it's required, the actual communication won't use that SecurityPolicy, if another is available.
@@ -3092,6 +3104,8 @@ Reconnect:
 
 Configuration:
 	Look at the :ref:`environment variables <env.var>` for a look at possible configuration options.
+	Important: To use certificate operations, such as encryption via SSL, you need to explicitely set ``CAQTDM_OPCUA_ENABLE_CERTIFICATE`` to not be empty.
+	This is because then you will have to (for most OPCUA servers) add your certificate to the trusted list before being able to open a connection.
 
 General Properties
 ----------------------
@@ -3592,6 +3606,87 @@ A row is detected to be a header row, when:
 - It is equivalent to the already present header row
 - It's first value cannot be converted to the same datatype as the first value of the second row
 
+.. _logging:
+Logging
+~~~~~~~~~~~~~~~~~~~~~
+
+Logging is available for caQtDM and can be configured with environment variables listed below, starting with "CAQTDM_LOGGING".
+Additionally, the loglevel and the categories to log can be configured using the Qt environment variable ``QT_LOGGING_RULES``.
+If you e.g. only want to see logs from the widgets, you can set it to be "caqtdm.widgets*=true". If you only want plugins, you can use: "caqtdm.plugins*=true".
+By default, only loglevel QtInfoMsg and higher is logged. Values like the examples above enable all levels for the activated categories. To only activate a certain category, use
+e.g. "caqtdm.widgets*.debug=false;caqtdm.widgets*.info=true". As you see, it is also possible to add multiple rules with ";". For further information, look at the official Qt Documentation. <https://doc.qt.io/qt-6/qloggingcategory.html>
+Rules are evaluated from left to right.
+
+Some available categories are:
+
+``qt``
+   category containing all Qt logs
+
+``caqtdm``
+   category containing all caQtDM specific logs.
+
+``caqtdm.plugins``
+   subcategory for all plugin specific logs
+
+``caqtdm.lib``
+   subcategory for all logs related to the caQtDM_Lib subproject.
+
+``caqtdm.widgets``
+   subcategory for all logs related to caQtDM Widgets. caQtDM Lib also uses these categories for widget-specific messages emitted by it.
+
+``caqtdm.viewer``
+   subcategpry for all logs related to the caQtDM_Viewer subproject.
+
+There are many more subcategories, which you can find by searching for "Q_LOGGING_CATEGORY(" in the sourcecode .h/.cpp files.
+
+By default, logging is only active to the console, with loglevel info and higher active, and simple formatting. (See below in the environment variables sections on how to configure this)
+In total, there are the following logging handlers available:
+
+``console``
+   prints logs to the stdout/stderr. Active by default.
+
+``file``
+   saves logs in a logfile, whose size is configureable. The file is in the local app data directory, from Qts QStandardPaths::AppLocalDataLocation. New files are created on each startup.
+
+``syslog``
+   directly calls the syslog() library, only available on unix-like operating systems.
+
+``logstash``
+   calls a configurable HTTP endpoint with the logs (meant for logstash). Has a default URL, but that is not guaranteed to work/be retrievable. Use your own backend if possible.
+   There is an example config you can use for your logstash service to parse the logs and forward them to Elastic, which you can find in caQtDM_Viewer/src/logging/example.conf.
+
+It should be noted that both file and logstash logging handlers buffer by default (configurable), whereas console and syslog logging are synchronous.
+If you change logging settings, it could negatively affect the performance of your caQtDM instance, as more log messages produces more overhead.
+The following table represents the data that was experimentally measured in a benchmark in March 2026. It can guide you if you want to configure your caQtDM differently than the default.
+There is a column called "%" which measures the reference value compared to the default configuration, rounded to the nearest percentage.
+
++--------------------------+-------------+--------+-------+--------------------------------------------------------------+
+| CONFIGURATION            | AVG (ms)    | %      | RUNS  | DESCRIPTION                                                  |
++--------------------------+-------------+--------+-------+--------------------------------------------------------------+
+| default                  | 9836.71     | 100%   | 38    | No change of any involved environment variables              |
++--------------------------+-------------+--------+-------+--------------------------------------------------------------+
+| silent                   | 9873.33     | 100%   | 30    | All loghandlers removed, logging rules to discard everything |
++--------------------------+-------------+--------+-------+--------------------------------------------------------------+
+| local                    | 10173.00    | 103%   | 33    | Same as default, but with loghandlers: console, file         |
++--------------------------+-------------+--------+-------+--------------------------------------------------------------+
+| localAllInclQtVerb       | 235243.50   | 2391%  | 10    | Same as local, verbose console, logging rules are "*=true"   |
++--------------------------+-------------+--------+-------+--------------------------------------------------------------+
+| localAllInclQt           | 63523.91    | 646%   | 32    | Same as local, logging rules are "*=true"                    |
++--------------------------+-------------+--------+-------+--------------------------------------------------------------+
+| localDebug               | 24236.59    | 246%   | 34    | Same as local, logging rules are caqtdm*.debug and higher    |
++--------------------------+-------------+--------+-------+--------------------------------------------------------------+
+| localInfo                | 10315.24    | 105%   | 34    | Same as local, logging rules are caqtdm*.info and higher     |
++--------------------------+-------------+--------+-------+--------------------------------------------------------------+
+| localWarning             | 10260.94    | 104%   | 33    | Same as local, logging rules are caqtdm*.warning and higher  |
++--------------------------+-------------+--------+-------+--------------------------------------------------------------+
+| localCritical            | 10098.00    | 103%   | 25    | Same as local, logging rules are caqtdm*.critical and higher |
++--------------------------+-------------+--------+-------+--------------------------------------------------------------+
+| localFatal               | 9917.12     | 101%   | 40    | Same as local, logging rules are caqtdm*.fatal and higher    |
++--------------------------+-------------+--------+-------+--------------------------------------------------------------+
+
+Depending on your console (and of course the rest of your system, but the console is the biggest bottleneck with many logs.) these speeds may be different.
+This data was tested on window with CMD, caQtDM was observed to run quicker with the QtCreator "Application Output" default console.
+
 .. _env.var:
 Environment Variables
 ~~~~~~~~~~~~~~~~~~~~~
@@ -3603,6 +3698,8 @@ caQtDM uses the following environment variables:
 +------------------------------+-----------------------------------------------+
 | ``QT_PLUGIN_PATH``           | to find the plugins of qt and others          |
 +------------------------------+-----------------------------------------------+
+| ``QT_LOGGING_RULES``         | to configure loglevel and categories to log   |
++------------------------------+-----------------------------------------------+
 | ``EPICS_CA_ADDR_LIST``       | see EPICS Documentation                       |
 +------------------------------+-----------------------------------------------+
 | ``EPICS_CA_MAX_ARRAY_BYTES`` | see EPICS Documentation                       |
@@ -3610,65 +3707,89 @@ caQtDM uses the following environment variables:
 
 **from caQtDM:**
 
-+--------------------------------------+-----------------------------------------------+
-| ``CAQTDM_DISPLAY_PATH``              | A colon-separated (semi-colon-separated on    |
-|                                      | Mircosoft Windows) list of directories in     |
-|                                      | which to look for display files. Only looks   |
-|                                      | in the current working directory if not       |
-|                                      | specified. Related Displays have to be in     |
-|                                      | your current directory or in this path        |
-|                                      |                                               |
-+--------------------------------------+-----------------------------------------------+
-| ``CAQTDM_URL_DISPLAY_PATH``          | paths to look for ui and stylesheet files     | 
-|                                      | to download via http                          |
-+--------------------------------------+-----------------------------------------------+
-| ``CAQTDM_EXEC_LIST``                 | A list of commands for the Context Menu . See |
-|                                      | the :ref:`context.menu.customization` for     |
-|                                      | the format.                                   |
-+--------------------------------------+-----------------------------------------------+
-| ``MEDM_EXEC_LIST``                   | for backwards compatability                   |
-+--------------------------------------+-----------------------------------------------+
-| ``CAQTDM_LAUNCHFILE``                | Enviroment file for Mobile devices            |
-+--------------------------------------+-----------------------------------------------+
-| ``CAQTDM_TIMEOUT_HOURS``             | to exit caQtDM after some amount of time      |
-+--------------------------------------+-----------------------------------------------+
-| ``CAQTDM_FINDRECORD_DIRECT``         | override all other find record settings       |
-|                                      | (direct json http download)                   |
-+--------------------------------------+-----------------------------------------------+
-| ``CAQTDM_FINDRECORD_SRV``            | for autocompletion, the request URL           |
-+--------------------------------------+-----------------------------------------------+
-| ``CAQTDM_FINDRECORD_FACILITY``       | search limitation for a facility              |
-+--------------------------------------+-----------------------------------------------+
-| ``CAQTDM_FINDRECORD_LIMIT``          | search limit max number of entries            |
-+--------------------------------------+-----------------------------------------------+
-| ``CAQTDM_DEFAULT_UNIT_REPLACEMENTS`` | if set to "false", default unit replacements  |
-|                                      | are disabled.                                 |
-+--------------------------------------+-----------------------------------------------+
-| ``CAQTDM_CUSTOM_UNIT_REPLACEMENTS``  | define custom unit replacements. They are     |
-|                                      | replaced after default replacements took      |
-|                                      | place, if enabled.You can use unicode         |
-|                                      | characters or hexadecimal / decimal utf-8     |
-|                                      | character codes, seperated by (,) , (=)       |
-|                                      | and (;).                                      |
-+--------------------------------------+-----------------------------------------------+
-| ``CAQTDM_CSV_SEPARATOR``             | The CSV Separator used in certain operations. | 
-+--------------------------------------+-----------------------------------------------+
-| ``CAQTDM_SCREENSHOT_NAME``           | If caQtDM was started with -print this will   |
-|                                      | specify the name of the screenshot file       |
-+--------------------------------------+-----------------------------------------------+
-| ``CAQTDM_SUPPRESS_UPDATES_ONLOAD``   | Disables widgets from being updated while a   |
-|                                      | file is being opened. This can reduce load    |
-|                                      | times of big panels by more than 50%.         |
-|                                      | Values: "TRUE", "FALSE" , without quotes      |
-+--------------------------------------+-----------------------------------------------+
-| ``CAQTDM_CREATE_LOGFILE``            | If set to "TRUE", caQtDM will create a logfile|
-|                                      | containing all of the input from the message  |
-|                                      | window. If caQtDM exits successfully, this    |
-|                                      | file gets deleted after termination.          |
-+--------------------------------------+-----------------------------------------------+
-| ``CAQTDM_LOGFILE_PATH``              | This specifies the path where the logfile, if |
-|                                      | logging is active, will be stored.            |
-+--------------------------------------+-----------------------------------------------+
++------------------------------------------+-----------------------------------------------+
+| ``CAQTDM_DISPLAY_PATH``                  | A colon-separated (semi-colon-separated on    |
+|                                          | Mircosoft Windows) list of directories in     |
+|                                          | which to look for display files. Only looks   |
+|                                          | in the current working directory if not       |
+|                                          | specified. Related Displays have to be in     |
+|                                          | your current directory or in this path        |
+|                                          |                                               |
++------------------------------------------+-----------------------------------------------+
+| ``CAQTDM_URL_DISPLAY_PATH``              | paths to look for ui and stylesheet files     | 
+|                                          | to download via http                          |
++------------------------------------------+-----------------------------------------------+
+| ``CAQTDM_EXEC_LIST``                     | A list of commands for the Context Menu . See |
+|                                          | the :ref:`context.menu.customization` for     |
+|                                          | the format.                                   |
++------------------------------------------+-----------------------------------------------+
+| ``MEDM_EXEC_LIST``                       | for backwards compatability                   |
++------------------------------------------+-----------------------------------------------+
+| ``CAQTDM_LAUNCHFILE``                    | Enviroment file for Mobile devices            |
++------------------------------------------+-----------------------------------------------+
+| ``CAQTDM_TIMEOUT_HOURS``                 | to exit caQtDM after some amount of time      |
++------------------------------------------+-----------------------------------------------+
+| ``CAQTDM_FINDRECORD_DIRECT``             | override all other find record settings       |
+|                                          | (direct json http download)                   |
++------------------------------------------+-----------------------------------------------+
+| ``CAQTDM_FINDRECORD_SRV``                | for autocompletion, the request URL           |
++------------------------------------------+-----------------------------------------------+
+| ``CAQTDM_FINDRECORD_FACILITY``           | search limitation for a facility              |
++------------------------------------------+-----------------------------------------------+
+| ``CAQTDM_FINDRECORD_LIMIT``              | search limit max number of entries            |
++------------------------------------------+-----------------------------------------------+
+| ``CAQTDM_DEFAULT_UNIT_REPLACEMENTS``     | if set to "false", default unit replacements  |
+|                                          | are disabled.                                 |
++------------------------------------------+-----------------------------------------------+
+| ``CAQTDM_CUSTOM_UNIT_REPLACEMENTS``      | define custom unit replacements. They are     |
+|                                          | replaced after default replacements took      |
+|                                          | place, if enabled.You can use unicode         |
+|                                          | characters or hexadecimal / decimal utf-8     |
+|                                          | character codes, seperated by (,) , (=)       |
+|                                          | and (;).                                      |
++------------------------------------------+-----------------------------------------------+
+| ``CAQTDM_CSV_SEPARATOR``                 | The CSV Separator used in certain operations. | 
++------------------------------------------+-----------------------------------------------+
+| ``CAQTDM_SCREENSHOT_NAME``               | If caQtDM was started with -print this will   |
+|                                          | specify the name of the screenshot file       |
++------------------------------------------+-----------------------------------------------+
+| ``CAQTDM_SUPPRESS_UPDATES_ONLOAD``       | Disables widgets from being updated while a   |
+|                                          | file is being opened. This can reduce load    |
+|                                          | times of big panels by more than 50%.         |
+|                                          | Values: "TRUE", "FALSE" , without quotes      |
++------------------------------------------+-----------------------------------------------+
+| ``CAQTDM_LOGGING_HANDLERS``              | Overwrites which handlers process qDebugs.    |
+|                                          | If set to be empty, qDebugs are not processed.|
+|                                          | Can be a comma separated list of these:       |
+|                                          | console, file, syslog, logstash               |
++------------------------------------------+-----------------------------------------------+
+| ``CAQTDM_LOGGING_CONSOLE_NO_FLUSH``      | If not empty, console logs will not be flushed|
++------------------------------------------+-----------------------------------------------+
+| ``CAQTDM_LOGGING_CONSOLE_VERBOSE``       | If not empty, console logs will have more     |
+|                                          | infos than just the message, so context infos |
++------------------------------------------+-----------------------------------------------+
+| ``CAQTDM_LOGGING_FILE_COUNT``            | Specifies the maximum number of logfiles.     |
+|                                          | Each startup creates one under LOCALAPPDATA.  |
++------------------------------------------+-----------------------------------------------+
+| ``CAQTDM_LOGGING_FILE_SIZE``             | Specified the maximum logfile size.           |
+|                                          | The size may be exceeded by a bit.            |
++------------------------------------------+-----------------------------------------------+
+| ``CAQTDM_LOGGING_FILE_BUFFER_TIMEOUT``   | Specifies the timeout, in which the logfile   |
+|                                          | will be written to with all buffered logs.    |
++------------------------------------------+-----------------------------------------------+
+|``CAQTDM_LOGGING_FILE_BUFFER_SIZE``       | Specifies the amount of logs to buffer before |
+|                                          | writing to the file. Extends the timeout check|
++------------------------------------------+-----------------------------------------------+
+|``CAQTDM_LOGGING_LOGSTASH_URL``           | The full HTTP(s) API Endpoint to post logs to.|
++------------------------------------------+-----------------------------------------------+
+|``CAQTDM_LOGGING_LOGSTASH_BUFFER_TIMEOUT``| Same as for file-logging                      |
++------------------------------------------+-----------------------------------------------+
+|``CAQTDM_LOGGING_LOGSTASH_BUFFER_SIZE``   | Same as for file-logging                      |
++------------------------------------------+-----------------------------------------------+
+|``CAQTDM_LOGGING_INCLUDE_MESSAGEWINDOW``  | If not empty, message window logs are debugged|
++------------------------------------------+-----------------------------------------------+
+|``CAQTDM_NO_CUSTOM_LOGHANDLER``           | Build: disables building of custom logging.   |
++------------------------------------------+-----------------------------------------------+
 
 **from plugins:**
 
@@ -3705,7 +3826,7 @@ caQtDM uses the following environment variables:
 |                                       | opcua://CHANNEL specify CHANNEL=opc.tcp://restofuri       |
 |                                       | Each line in the file is a translation.                   |
 +---------------------------------------+-----------------------------------------------------------+
-| ``CAQTDM_OPCUA_DISABLE_CERTIFICATE``  | If set, endpoints with signing / encryption are ignored   |
+| ``CAQTDM_OPCUA_ENABLE_CERTIFICATE``   | If empty, endpoints with signing / encryption are ignored |
 +---------------------------------------+-----------------------------------------------------------+
 | ``CAQTDM_OPCUA_MAX_LATENCY``          | Max latency (ms) endpoints may have when trying to connect|
 +---------------------------------------+-----------------------------------------------------------+

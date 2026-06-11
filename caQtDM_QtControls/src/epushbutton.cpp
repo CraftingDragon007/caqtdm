@@ -28,6 +28,8 @@
 #include <QStyle>
 #include <QtDebug>
 
+Q_LOGGING_CATEGORY(ePushButtonLog, "caqtdm.widgets.epushbutton")
+
 EPushButton::EPushButton(const QString &text, QWidget * parent) : QPushButton(text, parent), FontScalingWidget(this)
 {
     installEventFilter(this);
@@ -85,7 +87,7 @@ QSize  EPushButton::minimumSizeHint() const
 
 QSize EPushButton::calculateTextSpace()
 {
-  //qDebug() << "EPushButton::calculateTextSpace(): button size " << size();
+  qCDebug(ePushButtonLog) << "EPushButton::calculateTextSpace(): button size " << size();
   QStyleOptionButton button;
   initStyleOption(&button);
   /* Use QStyle subControlRect() to retrieve the area containing the button label.
@@ -105,7 +107,5 @@ bool EPushButton::eventFilter(QObject *obj, QEvent *event)
             return true;
         }
     }
-
     return QObject::eventFilter(obj, event);
 }
-

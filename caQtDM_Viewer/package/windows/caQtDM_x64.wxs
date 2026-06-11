@@ -40,7 +40,7 @@
                             <?else?>
                             <?include $(sys.SOURCEFILEPATH)\..\caQtDM_Qt5_x64.wxi ?>
                             <?endif?>
-                            <Component Id="Epics_7.0.7.1" Guid="B7D7E8AE-F448-43F8-A68A-A35895605B8C" Win64="yes">
+                            <Component Id="Epics_7.0.10.1" Guid="B7D7E8AE-F448-43F8-A68A-A35895605B8C" Win64="yes">
                                 <File Id="CAREPEATER.EXE" Name="caRepeater.exe" Source="$(env.EPICS_BASE)\bin\$(env.EPICS_HOST_ARCH)\caRepeater.exe" />
                                 <File Id="CA.DLL" Name="ca.dll" Source="$(env.EPICS_BASE)\bin\$(env.EPICS_HOST_ARCH)\ca.dll" />
                                 <File Id="COM.DLL" Name="Com.dll" Source="$(env.EPICS_BASE)\bin\$(env.EPICS_HOST_ARCH)\Com.dll" />
@@ -51,7 +51,7 @@
                                 <File Id="NT.DLL" Name="nt.dll" Source="$(env.EPICS_BASE)\bin\$(env.EPICS_HOST_ARCH)\nt.dll" />
                             </Component>
                             <Component Id="ZMQ" Guid="6F1967A1-84CA-4BE4-85DC-8D1B75338BB7" Win64="yes">
-                                <File Id="LIBZMQ.DLL" Name="libzmq.dll" Source="$(env.ZMQ)\$(env.ZMQLIBRARY)" />
+                                <File Id="libzmq.dll" Name="$(env.ZMQLIBRARY)" Source="$(env.ZMQBIN)\$(env.ZMQLIBRARY)" />
                             </Component>
                             <Component Id="qwt_6.3.0" Guid="80321EF0-DC70-4D0A-8E0C-269502A0EACB" Win64="yes">
                                 <File Id="QWT.DLL" Name="qwt.dll" Source="$(env.QWTHOME)\lib\qwt.dll" />
@@ -69,8 +69,9 @@
                                 <IniFile Id="qt_conf_file3" Action="createLine" Key="Binaries" Name="qt.conf" Section="Paths" Value="bin/windows-x64/" Directory="INSTALLDIR_BIN" />
                                 <CreateFolder />
                             </Component>
-                            <Component Id="libcrypto" Guid="914403E8-EE23-4A59-8835-104D31D55BD2" Win64="yes">
-                                <File Id="LIBCRYPTO_3_X64.DLL" Name="libcrypto-3-x64.dll" Source="$(env.LIBCRYPTO)" />
+                            <Component Id="ssl" Guid="5FB57937-E4B0-4FEE-A498-22C6BECAD8A9" Win64="yes">
+                                <File Id="LIBSSL" Name="$(env.LIBSSL)" Source="$(env.SSLBIN)\$(env.LIBSSL)" />
+                                <File Id="LIBCRYPTO" Name="$(env.LIBCRYPTO)" Source="$(env.SSLBIN)\$(env.LIBCRYPTO)" />
                             </Component>
                         </Directory>
                     </Directory>
@@ -103,6 +104,7 @@
                                 <!---File Id="QOPENSSLBACKEND.DLL" Name="qopensslbackend.dll" Source="$(env.QTHOME)\plugins\tls\qopensslbackend.dll" /-->
                                 <File Id="QSCHANNELBACKEND.DLL" Name="qschannelbackend.dll" Source="$(env.QTHOME)\plugins\tls\qschannelbackend.dll" />
                                 <File Id="QCERTONLYBACKEND.DLL" Name="qcertonlybackend.dll" Source="$(env.QTHOME)\plugins\tls\qcertonlybackend.dll" />
+                                <File Id="QOPENSSLBACKEND.DLL" Name="qopensslbackend.dll" Source="$(env.QTHOME)\plugins\tls\qopensslbackend.dll" />
                             </Component>
                         </Directory>
                         <?endif?>
@@ -177,7 +179,7 @@
             <?else?>
             <ComponentRef Id="Qt_5.15.0" />
             <?endif?>
-            <ComponentRef Id="Epics_7.0.7.1" />
+            <ComponentRef Id="Epics_7.0.10.1" />
             <ComponentRef Id="qwt_6.3.0" />
             <ComponentRef Id="CaQtDM" />
             <ComponentRef Id="designer" />
@@ -191,8 +193,8 @@
             <ComponentRef Id="qt_conf" />
             <ComponentRef Id="controlsystems" />
             <ComponentRef Id="ZMQ" />
-            <ComponentRef Id="libcrypto" />
             <ComponentRef Id="open62541_backend" />
+            <ComponentRef Id="ssl" />
         </Feature>
     </Product>
 </Wix>

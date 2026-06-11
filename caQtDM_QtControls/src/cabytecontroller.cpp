@@ -27,6 +27,8 @@
 #include "alarmdefs.h"
 #include <QGridLayout>
 
+Q_LOGGING_CATEGORY(caByteControllerLog, "caqtdm.widgets.cabytecontroller");
+
 caByteController::caByteController(QWidget *parent) : QWidget(parent)
 {
     // to start with, clear the stylesheet, so that playing around
@@ -156,10 +158,13 @@ void caByteController::drawByte(long lvalue, QColor trueColor, QColor falseColor
 void caByteController::setColor(int indx, QColor c, QColor text)
 {
     if(prvColor[indx] == c && prvTextcolor[indx] == text) return;
-    //printf("setcolors indx=%d c=%d %d %d prv=%d %d %d text=%d %d %d prv=%d %d %d\n", indx, c.red(), c.green(), c.blue(),
-    //                                                                       prvColor[indx].red(), prvColor[indx].green(), prvColor[indx].blue(),
-    //                                                                       text.red(), text.green(), text.blue(),
-    //                                                                       prvTextcolor[indx].red(), prvTextcolor[indx].green(), prvTextcolor[indx].blue());
+    qCDebug(caByteControllerLog)
+        << "setcolors"
+        << "indx=" << indx
+        << "c=" << c.red() << c.green() << c.blue()
+        << "prv=" << prvColor[indx].red() << prvColor[indx].green() << prvColor[indx].blue()
+        << "text=" << text.red() << text.green() << text.blue()
+        << "prv=" << prvTextcolor[indx].red() << prvTextcolor[indx].green() << prvTextcolor[indx].blue();
     prvColor[indx] = c;
     prvTextcolor[indx] = text;
 

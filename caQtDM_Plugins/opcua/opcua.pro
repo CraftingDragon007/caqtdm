@@ -23,14 +23,11 @@ INCLUDEPATH    += ../
 INCLUDEPATH    += ../../caQtDM_Lib/src
 INCLUDEPATH    += ../../caQtDM_QtControls/src
 
-HEADERS         = ../controlsinterface.h \
+HEADERS         = ../controlsinterface.h ../caQtDM_Plugins_global.h \
     opcua_plugin.h opcua_core.h
 SOURCES         = \
     opcua_plugin.cpp opcua_core.cpp
 TARGET          = opcua_plugin
-android {
-   INCLUDEPATH += $(ANDROIDFUNCTIONSINCLUDE)
-}
 
 contains(DEFINES, QT_OPCUA_X509) {
     HEADERS += certificatedialog.h \

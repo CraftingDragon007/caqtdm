@@ -184,7 +184,7 @@ limitsCartesianplotDialog::limitsCartesianplotDialog(caCartesianPlot *w, MutexKn
     xmax = xmaxLineEdit->text().trimmed();
     (void) xmax.toDouble(&ok2);
     if((!ok1 || !ok2) && (CartesianPlot->getXscaling() == caCartesianPlot::Channel)) {
-        qDebug() << "not valid values, probably channels";
+        qCDebug(caCartesianPlotLog) << "not valid values, probably channels";
         xComboBox->setEnabled(false);
         xminLineEdit->setEnabled(false);
         xmaxLineEdit->setEnabled(false);
@@ -194,7 +194,7 @@ limitsCartesianplotDialog::limitsCartesianplotDialog(caCartesianPlot *w, MutexKn
     ymax = ymaxLineEdit->text();
     (void) ymax.toDouble(&ok2);
     if((!ok1 || !ok2) && (CartesianPlot->getYscaling() == caCartesianPlot::Channel)) {
-        qDebug() << "not valid values, probably channels";
+        qCDebug(caCartesianPlotLog) << "not valid values, probably channels";
         yComboBox->setEnabled(false);
         yminLineEdit->setEnabled(false);
         ymaxLineEdit->setEnabled(false);
@@ -259,20 +259,20 @@ void limitsCartesianplotDialog::applyClicked()
     // set x scale
     if(indx == 0) { // auto
         CartesianPlot->setXscaling(caCartesianPlot::Auto);
-        qDebug() << "set xlimits to auto";
+        qCDebug(caCartesianPlotLog) << "set xlimits to auto";
     } else if(indx == 1) { // channel
         CartesianPlot->setXscaling(caCartesianPlot::Channel);
-        qDebug() << "set xlimits to channel";
+        qCDebug(caCartesianPlotLog) << "set xlimits to channel";
         QString pvs = CartesianPlot->getPV(0);
         QStringList vars = pvs.split(";");
         if((vars.size()== 2) || (vars.at(0).trimmed().length() > 0)) {
             knobData *kPtr = monData->getMutexKnobDataPV(CartesianPlot, vars.at(0).trimmed());
              if(kPtr != (knobData*) Q_NULLPTR) {
                 if(kPtr->edata.lower_disp_limit != kPtr->edata.upper_disp_limit) {
-                    qDebug() << "set to channel limits" << kPtr->edata.lower_disp_limit << kPtr->edata.upper_disp_limit;
+                    qCDebug(caCartesianPlotLog) << "set to channel limits" << kPtr->edata.lower_disp_limit << kPtr->edata.upper_disp_limit;
                     CartesianPlot->setScaleX(kPtr->edata.lower_disp_limit, kPtr->edata.upper_disp_limit);
                 } else {
-                    //qDebug() << "set to auto";
+                    qCDebug(caCartesianPlotLog) << "set to auto";
                     CartesianPlot->setXscaling(caCartesianPlot::Auto);
                     m_channelScalingWasReset = true;
                 }
@@ -281,7 +281,7 @@ void limitsCartesianplotDialog::applyClicked()
 
     } else if(indx == 2) { // user
         CartesianPlot->setXscaling(caCartesianPlot::User);
-        qDebug() << "set xlimits to" << xLimits;
+        qCDebug(caCartesianPlotLog) << "set xlimits to" << xLimits;
         CartesianPlot->setXaxisLimits(xLimits);
     }
 
@@ -297,10 +297,10 @@ void limitsCartesianplotDialog::applyClicked()
             knobData *kPtr = monData->getMutexKnobDataPV(CartesianPlot, vars.at(1).trimmed());
              if(kPtr != (knobData*) Q_NULLPTR) {
                 if(kPtr->edata.lower_disp_limit != kPtr->edata.upper_disp_limit) {
-                    //qDebug() << "set to channel limits" << kPtr->edata.lower_disp_limit << kPtr->edata.upper_disp_limit;
+                    qCDebug(caCartesianPlotLog) << "set to channel limits" << kPtr->edata.lower_disp_limit << kPtr->edata.upper_disp_limit;
                     CartesianPlot->setScaleY(kPtr->edata.lower_disp_limit, kPtr->edata.upper_disp_limit);
                 } else {
-                    //qDebug() << "set to auto";
+                    qCDebug(caCartesianPlotLog) << "set to auto";
                     CartesianPlot->setYscaling(caCartesianPlot::Auto);
                     m_channelScalingWasReset = true;
                 }
@@ -308,7 +308,7 @@ void limitsCartesianplotDialog::applyClicked()
         }
     } else if(indy == 2) { // user
         CartesianPlot->setYscaling(caCartesianPlot::User);
-        qDebug() << "set ylimits to" << yLimits;
+        qCDebug(caCartesianPlotLog) << "set ylimits to" << yLimits;
         CartesianPlot->setYaxisLimits(yLimits);
     }
 

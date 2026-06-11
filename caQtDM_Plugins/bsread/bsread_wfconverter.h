@@ -19,6 +19,7 @@
 #include "mutexKnobData.h"
 #include "bsread_channeldata.h"
 #include "bsread_wfblockconverter.h"
+#include "caQtDM_Plugins_global.h"
 
 #ifndef QT_NO_CONCURRENT
 #include <QtConcurrentRun>
@@ -28,7 +29,7 @@
 
 
 template <class T_BSREAD,class T_CAQTDM>
-class bsread_wfConverter
+class CAQTDM_PLUGINSSHARED_EXPORT bsread_wfConverter
 {
 private:
     knobData* kDataP;
@@ -146,33 +147,17 @@ public:
 #else
                     Sectors.addFuture(QtConcurrent::run(&bsread_wfConverter::ConProcess,this,sector,threadcounter,ptr,elementcount,target));
 #endif
-
-
-
                 }
                 Sectors.waitForFinished();
-                //printf("Image timer : %d milliseconds \n",timer.elapsed());
-
-
+                //qCDebug(bsreadLog) << "Image timer :" << "timer.elapsed() << "milliseconds";
     #else
                 ConProcess(1,1,ptr,elementcount,target);
     #endif
-
-
-
             }
-
-            //qDebug() << "convert timer :" <<  timer.elapsed() << "milliseconds";
-
+            //qCDebug(bsreadLog) << "convert timer :" <<  timer.elapsed() << "milliseconds";
           }
       }
     }
 };
-
-
-
-
-
-
 #endif // BSREAD_WFCONVERTER_H
 

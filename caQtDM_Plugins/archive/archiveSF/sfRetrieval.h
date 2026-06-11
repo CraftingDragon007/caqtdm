@@ -32,12 +32,7 @@
 #include <QTableWidget>
 #include <QMessageBox>
 #include <QEventLoop>
-
-//#define CSV 1
-
-#ifndef CSV
-#include "JSON.h"
-#endif
+#include "caQtDM_Plugins_global.h"
 
 class QNetworkAccessManager;
 
@@ -50,7 +45,7 @@ public:
     ~sfRetrieval() {
         X.clear();
         Y.clear();
-        //qDebug() << this << "destructor" << PV;
+        qCDebug(archiveSFLog) << this << "destructor" << PV;
     }
     bool requestUrl(const QUrl url, const QByteArray &json, int secondsPast, bool binned, bool timeAxis, QString key);
     const QString lastError();

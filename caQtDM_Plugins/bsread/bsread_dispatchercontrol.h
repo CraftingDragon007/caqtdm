@@ -42,14 +42,19 @@ typedef struct{
  int     index;
 }channelstruct;
 
-
-
 class QNetworkAccessManager;
 
-class bsread_dispatchercontrol : public QObject
+#ifdef UNIT_TESTING
+#define bsread_dispatchercontrol bsread_dispatchercontrol_TEST
+#endif
+
+class CAQTDM_PLUGINSSHARED_EXPORT bsread_dispatchercontrol : public QObject
 {
 Q_OBJECT
 
+#ifdef UNIT_TESTING
+public:
+#endif
     int filldispatcherchannels(QString channel);
     int filldispatcherchannels2(bsread_internalchannel *channel,int index);
 
@@ -58,6 +63,7 @@ Q_OBJECT
 public:
     bsread_dispatchercontrol();
     ~bsread_dispatchercontrol();
+
     int set_Dispatcher(QString *dispatcher);
 
     int add_Channel(QString channel,int index);
@@ -78,17 +84,24 @@ public:
 signals:
     //void requestFinished();
     void finished();
-private slots:
 public slots:
    void finishReplyConnect();
    void finishReplyDelete();
    void finishVerification();
    void process();
 
+#ifndef UNIT_TESTING
 private:
+#else
+public:
+#endif
    void setTerminate();
 
+#ifndef UNIT_TESTING
 protected:
+#else
+   public:
+#endif
 
   QString Dispatcher;
   MessageWindow *messagewindowP;

@@ -398,6 +398,6 @@ void caMeter::setAlarmColors(short status, bool force)
     }
 
 }
-#ifndef MOBILE
+//#ifndef MOBILE
 #include "moc_cameter.cpp"
-#endif
+//#endif

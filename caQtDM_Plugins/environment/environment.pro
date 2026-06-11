@@ -17,13 +17,10 @@ CONFIG         += plugin
 INCLUDEPATH    += .
 INCLUDEPATH    += ../
 INCLUDEPATH    += ../../caQtDM_Lib/src
+INCLUDEPATH    += ../../caQtDM_QtControls/src
 
-HEADERS         = environment_plugin.h ../controlsinterface.h
+HEADERS         = environment_plugin.h ../controlsinterface.h ../caQtDM_Plugins_global.h
 
 SOURCES         = environment_plugin.cpp
 
 TARGET          = environment_plugin
-
-android {
-   INCLUDEPATH += $(ANDROIDFUNCTIONSINCLUDE)
-}

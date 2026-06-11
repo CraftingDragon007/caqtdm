@@ -30,7 +30,6 @@
 #include <QString>
 #include <QtPlugin>
 
-
 class ControlsInterface
 
 {

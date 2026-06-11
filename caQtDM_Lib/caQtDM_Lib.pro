@@ -27,7 +27,7 @@ contains(QT_VER_MAJ, 5) {
 }
 
 contains(QT_VER_MAJ, 6) {
-    QT += widgets  uitools opengl
+    QT += widgets  uitools opengl xml
     !ios:!android {
        message("caQtDM_Lib -- printsupport added")
        QT += printsupport
@@ -57,7 +57,6 @@ INCLUDEPATH += $(QWTINCLUDE)
 INCLUDEPATH += $(EPICSINCLUDE)
 
 android {
-   INCLUDEPATH += $(ANDROIDFUNCTIONSINCLUDE)
    QMAKE_CXXFLAGS += "-g"
    QMAKE_CFLAGS_RELEASE += "-g"
 }

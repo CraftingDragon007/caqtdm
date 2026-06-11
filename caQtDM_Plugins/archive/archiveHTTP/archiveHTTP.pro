@@ -28,15 +28,12 @@ INCLUDEPATH    += ../../../caQtDM_Lib/src
 INCLUDEPATH    += ../../../caQtDM_QtControls/src/
 INCLUDEPATH    += $(QWTINCLUDE)
 
-android {
-   INCLUDEPATH += $(ANDROIDFUNCTIONSINCLUDE)
-}
-
 HEADERS         = ../../controlsinterface.h \
+    ../../caQtDM_Plugins_global.h \
     archivehttp_plugin.h \
 	httpretrieval.h \
 	../archiverGeneral.h \
-	httpperformancedata.h \
+    httpperformancedata.h \
     urlhandlerhttp.h \
     workerHttp.h \
     workerHttpThread.h

@@ -28,12 +28,12 @@
 #include "zmq.h"
 #include "bsread_decode.h"
 #include "bsread_dispatchercontrol.h"
+#include "caQtDM_Plugins_global.h"
 
 // as defined in knobDefines.h
 //caType {caSTRING	= 0, caINT = 1, caFLOAT = 2, caENUM = 3, caCHAR = 4, caLONG = 5, caDOUBLE = 6};
 
-// this demo plugin just gives you an idea how to use a plugin; for more details you should take a look
-// at the epics3 plugin
+Q_LOGGING_CATEGORY(bsreadLog, "caqtdm.plugins.bsread")
 
 // gives the plugin name back
 QString bsreadPlugin::pluginName()
@@ -44,7 +44,7 @@ QString bsreadPlugin::pluginName()
 // constructor
 bsreadPlugin::bsreadPlugin()
 {
-    qDebug() << "bsreadPlugin: Create";
+    qCDebug(bsreadLog) << "bsreadPlugin: Create";
     DispatcherThread=Q_NULLPTR;
     Dispatcher=Q_NULLPTR;
     DispatcherThread=new QThread(this);
@@ -108,8 +108,8 @@ int bsreadPlugin::initCommunicationLayer(MutexKnobData *data, MessageWindow *mes
 {
     int i;
     //Q_UNUSED(options);
-    //qDebug() << "bsreadPlugin: InitCommunicationLayer" << data;
-    qDebug() << "bsreadPlugin: InitCommunicationLayer with options" << options;
+    qCDebug(bsreadLog) << "bsreadPlugin: InitCommunicationLayer" << data;
+    qCDebug(bsreadLog) << "bsreadPlugin: InitCommunicationLayer with options" << options;
 
     mutexknobdataP = data;
     messagewindowP = messageWindow;
@@ -135,7 +135,7 @@ int bsreadPlugin::initCommunicationLayer(MutexKnobData *data, MessageWindow *mes
                 DispatcherThread->start();
             }
         }
-        //qDebug() << "Start Status:" <<DispatcherThread->isFinished();
+        qCDebug(bsreadLog) << "Start Status:" <<DispatcherThread->isFinished();
 
     }else{
         QString msg="Using Manual BSREAD Connection";
@@ -157,6 +157,7 @@ int bsreadPlugin::initCommunicationLayer(MutexKnobData *data, MessageWindow *mes
                 bsreadThreads.append(new QThread(this));
                 bsreadconnections.last()->setKnobData(mutexknobdataP);
                 bsreadconnections.last()->moveToThread(bsreadThreads.last());
+                bsreadconnections.last()->setTerminate(false);
                 connect(bsreadThreads.last(), SIGNAL(started()), bsreadconnections.last(), SLOT(process()));
                 connect(bsreadconnections.last(), SIGNAL(finished()), bsreadThreads.last(), SLOT(quit()));
                 connect(bsreadThreads.last(), SIGNAL(finished()), bsreadThreads.last(), SLOT(deleteLater()));
@@ -186,7 +187,7 @@ int bsreadPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip) {
 
     int i;
     QMutexLocker locker(&mutex);
-    //qDebug() << "bsreadPlugin:pvAddMonitor" << kData->pv << kData->index << kData;
+    qCDebug(bsreadLog) << "bsreadPlugin:pvAddMonitor" << kData->pv << kData->index << kData;
 
     //remove EPICS addjustment parameter
     QString datapv=kData->pv;
@@ -215,7 +216,7 @@ int bsreadPlugin::pvClearMonitor(knobData *kData) {
 
     QMutexLocker locker(&mutex);
     Dispatcher->rem_Channel(QString(kData->pv),kData->index);
-    //qDebug() << "bsreadPlugin:pvClearMonitor" << kData << kData->pv << kData->index <<bsreadconnections.size();
+    qCDebug(bsreadLog) << "bsreadPlugin:pvClearMonitor" << kData << kData->pv << kData->index <<bsreadconnections.size();
     while (i<bsreadconnections.size()){
         bsreadconnections.at(i)->bsread_DataMonitorUnConnect(kData);
 		i++;
@@ -224,7 +225,7 @@ int bsreadPlugin::pvClearMonitor(knobData *kData) {
 }
 int bsreadPlugin::pvFreeAllocatedData(knobData *kData)
 {
-    //qDebug() << "DemoPlugin:pvFreeAllocatedData";
+    qCDebug(bsreadLog) << "DemoPlugin:pvFreeAllocatedData";
     if (kData->edata.info != (void *) Q_NULLPTR) {
         free(kData->edata.info);
         kData->edata.info = (void*) Q_NULLPTR;
@@ -243,7 +244,7 @@ int bsreadPlugin::pvSetValue(char *pv, double rdata, int32_t idata, char *sdata,
     Q_UNUSED(errmess);
     Q_UNUSED(object);
     QMutexLocker locker(&mutex);
-    //qDebug() << "bsreadPlugin:pvSetValue" << pv << rdata << idata << sdata;
+    qCDebug(bsreadLog) << "bsreadPlugin:pvSetValue" << pv << rdata << idata << sdata;
     return Dispatcher->set_Channel(pv,rdata,idata,sdata,object,errmess,forceType);
 }
 
@@ -260,79 +261,79 @@ int bsreadPlugin::pvSetWave(char *pv, float *fdata, double *ddata, int16_t *data
     Q_UNUSED(errmess);
 
     QMutexLocker locker(&mutex);
-    qDebug() << "bsreadPlugin:pvSetWave";
+    qCDebug(bsreadLog) << "bsreadPlugin:pvSetWave";
     return false;
 }
 
 // caQtDM_Lib will call this routine for getting a description of the monitor
 int bsreadPlugin::pvGetTimeStamp(char *pv, char *timestamp) {
     Q_UNUSED(pv);
-    qDebug() << "bsreadPlugin:pvgetTimeStamp";
-    strcpy(timestamp, "timestamp in epics format");
+    qCDebug(bsreadLog) << "bsreadPlugin:pvgetTimeStamp";
+    qstrncpy(timestamp, "timestamp in epics format", TIMESTAMP_STRING_LENGTH);
     return true;
 }
 
 // caQtDM_Lib will call this routine for getting the timestamp for this monitor
 int bsreadPlugin::pvGetDescription(char *pv, char *description) {
     Q_UNUSED(pv);
-    qDebug() << "bsreadPlugin:pvGetDescription";
-    strcpy(description, "no Description available BSREAD data transfer");
+    qCDebug(bsreadLog) << "bsreadPlugin:pvGetDescription";
+    qstrncpy(description, "no Description available BSREAD data transfer", MAX_STRING_LENGTH);
     return true;
 }
 
 // next routines are used to stop and restart the dataacquisition (used in case of tabWidgets in the display)
 int bsreadPlugin::pvClearEvent(void * ptr) {
     Q_UNUSED(ptr);
-    qDebug() << "bsreadPlugin:pvClearEvent";
+    qCDebug(bsreadLog) << "bsreadPlugin:pvClearEvent";
     return true;
 }
 
 int bsreadPlugin::pvAddEvent(void * ptr) {
     Q_UNUSED(ptr);
-    qDebug() << "bsreadPlugin:pvAddEvent";
+    qCDebug(bsreadLog) << "bsreadPlugin:pvAddEvent";
     return true;
 }
 
 // next routines are used to Connect and disconnect monitors
 int bsreadPlugin::pvReconnect(knobData *kData) {
      Q_UNUSED(kData);
-    qDebug() << "bsreadPlugin:pvReconnect";
+    qCDebug(bsreadLog) << "bsreadPlugin:pvReconnect";
     return true;
 }
 
 int bsreadPlugin::pvDisconnect(knobData *kData) {
     Q_UNUSED(kData);
-    qDebug() << "bsreadPlugin:pvDisconnect";
+    qCDebug(bsreadLog) << "bsreadPlugin:pvDisconnect";
     return true;
 }
 
 // flush any io
 int bsreadPlugin::FlushIO() {
-    //qDebug() << "bsreadPlugin:FlushIO";
+    qCDebug(bsreadLog) << "bsreadPlugin:FlushIO";
     return true;
 }
 
 // termination
 int bsreadPlugin::TerminateIO() {
-    //qDebug() << "bsreadPlugin:TerminateIO";
+    qCDebug(bsreadLog) << "bsreadPlugin:TerminateIO";
     timerValues->stop();
     timer->stop();
     return true;
 }
 
 void bsreadPlugin::closeEvent(){
-    //qDebug() << "bsreadPlugin:closeEvent ";
+    qCDebug(bsreadLog) << "bsreadPlugin:closeEvent ";
     emit closeSignal();
     if (Dispatcher){
-        //qDebug() << "start Dispatcher->setTerminate(); ";
+        qCDebug(bsreadLog) << "start Dispatcher->setTerminate(); ";
         Dispatcher->initiateShutdown();
-        //qDebug() << "END Dispatcher->setTerminate(); ";
+       qCDebug(bsreadLog) << "END Dispatcher->setTerminate(); ";
     }
     if (DispatcherThread){
-        //qDebug() << "start DispatcherThread ";
+        qCDebug(bsreadLog) << "start DispatcherThread ";
         DispatcherThread->exit();
         DispatcherThread->wait();
-        //qDebug() << "end DispatcherThread ";
+        qCDebug(bsreadLog) << "end DispatcherThread ";
     }
     if (bsreadThreads.count()>0){
         bsreadconnections.last()->setTerminate();
