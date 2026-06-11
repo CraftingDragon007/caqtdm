@@ -40,8 +40,6 @@
 #include <QCompleter>
 #include <qtcontrols_global.h>
 #include <QtControls>
-#include "JSON.h"
-#include "JSONValue.h"
 #include "textedit.h"
 #include "networkmodel.h"
 
@@ -55,6 +53,10 @@
 #define arrayToolTip "This epics filter is used to retrieve parts of an array (subarrays and strided subarrays)."
 #define rateToolTip "This caQtDM filter is used to limit the maximum display rate of a channel/pv (in Hz)"
 
+#ifdef UNIT_TESTING
+#define PVDialog PVDialog_TEST
+#define QTCON_EXPORT
+#endif
 
 class QTCON_EXPORT PVDialog : public QDialog
 {
@@ -66,13 +68,20 @@ public:
 
     QSize sizeHint() const;
 
+#ifndef UNIT_TESTING
 private slots:
+#else
+public slots:
+#endif
     void saveState();
 
+#ifndef UNIT_TESTING
 private:
+#else
+public:
+#endif
 
     void print_out(const wchar_t *output);
-    wchar_t* converToWChar_t(QString text);
 
     QWidget *thisWidget;
     QCheckBox *dbndCheckBox, *arrayCheckBox, *syncCheckBox, *rateCheckBox, *tsCheckBox, *decCheckBox;

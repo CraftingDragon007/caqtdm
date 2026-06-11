@@ -13,6 +13,9 @@ on:
         default: Development
         type: string
   pull_request:
+    paths-ignore:
+      - 'caQtDM_docs/**'
+      - 'caQtDM_Tests/**'
   schedule:
     - cron: '0 2 * * *'
 

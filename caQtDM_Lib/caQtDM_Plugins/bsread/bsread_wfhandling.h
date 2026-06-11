@@ -8,9 +8,9 @@
 #include "knobData.h"
 #include "mutexKnobData.h"
 #include "bsread_channeldata.h"
+#include "caQtDM_Plugins_global.h"
 
-
-class bsread_wfhandling :public QObject, public QRunnable
+class CAQTDM_PLUGINSSHARED_EXPORT bsread_wfhandling :public QObject, public QRunnable
 {
     Q_OBJECT
     void run()

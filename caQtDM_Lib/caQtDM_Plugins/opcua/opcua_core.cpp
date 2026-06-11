@@ -29,7 +29,7 @@
 #include <QOpcUaErrorState>
 #include <QStandardPaths>
 #include <QTimer>
-#include "loggingcategories.h"
+#include "caQtDM_Plugins_global.h"
 #include "qdir.h"
 #include "qmetaobject.h"
 #include "qopcuaauthenticationinformation.h"

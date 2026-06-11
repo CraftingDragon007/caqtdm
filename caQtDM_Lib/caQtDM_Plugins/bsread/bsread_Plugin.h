@@ -48,7 +48,7 @@
 #endif
 #endif
 
-class Q_DECL_EXPORT bsreadPlugin : public QObject, ControlsInterface
+class CAQTDM_PLUGINSSHARED_EXPORT bsreadPlugin : public QObject, ControlsInterface
 {
     Q_OBJECT
     Q_INTERFACES(ControlsInterface)

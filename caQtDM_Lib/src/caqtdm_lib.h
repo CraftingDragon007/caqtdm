@@ -65,7 +65,6 @@
 #include <cahmiconfigtransferitem.h>
 #include <hmiapplicationeventfilter.h>
 #include <QClipboard>
-#include <QPointer>
 
 #include <QUiLoader>
 
@@ -77,7 +76,6 @@
 #include "mutexKnobDataWrapper.h"
 #include "MessageWindow.h"
 #include "messageWindowWrapper.h"
-#include "JSON.h"
 #include "limitsStripplotDialog.h"
 #include "limitsCartesianplotDialog.h"
 #include "limitsDialog.h"
@@ -92,6 +90,12 @@
 #include "caqtdm_lib_interface.h"
 
 #include <QtControls>
+
+#ifdef MOBILE
+#include <QGestureEvent>
+#include <QTapAndHoldGesture>
+#include "fingerswipegesture.h"
+#endif
 
 #include <QMenuBar>
 
@@ -110,6 +114,11 @@ enum macro_parser{
 namespace Ui {
 class CaQtDM_Lib;
 }
+
+#ifdef UNIT_TESTING
+#define CaQtDM_Lib CaQtDM_Lib_TEST
+#define CAQTDM_LIBSHARED_EXPORT
+#endif
 
 class CAQTDM_LIBSHARED_EXPORT CaQtDM_Lib : public QMainWindow, public CaQtDM_Lib_Interface
 {
@@ -144,6 +153,10 @@ public:
     // ZHW requested for external integration - allow an external application/object to get the top level ui widget of caQtDM_Lib window
     QWidget* getMyWidget(){ return myWidget; }
     // interface finish (perhaps we need more)
+
+#ifdef MOBILE
+    void grabSwipeGesture(Qt::GestureType fingerSwipeGestureTypeID);
+#endif
 
 #if defined(linux) || defined(__FreeBSD__)
     QString getDefaultPrinterFromSystem() {
@@ -271,7 +284,11 @@ public:
         }
     }
 
+#ifndef UNIT_TESTING
 protected:
+#else
+public:
+#endif
     virtual void timerEvent(QTimerEvent *e);
     void resizeEvent ( QResizeEvent * event );
     void mousePressEvent(QMouseEvent *event);
@@ -283,13 +300,19 @@ signals:
     void Signal_QLineEdit(const QString&, const QString&);
     void Signal_OpenNewWFile(const QString&, const QString&, const QString&, const QString&);
     void Signal_ContextMenu(QWidget*);
+    void Signal_NextWindow();
     void Signal_IosExit();
     void Signal_ReloadWindow(QWidget*);
     void Signal_ReloadWindowL();
     void Signal_ReloadAllWindows();
     void fileChanged(const QString&);
 
+#ifndef UNIT_TESTING
 private:
+#else
+public:
+#endif
+
 #if !defined(useElapsedTimer)
     double rTime();
 #endif
@@ -390,16 +413,10 @@ private:
 
 #ifdef MOBILE
     bool eventFilter(QObject *obj, QEvent *event);
-    bool handleMobileLongPressEvent(QObject *obj, QEvent *event);
-    void startMobileLongPress(QWidget *target, const QPoint &globalPosition);
-    void cancelMobileLongPress();
-    void triggerMobileLongPress();
-    QPointer<QWidget> mobileTouchTarget;
-    QPointer<QWidget> mobileLongPressTarget;
-    QPoint mobileLongPressGlobalPosition;
-    QPoint mobileLongPressStartGlobalPosition;
-    int mobileLongPressTimerId;
-    bool mobileLongPressTriggered;
+    bool gestureEvent(QObject *obj, QGestureEvent *event);
+    void tapAndHoldTriggered(QObject *obj, QTapAndHoldGesture* tapAndHold);
+    void fingerswipeTriggered(FingerSwipeGesture *gesture);
+    Qt::GestureType fingerSwipeGestureType;
 #else
 
     bool eventFilter(QObject *obj, QEvent *event);
@@ -506,7 +523,11 @@ private:
 public slots:
     void messageWindowOutput(const QtMsgType type, const QString &message);
 
+#ifndef UNIT_TESTING
 private slots:
+#else
+public slots:
+#endif
     void Callback_CaCalc(double value) ;
     void Callback_UndefinedMacrowindowExit();
     void Callback_GlobalShortcutWindowExit();
@@ -595,3 +616,5 @@ private slots:
 };
 
 #endif // CaQtDM_Lib_H
+
+

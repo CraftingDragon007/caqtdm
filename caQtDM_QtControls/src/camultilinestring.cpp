@@ -399,7 +399,7 @@ QSize caMultiLineString::sizeHint() const
     int w = QMETRIC_QT456_FONT_WIDTH(fm,text());
     int h = fm.height();
     QSize size(w, h);
-    qCDebug(caMultiLineStringLog) << "ESimpleLabel \e[1;33msizeHint\e[0m \"" << objectName() << "\" returning size w" << size.width() << "h" << size.height();
+    qCDebug(caMultiLineStringLog) << "ESimpleLabel sizeHint \"" << objectName() << "\" returning size w" << size.width() << "h" << size.height();
     return size;
 }
 
@@ -410,7 +410,7 @@ QSize caMultiLineString::minimumSizeHint() const
         size = QPlainTextEdit::minimumSizeHint();
     else
         size = sizeHint();
-    qCDebug(caMultiLineStringLog) << "ESimpleLabel \e[1;33mminimumsizeHint\e[0m \"" << objectName() << "\" returning size w" << size.width() << "h" << size.height();
+    qCDebug(caMultiLineStringLog) << "ESimpleLabel minimumsizeHint \"" << objectName() << "\" returning size w" << size.width() << "h" << size.height();
 
     return size;
 }

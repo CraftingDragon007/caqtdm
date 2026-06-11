@@ -82,7 +82,6 @@ void bsread_internalchannel::deleteIndex(int i)
     }
 }
 
-
 int bsread_internalchannel::getIndex(int i) const
 {
     return index.value(i);

@@ -50,6 +50,8 @@ void CustomWidgetInterface_Graphics::initialize(QDesignerFormEditorInterface *fo
     if (d_isInitialized)
         return;
 
+    QLoggingCategory::setFilterRules("*=false");
+
 #ifndef MOBILE
     // extension for PolyDraw
     if(d_name.contains("caPolyLine")) {

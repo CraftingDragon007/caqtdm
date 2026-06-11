@@ -57,7 +57,7 @@
  class QTextEdit;
  class QWidget;
 
- class sliderDialog : public QWidget
+class CAQTDM_LIBSHARED_EXPORT sliderDialog : public QWidget
 {
      Q_OBJECT
 

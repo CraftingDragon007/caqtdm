@@ -153,8 +153,6 @@ SOURCES	+= \
     src/calinedraw.cpp \
     src/wmsignalpropagator.cpp \
     src/replacemacro.cpp \
-    src/JSON.cpp \
-    src/JSONValue.cpp \
     src/textedit.cpp \
     src/wmsignalrescale.cpp
 
@@ -189,8 +187,6 @@ HEADERS += src/networkaccess.h src/fileFunctions.h \
     src/plotHelperClasses.h \
     src/wmsignalpropagator.h \
     src/replacemacro.h \
-    src/JSON.h \
-    src/JSONValue.h \
     src/networkmodel.h \
     src/textedit.h \
     src/wmsignalrescale.h

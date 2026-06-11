@@ -29,16 +29,16 @@
 #include <QBuffer>
 #include <QByteArray>
 #include <QDataStream>
+#include <QJsonDocument>
+#include <QJsonArray>
 #include "zmq.h"
 #include "dbrString.h"
 #include <exception>
 #include "bsread_decode.h"
 #include "knobData.h"
-#include "JSON.h"
-#include "JSONValue.h"
 #include "bsread_channeldata.h"
 #include "bsread_wfhandling.h"
-#include "loggingcategories.h"
+#include "caQtDM_Plugins_global.h"
 
 enum Alarms {NO_ALARM=0, MINOR_ALARM, MAJOR_ALARM, INVALID_ALARM, NOTCONNECTED=99};
 
@@ -59,10 +59,6 @@ bsread_Decode::bsread_Decode(void * Context,QString ConnectionPoint,QString Conn
    UpdaterPool=Q_NULLPTR;
    BlockPool=Q_NULLPTR;
 }
-
-
-
-
 
 bsread_Decode::~bsread_Decode()
 {
@@ -122,8 +118,6 @@ void bsread_Decode::process()
     size_t msg_size;
 
     rc = zmq_msg_init (&msg);
-    terminate=false;
-
 
     qCDebug(bsreadLog) << "bsreadDecode: ConnectionPoint :"<< StreamConnectionPoint << StreamConnectionType ;
     qCDebug(bsreadLog) << "bsreadDecode: start ThreadID" << QThread::currentThreadId();
@@ -218,7 +212,7 @@ void bsread_Decode::process()
                     }
                 }
 
-                qCCritical(bsreadLog) << "error in zmq_recvmsg(Main Massage):" << zmq_strerror (errno);
+                qCDebug(bsreadLog) << "error in zmq_recvmsg(Main Massage):" << zmq_strerror (errno);
 
             }
 
@@ -252,57 +246,51 @@ QString bsread_Decode::getMainHeader() const
 
 bool bsread_Decode::setMainHeader(char *value,size_t size)
 {
-    JSONObject jsonobj;
     QString RawData=QString(value);
     MainHeader = RawData.left((int)size);
     channelcounter=0;
-    JSONValue *MainMessageJ = JSON::Parse(MainHeader.toStdString().c_str());
-    if (MainMessageJ!=Q_NULLPTR){
-        if(!MainMessageJ->IsObject()) {
-            delete(MainMessageJ);
-        } else {
-            jsonobj=MainMessageJ->AsObject();
-            if (jsonobj.find(L"hash") != jsonobj.end() && jsonobj[L"hash"]->IsString()) {
-                hash=QString::fromWCharArray(jsonobj[L"hash"]->AsString().c_str());
-                qCDebug(bsreadLog) << "hType :" << hash;
+    QJsonParseError parseError;
+    QJsonDocument MainMessageJ = QJsonDocument::fromJson(MainHeader.toUtf8(), &parseError);
+    if (parseError.error == QJsonParseError::NoError){
+        if(MainMessageJ.isObject()) {
+            QJsonObject jsonobj = MainMessageJ.object();
+            if (jsonobj["hash"].isString()) {
+                hash = jsonobj["hash"].toString();
+                qCDebug(bsreadLog) << "hash:" << hash;
             }
 
-            if (jsonobj.find(L"pulse_id") != jsonobj.end() && jsonobj[L"pulse_id"]->IsNumber()) {
-                pulse_id=jsonobj[L"pulse_id"]->AsNumber();
-                qCDebug(bsreadLog) << "pulse_id :" << pulse_id;
+            if (jsonobj["pulse_id"].isDouble()) {
+                pulse_id = jsonobj["pulse_id"].toDouble();
+                qCDebug(bsreadLog) << "pulse_id:" << pulse_id;
             }
-            if (jsonobj.find(L"htype") != jsonobj.end() && jsonobj[L"htype"]->IsString()) {
-                main_htype=QString::fromWCharArray(jsonobj[L"htype"]->AsString().c_str());
+            if (jsonobj["htype"].isString()) {
+                main_htype = jsonobj["htype"].toString();
             }
-            if (jsonobj.find(L"global_timestamp") != jsonobj.end() && jsonobj[L"global_timestamp"]->IsObject())
+            if (jsonobj["global_timestamp"].isObject())
             {
-                JSONObject jsonobj2=jsonobj[L"global_timestamp"]->AsObject();
-                if (jsonobj2.find(L"epoch") != jsonobj2.end() && jsonobj2[L"epoch"]->IsNumber()) {
-                    global_timestamp_epoch=jsonobj2[L"epoch"]->AsNumber();
+                QJsonObject jsonobj2 = jsonobj["global_timestamp"].toObject();
+                if (jsonobj2["epoch"].isDouble()) {
+                    global_timestamp_epoch = jsonobj2["epoch"].toDouble();
                 }
-                if (jsonobj2.find(L"ns") != jsonobj2.end() && jsonobj2[L"ns"]->IsNumber()) {
-                    global_timestamp_ns=jsonobj2[L"ns"]->AsNumber();
+                if (jsonobj2["ns"].isDouble()) {
+                    global_timestamp_ns = jsonobj2["ns"].toDouble();
                 }
-                if (jsonobj2.find(L"sec") != jsonobj2.end() && jsonobj2[L"sec"]->IsNumber()) {
-                    global_timestamp_sec=jsonobj2[L"sec"]->AsNumber();
+                if (jsonobj2["sec"].isDouble()) {
+                    global_timestamp_sec = jsonobj2["sec"].toDouble();
                 }
-                if (jsonobj2.find(L"ns_offset") != jsonobj2.end() && jsonobj2[L"ns_offset"]->IsNumber()) {
-                    global_timestamp_ns_offset=jsonobj2[L"ns_offset"]->AsNumber();
+                if (jsonobj2["ns_offset"].isDouble()) {
+                    global_timestamp_ns_offset = jsonobj2["ns_offset"].toDouble();
                 }
-
             }
-            delete(MainMessageJ);
-
         }
     }
-
-
 
     return true;
 }
 void bsread_Decode::setHeader(char *value,size_t size){
     QMutexLocker locker(&mutex);
-    JSONValue *HeaderMessageJ;
+    QJsonParseError parseError;
+    QJsonDocument HeaderMessageJ;
     QString RawData=QString(value);
     ChannelHeader = RawData.left((int)size);
 
@@ -317,32 +305,26 @@ void bsread_Decode::setHeader(char *value,size_t size){
     bsread_InitHeaderChannels();
     qCDebug(bsreadLog) << "Integer :" << ChannelHeader;
     try{
-        HeaderMessageJ = JSON::Parse(ChannelHeader.toStdString().c_str());
+        HeaderMessageJ = QJsonDocument::fromJson(ChannelHeader.toUtf8(), &parseError);
     }
     catch (...) {
         qCDebug(bsreadLog) << "bsreadPlugin: Header Error :" << value;
-        HeaderMessageJ=Q_NULLPTR;
+        parseError.error = QJsonParseError::IllegalValue;
     }
 
-    if (HeaderMessageJ!=Q_NULLPTR){
-        if(!HeaderMessageJ->IsObject()) {
-            delete(HeaderMessageJ);
-        } else {
-            JSONObject jsonobj=HeaderMessageJ->AsObject();
-            if (jsonobj.find(L"channels") != jsonobj.end() && jsonobj[L"channels"]->IsArray()) {
+    if (parseError.error == QJsonParseError::NoError){
+        if(HeaderMessageJ.isObject()) {
+            QJsonObject jsonobj = HeaderMessageJ.object();
+            if (jsonobj["channels"].isArray()) {
+                QJsonArray jsonarr = jsonobj["channels"].toArray();
 
-
-                JSONArray jsonobj2=jsonobj[L"channels"]->AsArray();
-
-                for (unsigned int i = 0; i < jsonobj2.size(); i++)
+                for (unsigned int i = 0; i < jsonarr.size(); i++)
                 {
-
-                    bsread_channeldata *chdata=new bsread_channeldata();
+                    bsread_channeldata *chdata = new bsread_channeldata();
                     Channels.append(chdata);
-                    JSONObject jsonobj3=jsonobj2[i]->AsObject();
-                    if (jsonobj3.find(L"type") != jsonobj3.end() && jsonobj3[L"type"]->IsString()) {
-
-                        QString value=QString::fromWCharArray(jsonobj3[L"type"]->AsString().c_str());
+                    QJsonObject jsonobj2 = jsonarr[i].toObject();
+                    if (jsonobj2["type"].isString()) {
+                        QString value = jsonobj2["type"].toString();
                         if (value=="float64"){
                             chdata->type=bs_float64;
                         }else if(value=="float32"){
@@ -371,26 +353,25 @@ void bsread_Decode::setHeader(char *value,size_t size){
                             chdata->type=bs_none;
                         }
 
-
                     }
-                    if (jsonobj3.find(L"name") != jsonobj3.end() && jsonobj3[L"name"]->IsString()) {
-                        chdata->name=QString::fromWCharArray(jsonobj3[L"name"]->AsString().c_str());
+                    if (jsonobj2["name"].isString()) {
+                        chdata->name = jsonobj2["name"].toString();
                         ChannelSearch.insert(chdata->name, chdata);
                         qCDebug(bsreadLog) << "Ch-Name :" << chdata;
                     }
-                    if (jsonobj3.find(L"offset") != jsonobj3.end() && jsonobj3[L"offset"]->IsNumber()) {
-                        chdata->offset=jsonobj3[L"offset"]->AsNumber();
+                    if (jsonobj2["offset"].isDouble()) {
+                        chdata->offset = jsonobj2["offset"].toDouble();
                     }
-                    if (jsonobj3.find(L"modulo") != jsonobj3.end() && jsonobj3[L"modulo"]->IsNumber()) {
-                        chdata->modulo=jsonobj3[L"modulo"]->AsNumber();
+                    if (jsonobj2["modulo"].isDouble()) {
+                        chdata->modulo = jsonobj2["modulo"].toDouble();
                     }
 
-                    if (jsonobj3.find(L"encoding") != jsonobj3.end() && jsonobj3[L"encoding"]->IsString()) {
-                        QString encoding=QString::fromWCharArray(jsonobj3[L"encoding"]->AsString().c_str());
+                    if (jsonobj2["encoding"].isString()) {
+                        QString encoding = jsonobj2["encoding"].toString();
 
-                        if (encoding=="big"){
+                        if (encoding == "big"){
                             chdata->endianess=bs_big;
-                        }else if(encoding!="little"){
+                        }else if(encoding != "little"){
                            chdata->endianess=bs_other;
                         }
                         QStringList enc_values=encoding.split(",");
@@ -430,13 +411,13 @@ void bsread_Decode::setHeader(char *value,size_t size){
                         }
 
                     }
-                    if (jsonobj3.find(L"shape") != jsonobj3.end() && jsonobj3[L"shape"]->IsArray()) {
+                    if (jsonobj2["shape"].isArray()) {
                         chdata->shape.clear();
-                        JSONArray jsonobj4=jsonobj3[L"shape"]->AsArray();
-                        for (unsigned int j = 0; j < jsonobj4.size(); j++){
-                            int value=(int)jsonobj4[j]->AsNumber();
+                        QJsonArray jsonarr2 = jsonobj2["shape"].toArray();
+                        for (unsigned int j = 0; j < jsonarr2.size(); j++){
+                            int value = static_cast<int>(jsonarr2[j].toDouble());
                             chdata->shape.append(value);
-                            if ((jsonobj4.size()>1)&&(value>1)){
+                            if ((jsonarr2.size()>1)&&(value>1)){
                                 QString ShapeChannel=chdata->name;
                                 bsread_channeldata *shape_chdata=new bsread_channeldata();
                                 Channels.append(shape_chdata);
@@ -456,24 +437,22 @@ void bsread_Decode::setHeader(char *value,size_t size){
 
                 }
 
-                if (jsonobj.find(L"pulse_id") != jsonobj.end() && jsonobj[L"pulse_id"]->IsNumber()) {
-                    pulse_id=jsonobj[L"pulse_id"]->AsNumber();
+                if (jsonobj["pulse_id"].isDouble()) {
+                    pulse_id = jsonobj["pulse_id"].toDouble();
                 }
-                if (jsonobj.find(L"htype") != jsonobj.end() && jsonobj[L"htype"]->IsNumber()) {
-                    main_htype=QString::fromWCharArray(jsonobj[L"htype"]->AsString().c_str());
+                if (jsonobj["htype"].isString()) {
+                    main_htype = jsonobj["htype"].toString();
                 }
-                if (jsonobj.find(L"global_timestamp") != jsonobj.end() && jsonobj[L"global_timestamp"]->IsObject())
+                if (jsonobj["global_timestamp"].isObject())
                 {
-                    JSONObject jsonobj2=jsonobj[L"global_timestamp"]->AsObject();
-                    if (jsonobj2.find(L"sec") != jsonobj2.end() && jsonobj2[L"sec"]->IsNumber()) {
-                        global_timestamp_sec=jsonobj2[L"sec"]->AsNumber();
+                    QJsonObject jsonobj2 = jsonobj["global_timestamp"].toObject();
+                    if (jsonobj2["sec"].isDouble()) {
+                        global_timestamp_sec = jsonobj2["sec"].toDouble();
                     }
-                    if (jsonobj2.find(L"ns") != jsonobj2.end() && jsonobj2[L"ns"]->IsNumber()) {
-                        global_timestamp_ns=jsonobj2[L"ns"]->AsNumber();
+                    if (jsonobj2["ns"].isDouble()) {
+                        global_timestamp_ns = jsonobj2["ns"].toDouble();
                     }
                 }
-                delete(HeaderMessageJ);
-
             }
         }
     }
@@ -1030,10 +1009,9 @@ void bsread_Decode::bsread_EndofData()
 
 }
 
-void bsread_Decode::setTerminate()
+void bsread_Decode::setTerminate(bool doTerminate)
 {
-    terminate = true;
-
+    terminate = doTerminate;
 }
 
 void bsread_Decode::bsread_DataTimeOut(){

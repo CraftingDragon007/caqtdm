@@ -32,13 +32,7 @@
 #include <QTableWidget>
 #include <QMessageBox>
 #include <QEventLoop>
-#include "loggingcategories.h"
-
-//#define CSV 1
-
-#ifndef CSV
-#include "JSON.h"
-#endif
+#include "caQtDM_Plugins_global.h"
 
 class QNetworkAccessManager;
 

@@ -41,6 +41,10 @@ bool HTTPCONFIGURATOR = false;
 #include "fileFunctions.h"
 #include "loadPlugins.h"
 
+#ifdef MOBILE
+  #include "fingerswipegesture.h"
+#endif
+
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -670,6 +674,14 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
         this->ui.menuHttp->setEnabled(false);
     }
 
+//************************************************************************************************************************************************
+
+#ifdef MOBILE
+    // add fingerswipe gesture
+    QGestureRecognizer* pRecognizer = new FingerSwipeGestureRecognizer();
+    fingerSwipeGestureType = QGestureRecognizer::registerRecognizer(pRecognizer);
+#endif
+
     // application state handler
 #if QT_VERSION > 0x050000
     connect(qApp, SIGNAL(applicationStateChanged(Qt::ApplicationState)), this, SLOT(onApplicationStateChange(Qt::ApplicationState)));
@@ -878,7 +890,7 @@ void FileOpenWindow::timerEvent(QTimerEvent *event)
 #ifdef _WIN32
     PROCESS_MEMORY_COUNTERS_EX procmem;
     if (GetProcessMemoryInfo(GetCurrentProcess(),(PPROCESS_MEMORY_COUNTERS)&procmem,sizeof(procmem))) {
-      snprintf(asc, MAX_STRING_LENGTH,"memory: %ld kB", (procmem.PrivateUsage / (1024)));
+      snprintf(asc, MAX_STRING_LENGTH,"memory: %zu kB", (procmem.PrivateUsage / (1024)));
     } else {
       snprintf(asc, MAX_STRING_LENGTH, "memory: no RAM");
     }
@@ -916,7 +928,7 @@ void FileOpenWindow::timerEvent(QTimerEvent *event)
             snprintf(msg, MAX_STRING_LENGTH, "%s - PV=%d (%d NC), %d Monitors/s, %d Displays/s, highest=%s with %.1f Monitors/s ", asc, countPV, countNotConnected,
                       mutexKnobData->getMonitorsPerSecond(), mutexKnobData->getDisplaysPerSecond(), qasc(highPV), highCount);
         } else {
-            strcpy(msg, asc);
+            qstrncpy(msg, asc, sizeof(msg));
         }
         statusBar()->showMessage(msg);
     }
@@ -1091,6 +1103,7 @@ QMainWindow *FileOpenWindow::loadMainWindow(const QPoint &position, const QStrin
     }
 
 #ifdef MOBILE
+    newWindow->grabSwipeGesture(fingerSwipeGestureType);
     newWindow->setAttribute(Qt::WA_ContentsMarginsRespectsSafeArea,false);
 #endif
 

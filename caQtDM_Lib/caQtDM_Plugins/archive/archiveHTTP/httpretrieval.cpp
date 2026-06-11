@@ -45,7 +45,7 @@
 #endif
 
 #include <httpretrieval.h>
-#include "loggingcategories.h"
+#include "caQtDM_Plugins_global.h"
 
 #define qasc(x) x.toLatin1().constData()
 

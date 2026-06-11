@@ -302,7 +302,7 @@ void ArchiverGeneral::updateCartesian(
         kData.edata.connected = true;
         kData.edata.accessR = kData.edata.accessW = true;
         kData.edata.monitorCount++;
-        strcpy(kData.edata.fec, qasc(backend));
+        qstrncpy(kData.edata.fec, qasc(backend), sizeof(kData.edata.fec));
 
         if ((nbVal * sizeof(double)) > (size_t) kData.edata.dataSize) {
             if (kData.edata.dataB != (void *) Q_NULLPTR) {
@@ -324,7 +324,7 @@ void ArchiverGeneral::updateCartesian(
         kData.edata.connected = true;
         kData.edata.accessR = kData.edata.accessW = true;
         kData.edata.monitorCount++;
-        strcpy(kData.edata.fec, qasc(backend));
+        qstrncpy(kData.edata.fec, qasc(backend), sizeof(kData.edata.fec));
 
         if ((nbVal * sizeof(double)) > (size_t) kData.edata.dataSize) {
             if (kData.edata.dataB != (void *) Q_NULLPTR) {

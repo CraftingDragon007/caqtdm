@@ -30,7 +30,7 @@
 #include "modbus_plugin.h"
 #include "searchfile.h"
 #include "fileFunctions.h"
-#include "loggingcategories.h"
+#include "caQtDM_Plugins_global.h"
 
 Q_LOGGING_CATEGORY(modbusLog, "caqtdm.plugins.modbus")
 

@@ -28,7 +28,7 @@
 #include "zmq.h"
 #include "bsread_decode.h"
 #include "bsread_dispatchercontrol.h"
-#include "loggingcategories.h"
+#include "caQtDM_Plugins_global.h"
 
 // as defined in knobDefines.h
 //caType {caSTRING	= 0, caINT = 1, caFLOAT = 2, caENUM = 3, caCHAR = 4, caLONG = 5, caDOUBLE = 6};
@@ -157,6 +157,7 @@ int bsreadPlugin::initCommunicationLayer(MutexKnobData *data, MessageWindow *mes
                 bsreadThreads.append(new QThread(this));
                 bsreadconnections.last()->setKnobData(mutexknobdataP);
                 bsreadconnections.last()->moveToThread(bsreadThreads.last());
+                bsreadconnections.last()->setTerminate(false);
                 connect(bsreadThreads.last(), SIGNAL(started()), bsreadconnections.last(), SLOT(process()));
                 connect(bsreadconnections.last(), SIGNAL(finished()), bsreadThreads.last(), SLOT(quit()));
                 connect(bsreadThreads.last(), SIGNAL(finished()), bsreadThreads.last(), SLOT(deleteLater()));
@@ -268,7 +269,7 @@ int bsreadPlugin::pvSetWave(char *pv, float *fdata, double *ddata, int16_t *data
 int bsreadPlugin::pvGetTimeStamp(char *pv, char *timestamp) {
     Q_UNUSED(pv);
     qCDebug(bsreadLog) << "bsreadPlugin:pvgetTimeStamp";
-    strcpy(timestamp, "timestamp in epics format");
+    qstrncpy(timestamp, "timestamp in epics format", TIMESTAMP_STRING_LENGTH);
     return true;
 }
 
@@ -276,7 +277,7 @@ int bsreadPlugin::pvGetTimeStamp(char *pv, char *timestamp) {
 int bsreadPlugin::pvGetDescription(char *pv, char *description) {
     Q_UNUSED(pv);
     qCDebug(bsreadLog) << "bsreadPlugin:pvGetDescription";
-    strcpy(description, "no Description available BSREAD data transfer");
+    qstrncpy(description, "no Description available BSREAD data transfer", MAX_STRING_LENGTH);
     return true;
 }
 
