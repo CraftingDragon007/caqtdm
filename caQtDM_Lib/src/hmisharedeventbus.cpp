@@ -199,7 +199,11 @@ bool HmiSharedEventBus::sendEvent(int eventType, const QByteArray& payload) {
     }
 
     quint32 writeIndex = this_header->currentWriteIndex % EVENT_BUFFER_CAPACITY;
-
+    if (!this_eventBuffer) {
+        qCCritical(caHMILog) << "this_eventBuffer is a null pointer.";
+        this_sharedMemory.unlock();
+        return false;
+    }
     EventPayload& event = this_eventBuffer[writeIndex];
     event.eventType = eventType;
     event.senderPid = QCoreApplication::applicationPid();
@@ -257,6 +261,7 @@ void HmiSharedEventBus::checkForNewEvents() {
         const EventPayload& event = this_eventBuffer[eventBufferIndex];
 
         QByteArray payloadData;
+
         int dataSize = event.dataSize;
         if (dataSize > 0 && dataSize <= EVENT_PAYLOAD_SIZE) {
             payloadData = QByteArray(event.data, dataSize);
