@@ -7,6 +7,11 @@ caQtDM Manual
 | Paul Scherrer Institute
 | CH-5232 Villigen
 | Switzerland
+|
+| **and our co-worker:**
+| Yannik Wernle
+| Erik Schwarz
+| Julian Leon Houba
 
 About this manual
 -----------------
