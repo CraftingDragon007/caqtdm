@@ -14,10 +14,10 @@ index e8ca786f..e007995f 100644
                  CONFIG += Define_Build_Python
     	}
  
-diff --git a/caQtDM_Lib/caQtDM_Plugins/epics3/epicsSubs.c b/caQtDM_Lib/caQtDM_Plugins/epics3/epicsSubs.c
+diff --git a/caQtDM_Plugins/epics3/epicsSubs.c b/caQtDM_Plugins/epics3/epicsSubs.c
 index 983531a2..58b0b652 100644
---- a/caQtDM_Lib/caQtDM_Plugins/epics3/epicsSubs.c
-+++ b/caQtDM_Lib/caQtDM_Plugins/epics3/epicsSubs.c
+--- a/caQtDM_Plugins/epics3/epicsSubs.c
++++ b/caQtDM_Plugins/epics3/epicsSubs.c
 @@ -854,7 +854,7 @@ int CreateAndConnect(int index, knobData *kData, int rate, int skip)
  
      //printf("we have to add an epics device <%s>\n", kData->pv);

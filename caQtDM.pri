@@ -989,7 +989,7 @@ caQtDM_Viewer {
 					                LIBS += $$OUT_PWD/../caQtDM_Plugins/archive/archiveSF/libarchiveSF_plugin.a
                     }
                     archiveHTTP: {
-                            LIBS += $$OUT_PWD/../caQtDM_Lib/caQtDM_Plugins/archive/archiveHTTP/libarchiveHTTP_plugin.a
+                            LIBS += $$OUT_PWD/../caQtDM_Plugins/archive/archiveHTTP/libarchiveHTTP_plugin.a
                     }
 
         }
