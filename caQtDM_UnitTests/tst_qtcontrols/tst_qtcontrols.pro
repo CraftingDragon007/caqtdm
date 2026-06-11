@@ -27,6 +27,4 @@ macx {
     LIBS += -lz
     LIBS += -F$$(QWTLIB) -framework $$(QWTLIBNAME)
     QMAKE_RPATHDIR += $$(QWTLIB)
-#    QMAKE_RPATHDIR += $$(EPICSLIB)
-#    QMAKE_RPATHDIR += $$(CAQTDM_COLLECT)
 }

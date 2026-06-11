@@ -41,13 +41,8 @@ _EPICSLIB = $$(EPICSLIB)
 }
 
 macx {
-#    LIBS += -lz
     LIBS += -F$$(QWTLIB) -framework $$(QWTLIBNAME)
-    LIBS += $$(EPICSLIB)/libCom.dylib
-    LIBS += $$(EPICSLIB)/libca.dylib
     QMAKE_RPATHDIR += $$(QWTLIB)
-#    QMAKE_RPATHDIR += $$(EPICSLIB)
-#    QMAKE_RPATHDIR += $$(CAQTDM_COLLECT)
 } else {
     LIBS += \
         -L$$(QWTHOME)/lib \
