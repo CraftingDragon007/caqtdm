@@ -3,7 +3,13 @@
 
 #############################################################################
 # special EPICS things
-%define EPICS_TARGET_VERSION -7.0.9
+%if ! 0%{?EPICS_TARGET_VERSION:1}
+%if "%{getenv:EPICS_TARGET_VERSION}" == ""
+%define EPICS_TARGET_VERSION -7.0.10
+%else
+%define EPICS_TARGET_VERSION %{getenv:EPICS_TARGET_VERSION}
+%endif
+%endif
 #############################################################################
 
 # build qt4 support (or not)
@@ -25,11 +31,17 @@
 %global qt6 0
 %endif
 
+%if "%{getenv:RPM_RELEASE}" == ""
+%define _rpm_release 1.0
+%else
+%define _rpm_release %{getenv:RPM_RELEASE}
+%endif
+
 #############################################################################
 Name:    caqtdm 
 Summary: Qt Widgets for Technical Applications
 Version: 4.6.1
-Release: 1.0%{?dist}
+Release: %{_rpm_release}%{?dist}
 #############################################################################
 License: GPLv3
 URL:     https://github.com/caqtdm/caqtdm

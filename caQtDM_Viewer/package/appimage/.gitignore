@@ -1,0 +1,17 @@
+# Build and staging output
+build/
+build-docker/
+work/
+*.AppDir/
+
+# Downloaded packaging tools
+tools/
+
+# Extracted AppImage contents
+squashfs-root/
+
+# Generated bundles and local logs
+*.AppImage
+*.AppImage.zsync
+*.log
+*.abi.log
