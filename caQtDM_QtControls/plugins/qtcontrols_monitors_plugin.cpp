@@ -54,6 +54,8 @@ void CustomWidgetInterface_Monitors::initialize(QDesignerFormEditorInterface *fo
     if (d_isInitialized) return;
     d_isInitialized = true;
 
+    QLoggingCategory::setFilterRules("*=false");
+
 #ifndef MOBILE
         // for edition of channel/pv
         QExtensionManager *manager = formEditor->extensionManager();

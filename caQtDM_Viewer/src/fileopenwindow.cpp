@@ -890,7 +890,7 @@ void FileOpenWindow::timerEvent(QTimerEvent *event)
 #ifdef _WIN32
     PROCESS_MEMORY_COUNTERS_EX procmem;
     if (GetProcessMemoryInfo(GetCurrentProcess(),(PPROCESS_MEMORY_COUNTERS)&procmem,sizeof(procmem))) {
-      snprintf(asc, MAX_STRING_LENGTH,"memory: %ld kB", (procmem.PrivateUsage / (1024)));
+      snprintf(asc, MAX_STRING_LENGTH,"memory: %zu kB", (procmem.PrivateUsage / (1024)));
     } else {
       snprintf(asc, MAX_STRING_LENGTH, "memory: no RAM");
     }
@@ -928,7 +928,7 @@ void FileOpenWindow::timerEvent(QTimerEvent *event)
             snprintf(msg, MAX_STRING_LENGTH, "%s - PV=%d (%d NC), %d Monitors/s, %d Displays/s, highest=%s with %.1f Monitors/s ", asc, countPV, countNotConnected,
                       mutexKnobData->getMonitorsPerSecond(), mutexKnobData->getDisplaysPerSecond(), qasc(highPV), highCount);
         } else {
-            strcpy(msg, asc);
+            qstrncpy(msg, asc, sizeof(msg));
         }
         statusBar()->showMessage(msg);
     }

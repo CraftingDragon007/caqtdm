@@ -29,7 +29,7 @@ INCLUDEPATH    += ../../../../caQtDM_QtControls/src/
 INCLUDEPATH    += $(QWTINCLUDE)
 
 HEADERS         = ../../controlsinterface.h \
-    ../../loggingcategories.h \
+    ../../caQtDM_Plugins_global.h \
     archivehttp_plugin.h \
 	httpretrieval.h \
 	../archiverGeneral.h \

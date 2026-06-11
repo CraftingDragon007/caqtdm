@@ -1,7 +1,7 @@
 #include <QSysInfo>
 #include "bsread_wfhandling.h"
 #include "bsread_wfconverter.h"
-#include "loggingcategories.h"
+#include "caQtDM_Plugins_global.h"
 
 void bsread_wfhandling::process()
 {

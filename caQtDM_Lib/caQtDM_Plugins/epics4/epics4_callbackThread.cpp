@@ -28,7 +28,7 @@ using namespace std;
 
 
 #include "epics4_callbackThread.h"
-#include "loggingcategories.h"
+#include "caQtDM_Plugins_global.h"
 
 namespace epics { namespace pvData {
 

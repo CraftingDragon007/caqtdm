@@ -35,7 +35,7 @@
 #include <QTimer>
 
 #include "sfRetrieval.h"
-#include "loggingcategories.h"
+#include "caQtDM_Plugins_global.h"
 #include <QDebug>
 #include <QThread>
 #include <QTime>
@@ -43,6 +43,14 @@
 #include <sstream>
 
 #define qasc(x) x.toLatin1().constData()
+
+//#define CSV 1
+
+#ifndef CSV
+#include "QJsonDocument"
+#include "QJsonArray"
+#include "QJsonObject"
+#endif
 
 #ifdef MOBILE_ANDROID
 #  include <unistd.h>
@@ -161,13 +169,15 @@ void sfRetrieval::finishReply(QNetworkReply *reply)
     if(aborted) return;
     qCDebug(archiveSFLog) << QTime::currentTime().toString() << this << PV << "reply received";
     int count = 0;
+    double seconds;
+#ifdef CSV
     int valueIndex = 2;
     int expected = 3;
-    double seconds;
     if(isBinned) {
         valueIndex = 3;
         expected = 5;
     }
+#endif
 
     QVariant status =  reply->attribute(QNetworkRequest::HttpStatusCodeAttribute);
 
@@ -232,7 +242,7 @@ void sfRetrieval::finishReply(QNetworkReply *reply)
             emit requestFinished();
             return;
         } else {
-            //qDebug() << "i=" << i <<  "linecount" << line.count() << line[1];
+            //qCDebug(archiveSFLog) << "i=" << i <<  "linecount" << line.count() << line[1];
             double archiveTime = line[1].toDouble(&ok1);
             if(ok1) {
                 if((seconds - archiveTime) < secndsPast) {
@@ -259,74 +269,67 @@ void sfRetrieval::finishReply(QNetworkReply *reply)
     totalCount = 0;
     Backend = "";
 
-    JSONValue *value = JSON::Parse(qasc(out));
+    QJsonParseError parseError;
+    QJsonDocument document = QJsonDocument::fromJson(out.toUtf8(), &parseError);
 
     qCDebug(archiveSFLog) << "\n\nout:" << out << "\n";
 
     // Did it go wrong?
-    if (value == Q_NULLPTR) {
-        errorString = tr("could not parse json string left=%1 right=%2").arg(out.left(20)).arg(out.right(20));
+    if (parseError.error != QJsonParseError::NoError) {
+        errorString = tr("could not parse json string left=%1 right=%2 with error %3").arg(out.left(20)).arg(out.right(20)).arg(parseError.errorString());
         qCDebug(archiveSFLog) << QTime::currentTime().toString() << this << PV << "finishreply" << errorString;
         emit requestFinished();
         return;
     } else {
 
-        if(!value->IsArray()) {
+        if(!document.isArray()) {
             qCDebug(archiveSFLog) << "the json root element is not an array, something has changed";
-        }
-
-        if(value->IsArray()) {
-            JSONArray array = value->AsArray();
+        } else {
+            QJsonArray array = document.array();
 
             for (unsigned int i = 0; i < array.size(); i++) {
-                JSONValue *value1 = JSON::Parse(array[i]->Stringify().c_str());
+                QJsonValue value = array.at(i);
 
-                if(value1->IsObject()) {
+                if(value.isObject()) {
 
-                    JSONObject root;
-                    root = value1->AsObject();
+                    QJsonObject root1 = value.toObject();
 
                     // find channel data inside this part of array
-                    if (root.find(L"channel") != root.end() && root[L"channel"]->IsObject()) {
-                        //qDebug() << "\nchannel part found as object";
-                        JSONValue *value2 = JSON::Parse(root[L"channel"]->Stringify().c_str());
-                        JSONObject root0 = value2->AsObject();
+                    if (root1["channel"].isObject()) {
+                        //qCDebug(archiveSFLog) << "\nchannel part found as object";
+                        QJsonObject root2 = root1["channel"].toObject();
 
                         // get channel name
-                        if (root0.find(L"name") != root0.end() && root0[L"name"]->IsString()) {
-                            std::wstring data=root0[L"name"]->Stringify();
+                        if (root2["name"].isString()) {
+                            QString data = root2["name"].toString();
                             char *channel = new char[data.size()+1];
-                            sprintf(channel,"%ls", data.c_str());
-                            //qDebug()<< "channel name found" << root0[L"name"]->AsString().c_str() << channel;
+                            snprintf(channel,data.size()+1,"%s", qasc(data));
+                            //qCDebug(archiveSFLog) << "channel name found" << root2["name"]->toString() << channel;
                             delete[] channel;
                         }
 
                         // get backend name
-                        if (root0.find(L"backend") != root0.end() && root0[L"backend"]->IsString()) {
-                            //char backend[800];
-                            std::wstring data=root0[L"backend"]->Stringify();
+                        if (root2["backend"].isString()) {
+                            QString data = root2["backend"].toString();
                             char *backend = new char[data.size()+1];
-                            sprintf(backend,"%ls", data.c_str());
+                            snprintf(backend,data.size()+1,"%s", qasc(data));
                             Backend = QString(backend);
                             Backend = Backend.replace("\"", "");
-                            //qDebug()<< "backend name found" << root0[L"backend"]->AsString().c_str() << backend;
+                            //qCDebug(archiveSFLog) << "backend name found" << root2["backend"]->toString() << backend;
                             delete[] backend;
                         }
-                        delete value2;
                     }
 
                     // find data array inside this part of array
-                    if (root.find(L"data") != root.end() && root[L"data"]->IsArray()) {
-                        JSONArray array = root[L"data"]->AsArray();
-                        //qDebug() << "\ndata part found as array" << array.size();
+                    if (root1["data"].isArray()) {
+                        QJsonArray array = root1["data"].toArray();
+                        //qCDebug(archiveSFLog) << "\ndata part found as array" << array.size();
 
                         // scan the data part (big array)
                         if(array.size() < 1) {
                             errorString = tr("no data from %1 : %2").arg(downloadUrl.toString()).arg(Backend);
-                            //qDebug() << QTime::currentTime().toString() << this << PV << "finishreply" << errorString;
+                            //qCDebug(archiveSFLog) << QTime::currentTime().toString() << this << PV << "finishreply" << errorString;
                             emit requestFinished();
-                            delete value;
-                            delete value1;
                             return;
                         }
 
@@ -344,25 +347,22 @@ void sfRetrieval::finishReply(QNetworkReply *reply)
                                 double archiveTime;
 
                                 // find value part now
-                                JSONObject root1 = array[i]->AsObject();
-                                if (root1.find(L"value") != root1.end() && root1[L"value"]->IsObject()) {
-                                    JSONValue *value2 = JSON::Parse(root1[L"value"]->Stringify().c_str());
-                                    JSONObject root2 = value2->AsObject();
+                                QJsonObject root1 = array[i].toObject();
+                                if (root1["value"].isObject()) {
+                                    QJsonObject root2 = root1["value"].toObject();
 
                                     // look for mean
-                                    if (root2.find(L"mean") != root2.end() && root2[L"mean"]->IsNumber()) {
-                                        //qDebug() << "mean part found";
-                                        //stat = swscanf(root2[L"mean"]->Stringify().c_str(), L"%lf", &mean);
-                                        mean=root2[L"mean"]->AsNumber();
+                                    if (root2["mean"].isDouble()) {
+                                        //qCDebug(archiveSFLog) << "mean part found";
+                                        mean = root2["mean"].toDouble();
                                         valueFound = true;
                                     }
-                                    delete value2;
                                 }
 
                                 // look for globalSeconds
-                                if (root1.find(L"globalSeconds") != root1.end() && root1[L"globalSeconds"]->IsString()) {
-                                    //qDebug()<< "globalSeconds part found";
-                                    if(getDoubleFromString(QString::fromWCharArray(root1[L"globalSeconds"]->AsString().c_str()), archiveTime)){
+                                if (root1["globalSeconds"].isString()) {
+                                    //qCDebug(archiveSFLog) << "globalSeconds part found";
+                                    if(getDoubleFromString(root1["globalSeconds"].toString(), archiveTime)){
                                         timeFound = true;
                                     } else {
                                         qCDebug(archiveSFLog) << tr("could not decode globalSeconds ????");
@@ -375,7 +375,7 @@ void sfRetrieval::finishReply(QNetworkReply *reply)
                                     if(!timAxis) X[count] = -(seconds - archiveTime) / 3600.0;
                                     else X[count] = archiveTime * 1000;
                                     Y[count] = mean;
-                                    //qDebug() << "binned" << X[count] << Y[count];
+                                    //qCDebug(archiveSFLog) << "binned" << X[count] << Y[count];
                                     count++;
                                 }
 
@@ -391,29 +391,29 @@ void sfRetrieval::finishReply(QNetworkReply *reply)
                             for (unsigned int i = 0; i < array.size(); i++) {
 
                                 // simple value
-                                JSONObject root1 = array[i]->AsObject();
-                                if (root1.find(L"value") != root1.end() && root1[L"value"]->IsNumber()) {
-                                    //qDebug() << "value found";
-                                    //stat = swscanf(root1[L"value"]->Stringify().c_str(), L"%lf", &mean);
-                                    mean=root1[L"value"]->AsNumber();
+                                QJsonObject root1 = array[i].toObject();
+                                if (root1["value"].isDouble()) {
+                                    //qCDebug(archiveSFLog) << "value found";
+                                    //stat = swscanf(root1["value"].toString(), L "%lf", &mean);
+                                    mean=root1["value"].toDouble();
                                     valueFound = true;
                                 } else
 
                                     // an array
-                                    if (root1.find(L"value") != root1.end() && root1[L"value"]->IsArray()) {
-                                        //qDebug() << "\nvalue part found as array, not yet supported" << array.size();
+                                    if (root1["value"].isArray()) {
+                                        //qCDebug(archiveSFLog) << "\nvalue part found as array, not yet supported" << array.size();
                                         errorString = tr("waveforms not supported");
-                                        //qDebug()<< QTime::currentTime().toString()  << this << PV << "finishreply" << errorString;
+                                        //qCDebug(archiveSFLog)<< QTime::currentTime().toString()  << this << PV << "finishreply" << errorString;
                                         emit requestFinished();
                                         return;
                                     }
 
                                 // look for globalSeconds
-                                if (root1.find(L"globalSeconds") != root1.end() && root1[L"globalSeconds"]->IsString()) {
-                                    //qDebug()<< "globalSeconds part found";
-                                    if(getDoubleFromString(QString::fromWCharArray(root1[L"globalSeconds"]->AsString().c_str()), archiveTime)){
+                                if (root1["globalSeconds"].isString()) {
+                                    //qCDebug(archiveSFLog)<< "globalSeconds part found";
+                                    if(getDoubleFromString(root1["globalSeconds"].toString(), archiveTime)){
                                         timeFound = true;
-                                        //qDebug() << "time found" << archiveTime;
+                                        //qCDebug(archiveSFLog) << "time found" << archiveTime;
                                     } else {
                                         qCDebug(archiveSFLog) << tr("could not decode globalSeconds ????");
                                         break;
@@ -425,17 +425,15 @@ void sfRetrieval::finishReply(QNetworkReply *reply)
                                     if(!timAxis) X[count] = -(seconds - archiveTime) / 3600.0;
                                     else X[count] = archiveTime *1000;
                                     Y[count] = mean;
-                                    //qDebug() << "not binned" << X[count] << Y[count];
+                                    //qCDebug(archiveSFLog) << "not binned" << X[count] << Y[count];
                                     count++;
                                 }
                             }
                         }
                     }
                 }
-                delete value1;
             }
         }
-        delete value;
     }
 
     totalCount = count;

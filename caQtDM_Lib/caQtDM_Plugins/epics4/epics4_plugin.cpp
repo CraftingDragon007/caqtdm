@@ -32,7 +32,7 @@
 #include "epics4_plugin.h"
 #include <epicsThread.h>
 #include <ctime>
-#include "loggingcategories.h"
+#include "caQtDM_Plugins_global.h"
 
 Q_LOGGING_CATEGORY(epics4Log, "caqtdm.plugins.epics.4")
 
@@ -1702,13 +1702,13 @@ bool PVAInterface::getTimeStamp(char *buf)
     memcpy(&ctm,localtime(&tt),sizeof(struct tm));
     strftime(buf,32,"%b %d, %Y %H:%M:%S%n",&ctm);
     int len = strlen(buf);
-    sprintf(buf + len,".%09d tag %d\n",timeStamp.getNanoseconds(),timeStamp.getUserTag());
+    snprintf(buf + len,TIMESTAMP_STRING_LENGTH - len,".%09d tag %d\n",timeStamp.getNanoseconds(),timeStamp.getUserTag());
     return true;
 }
 
 bool PVAInterface::getDescription(char *buf)
 {
-    strcpy(buf, description.c_str());
+    qstrncpy(buf, description.c_str(), MAX_STRING_LENGTH);
     return true;
 }
 }}}

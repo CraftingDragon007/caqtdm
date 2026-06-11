@@ -3,7 +3,9 @@ name: caQtDM macOS Package Build
 on:
   workflow_dispatch:
   pull_request:
-  push:
+    paths-ignore:
+      - 'caQtDM_docs/**'
+      - 'caQtDM_Tests/**'
   schedule: # Daily at 2am
     - cron: '0 2 * * *'
 
@@ -259,6 +261,19 @@ jobs:
           make -j"$(sysctl -n hw.ncpu)"
           timerstop=$(date +%s)
           echo "caQtDM compile time: $((timerstop - timerstart)) seconds"
+
+      - name: Run unit tests
+        shell: bash
+        working-directory: ${{ env.CAQTDM_DIR }}/caQtDM_UnitTests
+        run: |
+          set -euo pipefail
+
+          export PATH="${EPICS_BASE}/bin/${EPICS_HOST_ARCH}:${QTHOME}/bin:${PATH}"
+          export DYLD_LIBRARY_PATH="${EPICSLIB}:${ZMQLIB}:${QWTLIB}:${CAQTDM_COLLECT}:${CAQTDM_COLLECT}/controlsystems:${DYLD_LIBRARY_PATH:-}"
+          export QT_FORCE_STDERR_LOGGING=1
+          export QT_LOGGING_TO_CONSOLE=1
+
+          make check
 
       # -------------------------------------------------------------------
       # Bundle / deploy

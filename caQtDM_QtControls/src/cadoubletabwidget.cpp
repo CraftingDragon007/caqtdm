@@ -396,7 +396,6 @@ void caDoubleTabWidget::setFont(int dir)
 
     int count =  vTabBar->buttons().count();
     for(int i = count-1; i >= 0; i--) {
-        QPushButton* button = (QPushButton*) vTabBar->button(i);
         style = "QPushButton {border: 2px solid #8f8f91; border-radius: 6px ; background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,stop: 0 #f6f7fa, stop: 1 #dadbde);  ";
 
         // style for vertical list

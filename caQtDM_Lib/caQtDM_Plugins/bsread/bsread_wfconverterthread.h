@@ -6,7 +6,7 @@
 #include "bsread_wfhandling.h"
 
 
-class bsread_wfConverterThread : public QObject
+class CAQTDM_PLUGINSSHARED_EXPORT bsread_wfConverterThread : public QObject
 {
     Q_OBJECT
 private:

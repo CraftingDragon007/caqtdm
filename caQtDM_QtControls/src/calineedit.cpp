@@ -767,7 +767,7 @@ QSize caLineEdit::sizeHint() const
     int w = QMETRIC_QT456_FONT_WIDTH(fm,text());
     int h = QMETRIC_QT456_FONT_HEIGHT(fm,text());
     QSize size(w, h);
-    qCDebug(caLineEditLog) << "ESimpleLabel \e[1;33msizeHint\e[0m \"" << objectName() << "\" returning size w" << size.width() << "h" << size.height();
+    qCDebug(caLineEditLog) << "ESimpleLabel sizeHint \"" << objectName() << "\" returning size w" << size.width() << "h" << size.height();
     return size;
 }
 
@@ -778,7 +778,7 @@ QSize caLineEdit::minimumSizeHint() const
         size = QLineEdit::minimumSizeHint();
     else
         size = sizeHint();
-    qCDebug(caLineEditLog) << "ESimpleLabel \e[1;33mminimumsizeHint\e[0m \"" << objectName() << "\" returning size w" << size.width() << "h" << size.height();
+    qCDebug(caLineEditLog) << "ESimpleLabel minimumsizeHint \"" << objectName() << "\" returning size w" << size.width() << "h" << size.height();
 
     return size;
 }
