@@ -3,7 +3,7 @@ caQtDM Manual
 ==============
 
 | **Anton Mezger/Helge Brands**
-| **May 2025**
+| **June 2026**
 | Paul Scherrer Institute
 | CH-5232 Villigen
 | Switzerland
@@ -389,10 +389,9 @@ Development history
 The following list describe the new features and bug fixes for every
 release. You can follow the development history and detect if a bug in
 the used version has been solved.
-
 .. container::
 
-   4.6.0
+   4.6.1
    
 - update fix for unconnected Channels
 - ``%read`` command for cainclude and caRelatedDisplay
