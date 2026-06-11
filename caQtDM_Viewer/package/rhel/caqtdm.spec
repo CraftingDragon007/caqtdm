@@ -388,7 +388,7 @@ popd
 
         cp %{_builddir}/%{name}-%{version}/caQtDM_Lib/src/*.h     %{buildroot}/usr/local/include/caqtdm
         
-	cp %{_builddir}/%{name}-%{version}/caQtDM_Lib/caQtDM_Plugins/*.h     %{buildroot}/usr/local/include/caqtdm/caQtDM_Plugins
+    cp %{_builddir}/%{name}-%{version}/caQtDM_Plugins/*.h     %{buildroot}/usr/local/include/caqtdm/caQtDM_Plugins
 	
         cp %{_builddir}/%{name}-%{version}/caQtDM_Viewer/src/*.h     %{buildroot}/usr/local/include/caqtdm
         

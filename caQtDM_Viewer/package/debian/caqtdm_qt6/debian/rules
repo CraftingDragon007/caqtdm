@@ -134,7 +134,7 @@ override_dh_auto_install:
 	
 	install -Dm644 caQtDM_QtControls/plugins/*.h debian/caqtdm/usr/include/caqtdm/plugins/
 	install -Dm644 caQtDM_Lib/src/*.h debian/caqtdm/usr/include/caqtdm/
-	install -Dm644 caQtDM_Lib/caQtDM_Plugins/*.h debian/caqtdm/usr/include/caqtdm/caQtDM_Plugins/
+	install -Dm644 caQtDM_Plugins/*.h debian/caqtdm/usr/include/caqtdm/caQtDM_Plugins/
 	install -Dm644 caQtDM_Viewer/src/*.h debian/caqtdm/usr/include/caqtdm/
 	
 	install -Dm644 caQtDM_QtControls/doc/*.qch debian/caqtdm/opt/caqtdm/doc/

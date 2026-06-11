@@ -37,7 +37,7 @@ cd $REPOSITORY_NAME
 git checkout $GIT_CHECKOUT
 
 
-#cd caQtDM_Lib/caQtDM_Plugins/
+#cd caQtDM_Plugins/
 patch -R < $BUILD_ROOT/../patch
 #cd ../..
 

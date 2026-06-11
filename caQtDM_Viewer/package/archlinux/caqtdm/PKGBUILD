@@ -144,7 +144,7 @@ EOF
     install -Dm644 -t "$pkgdir/usr/include/caqtdm/plugins/" \
         "$srcdir/$_pkgsrc/caQtDM_QtControls/plugins/"*.h
     install -Dm644 -t "$pkgdir/usr/include/caqtdm/caQtDM_Plugins/" \
-        "$srcdir/$_pkgsrc/caQtDM_Lib/caQtDM_Plugins/"*.h
+        "$srcdir/$_pkgsrc/caQtDM_Plugins/"*.h
 
     find "$srcdir/$_pkgsrc/caQtDM_QtControls/src" -maxdepth 1 \
         -type f ! -name '*.*' \

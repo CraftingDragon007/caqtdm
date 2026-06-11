@@ -67,7 +67,8 @@ qtcontrols_monitors.depends = caQtDM_QtControls caQtDM_Lib
 qtcontrols_utilities.file = caQtDM_QtControls/plugins/qtcontrols_utilities.pro
 qtcontrols_utilities.depends = caQtDM_QtControls caQtDM_Lib
 
-caQtDM_Plugins.file = caQtDM_Lib/caQtDM_Plugins/csplugins.pro 
+INCLUDEPATH += ./caQtDM_Plugins
+
 caQtDM_Plugins.depends = caQtDM_Lib
 
 !MOBILE {
