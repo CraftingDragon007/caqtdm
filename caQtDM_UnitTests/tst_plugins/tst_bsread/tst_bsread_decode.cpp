@@ -60,7 +60,7 @@ void Testbsread_Decode::parsesMainHeader()
     QByteArray raw
         = R"({"hash":"deadbeef","pulse_id":42,"htype":"bsr_m-1.1","global_timestamp":{"epoch":1000.5,"ns":999.0,"sec":12345.0,"ns_offset":7.0}})";
     bool ok = m_decode->setMainHeader(raw.data(), raw.size());
-    QVERIFY(1==2);
+
     QVERIFY(ok);
     QCOMPARE(m_decode->channelcounter, 0);
     QCOMPARE(m_decode->hash, QString("deadbeef"));
