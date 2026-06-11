@@ -627,7 +627,7 @@ void ca3DWidget::turnCameraRight(double angle)
     }
 
     Qt3DRender::QCamera *camera = this3DView->camera();
-    turnCameraBy(camera, angle, 0.0);
+    turnCameraBy(camera, -angle, 0.0);
     apply3DOverlayVisibility(thisCameraPreset);
     qCDebug(ca3DWidgetLog) << "turnCameraRight applied" << cameraDebugState(camera);
 #else
@@ -645,7 +645,7 @@ void ca3DWidget::turnCameraLeft(double angle)
     }
 
     Qt3DRender::QCamera *camera = this3DView->camera();
-    turnCameraBy(camera, -angle, 0.0);
+    turnCameraBy(camera, angle, 0.0);
     apply3DOverlayVisibility(thisCameraPreset);
     qCDebug(ca3DWidgetLog) << "turnCameraLeft applied" << cameraDebugState(camera);
 #else
