@@ -26,7 +26,7 @@ contains(QT_VER_MAJ, 5) {
       }
 }
 contains(QT_VER_MAJ, 6) {
-      QT += widgets concurrent opengl core network
+      QT += widgets concurrent opengl core network xml
       !android {
         QT += uitools
       }
@@ -50,10 +50,6 @@ INCLUDEPATH += ../caQtDM_Parsers/edlParserSrc
 
 freebsd {
    INCLUDEPATH += /usr/local/include
-}
-
-android {
-   INCLUDEPATH += $(ANDROIDFUNCTIONSINCLUDE)
 }
 
 RESOURCES = qtcontrols.qrc
@@ -154,8 +150,6 @@ SOURCES	+= \
     src/calinedraw.cpp \
     src/wmsignalpropagator.cpp \
     src/replacemacro.cpp \
-    src/JSON.cpp \
-    src/JSONValue.cpp \
     src/textedit.cpp \
     src/wmsignalrescale.cpp
 
@@ -190,8 +184,6 @@ HEADERS += src/networkaccess.h src/fileFunctions.h \
     src/plotHelperClasses.h \
     src/wmsignalpropagator.h \
     src/replacemacro.h \
-    src/JSON.h \
-    src/JSONValue.h \
     src/networkmodel.h \
     src/textedit.h \
     src/wmsignalrescale.h

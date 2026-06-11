@@ -26,6 +26,8 @@
 #include "searchfile.h"
 #include "pathdefinitions.h"
 
+Q_LOGGING_CATEGORY(searchFileLog, "caqtdm.widgets.searchfile")
+
 searchFile::searchFile(QString filename)
 {
    _FileName = filename;
@@ -66,7 +68,7 @@ QString searchFile::findFile()
 
     // return filename or null
     if(fileFound) {
-        //printf("searchFile -- %s\n", qasc(FileName));
+        qCDebug(searchFileLog) << "searchFile --" << FileName;
         return FileName;
     }
     else return NULL;

@@ -172,8 +172,9 @@ protected:
       virtual QSize sizeHint() const override;
       virtual QSize minimumSizeHint() const override;
       QSize calculateTextSpace() override;
+      int toEngineeringNotation(char *buffer, size_t bufferLen, double value, int eng_precision = 3);
 
-private:
+  private:
     QString thisPV;
 
     QColor thisForeColor, oldForeColor;
@@ -184,6 +185,7 @@ private:
     colMode oldColorMode;
 
     int thisPrecision;
+    int engr_notationPrecision;
     SourceMode thisPrecMode;
     SourceMode thisLimitsMode;
 

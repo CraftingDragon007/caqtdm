@@ -6,7 +6,7 @@ export PYTHONVERSION=$(shell python3 --version 2>&1 | cut -d ' ' -f 2 | cut -d '
 export ZMQ=/usr/
 export ZMQINC=${ZMQ}/include
 export ZMQLIB=${ZMQ}/lib
-export QTDM_RPATH=/opt/caqtdm/lib/qt6
+export CAQTDM_NORPATH=1
 export GCC_BUILD_ARCH=$(shell gcc -dumpmachine)
 export EPICS_HOST_ARCH=linux-$(shell uname -m)
 export QTHOME=/usr
@@ -73,6 +73,13 @@ override_dh_auto_install:
 	echo "designer \$$@" >> binaries/caqtdm_designer
 	
 	install -Dm755 binaries/caqtdm_designer debian/caqtdm/opt/caqtdm/lib/qt6/caqtdm_designer
+
+	# Create ld config
+	mkdir -p debian/caqtdm/etc/ld.so.conf.d
+	echo "/opt/caqtdm/lib" > debian/caqtdm/etc/ld.so.conf.d/caqtdm.conf
+	echo "/opt/caqtdm/lib/qt6" >> debian/caqtdm/etc/ld.so.conf.d/caqtdm.conf
+	echo "/opt/caqtdm/lib/qt6/designer" >> debian/caqtdm/etc/ld.so.conf.d/caqtdm.conf
+	echo "/opt/caqtdm/lib/qt6/controlsystems" >> debian/caqtdm/etc/ld.so.conf.d/caqtdm.conf
 
 	# Create symlinks
 	ln -sfv /opt/caqtdm/lib/qt6/caqtdm debian/caqtdm/usr/bin/caqtdm

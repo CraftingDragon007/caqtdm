@@ -28,11 +28,7 @@ INCLUDEPATH    += ../../../src
 INCLUDEPATH    += ../../../../caQtDM_QtControls/src/
 INCLUDEPATH    += $(QWTINCLUDE)
 
-android {
-   INCLUDEPATH += $(ANDROIDFUNCTIONSINCLUDE)
-}
-
-HEADERS         = ../../controlsinterface.h archiveSF_plugin.h sfRetrieval.h ../archiverCommon.h
+HEADERS         = ../../controlsinterface.h archiveSF_plugin.h sfRetrieval.h ../archiverCommon.h ../../caQtDM_Plugins_global.h
 SOURCES         =  archiveSF_plugin.cpp sfRetrieval.cpp ../archiverCommon.cpp
 TARGET          = archiveSF_plugin
 

@@ -65,3 +65,7 @@ override_dh_auto_install:
 	echo "EPICS_HOST_ARCH=${EPICS_HOST_ARCH}" > debian/epics-base/usr/lib/environment.d/10-epics-base.conf
 	echo "EPICS_BASE=/usr/lib/epics" >> debian/epics-base/usr/lib/environment.d/10-epics-base.conf
 
+	# Ld config
+	mkdir -p debian/epics-base/etc/ld.so.conf.d
+	echo "/usr/lib/epics/lib/${EPICS_HOST_ARCH}" > debian/epics-base/etc/ld.so.conf.d/epics-base.conf
+

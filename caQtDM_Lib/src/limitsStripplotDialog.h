@@ -60,7 +60,7 @@
  class QTextEdit;
  class QWidget;
 
- class limitsStripplotDialog : public QWidget
+class CAQTDM_LIBSHARED_EXPORT limitsStripplotDialog : public QWidget
 {
      Q_OBJECT
 

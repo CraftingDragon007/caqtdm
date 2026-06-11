@@ -25,12 +25,17 @@
 #include <QDebug>
 #include <QThread>
 #include "demo_plugin.h"
+// You need to modify this file to add a plugin-specific logging category
+#include "caQtDM_Plugins_global.h"
 
 // as defined in knobDefines.h
 //caType {caSTRING	= 0, caINT = 1, caFLOAT = 2, caENUM = 3, caCHAR = 4, caLONG = 5, caDOUBLE = 6};
 
 // this demo plugin just gives you an idea how to use a plugin; for more details you should take a look
 // at the epics3 plugin
+
+// This needs to be done ONLY once per Plugin.
+Q_LOGGING_CATEGORY(demoLog, "caqtdm.plugins.demo")
 
 // gives the plugin name back
 QString DemoPlugin::pluginName()
@@ -41,7 +46,19 @@ QString DemoPlugin::pluginName()
 // constructor
 DemoPlugin::DemoPlugin()
 {
-    qDebug() << "DemoPlugin: Create";
+    // Logging this way, there is no need to manually specify information about where this log is from etc.
+    qCDebug(demoLog) << "Demo: Create";
+    timer = timerValues = Q_NULLPTR;
+}
+
+DemoPlugin::~DemoPlugin()
+{
+    if (timer) {
+        timer->deleteLater();
+    }
+    if (timerValues) {
+        timerValues->deleteLater();
+    }
 }
 
 // in this demo we update our interface here; normally you should update in from your controlsystem
@@ -92,7 +109,7 @@ void DemoPlugin::updateValues()
 #ifdef HARDWORK
 void  DemoPlugin::updateHardwork()
 {
-    qDebug() << "hardwork";
+    qCDebug(demoLog) << "hardwork";
     QMap<QString, double>::iterator i;
     for (i = listOfDoubles.begin(); i != listOfDoubles.end(); ++i) i.value()++;
 }
@@ -101,7 +118,7 @@ void  DemoPlugin::updateHardwork()
 // initialize our communicationlayer with everything you need
 int DemoPlugin::initCommunicationLayer(MutexKnobData *data, MessageWindow *messageWindow, QMap<QString, QString> options)
 {
-    qDebug() << "DemoPlugin: InitCommunicationLayer with options" << options;
+    qCDebug(demoLog) << "InitCommunicationLayer with options" << options;
 
     mutexknobdataP = data;
     messagewindowP = messageWindow;
@@ -109,12 +126,12 @@ int DemoPlugin::initCommunicationLayer(MutexKnobData *data, MessageWindow *messa
     initValue = 0.0;
 
     // we want to update our internal doubles every second
-    timerValues = new QTimer(this);
+    timerValues = new QTimer();
     connect(timerValues, SIGNAL(timeout()), this, SLOT(updateValues()));
     timerValues->start(1000);
 
     // we want to update the interface every 2 seconds
-    timer = new QTimer(this);
+    timer = new QTimer();
     connect(timer, SIGNAL(timeout()), this, SLOT(updateInterface()));
     timer->start(2000);
 
@@ -129,7 +146,7 @@ int DemoPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip) {
     QMutexLocker locker(&mutex);
     QString key = kData->pv;
 
-    qDebug() << "DemoPlugin:pvAddMonitor" << kData->pv << kData->index;
+    qCDebug(demoLog) << "pvAddMonitor" << kData->pv << kData->index;
     double value = initValue;
     initValue += 10;
 
@@ -146,7 +163,7 @@ int DemoPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip) {
 int DemoPlugin::pvClearMonitor(knobData *kData) {
     QMutexLocker locker(&mutex);
 
-    qDebug() << "DemoPlugin:pvClearMonitor" << kData->pv << kData->index;
+    qCDebug(demoLog) << "pvClearMonitor" << kData->pv << kData->index;
     QString key = kData->pv;
     if(!listOfDoubles.contains(key)) listOfDoubles.remove(key);
     listOfIndexes.removeAll(kData->index);
@@ -156,7 +173,7 @@ int DemoPlugin::pvClearMonitor(knobData *kData) {
 
 int DemoPlugin::pvFreeAllocatedData(knobData *kData)
 {
-    //qDebug() << "DemoPlugin:pvFreeAllocatedData";
+    qCDebug(demoLog) << "DemoPlugin:pvFreeAllocatedData";
     if (kData->edata.info != (void *) Q_NULLPTR) {
         free(kData->edata.info);
         kData->edata.info = (void*) Q_NULLPTR;
@@ -175,7 +192,7 @@ int DemoPlugin::pvSetValue(char *pv, double rdata, int32_t idata, char *sdata, c
     Q_UNUSED(errmess);
     Q_UNUSED(forceType);
     QMutexLocker locker(&mutex);
-    qDebug() << "DemoPlugin:pvSetValue" << pv << rdata << idata << sdata;
+    qCDebug(demoLog) << "pvSetValue" << pv << rdata << idata << sdata;
     QString key = pv;
     if(listOfDoubles.contains(key)) listOfDoubles.insert(pv, rdata);
     return true;
@@ -193,7 +210,7 @@ int DemoPlugin::pvSetWave(char *pv, float *fdata, double *ddata, int16_t *data16
     Q_UNUSED(object);
     Q_UNUSED(errmess);
     QMutexLocker locker(&mutex);
-    qDebug() << "DemoPlugin:pvSetWave";
+    qCDebug(demoLog) << "pvSetWave";
     return true;
 }
 
@@ -201,8 +218,8 @@ int DemoPlugin::pvSetWave(char *pv, float *fdata, double *ddata, int16_t *data16
 int DemoPlugin::pvGetTimeStamp(char *pv, char *timestamp) {
     Q_UNUSED(pv);
     Q_UNUSED(timestamp);
-    qDebug() << "DemoPlugin:pvgetTimeStamp";
-    strcpy(timestamp, "timestamp in epics format");
+    qCDebug(demoLog) << "pvgetTimeStamp";
+    qstrncpy(timestamp, "timestamp in epics format", TIMESTAMP_STRING_LENGTH);
     return true;
 }
 
@@ -210,41 +227,41 @@ int DemoPlugin::pvGetTimeStamp(char *pv, char *timestamp) {
 int DemoPlugin::pvGetDescription(char *pv, char *description) {
     Q_UNUSED(pv);
     Q_UNUSED(description);
-    qDebug() << "DemoPlugin:pvGetDescription";
-    strcpy(description, "hello, I am a double");
+    qCDebug(demoLog) << "pvGetDescription";
+    qstrncpy(description, "hello, I am a double", MAX_STRING_LENGTH);
     return true;
 }
 
 // next two routines are used to stop and restart the monitoring (used in case of tabWidgets in the display)
 int DemoPlugin::pvClearEvent(void * ptr) {
     Q_UNUSED(ptr);
-    qDebug() << "DemoPlugin:pvClearEvent";
+    qCDebug(demoLog) << "pvClearEvent";
     return true;
 }
 
 int DemoPlugin::pvAddEvent(void * ptr) {
     Q_UNUSED(ptr);
-    qDebug() << "DemoPlugin:pvAddEvent";
+    qCDebug(demoLog) << "pvAddEvent";
     return true;
 }
 
 // next two routines are used to connect and disconnect monitors when the application gest suspended and reactivated
 int DemoPlugin::pvReconnect(knobData *kData) {
     Q_UNUSED(kData);
-    qDebug() << "DemoPlugin:pvReconnect";
+    qCDebug(demoLog) << "pvReconnect";
     return true;
 }
 
 int DemoPlugin::pvDisconnect(knobData *kData) {
     Q_UNUSED(kData);
-    qDebug() << "DemoPlugin:pvDisconnect";
+    qCDebug(demoLog) << "pvDisconnect";
     return true;
 }
 
 // flush any io is periodically called (1s timer) in order to flush the disconnection and reconnection
 // used for pv's that will be hidden and shown in case of tabwidgets
 int DemoPlugin::FlushIO() {
-    //qDebug() << "DemoPlugin:FlushIO";
+    qCDebug(demoLog) << "DemoPlugin:FlushIO";
     return true;
 }
 
@@ -252,7 +269,7 @@ int DemoPlugin::FlushIO() {
 // otherwise probably no meaning; in this demo, we stop the simulation, however it will not be reactivated
 // any more (you may do that through pvReconnect)
 int DemoPlugin::TerminateIO() {
-    //qDebug() << "DemoPlugin:TerminateIO";
+    qCDebug(demoLog) << "DemoPlugin:TerminateIO";
     timerValues->stop();
     timer->stop();
     return true;

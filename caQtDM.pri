@@ -1,5 +1,52 @@
+opcua_plugin {
+        CONFIG += caQtDM_Plugin
+        CONFIG += Define_ControlsysTargetDir Define_Build_objDirs
+
+        unix:!macx:!ios:!android {
+		        message("opcua_plugin configuration unix:!macx:!ios:!android")
+                INCLUDEPATH   += $(EPICSINCLUDE)/os/Linux
+				LIBS += -L$(CAQTDM_COLLECT) -lcaQtDM_Lib
+				caqtdm_rpath {
+				    LIBS += -Wl,-rpath,$(QTDM_RPATH)
+				}
+                CONFIG += release
+        }
+
+        macx {
+		        message("opcua_plugin configuration macx")
+                INCLUDEPATH   += $(EPICSINCLUDE)/os/Linux
+                LIBS += $$(CAQTDM_COLLECT)/libcaQtDM_Lib.dylib
+                CONFIG += release
+        }
+
+        ios | android {
+		        message("opcua_plugin configuration : ios or android")
+                message( $$OUT_PWD )
+                CONFIG += staticlib
+                LIBS += $$OUT_PWD/../../libcaQtDM_Lib.a
+        }
+
+        win32 {
+		        message("opcua_plugin configuration win32")
+                INCLUDEPATH  += $$(EPICS_BASE)/include/os/win32
+
+                win32-msvc* || msvc{
+                        CONFIG += Define_Build_caQtDM_Lib Define_Build_epics_controls Define_Symbols
+                }
+
+                win32-g++ {
+                        EPICS_LIBS=$$(EPICS_BASE)/lib/win32-x86-mingw
+                        LIBS += ../caQtDM_Lib/release/libcaQtDM_Lib.a
+                }
+        }
+}
+
+#==========================================================================================================
+
+
 #==========================================================================================================
 archive_plugin {
+        CONFIG += caQtDM_Plugin
         CONFIG += Define_ControlsysTargetDir Define_Build_objDirs
 
         unix:!macx:!ios:!android:!freebsd {
@@ -59,6 +106,7 @@ archive_plugin {
 
 #==========================================================================================================
 demo_plugin {
+        CONFIG += caQtDM_Plugin
         CONFIG += Define_ControlsysTargetDir Define_Build_objDirs
         
         unix:!macx:!ios:!android {
@@ -84,7 +132,6 @@ demo_plugin {
                 CONFIG += staticlib
                 android {
                     LIBS += $$OUT_PWD/../../libcaQtDM_Lib_$${QT_ARCH}.a
-                    INCLUDEPATH += $$OUT_PWD/../caQtDM_AndroidFunctions/src
                 }
                 ios {
                     LIBS += $$OUT_PWD/../../libcaQtDM_Lib.a
@@ -108,6 +155,7 @@ demo_plugin {
 
 #==========================================================================================================
 gps_plugin {
+        CONFIG += caQtDM_Plugin
         CONFIG += Define_ControlsysTargetDir Define_Build_objDirs
 
         unix:!macx:!ios:!android {
@@ -133,7 +181,6 @@ gps_plugin {
                 CONFIG += staticlib
                 android {
                     LIBS += $$OUT_PWD/../../libcaQtDM_Lib_$${QT_ARCH}.a
-                    INCLUDEPATH += $$OUT_PWD/../caQtDM_AndroidFunctions/src
                 }
                 ios {
                     LIBS += $$OUT_PWD/../../libcaQtDM_Lib.a
@@ -156,6 +203,7 @@ gps_plugin {
 }
 #==========================================================================================================
 bsread_Plugin {
+        CONFIG += caQtDM_Plugin
         message(“bsread_plugin configuration”)
         CONFIG += Define_ControlsysTargetDir Define_Build_objDirs Define_ZMQ_Lib
         
@@ -198,6 +246,7 @@ bsread_Plugin {
 
 #==========================================================================================================
 epics3_plugin {
+        CONFIG += caQtDM_Plugin
         CONFIG += Define_ControlsysTargetDir Define_Build_objDirs
 
         unix:!macx:!ios:!android:!freebsd {
@@ -228,7 +277,7 @@ epics3_plugin {
 
 	}
 
-        macx {
+        macx:!ios {
                 message("epics3_plugin configuration macx")
  		INCLUDEPATH   += $(EPICSINCLUDE)/os/Darwin
                 INCLUDEPATH   += $(EPICSINCLUDE)/compiler/clang
@@ -250,7 +299,6 @@ epics3_plugin {
                         INCLUDEPATH += $(EPICSINCLUDE)/os/android
                         INCLUDEPATH += $(EPICSINCLUDE)/compiler/clang
                         LIBS += $$OUT_PWD/../../libcaQtDM_Lib_$${QT_ARCH}.a
-                        INCLUDEPATH += $$OUT_PWD/../caQtDM_AndroidFunctions/src
                 }
         }
 
@@ -274,6 +322,7 @@ epics3_plugin {
 }
 #==========================================================================================================
 environment_Plugin {
+        CONFIG += caQtDM_Plugin
         message(“environment_plugin configuration”)
         CONFIG += Define_ControlsysTargetDir Define_Build_objDirs
 
@@ -325,7 +374,6 @@ environment_Plugin {
                 android {
                         INCLUDEPATH += $(EPICSINCLUDE)/os/android
                         INCLUDEPATH += $(EPICSINCLUDE)/compiler/clang
-                        INCLUDEPATH += $(ANDROIDFUNCTIONSINCLUDE)
                         LIBS += $$OUT_PWD/../../libcaQtDM_Lib_$${QT_ARCH}.a
                 }
         }
@@ -347,6 +395,7 @@ environment_Plugin {
 }
 #==========================================================================================================
 epics4_plugin {
+        CONFIG += caQtDM_Plugin
         CONFIG += Define_ControlsysTargetDir Define_Build_objDirs
 
         unix:!macx:!ios:!android:!freebsd {
@@ -425,7 +474,7 @@ epics4_plugin {
         }
 
 	
-        macx {
+        macx:!ios {
                 message("epics4_plugin configuration macx")
                 INCLUDEPATH   += $(EPICSINCLUDE)
                 INCLUDEPATH   += $(EPICSINCLUDE)/os/Darwin
@@ -471,7 +520,6 @@ epics4_plugin {
                 android {
                         INCLUDEPATH += $(EPICSINCLUDE)/os/android
                         INCLUDEPATH += $(EPICSINCLUDE)/compiler/clang
-                        INCLUDEPATH += $(ANDROIDFUNCTIONSINCLUDE)
                         LIBS += $$OUT_PWD/../../libcaQtDM_Lib_$${QT_ARCH}.a
                 }
         }
@@ -493,6 +541,12 @@ epics4_plugin {
  		
  
 	}
+}
+
+caQtDM_Plugin {
+        win32-msvc* || msvc {
+                DEFINES += CAQTDM_PLUGIN_LIBRARY
+        }
 }
 
 #==========================================================================================================
@@ -807,7 +861,6 @@ caQtDM_Viewer {
                     LIBS += $$OUT_PWD/../caQtDM_Lib/caQtDM_Plugins/epics3/libepics3_plugin.a
                     LIBS += $$OUT_PWD/../caQtDM_Lib/caQtDM_Plugins/archive/archiveSF/libarchiveSF_plugin.a
                     LIBS += $$OUT_PWD/../caQtDM_Lib/caQtDM_Plugins/environment/libenvironment_plugin.a
-
                     modbus {
                         LIBS += $$OUT_PWD/../caQtDM_Lib/caQtDM_Plugins/modbus/libmodbus_plugin.a
                     }
@@ -840,16 +893,16 @@ caQtDM_Viewer {
                     #QMAKE_BUNDLE_DATA += assets_catalogs
 
                     QMAKE_BUNDLE_DATA += APP_XML_FILES APP-FONTS #APP_ICON APP1_ICON
-                    QMAKE_CFLAGS += -gdwarf-2
-                    QMAKE_CXXFLAGS += -gdwarf-2
+                    #QMAKE_CFLAGS += -gdwarf-2
+                    #QMAKE_CXXFLAGS += -gdwarf-2
                     QMAKE_TARGET_BUNDLE_PREFIX=ch.psi
 
                     QMAKE_BUNDLE_NAME = ch.psi.caQtDM
                     bundle_identifier.name = PRODUCT_BUNDLE_IDENTIFIER
                     bundle_identifier.value = ch.psi.caQtDM
                     QMAKE_MAC_XCODE_SETTINGS += bundle_identifier
-                    target.name=IPHONEOS_DEPLOYMENT_TARGET
-                    target.value = 18.0
+                    #target.name=IPHONEOS_DEPLOYMENT_TARGET
+                    #target.value = 18.0
 
                     QMAKE_MAC_XCODE_SETTINGS += target
                     assetIcon.name = ASSETCATALOG_COMPILER_APPICON_NAME
@@ -879,6 +932,7 @@ caQtDM_Viewer {
                          # build simulator only for 32 bit
                          INCLUDEPATH += $$(QWTHOME)/src
                          QMAKE_LFLAGS += -all_load
+                         QMAKE_APPLE_SIMULATOR_ARCHS="arm64 x86_64"
                     }
                     CONFIG(iphoneos,iphoneos|iphonesimulator): {
                         message("caQtDM_viewer configuration : iphoneos")
@@ -965,7 +1019,6 @@ caQtDM_Viewer {
                         LIBS += $(CAQTDM_COLLECT)/designer/libqtcontrols_utilities_plugin_$${QT_ARCH}.a
                         LIBS += $(CAQTDM_COLLECT)/controlsystems/libdemo_plugin_$${QT_ARCH}.a
                         LIBS += $(CAQTDM_COLLECT)/controlsystems/libepics3_plugin_$${QT_ARCH}.a
-                        LIBS += $(CAQTDM_COLLECT)/libAndroidFunctions_$${QT_ARCH}.a
                         epics4: {
                                 LIBS += $(CAQTDM_COLLECT)/controlsystems/libepics4_plugin_$${QT_ARCH}.a
                                 }
@@ -983,6 +1036,9 @@ caQtDM_Viewer {
                         }
                         gps {
                             LIBS += $(CAQTDM_COLLECT)/controlsystems/libgps_plugin_$${QT_ARCH}.a
+                        }
+                        opcua {
+                            LIBS += $(CAQTDM_COLLECT)/controlsystems/libopcua_plugin_$${QT_ARCH}.a
                         }
 
                         LIBS += $(CAQTDM_COLLECT)/libcaQtDM_Lib_$${QT_ARCH}.a

@@ -60,6 +60,8 @@
 #define MAXIMUMSIZE 5000
 #define SOMEMORE 500
 
+Q_LOGGING_CATEGORY(caStripPlotLog, "caqtdm.widgets.castripplot")
+
 caStripPlot::~caStripPlot() {
 
     emit timerThreadStop();
@@ -96,7 +98,7 @@ caStripPlot::caStripPlot(QWidget *parent): QwtPlot(parent)
     autoscaleMinYOverride = false;
 
 #ifdef QWT_USE_OPENGL
-    printf("caStripplot uses opengl ?\n");
+    qCDebug(caStripPlotLog) << "caStripplot uses opengl";
     GLCanvas *canvas = new GLCanvas();
     canvas->setPalette( QColor( "khaki" ) );
     setCanvas(canvas);
@@ -358,7 +360,7 @@ void caStripPlot::selectYAxis(quint8 newYAxisIndex){
         newYAxisMax = qMax(newYAxisMax, 1e-19);
     }
 
-    qDebug() << "going from" << oldYAxisMin << "-" <<oldYAxisMax << "to" << newYAxisMin << "-" << newYAxisMax;
+    qCInfo(caStripPlotLog) << "going from" << oldYAxisMin << "-" <<oldYAxisMax << "to" << newYAxisMin << "-" << newYAxisMax;
 
     bool isLinear = (thisYaxisType == linear);
     static_cast<PlotScaleDraw*>(axisScaleDraw(yLeft))->setConversion(oldYAxisMin, oldYAxisMax, newYAxisMin, newYAxisMax, isLinear);
@@ -385,7 +387,7 @@ void caStripPlot::defineXaxis(units unit, double period)
         interval = period * 60;
     } else {
         interval = 60;
-        printf("\nunknown unit\n");
+        qCWarning(caStripPlotLog) << "unknown unit";
     }
 
     // set xaxis
@@ -401,7 +403,7 @@ void caStripPlot::setXaxis(double interval, double period)
 
     if(thisXaxisType != ValueScale) {
         plotPicker->setIsXAxisAlreadyCorrect(false);
-        QDateTime timeNow= QDateTime::currentDateTime();
+        QDateTime timeNow = QDateTime::currentDateTime();
         timeNow = timeNow.addSecs((int) -interval);
         setAxisScale(QwtPlot::xBottom, 0, interval, interval/nbTicks);
         setAxisScaleDraw(QwtPlot::xBottom, new PlotDateScaleDraw(timeNow) );
@@ -453,7 +455,7 @@ void caStripPlot::setYaxisType(yAxisType s)
  * */
 void caStripPlot::remapCurve(double newMin, double newMax,  quint8 curvIndex, bool isNewLog = false)
 {
-    //qDebug() << "remapping Curve: " << curvIndex << "min/max:" << newMin << newMax << "isNewLog:"<< isNewLog;
+    qCDebug(caStripPlotLog) << "remapping Curve: " << curvIndex << "min/max:" << newMin << newMax << "isNewLog:"<< isNewLog;
     // Start timer to measure performance:
     //QElapsedTimer timer;
     //timer.start();
@@ -541,13 +543,13 @@ void caStripPlot::remapCurve(double newMin, double newMax,  quint8 curvIndex, bo
     replot();
 
     // Print time it took to do conversions
-    //qDebug() << "Conversion took ms: " << timer.nsecsElapsed()/1000000.0;
+    //qCDebug(caStripPlotLog) << "Conversion took ms: " << timer.nsecsElapsed()/1000000.0;
 }
 
 void caStripPlot::RescaleCurves(int width, units unit, double period)
 {
 
-    //printf("canvas width=%d\n",width);
+    qCDebug(caStripPlotLog) << "canvas width=" << width;
 
     HISTORY = width; // equals canvas width
 
@@ -810,7 +812,7 @@ void caStripPlot::defineCurves(QStringList titles, units unit, double period, in
     bool propertyConversionOk;
     xAxisToleranceFactor = this->property("xAxisToleranceFactor").toFloat(&propertyConversionOk);
     if (!propertyConversionOk || xAxisToleranceFactor <= 0 || xAxisToleranceFactor >= 1){
-        qDebug() << "The Dynamic Property xAxisToleranceFactor is either not set or set incorrectly (not between 0 and 1) and will be replaced by default value 0.01 for Object:" << this->objectName();
+        qCWarning(caStripPlotLog) << "The Dynamic Property xAxisToleranceFactor is either not set or set incorrectly (not between 0 and 1) and will be replaced by default value 0.01 for Object:" << this->objectName();
         xAxisToleranceFactor = 0.01f;
     }
     // set plotpicker, same reason as xAxisToleranceFactor;
@@ -857,15 +859,13 @@ void caStripPlot::TimeOutThread()
 
     // we need an exact time scale
     if(RestartPlot1) {
-        ftime(&timeStart);
-        static_cast<DynamicPlotPicker*>(plotPicker)->setStartTime(timeStart.time, thisPeriod);
+        timeStartMs = QDateTime::currentMSecsSinceEpoch();
+        static_cast<DynamicPlotPicker*>(plotPicker)->setStartTime(timeStartMs/1000, thisPeriod);
         RestartPlot1 = false;
         RestartPlot2 = true;
     }
-    ftime(&timeNow);
 
-    elapsedTime = ((double) timeNow.time + (double) timeNow.millitm / (double)1000) -
-                  ((double) timeStart.time + (double) timeStart.millitm / (double)1000);
+    elapsedTime = QDateTime::currentMSecsSinceEpoch() / 1000.0 - timeStartMs / 1000.0;
 
     timeData = INTERVAL + elapsedTime;  // in seconds
     interval = INTERVAL;
@@ -1073,17 +1073,15 @@ void caStripPlot::TimeOut()
 
     if(thisXticks < 1) nbTicks = 1; else nbTicks = thisXticks;
 
-    //printf("timeout for numberofcurves=%d\n", NumberOfCurves);
+    qCDebug(caStripPlotLog) << "timeout for numberofcurves=" << NumberOfCurves;
 
     mutex.lock();
 
     // in case of restart plot, get start time and for the running time scale the new scale
     if(RestartPlot2) {
         RestartPlot2 = false;
-        ftime(&plotStart);
+        plotStartMs = QDateTime::currentMSecsSinceEpoch();
         if(thisXaxisType != ValueScale) {
-            QTime timeNow= QTime::currentTime();
-            timeNow = timeNow.addSecs((int) -INTERVAL);
             setAxisScale(QwtPlot::xBottom, 0, INTERVAL, INTERVAL/nbTicks);
 
             if(thisXaxisType == TimeScaleFix) {
@@ -1093,7 +1091,8 @@ void caStripPlot::TimeOut()
                 QwtLinearScaleEngine *scaleEngine= new QwtDateScaleEngine();
                 setAxisScaleEngine(QwtPlot::xBottom, scaleEngine);
             }
-            QDateTime dateTimeNow= QDateTime::currentDateTime();
+
+            QDateTime dateTimeNow = QDateTime::currentDateTime();
             dateTimeNow = dateTimeNow.addSecs((int) -INTERVAL);
             setAxisScaleDraw (QwtPlot::xBottom, new PlotDateScaleDraw(dateTimeNow));
         }
@@ -1103,12 +1102,9 @@ void caStripPlot::TimeOut()
         }
     }
 
-    // get actual time
-    ftime(&timeNow);
-
     // get time since restart
-    elapsedTime = ((double) timeNow.time + (double) timeNow.millitm / (double)1000) -
-                  ((double) plotStart.time + (double) plotStart.millitm / (double)1000);
+    elapsedTime = QDateTime::currentMSecsSinceEpoch() /
+                      1000.0 - plotStartMs / 1000.0;
 
     // change scale base in case of running time scale
     if(thisXaxisType != ValueScale) {
@@ -1169,7 +1165,7 @@ void caStripPlot::RescaleAxis()
     int i;
     // rescale axis
     for(i=0; i < NumberOfCurves; i++) {
-        setData(realTim[i], realVal[i], i);
+        setData(realMin[i], realVal[i], i);
         // redraw legend if any
         curve[i]->setTitle(legendText(i));
     }
@@ -1178,7 +1174,7 @@ void caStripPlot::RescaleAxis()
 void caStripPlot::setLegendAttribute(QColor c, QFont f, LegendAtttribute SW)
 {
 
-    //printf("fontsize=%.1f %s\n", f.pointSizeF(), qasc(this->objectName()));
+    qCDebug(caStripPlotLog) << "fontsize=" << f.pointSizeF() << this->objectName();
     //when legend text gets to small, hide it (will give then space for plot)
     setProperty("legendfontsize", f.pointSizeF());
 
@@ -1277,7 +1273,7 @@ void caStripPlot::setLegendAttribute(QColor c, QFont f, LegendAtttribute SW)
 
 }
 
-void caStripPlot::setData(struct timeb now, double Y, int curvIndex)
+void caStripPlot::setData(qint64 nowMs, double Y, int curvIndex)
 {
     if(curvIndex < 0 || curvIndex > (MAXCURVES-1)) return;
 
@@ -1287,7 +1283,7 @@ void caStripPlot::setData(struct timeb now, double Y, int curvIndex)
     static std::vector<double> bmvece;
 
     realVal[curvIndex] = Y;
-    realTim[curvIndex] = now;
+    realTim[curvIndex] = nowMs;
     if(Y> realMax[curvIndex]) realMax[curvIndex]  = Y;
     if(Y< realMin[curvIndex]) realMin[curvIndex]  = Y;
 
@@ -1558,7 +1554,7 @@ bool caStripPlot::eventFilter(QObject *obj, QEvent *event)
             return true;
         }
         if(nButton==2) {
-            //printf("emit from %s\n", qasc(this->objectName()));
+            qCDebug(caStripPlotLog) << "emit from" << this->objectName();
             QPoint p;
             emit ShowContextMenu(p);
             return true;

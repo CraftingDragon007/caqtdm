@@ -24,12 +24,15 @@
  */
 
 #include <pipereader.h>
+#include <loggingcategories.h>
+
+Q_LOGGING_CATEGORY(pipeReaderLog, "caqtdm.viewer.pipereader")
 
 PipeReader::PipeReader(QEventLoop *loop, QObject *parent) : QObject(parent)
 {
     evLoop = loop;
     std_in = new QFile();
-    std_in->open(0,QIODevice::ReadOnly);
+    if (!std_in->open(0,QIODevice::ReadOnly)) qCCritical(pipeReaderLog) << "couldn't open stdin, proceeding for now, but may fail...";
     notifier = new QSocketNotifier(0, QSocketNotifier::Read);
     connect(notifier,SIGNAL(activated(int)),this,SLOT(DataReadyOnStdin()));
 
@@ -43,9 +46,9 @@ PipeReader::~PipeReader()
 {
 }
 
-void PipeReader:: Quit()
+void PipeReader::Quit()
 {
-    //qDebug() << "timeout";
+    qCDebug(pipeReaderLog) << "timeout";
     timer->stop();
     // get rid of notifier
     disconnect(notifier, SIGNAL(activated(int)), 0, 0 );
@@ -58,14 +61,14 @@ void PipeReader::DataReadyOnStdin() {
     timer->stop();
     QByteArray newData = std_in->readAll();
     std_in->close();
-    //qDebug() << data << data.size();
+    qCDebug(pipeReaderLog) << data << data.size();
     if(newData.size() == 0) {
 
     } else {
         QTemporaryFile file(QDir::tempPath()+"/qt-tempFile");
         file.setAutoRemove(false);
         if(file.open()) {
-            qDebug() << file.fileName();
+            qCInfo(pipeReaderLog) << file.fileName();
             file.write(newData);
             file.close();
             filename = file.fileName() + ".ui";
@@ -82,7 +85,7 @@ void PipeReader::DataReadyOnStdin() {
 
 QString PipeReader::getTemporaryFilename()
 {
-    //qDebug() << "getTemporaryFilename" << filename;
+    qCDebug(pipeReaderLog) << "getTemporaryFilename" << filename;
     return filename;
 }
 

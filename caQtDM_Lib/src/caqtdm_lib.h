@@ -76,7 +76,6 @@
 #include "mutexKnobDataWrapper.h"
 #include "MessageWindow.h"
 #include "messageWindowWrapper.h"
-#include "JSON.h"
 #include "limitsStripplotDialog.h"
 #include "limitsCartesianplotDialog.h"
 #include "limitsDialog.h"
@@ -115,6 +114,11 @@ enum macro_parser{
 namespace Ui {
 class CaQtDM_Lib;
 }
+
+#ifdef UNIT_TESTING
+#define CaQtDM_Lib CaQtDM_Lib_TEST
+#define CAQTDM_LIBSHARED_EXPORT
+#endif
 
 class CAQTDM_LIBSHARED_EXPORT CaQtDM_Lib : public QMainWindow, public CaQtDM_Lib_Interface
 {
@@ -280,7 +284,11 @@ public:
         }
     }
 
+#ifndef UNIT_TESTING
 protected:
+#else
+public:
+#endif
     virtual void timerEvent(QTimerEvent *e);
     void resizeEvent ( QResizeEvent * event );
     void mousePressEvent(QMouseEvent *event);
@@ -299,7 +307,12 @@ signals:
     void Signal_ReloadAllWindows();
     void fileChanged(const QString&);
 
+#ifndef UNIT_TESTING
 private:
+#else
+public:
+#endif
+
 #if !defined(useElapsedTimer)
     double rTime();
 #endif
@@ -366,6 +379,7 @@ private:
     bool reaffectText(QMap<QString, QString> map, QString *text, QWidget *w);
     int InitVisibility(QWidget* widget, knobData *kData, QMap<QString, QString> map,  int *specData, QString info);
     void postMessage(QtMsgType type, char *msg);
+    void postMessageAndLog(QtMsgType type, char *msg, QMessageLogger::CategoryFunction category);
     int Execute(char *command);
 
     void TreatRequestedWave(QString pv, QString text, caWaveTable::FormatType fType, int index, QWidget *w);
@@ -506,7 +520,14 @@ private:
     QString handle_Macro_Constants(QString Text);
     QStringList treat_read_MacroCommand(QStringList args);
 
+public slots:
+    void messageWindowOutput(const QtMsgType type, const QString &message);
+
+#ifndef UNIT_TESTING
 private slots:
+#else
+public slots:
+#endif
     void Callback_CaCalc(double value) ;
     void Callback_UndefinedMacrowindowExit();
     void Callback_GlobalShortcutWindowExit();

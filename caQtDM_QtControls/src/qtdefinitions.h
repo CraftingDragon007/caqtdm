@@ -28,6 +28,7 @@
 
 #define MAX_STRING_LENGTH 4096
 #define SMALL_STRING_LENGTH 255
+#define TIMESTAMP_STRING_LENGTH 50
 
 #ifdef MOBILE_ANDROID
 #include <QScreen>

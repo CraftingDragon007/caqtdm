@@ -31,14 +31,6 @@
 #include <QSslConfiguration>
 #include <QTimer>
 #include <QWaitCondition>
-#include <iostream>
-#include <time.h>
-
-#ifdef MOBILE_ANDROID
-#include <androidtimeb.h>
-#else
-#include <sys/timeb.h>
-#endif
 
 #include <QDebug>
 #include <QThread>
@@ -52,10 +44,8 @@
 #include <zlib.h>
 #endif
 
-#include <fstream>
 #include <httpretrieval.h>
-#include <iostream>
-#include <sstream>
+#include "caQtDM_Plugins_global.h"
 
 #define qasc(x) x.toLatin1().constData()
 
@@ -219,7 +209,6 @@ void HttpRetrieval::finishReply(QNetworkReply *reply)
         return;
     }
     int count = 0;
-    struct timeb now;
     double seconds;
 
     QVariant status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute);
@@ -295,16 +284,14 @@ void HttpRetrieval::finishReply(QNetworkReply *reply)
         // Not using qUncompress because we have zLib encrypted data, so custom function is used.
         out = gUncompress(outCompressed);
     } catch (...) {
-        qDebug() << (__FILE__) << ":" << (__LINE__) << "|"
-                 << "failed to uncompress Data, treating it as plain json";
+        qCDebug(archiveHTTPLog) << "failed to uncompress Data, treating it as plain json";
         out = outCompressed;
     }
 
     if (out.isEmpty()) { // Must have been uncompressed data
         out = outCompressed;
         if (out.isEmpty()) { // well...
-            qDebug() << (__FILE__) << ":" << (__LINE__) << "|"
-                     << "Response is empty, aborting request.";
+            qCDebug(archiveHTTPLog) << "Response is empty, aborting request.";
             emit requestFinished();
             reply->deleteLater();
             m_errorString += "HTTP response was empty";
@@ -314,8 +301,7 @@ void HttpRetrieval::finishReply(QNetworkReply *reply)
 
     reply->deleteLater();
     m_errorString = "";
-    ftime(&now);
-    seconds = (double) now.time + (double) now.millitm / (double) 1000;
+    seconds = QDateTime::currentMSecsSinceEpoch() / 1000.0;
 
     bool conversionOk = true;
     QJsonObject rootObject;
@@ -523,7 +509,7 @@ void HttpRetrieval::timeoutRequest()
 QByteArray HttpRetrieval::gUncompress(const QByteArray &data)
 {
     if (data.size() <= 4) {
-        qWarning("gUncompress: Input data is truncated");
+        qCWarning(archiveHTTPLog) << "Input data is truncated";
         return QByteArray();
     }
 

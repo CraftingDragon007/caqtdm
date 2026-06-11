@@ -18,6 +18,7 @@ INCLUDEPATH    += ../
 INCLUDEPATH    += ../../src
 INCLUDEPATH    += ../../../caQtDM_QtControls/src
 HEADERS         = bsread_Plugin.h ../controlsinterface.h \
+    ../caQtDM_Plugins_global.h \
     bsread_decode.h \
     bsread_channeldata.h \
     bsread_dispatchercontrol.h \

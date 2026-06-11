@@ -21,8 +21,9 @@ CONFIG         += plugin
 INCLUDEPATH    += .
 INCLUDEPATH    += ../
 INCLUDEPATH    += ../../src
+INCLUDEPATH    += ../../../caQtDM_QtControls/src
 
-HEADERS         = epics4_plugin.h ../controlsinterface.h   
+HEADERS         = epics4_plugin.h ../controlsinterface.h ../caQtDM_Plugins_global.h
 SOURCES         = epics4_plugin.cpp
 TARGET          = epics4_plugin
 

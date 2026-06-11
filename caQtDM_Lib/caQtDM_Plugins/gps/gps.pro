@@ -19,9 +19,7 @@ CONFIG         += plugin
 INCLUDEPATH    += .
 INCLUDEPATH    += ../
 INCLUDEPATH    += ../../src
-HEADERS         = gps_plugin.h ../controlsinterface.h
+INCLUDEPATH    += ../../../caQtDM_QtControls/src
+HEADERS         = gps_plugin.h ../controlsinterface.h ../caQtDM_Plugins_global.h
 SOURCES         = gps_plugin.cpp
 TARGET          = gps_plugin
-android {
-   INCLUDEPATH += $(ANDROIDFUNCTIONSINCLUDE)
-}

@@ -31,16 +31,10 @@
 #include <QCoreApplication>
 #include <QMutexLocker>
 #include <stdio.h>
-#include <time.h>
 #include <QFile>
 #include <QDebug>
 #include <QTextStream>
 #include <QScrollBar>
-#ifndef MOBILE_ANDROID
-#include <sys/timeb.h>
-#else
-#include <androidtimeb.h>
-#endif
 #include "qtdefinitions.h"
 
 #define GCC_VERSION (__GNUC__ * 10000 \
@@ -50,8 +44,12 @@
 const char* MessageWindow::WINDOW_TITLE = "caQtDM Messages";
 MessageWindow* MessageWindow::MsgHandler = Q_NULLPTR;
 
+Q_LOGGING_CATEGORY(messageWindowLog, "caqtdm.lib.messagewindow")
+Q_LOGGING_CATEGORY(externCLog, "caqtdm.extern.c")
+
 MessageWindow::MessageWindow(QWidget* parent) : QDockWidget(parent)
 {
+    m_logMessageEvents = !qEnvironmentVariableIsEmpty("CAQTDM_LOGGING_INCLUDE_MESSAGEWINDOW");
 
     QFont font("Monospace");
     font.setStyleHint(QFont::TypeWriter);
@@ -73,49 +71,13 @@ MessageWindow::MessageWindow(QWidget* parent) : QDockWidget(parent)
     setContextMenuPolicy(Qt::CustomContextMenu);
     show();
 
-    QString createLogFile = qgetenv("CAQTDM_CREATE_LOGFILE");
-    if (createLogFile.toLower() == "true") {
-        QDateTime currentTime = QDateTime::currentDateTime();
-        QString logFileName = QString("caQtDM_Logfile_%1.txt").arg(currentTime.toLocalTime().toString("yyyy-dd-M--HH-mm-ss-zzz"));
-        QString logFilePath = qgetenv("CAQTDM_LOGFILE_PATH");
-        if (!logFilePath.isEmpty()) {
-            logFilePath += "/" + logFileName;
-            m_logFilePath = logFilePath;
-        } else {
-            m_logFilePath = logFileName;
-        }
-    }
-
     move(x(), 0);
 }
 
 QString MessageWindow::QtMsgToQString(QtMsgType type, const char *msg)
 {
-    time_t          time_val;
-    struct tm       *timess;
-    struct timeb    timeA;
-    char            prTime[200];
-
-    ftime(&timeA);
-    time_val = timeA.time;
-    timess = localtime(&time_val);
-    if(timess != Q_NULLPTR) {
-        sprintf(prTime, "%02d-%02d-%04d %02d:%02d:%02d ", timess->tm_mday, timess->tm_mon+1, timess->tm_year+1900,  timess->tm_hour, timess->tm_min, timess->tm_sec);
-        switch (type) {
-                case QtDebugMsg:
-                        return QString(prTime) + QString(msg);
-                case QtWarningMsg:
-                        return QString(prTime) + QString(msg);
-                case QtCriticalMsg:
-                        return QString(prTime) + QString(msg);
-                case QtFatalMsg:
-                        return QString(prTime) + QString(msg);
-                default:
-                        return QString(prTime) + QString(msg);
-        }
-     } else {
-        return QString(msg);
-     }
+    QString prTime = QDateTime::currentDateTime().toString("dd-MM-yyyy HH:mm:ss ");
+    return prTime + QString(msg);
 }
 
 void MessageWindow::AppendMsgWrapper(QtMsgType type, char* msg)
@@ -157,11 +119,6 @@ QString MessageWindow::getMessageBoxContents() {
     return msgTextEdit.toPlainText();
 }
 
-QString MessageWindow::getLogFilePath()
-{
-    return m_logFilePath;
-}
-
 void MessageWindow::themeChanged() {
     QApplication* guiApp = qobject_cast<QApplication*>(qApp);
     QPalette palette = guiApp->palette();
@@ -189,17 +146,25 @@ void MessageWindow::postMsgEvent(QtMsgType type, char* msg)
 {
     QString qmsg = MessageWindow::QtMsgToQString(type, msg);
 
-    // Also write the message to a temporary logfile that gets permanent if the progam crashes.
-    if (!m_logFilePath.isEmpty()) {
-            QFile logFile(m_logFilePath);
-        if (logFile.open(QIODevice::Append | QIODevice::Text)) {
-            QTextStream textStream(&logFile);
-            textStream << qmsg.append("\n");
-            logFile.close();
-        } else {
-            qWarning() << "Failed to write to logfile";
+    if (m_logMessageEvents) {
+        // In addition to displaying the message in the message window, trigger a QtLogging message
+        switch (type) {
+        case QtDebugMsg:
+            qCDebug(messageWindowLog) << msg;
+            break;
+        case QtInfoMsg:
+            qCInfo(messageWindowLog) << msg;
+            break;
+        case QtWarningMsg:
+            qCWarning(messageWindowLog) << msg;
+            break;
+        case QtCriticalMsg:
+        case QtFatalMsg:
+            qCCritical(messageWindowLog) << msg;
+            break;
         }
     }
+
     switch (type) {
 #if QT_VERSION > QT_VERSION_CHECK(5, 0, 0)
     case QtInfoMsg:
@@ -244,11 +209,31 @@ void MessageWindow::postMsgEvent(QtMsgType type, char* msg)
 
 extern "C" MessageWindow* C_postMsgEvent(MessageWindow* p, int type, char* msg)
 {
+    QtMsgType msgType;
+
+    // Map QtMsgType
+    switch (type) {
+    case 0:
+        msgType = QtDebugMsg;
+        qCDebug(externCLog) << msg;
+        break;
+    case 1:
+        msgType = QtWarningMsg;
+        qCWarning(externCLog) << msg;
+        break;
+    case 2:
+    case 3:
+        msgType = QtCriticalMsg;
+        qCCritical(externCLog) << msg;
+        break;
+    default:
+        return p;
+        break;
+    }
+
     if(p == 0) return p;
-    if(type == 0) p->postMsgEvent(QtDebugMsg, msg);
-    else if(type == 1) p->postMsgEvent(QtWarningMsg, msg);
-    else if(type == 2) p->postMsgEvent(QtCriticalMsg, msg);
-    else if(type == 3) p->postMsgEvent(QtCriticalMsg, msg);
+
+    p->postMsgEvent(msgType, msg);
     return p;
 }
 

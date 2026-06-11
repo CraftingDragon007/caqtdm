@@ -20,9 +20,7 @@ CONFIG         += plugin
 INCLUDEPATH    += .
 INCLUDEPATH    += ../
 INCLUDEPATH    += ../../src
-HEADERS         = demo_plugin.h ../controlsinterface.h
+INCLUDEPATH    += ../../../caQtDM_QtControls/src
+HEADERS         = demo_plugin.h ../controlsinterface.h ../caQtDM_Plugins_global.h
 SOURCES         = demo_plugin.cpp
 TARGET          = demo_plugin
-android {
-   INCLUDEPATH += $(ANDROIDFUNCTIONSINCLUDE)
-}

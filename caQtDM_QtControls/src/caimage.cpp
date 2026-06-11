@@ -29,6 +29,8 @@
 #include <QPainter>
 //#include <QElapsedTimer>
 
+Q_LOGGING_CATEGORY(caImageLog, "caqtdm.widgets.caimage")
+
 caImage::caImage(QWidget* parent) : QWidget(parent)
 {
     messagequeue = new messageQueue();
@@ -61,22 +63,29 @@ bool caImage::anyMessages()
     return !messagequeue->isEmpty();
 }
 
-void caImage::init(const QString& filename) {
-
+void caImage::init(const QString& filename, const bool isProvisional) {
     // this will check for file existence and when an url is defined, download the file from a http server
     fileFunctions filefunction;
     int success = filefunction.checkFileAndDownload(filename);
     if(filefunction.lastInfo().length() > 0) messagequeue->enqueue(filefunction.lastInfo());
     if(!success) {
-        if(filefunction.lastError().length() > 0) messagequeue->enqueue(filefunction.lastError());
-        messagequeue->enqueue(tr("Info: could not find or download file %1, however continue").arg(filename));
-        printf("caimage: %s\n", qasc(tr("Info: could not find or download file %1, however continue; %2").arg(filename).arg(qasc(filefunction.lastInfo()))));
+        if (isProvisional) {
+            qCDebug(caImageLog) << "caimage:" << tr("Info: could not find or download provisional file %1, however continue; %2").arg(filename).arg(qasc(filefunction.lastInfo()));
+        } else {
+            if(filefunction.lastError().length() > 0) messagequeue->enqueue(filefunction.lastError());
+            messagequeue->enqueue(tr("Info: could not find or download file %1, however continue").arg(filename));
+            qCWarning(caImageLog) << "caimage:" << tr("Info: could not find or download file %1, however continue; %2").arg(filename).arg(qasc(filefunction.lastInfo()));
+        }
     }
 
     searchFile *s = new searchFile(filename);
     QString fileNameFound = s->findFile();
     if(fileNameFound.isNull()) {
-        qDebug() << "file" << filename << "does not exist";
+        if (isProvisional) {
+            qCDebug(caImageLog) << "provisional file" << filename << "could not be found";
+        } else {
+            qCCritical(caImageLog) << "file" << filename << "does not exist";
+        }
         delete s;
         return;
     }
@@ -154,10 +163,10 @@ void caImage::setValid()
     _container->setStyleSheet(style);
 }
 
-void caImage::setFileName(QString filename)
+void caImage::setFileName(QString filename, bool isProvisional)
 {
     thisFileName = filename;
-    init(thisFileName);
+    init(thisFileName, isProvisional);
 }
 
 void caImage::setFrame(int frame)

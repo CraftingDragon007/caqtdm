@@ -32,12 +32,14 @@
 #include <QDebug>
 #include <QApplication>
 #include <QClipboard>
+#include <QtMath>
 #if defined(_MSC_VER)
     #ifndef snprintf
      #define snprintf _snprintf
     #endif
 #endif
 
+Q_LOGGING_CATEGORY(caLineDrawLog, "caqtdm.widgets.calinedraw")
 
 caLineDraw::caLineDraw(QWidget *parent) : QWidget(parent), FontScalingWidget(this), caWidgetInterface()
 {
@@ -46,7 +48,7 @@ caLineDraw::caLineDraw(QWidget *parent) : QWidget(parent), FontScalingWidget(thi
     // if this font does not exist then try a next one
     QFontInfo info(font);
     QString family = info.family();
-    //printf("got font %s\n", qasc(family));
+    qCDebug(caLineDrawLog) << "got font " << family;
     if(!family.contains("Lucida Sans Typewriter")) {
         QFont  newfont("Monospace");   // not very nice, while a a dot inside the zero to distinguish from o
         newfont.setStyleHint(QFont::TypeWriter);
@@ -216,7 +218,7 @@ void caLineDraw::setAlarmColors(short status, double value, QColor bgAtInit, QCo
     switch (m_AlarmState) {
 
     case NO_ALARM:
-        //qDebug() << "no alarm" << kPtr->pv;
+        qCDebug(caLineDrawLog) << "no alarm";
         if(m_ColorMode == Alarm_Static || m_ColorMode == Alarm_Default) {
             c = AL_GREEN;
             if(m_AlarmHandling == onForeground) setForeAndBackground(c, bgAtInit);
@@ -227,7 +229,7 @@ void caLineDraw::setAlarmColors(short status, double value, QColor bgAtInit, QCo
         break;
 
     case MINOR_ALARM:
-        //qDebug() << "minor alarm";
+        qCDebug(caLineDrawLog) << "minor alarm";
         if(m_ColorMode == Alarm_Static || m_ColorMode == Alarm_Default) {
             c = AL_YELLOW;
             if(m_AlarmHandling == onForeground) setForeAndBackground(c, bgAtInit);
@@ -238,7 +240,7 @@ void caLineDraw::setAlarmColors(short status, double value, QColor bgAtInit, QCo
         break;
 
     case MAJOR_ALARM:
-        //qDebug() << "serious alarm" << kPtr->pv;
+        qCDebug(caLineDrawLog) << "serious alarm";
         if(m_ColorMode == Alarm_Static || m_ColorMode == Alarm_Default) {
             c = AL_RED;
             if(m_AlarmHandling == onForeground) setForeAndBackground(c, bgAtInit);
@@ -249,7 +251,7 @@ void caLineDraw::setAlarmColors(short status, double value, QColor bgAtInit, QCo
         break;
 
     case INVALID_ALARM:
-        //qDebug() << "invalid alarm";
+        qCDebug(caLineDrawLog) << "invalid alarm";
         if(m_ColorMode == Alarm_Static) {
             c =AL_WHITE;
             if(m_AlarmHandling == onForeground) setForeAndBackground(c, bgAtInit);
@@ -260,12 +262,12 @@ void caLineDraw::setAlarmColors(short status, double value, QColor bgAtInit, QCo
         break;
 
     case NOTCONNECTED:
-        //qDebug() << "no connection";
+        qCDebug(caLineDrawLog) << "no connection";
         forceForeAndBackground(AL_WHITE, AL_WHITE);
         break;
 
     default:
-        //qDebug() << "Alarm default" << status;
+        qCDebug(caLineDrawLog) << "Alarm default" << status;
         if(m_ColorMode == Alarm_Static) {
             c = AL_DEFAULT;
             if(m_AlarmHandling == onForeground) setForeAndBackground(c, bgAtInit);
@@ -347,10 +349,10 @@ void caLineDraw::mouseReleaseEvent(QMouseEvent *event){
     QString s = m_Text;
     if(s[s.length()-1] == QString(" ")){
         s.remove(s.length()-1,1);
-        //qDebug() << s;
+        qCDebug(caLineDrawLog) << s;
     }
 
-    qDebug() << this->thisPV << m_Text << s;
+    qCDebug(caLineDrawLog) << this->thisPV << m_Text << s;
     if(s != getMarkedText() && s.length() > 0){
         for(int i = 0; i <= lineDrawList.size() -1; i++){
            // lineDrawList[i]->resetMarking();
@@ -371,7 +373,7 @@ void caLineDraw::mouseMoveEvent(QMouseEvent *event){
 
         handleMarking(position);
         update();
-        // qDebug() << "POS:" << position;
+        qCDebug(caLineDrawLog) << "POS:" << position;
     }
 }
 
@@ -456,7 +458,7 @@ void caLineDraw::handleMarking(QPoint currentMousePosition){
         int  posVal = position.x();
 
 
-        // qDebug() << "F:"<< firstXVal << "L:" << lastXVal << "M:" << mouseVal << "P:" << posVal;
+        qCDebug(caLineDrawLog) << "F:"<< firstXVal << "L:" << lastXVal << "M:" << mouseVal << "P:" << posVal;
         if(startIndex < 0){
             // Is Starting Point Outside Left/Upper Bounds
             if(mouseVal < firstXVal || posVal < firstXVal){
@@ -564,7 +566,7 @@ QString caLineDraw::getMarkedText(){
     }
 
     markedText = markedText.trimmed();
-    // qDebug() << "MarkedText:" << markedText;
+    qCDebug(caLineDrawLog) << "MarkedText:" << markedText;
     return markedText;
 }
 
@@ -764,10 +766,10 @@ bool caLineDraw::event(QEvent *e)
         if(!m_IsShown) {
             QString c = palette().color(QPalette::Base).name();
             m_BackColorDefault = QColor(c);
-            //printf("default back color %s %s\n", qasc(c), qasc(this->objectName()));
+            qCDebug(caLineDrawLog) << "default back color" << c << this->objectName();
             c = palette().color(QPalette::Text).name();
             m_ForeColorDefault = QColor(c);
-            //printf("default fore color %s %s\n", qasc(c), qasc(this->objectName()));
+            qCDebug(caLineDrawLog) << "default fore color" << c << this->objectName();
             if(!m_BackColorDefault.isValid()) m_BackColorDefault = QColor(255, 248, 220, 255);
             if(!m_ForeColorDefault.isValid()) m_ForeColorDefault = Qt::black;
 
@@ -852,8 +854,11 @@ void caLineDraw::setFormat(int prec)
         sprintf(m_FormatC, "%s.%dlf", "%", qAbs(precision));
         break;
     case exponential:
-    case engr_notation:
         sprintf(m_Format, "%s.%dle", "%", qAbs(precision));
+        break;
+    case engr_notation:
+        // this format is handled by a function
+        engr_notationPrecision = precision;
         break;
     case truncated:
     case enumeric:
@@ -883,6 +888,99 @@ void caLineDraw::setFormat(int prec)
 
     }
 }
+/**
+ * Converts a double to engineering notation and writes to a char array
+ *
+ * @param buffer    Destination char array
+ * @param bufferLen Size of the buffer (including space for null terminator)
+ * @param value     The double value to convert
+ * @param precision Number of digits after the decimal point
+ * @return          Number of characters written (excluding null), or -1 on error
+ */
+int caLineDraw::toEngineeringNotation(char* buffer, size_t bufferLen, double value, int eng_precision) {
+    // Validate inputs
+    if (buffer == nullptr || bufferLen == 0) {
+        return -1;
+    }
+
+    // Clamp precision to reasonable bounds
+    if (eng_precision < 0) eng_precision = 0;
+    if (eng_precision > 15) eng_precision = 15;
+
+    // Handle special cases
+    if (qIsNaN(value)) {
+        if (bufferLen < 4) { buffer[0] = '\0'; return -1; }
+        strncpy(buffer, "nan",bufferLen);
+        return 3;
+    }
+
+    if (qIsInf(value)) {
+        const char* result = (value > 0) ? "inf" : "-inf";
+        size_t len = strlen(result);
+        if (bufferLen <= len) { buffer[0] = '\0'; return -1; }
+        strncpy(buffer, result,bufferLen);
+        return static_cast<int>(len);
+    }
+
+    if (value == 0.0) {
+        int written = snprintf(buffer, bufferLen, " %.*fe+00", eng_precision, 0.0);
+        if (written < 0 || static_cast<size_t>(written) >= bufferLen) {
+            buffer[0] = '\0';
+            return -1;
+        }
+        return written;
+    }
+
+    // Handle negative numbers
+    bool negative = value < 0;
+    double absValue = qAbs(value);
+
+    // Calculate the exponent (power of 10)
+    int exponent = static_cast<int>(qFloor(log10(absValue)));
+
+    // Adjust exponent to be a multiple of 3
+    int engExponent;
+    if (exponent >= 0) {
+        engExponent = exponent - (exponent % 3);
+    } else {
+        // Handle negative exponents correctly
+        int mod = exponent % 3;
+        engExponent = (mod == 0) ? exponent : exponent - (3 + mod);
+    }
+
+    // Calculate the mantissa
+    double mantissa = absValue / qPow(10.0, engExponent);
+
+    // Handle floating point precision issues
+    // Mantissa should be in range [1, 1000)
+    if (mantissa >= 999.9999999999) {
+        mantissa /= 1000.0;
+        engExponent += 3;
+    } else if (mantissa < 1.0) {
+        mantissa *= 1000.0;
+        engExponent -= 3;
+    }
+    int written;
+
+    // Apply sign
+    // Format the output
+    // Format: [-]d.ddde±ee (sign + digits + decimal + precision + 'e' + sign + 2-3 digits)
+    if (negative) {
+        written = snprintf(buffer, bufferLen, "-%3.*fe%+03d",
+                           eng_precision - (exponent - engExponent), mantissa, engExponent);
+    }else{
+        written = snprintf(buffer, bufferLen, " %3.*fe%+03d",
+                           eng_precision - (exponent - engExponent), mantissa, engExponent);
+    }
+
+
+    if (written < 0 || static_cast<size_t>(written) >= bufferLen) {
+        buffer[0] = '\0';
+        return -1;
+    }
+
+    return written;
+}
 
 void caLineDraw::setValue(double value, const QString& units)
 {
@@ -893,6 +991,9 @@ void caLineDraw::setValue(double value, const QString& units)
         } else {
             snprintf(asc, MAX_STRING_LENGTH, m_Format, value);
         }
+    } else if(m_FormatType == engr_notation and thisDatatype == caDOUBLE)  {
+        // proper handling of engineering notation!
+        toEngineeringNotation(asc, MAX_STRING_LENGTH, value, engr_notationPrecision);
     } else if(m_FormatType == hexadecimal || m_FormatType == octal || m_FormatType == user_defined_format)  {
         if(thisDatatype == caDOUBLE) snprintf(asc, MAX_STRING_LENGTH, m_Format, (long long) value);
         else  snprintf(asc, MAX_STRING_LENGTH, m_Format, (int) value);
@@ -1067,7 +1168,7 @@ void caLineDraw::copy(){
     }
 
     if(markedCount == 1){
-        qDebug() << markedCount;
+        qCDebug(caLineDrawLog) << markedCount;
         copyString = copyString.split("\t")[1].replace("\n", QString(""));
     }
 

@@ -24,6 +24,7 @@
  */
 
 #include "dec_int_from_format.h"
+#include "qtcontrols_global.h"
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     #include <QRegExp>
 #else
@@ -33,6 +34,8 @@
 #include <stdio.h>
 
 #define qstoc(x) ""
+
+Q_LOGGING_CATEGORY(decIntFromFormatLog, "caqtdm.widgdets.decintfromformat")
 
 DecIntFromFormat::DecIntFromFormat(QString f)
 {
@@ -50,8 +53,8 @@ bool DecIntFromFormat::decode()
     int posV2 = - 1;
     int posV3 = - 1;
 	QStringList captures;
-// 	printf("\e[1;36mdecode() format %s\e[0m\n", qstoc(d_format));
-	if(d_format == "%d")
+    qCDebug(decIntFromFormatLog) << "decode() format" << d_format;
+    if(d_format == "%d")
 	{
 		d_decDefaults = false;
 		d_decDigits = 0;
@@ -112,9 +115,8 @@ bool DecIntFromFormat::decode()
 			{
                 d_intDigits = capReV2_Text.at(1).toInt();
 				d_intDefaults = false;
-                    printf("warning: format \"%s\" is not correct, anyway accepting it and setting %d decimals\n",
-					qstoc(d_format),  d_intDigits);
-                    printf("note the correct format is \"%%.%d\"\n", d_intDigits);
+                    qCWarning(decIntFromFormatLog) << "Warning: format \"" << d_format << "\" is not correct, anyway accepting it and setting" << d_intDigits << "decimals\n";
+                    qCWarning(decIntFromFormatLog).nospace() << "note the correct format is \"%%.%d\"" << d_intDigits;
 			}
 		}
 	}
@@ -169,7 +171,7 @@ bool DecIntFromFormat::decode()
 				{
                     d_intDigits = flRe2_Text.at(1).toInt();
                     d_decDigits = flRe2_Text.at(2).toInt();
-                    printf("captured %d int %d dec\n", d_intDigits, d_decDigits);
+                    qCInfo(decIntFromFormatLog) << "captured" << d_intDigits << "int" << d_decDigits << "dec";
 					d_decDefaults = false;
 					d_intDefaults =  false;
 				}
@@ -178,7 +180,7 @@ bool DecIntFromFormat::decode()
 	}
 	if(pos < 0)
 	{
-                printf("format error in \"%s\"", qstoc(d_format));
+                qCWarning(decIntFromFormatLog) << "format error in: " << d_format;
 		return false;
 	}
 	else

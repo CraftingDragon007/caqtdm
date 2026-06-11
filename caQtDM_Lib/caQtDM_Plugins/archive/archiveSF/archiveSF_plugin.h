@@ -33,6 +33,7 @@
 #include <QThread>
 #include <qwt.h>
 #include "cacartesianplot.h"
+#include "caQtDM_Plugins_global.h"
 #include "controlsinterface.h"
 #include "archiveSF_plugin.h"
 #include "archiverCommon.h"
@@ -45,14 +46,14 @@ class Q_DECL_EXPORT WorkerSF : public QObject
 
 public:
     WorkerSF() {
-        //qDebug() << "WorkerSF::WorkerSF()";
+        qCDebug(archiveSFLog) << "WorkerSF::WorkerSF()";
         qRegisterMetaType<indexes>("indexes");
         qRegisterMetaType<QVector<double> >("QVector<double>");
         fromArchive =  (sfRetrieval *)0;
     }
 
     ~WorkerSF() {
-        //qDebug() << "WorkerSF::~WorkerSF()";
+        qCDebug(archiveSFLog) << "WorkerSF::~WorkerSF()";
     }
 
 private:
@@ -75,7 +76,6 @@ public slots:
         QMutex *mutex = indexNew.mutexP;
         mutex->lock();
 
-        struct timeb now;
         QUrl url = QUrl(index_name);
         QString fields, agg;
         bool isBinned;
@@ -83,8 +83,7 @@ public slots:
         QString key = indexNew.pv;
         int nbVal = 0;
 
-        ftime(&now);
-        double endSeconds = (double) now.time + (double) now.millitm / (double)1000;
+        double endSeconds = QDateTime::currentMSecsSinceEpoch() / 1000.0;
         double startSeconds = endSeconds - indexNew.secondsPast;
 #ifdef CSV
         QString response ="'response':{'format':'csv'}";
@@ -115,7 +114,7 @@ public slots:
 
         fromArchive = new sfRetrieval();
 
-        //qDebug() << "fromArchive pointer=" << fromArchive << indexNew.timeAxis;
+        qCDebug(archiveSFLog) << "fromArchive pointer=" << fromArchive << indexNew.timeAxis;
         bool readdata_ok=fromArchive->requestUrl(url, json_str, indexNew.secondsPast, isBinned, indexNew.timeAxis, key);
 
         if (fromArchive->is_Redirected()){
@@ -129,7 +128,7 @@ public slots:
           mess.append(url.toString());
           messageWindow->postMsgEvent(QtWarningMsg, (char*) qasc(mess));
           indexNew.w->setProperty("archiverIndex",QVariant(url.toString()));
-          //qDebug()<< "archiv PV"<<indexNew.pv;
+          qCDebug(archiveSFLog) << "archiv PV" << indexNew.pv;
           fromArchive->deleteLater();
           fromArchive = new sfRetrieval();
           readdata_ok=fromArchive->requestUrl(url, json_str, indexNew.secondsPast, isBinned, indexNew.timeAxis, key);
@@ -137,7 +136,7 @@ public slots:
 
         if(readdata_ok) {
             if((nbVal = fromArchive->getCount()) > 0) {
-                //qDebug() << nbVal << total;
+                qCDebug(archiveSFLog) << nbVal << total;
                 TimerN.resize(fromArchive->getCount());
                 YValsN.resize(fromArchive->getCount());
                 fromArchive->getData(TimerN, YValsN);
@@ -158,7 +157,7 @@ public slots:
             }
         }
 
-        //qDebug() << QTime::currentTime().toString() << "number of values received" << nbVal << fromArchive << "for" << key;
+        qCDebug(archiveSFLog) << QTime::currentTime().toString() << "number of values received" << nbVal << fromArchive << "for" << key;
 
         emit resultReady(indexNew, nbVal, TimerN, YValsN, fromArchive->getBackend());
 
@@ -183,9 +182,8 @@ class Q_DECL_EXPORT WorkerSfThread : public QThread
 public:
     WorkerSfThread(WorkerSF *worker) {
         pworker = worker;
-        //qDebug() << "myThread::myThread()";
+        qCDebug(archiveSFLog) << "myThread::myThread()";
     }
-        //qDebug() << "myThread::~myThread()";
     ~WorkerSfThread() {
     }
     WorkerSF *workersf() {

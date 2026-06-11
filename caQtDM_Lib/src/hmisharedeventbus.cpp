@@ -11,14 +11,12 @@ HmiSharedEventBus& HmiSharedEventBus::instance() {
 HmiSharedEventBus::HmiSharedEventBus(QObject *parent)
     : QObject(parent),
     this_sharedMemory(QString(SHARED_MEM_KEY).arg(getUniqueUserId())),
-    // Initialize semaphore with 1 (available) for mutual exclusion (mutex behavior)
-    this_writeLockSemaphore(QString(WRITE_LOCK_SEM_KEY).arg(getUniqueUserId()), 1, QSystemSemaphore::Open),
-    this_header(nullptr),
-    this_eventBuffer(nullptr),
+    this_header(Q_NULLPTR),
+    this_eventBuffer(Q_NULLPTR),
     this_currentProcessSlotIndex(-1),
     this_isInitialized(false) // Initially not set up
 {
-    this_pollTimer.setInterval(50);
+    this_pollTimer.setInterval(10);
     connect(&this_pollTimer, &QTimer::timeout, this, &HmiSharedEventBus::checkForNewEvents);
 }
 
@@ -28,25 +26,25 @@ HmiSharedEventBus::~HmiSharedEventBus() {
 
 bool HmiSharedEventBus::setup() {
     if (this_isInitialized) {
-        qWarning() << PREFIX << "HmiSharedEventBus for PID" << QCoreApplication::applicationPid() << "is already initialized.";
+        qCWarning(caHMILog) << "HmiSharedEventBus for PID" << QCoreApplication::applicationPid() << "is already initialized.";
         return true;
     }
 
     // 1. Attach to or create shared memory
     if (!attachToSharedMemory()) {
-        qCritical() << PREFIX << "Failed to set up HmiSharedEventBus: Cannot attach or create shared memory for PID" << QCoreApplication::applicationPid();
+        qCCritical(caHMILog) << "Failed to set up HmiSharedEventBus: Cannot attach or create shared memory for PID" << QCoreApplication::applicationPid();
         return false;
     }
 
     // 2. Find or create a slot for this process in the shared header
     this_currentProcessSlotIndex = findOrCreateProcessSlot();
     if (this_currentProcessSlotIndex == -1) {
-        qCritical() << PREFIX << "Failed to find or create a process slot for PID" << QCoreApplication::applicationPid() << ". Max processes reached, or another issue.";
+        qCCritical(caHMILog) << "Failed to find or create a process slot for PID" << QCoreApplication::applicationPid() << ". Max processes reached, or another issue.";
         this_sharedMemory.detach();
         return false;
     }
 
-    qDebug() << PREFIX << "Process" << QCoreApplication::applicationPid()
+    qCDebug(caHMILog) << "Process" << QCoreApplication::applicationPid()
              << "initialized in slot" << this_currentProcessSlotIndex;
 
     // 3. Start polling for new events
@@ -59,14 +57,15 @@ void HmiSharedEventBus::shutdown() {
     if (!this_isInitialized) {
         return;
     }
+    this_isInitialized = false;
+
     this_pollTimer.stop();
     cleanupProcessSlot();
 
     if (this_sharedMemory.isAttached()) {
         this_sharedMemory.detach();
-        qDebug() << PREFIX << "Process" << QCoreApplication::applicationPid() << "detached from shared memory.";
+        qCInfo(caHMILog) << "Process" << QCoreApplication::applicationPid() << "detached from shared memory.";
     }
-    this_isInitialized = false;
 }
 
 bool HmiSharedEventBus::isInitialized() const {
@@ -81,7 +80,7 @@ bool HmiSharedEventBus::attachToSharedMemory() {
                 return false;
             }
         } else {
-            qCritical() << PREFIX << "Error attaching to shared memory for PID" << QCoreApplication::applicationPid() << ":" << this_sharedMemory.errorString();
+            qCCritical(caHMILog) << "Error attaching to shared memory for PID" << QCoreApplication::applicationPid() << ":" << this_sharedMemory.errorString();
             return false;
         }
     }
@@ -97,90 +96,102 @@ bool HmiSharedEventBus::attachToSharedMemory() {
 
 void HmiSharedEventBus::createSharedMemory() {
     size_t totalSize = sizeof(SharedHeader) + EVENT_BUFFER_CAPACITY * sizeof(EventPayload);
-    qDebug() << PREFIX << "Process" << QCoreApplication::applicationPid() << ": Attempting to create shared memory with size:" << totalSize << "bytes";
+    qCDebug(caHMILog) << "Process" << QCoreApplication::applicationPid() << ": Attempting to create shared memory with size:" << totalSize << "bytes";
 
     if (!this_sharedMemory.create(totalSize)) {
-        qCritical() << PREFIX << "Error creating shared memory segment for PID" << QCoreApplication::applicationPid() << ":" << this_sharedMemory.errorString();
+        qCCritical(caHMILog) << "Error creating shared memory segment for PID" << QCoreApplication::applicationPid() << ":" << this_sharedMemory.errorString();
         return;
     }
 
     if (!this_sharedMemory.isAttached()) {
-        qCritical() << PREFIX << "Shared memory created but failed to attach for PID" << QCoreApplication::applicationPid() << ". This indicates a problem.";
+        qCCritical(caHMILog) << "Shared memory created but failed to attach for PID" << QCoreApplication::applicationPid() << ". This indicates a problem.";
         return;
     }
 
-    this_writeLockSemaphore.acquire();
-    new (this_sharedMemory.data()) SharedHeader();
-    this_writeLockSemaphore.release();
-
-    qDebug() << PREFIX << "Shared memory segment created and initialized by process" << QCoreApplication::applicationPid();
+    if (this_sharedMemory.lock()) {
+        new (this_sharedMemory.data()) SharedHeader();
+        this_sharedMemory.unlock();
+        qCDebug(caHMILog) << "Shared memory segment created and initialized by process" << QCoreApplication::applicationPid();
+    } else {
+        qCCritical(caHMILog) << "Failed to lock shared memory for writing:" << this_sharedMemory.errorString();
+    }
 }
 
 int HmiSharedEventBus::findOrCreateProcessSlot() {
     int currentPid = QCoreApplication::applicationPid();
-
-    this_writeLockSemaphore.acquire();
-
     int freeSlot = -1;
-    for (int i = 0; i < MAX_PROCESS_SLOTS; ++i) {
-        if (this_header->processSlots[i].pid == currentPid) {
-            // This process already has a slot assigned (e.g., re-initialization or old entry).
-            qWarning() << PREFIX << "Process" << currentPid << "reusing existing slot" << i;
-            this_writeLockSemaphore.release();
-            return i;
-        }
-        if (this_header->processSlots[i].pid == 0 && freeSlot == -1) {
-            freeSlot = i; // Remember the first free slot we find.
-        }
-    }
 
-    if (freeSlot != -1) {
-        this_header->processSlots[freeSlot].pid = currentPid;
-        // Initialize this slot's last read index to the current total events written.
-        // This ensures the process only sees events *after* it initialized.
-        this_header->processSlots[freeSlot].lastReadTotalEvents = this_header->totalEventsWritten;
-        qDebug() << PREFIX << "Process" << currentPid << "claimed slot" << freeSlot
-                 << "last read total events set to" << this_header->totalEventsWritten;
+    if (this_sharedMemory.lock()) {
+        for (int i = 0; i < MAX_PROCESS_SLOTS; ++i) {
+            if (this_header->processSlots[i].pid == currentPid) {
+                // This process already has a slot assigned (e.g., re-initialization or old entry).
+                qCWarning(caHMILog) << "Process" << currentPid << "reusing existing slot" << i;
+                this_sharedMemory.unlock();
+                return i;
+            }
+            if (this_header->processSlots[i].pid == 0 && freeSlot == -1) {
+                freeSlot = i; // Remember the first free slot we find.
+            }
+        }
+
+        if (freeSlot != -1) {
+            this_header->processSlots[freeSlot].pid = currentPid;
+            // Initialize this slot's last read index to the current total events written.
+            // This ensures the process only sees events *after* it initialized.
+            this_header->processSlots[freeSlot].lastReadTotalEvents = this_header->totalEventsWritten;
+            qCDebug(caHMILog) << "Process" << currentPid << "claimed slot" << freeSlot
+                              << "last read total events set to" << this_header->totalEventsWritten;
+        } else {
+            qCCritical(caHMILog) << "No free process slots available for PID"
+                                 << currentPid << ". Max processes reached (" << MAX_PROCESS_SLOTS
+                                 << ").";
+        }
+
+        this_sharedMemory.unlock();
     } else {
-        qCritical() << PREFIX << "No free process slots available for PID" << currentPid << ". Max processes reached (" << MAX_PROCESS_SLOTS << ").";
+        qCCritical(caHMILog) << "Failed to lock shared memory for writing:" << this_sharedMemory.errorString();
     }
-
-    this_writeLockSemaphore.release(); // Release the lock.
     return freeSlot;
 }
 
 void HmiSharedEventBus::cleanupProcessSlot() {
     // Only proceed if the bus was successfully initialized and we have a valid header/slot.
     if (this_isInitialized && this_currentProcessSlotIndex != -1 && this_header) {
-        this_writeLockSemaphore.acquire();
-        // Double-check if our PID is still in the slot before clearing.
-        if (this_header->processSlots[this_currentProcessSlotIndex].pid == QCoreApplication::applicationPid()) {
-            this_header->processSlots[this_currentProcessSlotIndex].pid = 0; // Mark slot as free
-            this_header->processSlots[this_currentProcessSlotIndex].lastReadTotalEvents = 0; // Reset
-            qDebug() << PREFIX << "Process" << QCoreApplication::applicationPid() << "released slot" << this_currentProcessSlotIndex;
+        if (this_sharedMemory.lock()) {
+            // Double-check if our PID is still in the slot before clearing.
+            if (this_header->processSlots[this_currentProcessSlotIndex].pid
+                == QCoreApplication::applicationPid()) {
+                this_header->processSlots[this_currentProcessSlotIndex].pid = 0; // Mark slot as free
+                this_header->processSlots[this_currentProcessSlotIndex].lastReadTotalEvents
+                    = 0; // Reset
+                qCDebug(caHMILog) << "Process" << QCoreApplication::applicationPid()
+                                  << "released slot" << this_currentProcessSlotIndex;
+            }
+            this_sharedMemory.unlock();
+        } else {
+            qCCritical(caHMILog) << "Failed to lock shared memory for writing:" << this_sharedMemory.errorString();
         }
-        this_writeLockSemaphore.release();
     }
 }
 
 bool HmiSharedEventBus::sendEvent(int eventType, const QByteArray& payload) {
     if (!this_isInitialized || this_currentProcessSlotIndex == -1 || !this_header) {
-        qWarning() << PREFIX << "HmiSharedEventBus not initialized. Cannot send event for PID" << QCoreApplication::applicationPid();
+        qCWarning(caHMILog) << "HmiSharedEventBus not initialized. Cannot send event for PID" << QCoreApplication::applicationPid();
         return false;
     }
 
     if (payload.size() > EVENT_PAYLOAD_SIZE) {
-        qWarning() << PREFIX << "Event payload size (" << payload.size()
+        qCWarning(caHMILog) << "Event payload size (" << payload.size()
         << ") exceeds max allowed (" << EVENT_PAYLOAD_SIZE << "). Event truncated or ignored by PID" << QCoreApplication::applicationPid();
         // Payload size to large
         return false;
     }
 
-    if (!this_writeLockSemaphore.acquire()) {
-        qCritical() << PREFIX << "Unable to aquire system semaphore, error:" << this_writeLockSemaphore.errorString();
-        qCritical() << PREFIX << "To prevent crashes HmiShharedEventBus is now disabled!";
+    if (!this_sharedMemory.lock()) {
+        qCCritical(caHMILog) << "Unable to lock sharedMemory, error:" << this_sharedMemory.errorString();
+        qCCritical(caHMILog) << "To prevent crashes HmiShharedEventBus is now disabled!";
 #ifdef linux
-        qCritical() << PREFIX << "Please clean up /tmp/*caQtDM* and restart the program if you want to use caHMIConfig features";
+        qCCritical(caHMILog) << "Please clean up /tmp/*caQtDM* and restart the program if you want to use caHMIConfig features";
 #endif
         this_isInitialized = false;
         this_pollTimer.stop();
@@ -207,12 +218,11 @@ bool HmiSharedEventBus::sendEvent(int eventType, const QByteArray& payload) {
     this_header->currentWriteIndex = (writeIndex + 1) % EVENT_BUFFER_CAPACITY;
     this_header->totalEventsWritten++;
 
-    this_writeLockSemaphore.release();
+    this_sharedMemory.unlock();
 
-    /*
-    qDebug() << "Process" << QCoreApplication::applicationPid()
+    qCDebug(caHMILog) << "Process" << QCoreApplication::applicationPid()
              << "sent event" << EventTypes(eventType) << "at index" << writeIndex
-             << "Total events written:" << this_header->totalEventsWritten; */
+             << "Total events written:" << this_header->totalEventsWritten;
 
     return true;
 }
@@ -224,31 +234,39 @@ void HmiSharedEventBus::checkForNewEvents() {
     }
 
     // Snapshot global and local counters to ensure consistency during processing.
+    if (!this_sharedMemory.lock()) {
+        qCCritical(caHMILog) << "Unable to lock sharedMemory, error:" << this_sharedMemory.errorString();
+        return;
+    }
+
     quint64 currentTotalEvents = this_header->totalEventsWritten;
     quint64& lastReadTotalEvents = this_header->processSlots[this_currentProcessSlotIndex].lastReadTotalEvents;
-
+    quint32 currentWriteIndex = this_header->currentWriteIndex;
     quint64 unreadGlobalEvents = currentTotalEvents - lastReadTotalEvents;
+    lastReadTotalEvents = currentTotalEvents;
+
+    this_sharedMemory.unlock();
 
     if (unreadGlobalEvents == 0) {
         return; // No new events available
     }
 
     quint64 eventsToProcess = std::min(unreadGlobalEvents, (quint64)EVENT_BUFFER_CAPACITY);
+    quint32 readBufferStartIndex = (currentWriteIndex - eventsToProcess + EVENT_BUFFER_CAPACITY * 2) % EVENT_BUFFER_CAPACITY;
 
-    quint32 readBufferStartIndex = (this_header->currentWriteIndex - eventsToProcess + EVENT_BUFFER_CAPACITY * 2) % EVENT_BUFFER_CAPACITY;
-
-
+    // Reading here happens without lockingm, since locking with multiple processes every 5ms can quickly slow down performance drastically
+    // It may be that events are overwritten during our reads, but that might also happen during the poll timeout.
     for (quint64 i = 0; i < eventsToProcess; ++i) {
         quint32 eventBufferIndex = (readBufferStartIndex + i) % EVENT_BUFFER_CAPACITY;
         const EventPayload& event = this_eventBuffer[eventBufferIndex];
 
         QByteArray payloadData;
-        if (event.dataSize > 0 && event.dataSize <= EVENT_PAYLOAD_SIZE) {
-            payloadData = QByteArray(event.data, event.dataSize);
+
+        int dataSize = event.dataSize;
+        if (dataSize > 0 && dataSize <= EVENT_PAYLOAD_SIZE) {
+            payloadData = QByteArray(event.data, dataSize);
         }
 
         emit eventReceived(event.eventType, event.senderPid, event.timestamp, payloadData);
     }
-
-    lastReadTotalEvents = currentTotalEvents;
 }

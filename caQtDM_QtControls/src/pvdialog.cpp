@@ -26,8 +26,7 @@
 #include <QtGui>
 #include <QtDesigner/QtDesigner>
 #include "pvdialog.h"
-#include "JSON.h"
-#include "JSONValue.h"
+#include <QJsonDocument>
 #include <iostream>
 
 void PVDialog::print_out(const wchar_t* output)
@@ -72,7 +71,7 @@ PVDialog::PVDialog(QWidget *tic, QWidget *parent) : QDialog(parent)
     int pos;
     QString prefix("");
     QStringList plugins;
-    plugins <<""<<"epics3"<<"epics4"<<"bsread"<<"environment"<<"modbus"<<"gps"<<"archiveHTTP";
+    plugins <<""<<"epics3"<<"epics4"<<"bsread"<<"environment"<<"modbus"<<"gps"<<"archiveHTTP"<<"opcua";
 
     if(caLed *w = qobject_cast<caLed *>(tic)) PV = w->getPV();
     else if (caLinearGauge *w = qobject_cast<caLinearGauge*>(tic)) PV = w->getPV();
@@ -97,8 +96,10 @@ PVDialog::PVDialog(QWidget *tic, QWidget *parent) : QDialog(parent)
     else if (caToggleButton *w = qobject_cast<caToggleButton*>(tic)) PV = w->getPV();
     else if (caSpinbox *w = qobject_cast<caSpinbox*>(tic)) PV = w->getPV();
     else if (caByteController *w = qobject_cast<caByteController*>(tic)) PV = w->getPV();
-
-    else return;
+    else {
+        entry = Q_NULLPTR;
+        return;
+    }
 
     entry = tic;
 
@@ -120,173 +121,152 @@ PVDialog::PVDialog(QWidget *tic, QWidget *parent) : QDialog(parent)
         trimmedPV = PV.mid(0, pos);
         //std::cerr << "jsonstring=" << qasc(JSONString) << "\n";
 
-        JSONValue *main_object = JSON::Parse(JSONString.toLatin1());
-        if (main_object == NULL) {
+        QJsonParseError parseError;
+        QJsonDocument document = QJsonDocument::fromJson(JSONString.toUtf8(), &parseError);
+        if (parseError.error != QJsonParseError::NoError) {
             //print_out(L"failed to parse");
-            errorMessage = "could not parse entered expression";
-        } else if (!main_object->IsObject()) {
+            errorMessage = "could not parse entered expression, got error:" + parseError.errorString();
+        } else if (!document.isObject()) {
             //print_out(L"code is not an object");
-            errorMessage = "could not parse entered expression";
-            delete main_object;
+            errorMessage = "could not parse entered expression, isn't json object";
         } else {
             //print_out(L"\nMain object:");
             //print_out(main_object->Stringify().c_str());
 
             // Fetch the keys
-            std::vector<std::wstring> keys = main_object->ObjectKeys();
-            std::vector<std::wstring>::iterator iter = keys.begin();
+            QJsonObject main_object = document.object();
+            QStringList keys = main_object.keys();
+            QStringList::iterator iter = keys.begin();
             while (iter != keys.end()) {
-                QString QKey = QString::fromStdWString(std::wstring (*iter).c_str());
+                QString key = *iter;
+                QJsonValue value = main_object[key];
+                //std::cerr <<  "Key: " << qasc(key) << " Value. " << qasc(value) << "\n";
 
-                // Get the key's value.
-                JSONValue *key_value = main_object->Child((*iter).c_str());
-                if (key_value) {
-                    QString QValue = QString::fromStdWString(std::wstring (key_value->Stringify()));
-                    //std::cerr <<  "Key: " << qasc(QKey) << " Value. " << qasc(QValue) << "\n";
-
-                    // get maxdisplayrate
-                    if(QValue.contains("maxdisplayrate")) {
-                        displayratePresent = true;
-                        JSONObject root;
-                        root = key_value->AsObject();
-                        if (root.find(L"maxdisplayrate") != root.end() && root[L"maxdisplayrate"]->IsNumber()) {;
-                            //std::cerr << "maxdisplayrate detected\n";
-                            int status = swscanf(root[L"maxdisplayrate"]->Stringify().c_str(), L"%d", &rateValueDecoded);
-                            if(status != 1) errorMessage = "could not get ratevalue";
-                            else rateValueOK = true;
-                            //std::cerr << "decode value=" << rateValueOK << " " << rateValueDecoded << "\n";
-                        }
-                    }
-
-                    // get deadband value
-                    if(QKey.contains("dbnd")) {
-                        deadbandPresent = true;
-                        JSONObject root;
-                        root = key_value->AsObject();
-                        if (root.find(L"abs") != root.end() && root[L"abs"]->IsNumber())  {
-                            //std::cerr << "abs detected " << root[L"abs"]->Stringify().c_str() << "\n";
-                            dbndType = "abs";
-                            int status = swscanf(root[L"abs"]->Stringify().c_str(), L"%lf", &dbndValueDecoded);
-                            if(status != 1) errorMessage = "could not get dbndvalue";
-                            else dbndValueOK = true;
-                            //std::cerr << "decode value=" << dbndValueOK << " " << dbndValueDecoded << "\n";
-                        }
-                        if(root.find(L"rel") != root.end() && root[L"rel"]->IsNumber()) {
-                            //std::cerr << "rel detected\n";
-                            dbndType = "rel";
-                            int status = swscanf(root[L"rel"]->Stringify().c_str(), L"%f", &dbndValueDecoded);
-                            if(status != 1) errorMessage = "could not get dbndvalue";
-                            else dbndValueOK = true;
-                            //std::cerr << "decode value=" << dbndValueOK << " " << dbndValueDecoded << "\n";
-                        }
-                    }
-
-                    // get decimation, do not parse with json, here we have a simple case
-                    if(QKey.contains("dec")) {
-                        decPresent = true;
-                        JSONObject root;
-                        root = key_value->AsObject();
-                        if (root.find(L"n") != root.end() && root[L"n"]->IsNumber()) {
-                           // std::cerr << "dec detected\n";
-                            int status = swscanf(root[L"n"]->Stringify().c_str(), L"%d", &decValueDecoded);
-                            if(status != 1) errorMessage = "could not get decvalue";
-                            else decValueOK = true;
-                            //std::cerr << "decode value=" << decValueOK << " " << decValueDecoded << "\n";
-                        }
-                    }
-
-                    // get sync data
-                    if(QKey.contains("sync")) {  // camonitor 'ACM:COUNT:1.{"sync":{"while":"blue"}}’
-                        //std::cerr <<  "Key: " << qasc(QKey) << " Value. " << qasc(QValue) << "\n";
-                        syncPresent = true;
-                        JSONValue *main_object = JSON::Parse(QValue.toLatin1());
-                        if (main_object == NULL) {
-                            //print_out(L"failed to parse");
-                            errorMessage = "could not parse entered sync expression";
-                        } else if (!main_object->IsObject()) {
-                            //print_out(L"code is not an object");
-                            errorMessage = "could not parse entered sync expression";
-                            delete main_object;
-                        } else {
-                            // iterate for next objects
-                            std::vector<std::wstring> keys = main_object->ObjectKeys();
-                            std::vector<std::wstring>::iterator iter1 = keys.begin();
-                            while (iter1 != keys.end()) {
-                                QString QKey = QString::fromStdWString(std::wstring (*iter1).c_str());
-                                //std::cerr << "Key: " << qasc(QKey) << "\n";
-                                QStringList choices;
-                                choices <<"before"<<"first"<<"while"<<"last"<<"after"<<"unless";
-                                if((syncIndex = choices.indexOf(QKey)) != -1) {
-                                   //std::cerr << "index in QKey: " << syncIndex << "\n";
-                                } else {
-                                   //std::cerr << "index in QKey not found " << qasc(QKey )<< "\n";
-                                   errorMessage = "could not find valid keyword for sync";
-                                }
-
-                                // Get the key's value.
-                                JSONValue *key_value = main_object->Child((*iter1).c_str());
-                                if (key_value) {
-                                    syncValue = QString::fromStdWString((key_value->AsString()));
-                                    //std::cerr << "Value: " << qasc(syncValue) << "\n";
-                                 }
-                                // Next key.
-                                iter1++;
-                                break;
-                            }
-                        }
-                    }
-
-
-                    // get ts
-                    if(QKey.contains("ts")) {
-                        tsPresent = true;
-                    }
-
-                    // get array data
-                    if(QKey.contains("arr")) {
-                        arrayPresent = true;
-                        JSONValue *main_object = JSON::Parse(QValue.toLatin1());
-                        if (main_object == NULL) {
-                            //print_out(L"failed to parse");
-                            errorMessage = "could not parse entered array expression";
-                        } else if (!main_object->IsObject()) {
-                            //print_out(L"code is not an object");
-                            errorMessage = "could not parse entered array expression";
-                            delete main_object;
-                        } else {
-                            std::vector<std::wstring> keys = main_object->ObjectKeys();
-                            std::vector<std::wstring>::iterator iter1 = keys.begin();
-                            while (iter1 != keys.end()) {
-                                QString QKey = QString::fromStdWString(std::wstring (*iter1).c_str());
-                                //std::cerr << "Key: " << qasc(QKey);
-                                // Get the key's value.
-                                JSONValue *key_value = main_object->Child((*iter1).c_str());
-                                if (key_value) {
-                                    QString QValue = QString::fromStdWString((key_value->Stringify()));
-                                    //std::cerr << "key: " << qasc(QKey) << " Value: " << qasc(QValue) << "\n";
-                                    if(QKey.contains("s")) {
-                                        sValueDecoded = QValue.toInt(&sValueOK);
-                                        if(!sValueOK) errorMessage = "could not get array svalue";;
-                                    } else if(QKey.contains("i")) {
-                                        iValueDecoded = QValue.toInt(&iValueOK);
-                                        if(!iValueOK) errorMessage = "could not get array ivalue";
-                                    } else if(QKey.contains("e")) {
-                                        eValueDecoded = QValue.toInt(&eValueOK);
-                                        if(!eValueOK) errorMessage = "could not get array evalue";
-                                    }
-                                 }
-                                // Next key.
-                                iter1++;
-                            }
-                        }
+                // get maxdisplayrate
+                if(value.isObject() && value.toObject().contains("maxdisplayrate")) {
+                    displayratePresent = true;
+                    QJsonObject root = value.toObject();
+                    if (root["maxdisplayrate"].isDouble()) {;
+                        //std::cerr << "maxdisplayrate detected\n";
+                        rateValueDecoded = root["maxdisplayrate"].toDouble();
+                        rateValueOK = true;
+                        //std::cerr << "decode value=" << rateValueOK << " " << rateValueDecoded << "\n";
+                    } else {
+                        errorMessage = "could not get ratevalue";
                     }
                 }
 
+                // get deadband value
+                if(key.contains("dbnd") && value.isObject()) {
+                    deadbandPresent = true;
+                    QJsonObject root = value.toObject();
+                    if (root["abs"].isDouble())  {
+                        //std::cerr << "abs detected " << root[L"abs"]->Stringify().c_str() << "\n";
+                        dbndType = "abs";
+                        dbndValueDecoded = root["abs"].toDouble();
+                        dbndValueOK = true;
+                        //std::cerr << "decode value=" << dbndValueOK << " " << dbndValueDecoded << "\n";
+                    } else if(root["rel"].isDouble()) {
+                        //std::cerr << "rel detected\n";
+                        dbndType = "rel";
+                        dbndValueDecoded = root["rel"].toDouble();
+                        dbndValueOK = true;
+                        //std::cerr << "decode value=" << dbndValueOK << " " << dbndValueDecoded << "\n";
+                    } else {
+                        errorMessage = "could not get dbndvalue";
+                    }
+                }
+
+                // get decimation, do not parse with json, here we have a simple case
+                if(key.contains("dec") && value.isObject()) {
+                    decPresent = true;
+                    QJsonObject root = value.toObject();
+                    if (root["n"].isDouble()) {
+                        // std::cerr << "dec detected\n";
+                        decValueDecoded = root["n"].toDouble();
+                        decValueOK = true;
+                        //std::cerr << "decode value=" << decValueOK << " " << decValueDecoded << "\n";
+                    } else {
+                        errorMessage = "could not get decvalue";
+                    }
+                }
+
+                // get sync data
+                if(key.contains("sync") && value.isObject()) {  // camonitor 'ACM:COUNT:1.{"sync":{"while":"blue"}}’
+                    //std::cerr <<  "Key: " << qasc(QKey) << " Value. " << qasc(QValue) << "\n";
+                    syncPresent = true;
+                    QJsonObject root = value.toObject();
+                    // iterate for next objects
+                    QStringList keys = root.keys();
+                    QStringList::iterator iter1 = keys.begin();
+                    while (iter1 != keys.end()) {
+                        QString key = *iter1;
+                        //std::cerr << "Key: " << qasc(QKey) << "\n";
+                        QStringList choices;
+                        choices <<"before"<<"first"<<"while"<<"last"<<"after"<<"unless";
+                        if((syncIndex = choices.indexOf(key)) != -1) {
+                           //std::cerr << "index in QKey: " << syncIndex << "\n";
+                        } else {
+                           //std::cerr << "index in QKey not found " << qasc(QKey )<< "\n";
+                           errorMessage = "could not find valid keyword for sync";
+                        }
+
+                        // Get the key's value.
+                        QJsonValue value = root[key];
+                        if (value.isString()) {
+                            syncValue = value.toString();
+                            //std::cerr << "Value: " << qasc(syncValue) << "\n";
+                         }
+                        // Next key.
+                        iter1++;
+                        break;
+                    }
+                }
+
+
+                // get ts
+                if(key.contains("ts")) {
+                    tsPresent = true;
+                }
+
+                // get array data
+                if(key.contains("arr") && value.isObject()) {
+                    arrayPresent = true;
+                    QJsonObject root = value.toObject();
+                    QStringList keys = root.keys();
+                    QStringList::iterator iter1 = keys.begin();
+                    while (iter1 != keys.end()) {
+                        QString key = *iter1;
+                        //std::cerr << "Key: " << qasc(QKey);
+                        // Get the key's value.
+                        QJsonValue value = root[key];
+                        QString stringValue;
+                        if (value.isString()) {
+                            stringValue = value.toString();
+                        } else if (value.isDouble()) {
+                            stringValue = QString::number(static_cast<int>(value.toDouble()));
+                        }
+
+                        if (!stringValue.isEmpty()) {
+                            //std::cerr << "key: " << qasc(key) << " Value: " << qasc(stringValue) << "\n";
+                            if(key.contains("s")) {
+                                sValueDecoded = stringValue.toInt(&sValueOK);
+                                if(!sValueOK) errorMessage = "could not get array svalue";;
+                            } else if(key.contains("i")) {
+                                iValueDecoded = stringValue.toInt(&iValueOK);
+                                if(!iValueOK) errorMessage = "could not get array ivalue";
+                            } else if(key.contains("e")) {
+                                eValueDecoded = stringValue.toInt(&eValueOK);
+                                if(!eValueOK) errorMessage = "could not get array evalue";
+                            }
+                         }
+                        // Next key.
+                        iter1++;
+                    }
+                }
                 // Next key.
                 iter++;
             }
-
-            delete main_object;
         }
     }
 
@@ -450,6 +430,7 @@ PVDialog::PVDialog(QWidget *tic, QWidget *parent) : QDialog(parent)
     mainLayout->addWidget(rateCheckBox, 7, 1);
     mainLayout->addWidget(rateIntValue, 7, 3);
     rateIntValue->setMinimum(1);
+    rateIntValue->setMaximum(100);
     if(displayratePresent) {
        rateCheckBox->setChecked(true);
        if(rateValueOK) rateIntValue->setValue(rateValueDecoded);
@@ -484,98 +465,58 @@ QSize PVDialog::sizeHint() const
     return QSize(250, 250);
 }
 
-wchar_t* PVDialog::converToWChar_t(QString text)
-{
-    wchar_t* array = new wchar_t[text.length() + 1];
-    text.toWCharArray(array);
-    array[text.length()] = 0;
-    return array;
-}
-
 void PVDialog::saveState()
 {
-
-    if (QDesignerFormWindowInterface *formWindow
-            = QDesignerFormWindowInterface::findFormWindow(entry)) {
-
+    if (QDesignerFormWindowInterface *formWindow = QDesignerFormWindowInterface::findFormWindow(
+            entry)) {
         QString channel("");
         QString pv = pvLine->toPlainText();
         QString prefix = prefixComboBox->currentText();
-        JSONObject root, root1, root2, root3;
+        QJsonObject root;
         bool B_dbnd = dbndCheckBox->isChecked();
         bool B_rate = rateCheckBox->isChecked();
         bool B_array = arrayCheckBox->isChecked();
-        bool B_sync  = syncCheckBox->isChecked();
+        bool B_sync = syncCheckBox->isChecked();
         bool B_ts = tsCheckBox->isChecked();
         bool B_dec = decCheckBox->isChecked();
-
-        if(B_dbnd) {
-            QString typeAsString = dbndComboBox->currentText();
-            double value = dbndDoubleValue->value();
-            root2[converToWChar_t(typeAsString)] = new JSONValue(value);
-            root[L"dbnd"] = new JSONValue(root2);
+        if (B_dbnd) {
+            root["dbnd"] = QJsonObject{{dbndComboBox->currentText(), dbndDoubleValue->value()}};
         }
-
-        if(B_rate) {
-            double value = rateIntValue->value();
-            root1[L"maxdisplayrate"] = new JSONValue(value);
-            root[L"caqtdm_monitor"] = new JSONValue(root1);
+        if (B_rate) {
+            root["caqtdm_monitor"] = QJsonObject{{"maxdisplayrate", rateIntValue->value()}};
         }
-
-        if(B_dec) {
-            double value = decIntValue->value();
-            root1[L"n"] = new JSONValue(value);
-            root[L"dec"] = new JSONValue(root1);
+        if (B_dec) {
+            root["dec"] = QJsonObject{{"n", decIntValue->value()}};
         }
-
-        if(B_array) {
-            int sValue = arrayIntValue_s->value();
-            int iValue = arrayIntValue_i->value();
-            int eValue = arrayIntValue_e->value();
-            root3[L"s"] = new JSONValue(sValue);
-            root3[L"i"] = new JSONValue(iValue);
-            root3[L"e"] = new JSONValue(eValue);
-            root[L"arr"] = new JSONValue(root3);
+        if (B_array) {
+            root["arr"] = QJsonObject{{"s", arrayIntValue_s->value()},
+                                       {"i", arrayIntValue_i->value()},
+                                       {"e", arrayIntValue_e->value()}};
         }
-
-        if(B_sync) {
-            root1[converToWChar_t(syncComboBox->currentText())] =  new JSONValue(converToWChar_t(syncLine->text()));
-            root[L"sync"] = new JSONValue(root1);
+        if (B_sync) {
+            root["sync"] = QJsonObject{{syncComboBox->currentText(), syncLine->text()}};
         }
-
-        if(B_ts) {;
-            root[L"ts"] =  new JSONValue(L"");
+        if (B_ts) {
+            root["ts"] = QJsonObject();
         }
-
-        if(pv.size() > 0) {
-            if(prefix.size() > 0) {
+        if (pv.size() > 0) {
+            if (prefix.size() > 0) {
                 channel = prefix + "://" + pv;
             } else {
-               channel = pv;
+                channel = pv;
             }
-
-            if(B_dbnd || B_rate || B_array || B_sync || B_ts || B_dec) {
-                JSONValue *value = new JSONValue(root);
-                QString strng = QString::fromWCharArray(value->Stringify().c_str());
-
-                //std::cerr <<"before: " << qasc(strng) << "\n";
-                strng.replace("\"ts\":\"\"", "\"ts\":{}");
-
+            if (B_dbnd || B_rate || B_array || B_sync || B_ts || B_dec) {
+                QString strng = QJsonDocument(root).toJson(QJsonDocument::Compact);
                 channel.append(".");
                 channel.append(strng);
-                //std::cerr <<"after: " << qasc(strng) << "\n";
             }
         }
-
-        if (caCamera *w = qobject_cast<caCamera*>(entry)) {
+        if (caCamera *w = qobject_cast<caCamera *>(entry)) {
             Q_UNUSED(w);
             formWindow->cursor()->setProperty("channelData", channel);
         } else {
             formWindow->cursor()->setProperty("channel", channel);
         }
     }
-
     accept();
 }
-
-

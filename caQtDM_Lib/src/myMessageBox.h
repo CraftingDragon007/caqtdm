@@ -27,6 +27,7 @@
 #ifndef MYMESSAGEBOX_H
 #define MYMESSAGEBOX_H
 
+#include "caQtDM_Lib_global.h"
 #include <QDialogButtonBox>
 #include <QDialog>
 #include <QTextEdit>
@@ -43,7 +44,7 @@
 
 #include "specialFunctions.h"
 
-class myMessageBox : public QWidget
+class CAQTDM_LIBSHARED_EXPORT myMessageBox : public QWidget
 {
 public:
     explicit myMessageBox(QWidget *parent = 0);

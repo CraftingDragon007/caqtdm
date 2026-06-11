@@ -25,6 +25,8 @@
 
 #include "processWindow.h"
 
+Q_LOGGING_CATEGORY(processWindowLog, "caqtdm.lib.processwindow")
+
 processWindow::processWindow(QWidget *parent, bool display, bool CloseExit0, QWidget *caller): QMainWindow(parent)
 {
     outputWindow = (QTextEdit *) Q_NULLPTR;
@@ -90,7 +92,7 @@ bool processWindow::tryTerminate()
         termProcess->terminate();
         termProcess->waitForFinished(500);
         if( termProcess->state() == QProcess::Running) {
-            qDebug() << "process still running, I will kill it";
+            qCInfo(processWindowLog) << "process still running, I will kill it";
             termProcess->kill();
         }
     }
@@ -102,9 +104,9 @@ bool processWindow::tryTerminate()
 void processWindow::closeEvent(QCloseEvent *e)
 {
     if (!tryTerminate()) {
-        qDebug() << "processWindow -- Warning: cannot terminate process";
+        qCInfo(processWindowLog) << "processWindow -- Warning: cannot terminate process";
     } else {
-        //qDebug() << "processWindow -- Process terminated";
+        qCDebug(processWindowLog) << "processWindow -- Process terminated";
     }
     e->accept();
 }
@@ -135,7 +137,7 @@ void processWindow::start(QString command)
        connect(termProcess, SIGNAL(readyReadStandardOutput()), this, SLOT(updateText()));
        debugWindow->setText(command);
     }
-    qDebug()<<"command:" << command;
+    qCInfo(processWindowLog) << "command:" << command;
     if (arguments.isEmpty()){
         termProcess->start(command);
     }else{
