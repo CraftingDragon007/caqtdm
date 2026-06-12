@@ -7313,10 +7313,14 @@ void CaQtDM_Lib::hmiHandleIncomingEvent(QObject *target, QEvent *event, QEvent *
                                 fType = FormatType::decimal;
                                 QVariant value = QVariant(item->value().toDouble());
                                 emit widget->caHMIConfigValueSet(value);
+                                emit widget->caHMIConfigValueSet(value.toInt());
+                                emit widget->caHMIConfigValueSet(value.toDouble());
+                                emit widget->caHMIConfigValueSet(value.toString());
                             } else {
                                 fType = FormatType::string;
                                 QVariant value = item->value();
                                 emit widget->caHMIConfigValueSet(value);
+                                emit widget->caHMIConfigValueSet(value.toString());
                             }
 
                             QString text = item->value().toString();

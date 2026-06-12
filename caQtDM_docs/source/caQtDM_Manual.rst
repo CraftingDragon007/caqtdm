@@ -2709,6 +2709,15 @@ has no equivalent in MEDM
    ``caHMIConfigValueSet(QVariant value)``
       Emitted when a value is determined by the widget (either a literal SetValue or a calculated result). The ``QVariant`` carries the value, can be numeric or a string.
 
+   ``caHMIConfigValueSet(QString value)``
+      Emitted when a value is determined by the widget (either a literal SetValue or a calculated result). The ``QString`` carries the value as string.
+
+   ``caHMIConfigValueSet(double value)``
+      Emitted when a numeric value is detmerined by the widget (either a literal SetValue or a calculated result). The ``double`` carries the numeric value.
+
+   ``caHMIConfigValueSet(int value)``
+      Emitted when a numeric value is determined by the widget (either a literal SetValue or a calculated result). The ``int`` carries the numeric value and is rounded if the original value was a floating point number.
+
    **Type of Output Channel Data**
    The type of output varies depending on the configuration, here is a table depicting different output scenarios:
 

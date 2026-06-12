@@ -99,6 +99,9 @@ signals:
     void caHMIConfigMouse(QRect rect);
     void caHMIConfigMouse(QPoint point);
     void caHMIConfigValueSet(QVariant value);
+    void caHMIConfigValueSet(QString value);
+    void caHMIConfigValueSet(int value);
+    void caHMIConfigValueSet(double value);
 
 };
 
