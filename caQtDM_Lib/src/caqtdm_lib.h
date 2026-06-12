@@ -371,6 +371,7 @@ public:
     QWidget* getTabParent(QWidget *w1);
     QString treatMacro(QMap<QString, QString> map, const QString& pv, bool *doNothing, QString widgetName = "");
     void scanWidgets(QList<QWidget*> list, QString macro);
+    void scan3DOverlayWidgets(ca3DWidget *widget3D, QString macro);
     void HandleWidget(QWidget *w, QString macro, bool firstPass, bool treatPrimaries);
     void closeEvent(QCloseEvent* ce);
     bool CalcVisibility(QWidget *w, double &result, bool &valid);
@@ -616,5 +617,4 @@ public slots:
 };
 
 #endif // CaQtDM_Lib_H
-
 

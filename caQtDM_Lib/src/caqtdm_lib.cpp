@@ -1287,6 +1287,48 @@ void CaQtDM_Lib::scanWidgets(QList<QWidget*> list, QString macro)
     }
 }
 
+void CaQtDM_Lib::scan3DOverlayWidgets(ca3DWidget *widget3D, QString macro)
+{
+    if (!widget3D) {
+        return;
+    }
+
+    const QList<QWidget*> overlayRoots = widget3D->overlayRootWidgets();
+    qCDebug(ca3DWidgetLog) << "scan3DOverlayWidgets" << widget3D << "roots" << overlayRoots.count() << "macro" << macro;
+    for (QWidget *overlayRoot : overlayRoots) {
+        if (!overlayRoot) {
+            continue;
+        }
+
+        bool doNothingLocal = false;
+        const QMap<QString, QString> macroMap = createMap(macro);
+        QString macroS = widget3D->overlayMacro(overlayRoot);
+        if (macroS.size() < 1) {
+            macroS = macro;
+        } else {
+            macroS = treatMacro(macroMap, macroS, &doNothingLocal, widget3D->objectName());
+        }
+
+        const QString cainclude_path_stacked = cainclude_path;
+        const QString overlayPath = widget3D->overlayIncludePath(overlayRoot);
+        if (!overlayPath.isEmpty()) {
+            cainclude_path = overlayPath;
+        }
+
+        savedMacro[level] = macroS;
+        level++;
+        savedFile[level] = savedFile[level-1];
+
+        QList<QWidget*> overlayWidgets;
+        overlayWidgets.append(overlayRoot);
+        overlayWidgets.append(overlayRoot->findChildren<QWidget *>());
+        scanWidgets(overlayWidgets, macroS);
+
+        cainclude_path = cainclude_path_stacked;
+        level--;
+    }
+}
+
 /**
  * this routine handles the initialization of all widgets
  */
@@ -2478,6 +2520,19 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         bytecontrollerWidget->setProperty("MonitorList", integerList);
 
         bytecontrollerWidget->setProperty("Taken", true);
+
+        //==================================================================================================================
+    } else if(ca3DWidget* widget3D = qobject_cast<ca3DWidget *>(w1)) {
+
+        qCDebug(ca3DWidgetLog) << "treat ca3DWidget overlays" << w1;
+        widget3D->setProperty("Taken", true);
+        if (!widget3D->property("ca3DOverlayRuntimeHookInstalled").toBool()) {
+            widget3D->setProperty("ca3DOverlayRuntimeHookInstalled", true);
+            connect(widget3D, &ca3DWidget::overlayWidgetsRebuilt, this, [this, widget3D, macro]() {
+                scan3DOverlayWidgets(widget3D, macro);
+            });
+        }
+        scan3DOverlayWidgets(widget3D, macro);
 
         //==================================================================================================================
     } else if(caInclude* includeWidget = qobject_cast<caInclude *>(w1)) {

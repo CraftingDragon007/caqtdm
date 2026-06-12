@@ -254,6 +254,7 @@ bool ca3DConfigParser::parse(const QString &json, ca3DSceneConfig *config, QStri
         item.id = stringFromObject(object, QStringLiteral("id"));
         item.includeFile = stringFromObject(object, QStringLiteral("includeFile"));
         item.includeFileResolved = resolveDisplayFile(item.includeFile);
+        item.macro = stringFromObject(object, QStringLiteral("macro"));
         item.position = vectorFromArray(object.value(QStringLiteral("position")), QStringLiteral("overlay.position"), errors);
         item.rotation = vectorFromArray(object.value(QStringLiteral("rotation")), QStringLiteral("overlay.rotation"), errors);
         item.size = sizeFromArray(object.value(QStringLiteral("size")), QStringLiteral("overlay.size"), errors);

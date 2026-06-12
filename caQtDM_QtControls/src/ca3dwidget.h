@@ -6,6 +6,7 @@
 #define CA3DWIDGET_H
 
 #include <QWidget>
+#include <QList>
 #include <QMap>
 #include <QPixmap>
 #include <QString>
@@ -50,6 +51,9 @@ public:
     bool getFallbackMode() const { return thisFallbackMode; }
     bool getConfigValid() const { return thisConfigValid; }
     QStringList getConfigErrors() const { return thisConfigErrors; }
+    QList<QWidget*> overlayRootWidgets() const;
+    QString overlayMacro(QWidget *rootWidget) const;
+    QString overlayIncludePath(QWidget *rootWidget) const;
 
 public slots:
     void setCameraPreset(int preset);
@@ -68,6 +72,9 @@ public slots:
     void setObjectAxisValue(const QString &objectId, const QString &axisId, double value);
     void setObjectTranslation(const QString &objectId, double x, double y, double z);
     void setObjectRotation(const QString &objectId, double rx, double ry, double rz);
+
+signals:
+    void overlayWidgetsRebuilt();
 
 private:
     void updatePlaceholderText();

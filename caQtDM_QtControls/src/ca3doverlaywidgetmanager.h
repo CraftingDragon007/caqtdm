@@ -22,6 +22,7 @@ public:
     ~ca3DOverlayWidgetManager();
 
     void loadWidgetsFromUi(const QString &uiFilePath);
+    QWidget *contentRoot() const { return thisContentRoot; }
     QSize sourceDesignSize() const { return thisSourceDesignSize; }
     QImage renderSnapshot(qreal scale) const;
     bool sendMouseEvent(const QPointF &designPosition, QEvent::Type type, Qt::MouseButton button,

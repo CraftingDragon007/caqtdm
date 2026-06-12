@@ -49,6 +49,7 @@ struct QTCON_EXPORT ca3DOverlayConfig
     QString id;
     QString includeFile;
     QString includeFileResolved;
+    QString macro;
     QVector3D position;
     QVector3D rotation;
     QSizeF size;

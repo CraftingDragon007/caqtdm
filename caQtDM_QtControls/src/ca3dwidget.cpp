@@ -11,6 +11,7 @@
 
 #include <QFrame>
 #include <QApplication>
+#include <QFileInfo>
 #include <QKeyEvent>
 #include <QLabel>
 #include <QLoggingCategory>
@@ -397,6 +398,52 @@ void ca3DWidget::setSceneConfig(const QString &config)
     thisConfigValid = ca3DConfigParser::parse(thisSceneConfig, &thisConfig, &thisConfigErrors);
     rebuildScene();
     updatePlaceholderText();
+}
+
+QList<QWidget*> ca3DWidget::overlayRootWidgets() const
+{
+    QList<QWidget*> roots;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    for (ca3DOverlayWidgetManager *manager : this3DOverlayManagers) {
+        if (manager && manager->contentRoot()) {
+            roots.append(manager->contentRoot());
+        }
+    }
+#endif
+    return roots;
+}
+
+QString ca3DWidget::overlayMacro(QWidget *rootWidget) const
+{
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    for (const ca3DOverlayConfig &overlay : thisConfig.overlays) {
+        ca3DOverlayWidgetManager *manager = this3DOverlayManagersById.value(overlay.id, Q_NULLPTR);
+        if (manager && manager->contentRoot() == rootWidget) {
+            return overlay.macro;
+        }
+    }
+#else
+    Q_UNUSED(rootWidget);
+#endif
+    return QString();
+}
+
+QString ca3DWidget::overlayIncludePath(QWidget *rootWidget) const
+{
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    for (const ca3DOverlayConfig &overlay : thisConfig.overlays) {
+        ca3DOverlayWidgetManager *manager = this3DOverlayManagersById.value(overlay.id, Q_NULLPTR);
+        if (manager && manager->contentRoot() == rootWidget) {
+            const QFileInfo fileInfo(overlay.includeFileResolved.isEmpty() ? overlay.includeFile : overlay.includeFileResolved);
+            if (!fileInfo.path().isEmpty()) {
+                return fileInfo.path() + QStringLiteral("/");
+            }
+        }
+    }
+#else
+    Q_UNUSED(rootWidget);
+#endif
+    return QString();
 }
 
 void ca3DWidget::setCameraPreset(int preset)
@@ -1155,6 +1202,7 @@ void ca3DWidget::rebuild3DOverlays()
     apply3DOverlayVisibility(thisCameraPreset > 0 || thisConfig.cameraPresets.isEmpty()
                              ? thisCameraPreset
                              : thisConfig.cameraPresets.first().id);
+    emit overlayWidgetsRebuilt();
 }
 
 void ca3DWidget::clear3DOverlays()
