@@ -1287,7 +1287,7 @@ void CaQtDM_Lib::scanWidgets(QList<QWidget*> list, QString macro)
     }
 }
 
-void CaQtDM_Lib::scan3DOverlayWidgets(ca3DWidget *widget3D, QString macro)
+void CaQtDM_Lib::scan3DOverlayWidgets(ca3DWidget *widget3D, const QString& macro)
 {
     if (!widget3D) {
         return;
@@ -5308,6 +5308,19 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
         if(widget == myWidget) {
             thisInstance = true;
             break;
+        }
+        // overlays inside a ca3DWidget are not directly under myWidget, but the ca3DWidget itself is
+        if(ca3DWidget *widget3D = qobject_cast<ca3DWidget *>(widget)) {
+            Q_UNUSED(widget3D);
+            QWidget *parent = widget;
+            while (parent->parentWidget()) {
+                parent = parent->parentWidget();
+                if(parent == myWidget) {
+                    thisInstance = true;
+                    break;
+                }
+            }
+            if(thisInstance) break;
         }
     }
     if(!thisInstance) {

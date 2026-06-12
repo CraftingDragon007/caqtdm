@@ -76,6 +76,8 @@ void ca3DOverlayWidgetManager::loadWidgetsFromUi(const QString &uiFilePath)
         return;
     }
 
+    thisLoadedWidget->setParent(this);
+
     thisContentRoot = thisLoadedWidget->findChild<QWidget *>(QStringLiteral("centralWidget"));
     if (!thisContentRoot) {
         thisContentRoot = thisLoadedWidget->findChild<QWidget *>(QStringLiteral("centralwidget"));
