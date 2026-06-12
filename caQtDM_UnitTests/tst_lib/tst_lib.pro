@@ -2,6 +2,9 @@ include(../../caQtDM_Viewer/qtdefs.pri)
 include(../unitTests.pri)
 
 QT += network gui widgets designer uitools printsupport
+web {
+    QT += websockets
+}
 
 SOURCES += tst_lib.cpp \
     tst_caqtdm_lib.cpp
