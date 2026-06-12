@@ -7342,17 +7342,22 @@ void CaQtDM_Lib::hmiHandleIncomingEvent(QObject *target, QEvent *event, QEvent *
                             if (item->outputA().length() == 0) return;
                             TreatRequestedValue(item->outputA(), text, fType, w1);
                         } else if (item->calculationType() == caHMIConfig::calcType::Calc) {
-                            QString calc = item->value().toString();
                             double result;
                             bool valid;
                             CalcVisibility(widget, result, valid);
                             if (valid){
                                 FormatType fType = FormatType::decimal;
                                 QWidget *w1 = qobject_cast<QWidget *>(widget);
-                                QString text = QString::number(result);
+
+                                QVariant value = QVariant(result);
+
+                                emit widget->caHMIConfigValueSet(value);
+                                emit widget->caHMIConfigValueSet(value.toInt());
+                                emit widget->caHMIConfigValueSet(value.toDouble());
+                                emit widget->caHMIConfigValueSet(value.toString());
 
                                 if (item->outputA().length() == 0) return;
-                                TreatRequestedValue(item->outputA(), text, fType, w1);
+                                TreatRequestedValue(item->outputA(), value.toString(), fType, w1);
                             }
                         }
                     }
