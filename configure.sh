@@ -263,6 +263,20 @@ _caqtdm_env_detect() {
       break
     done
   fi
+  if [ -z "${QWTINCLUDE:-}" ]; then
+    if [ "$qt_major" = 5 ]; then
+      local qwt_include_candidates=(/usr/include/qt5/qwt /usr/include/qwt)
+    else
+      local qwt_include_candidates=(/usr/include/qt6/qwt /usr/include/qwt)
+    fi
+    local qwt_include_candidate
+    for qwt_include_candidate in "${qwt_include_candidates[@]}"; do
+      if [ -d "$qwt_include_candidate" ]; then
+        QWTINCLUDE=$qwt_include_candidate
+        break
+      fi
+    done
+  fi
   QWTINCLUDE=${QWTINCLUDE:-/usr/include/qwt}
   QWTLIB=${QWTLIB:-$QWTHOME/lib}
   if [ -z "$QWTLIBNAME" ] || [ -z "$QWTVERSION" ]; then
