@@ -83,6 +83,8 @@ jobs:
       - name: Install build tools (OpenSSL for Qt OPC UA)
         run: |
           set -euo pipefail
+          brew remove rustup xcodes
+          brew remove firefox google-chrome microsoft-edge
           brew update
           brew upgrade
           brew install openssl@3 || true
