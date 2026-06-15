@@ -53,7 +53,9 @@ Q_LOGGING_CATEGORY(ca3DWidgetLog, "caqtdm.widgets.ca3dwidget")
 
 namespace
 {
-constexpr qreal kOverlayTextureScale = 4.0;
+constexpr qreal kOverlayMinTextureScale = 0.75;
+constexpr qreal kOverlayMaxTextureScale = 2.0;
+constexpr int kOverlayMaxTexturePixels = 1048576;
 
 QQuaternion rotationFromEuler(const QVector3D &rotation)
 {
@@ -263,14 +265,9 @@ private:
     bool thisForwardingKeyEvent;
 };
 
-bool overlayIsInCameraView(Qt3DRender::QCamera *camera, const ca3DOverlayConfig &overlay)
+bool pointIsInCameraView(const QMatrix4x4 &viewProjection, const QVector3D &point)
 {
-    if (!camera) {
-        return false;
-    }
-
-    const QMatrix4x4 viewProjection = camera->projectionMatrix() * camera->viewMatrix();
-    const QVector4D clip = viewProjection * QVector4D(overlay.position, 1.0f);
+    const QVector4D clip = viewProjection * QVector4D(point, 1.0f);
     if (clip.w() <= 0.0f) {
         return false;
     }
@@ -280,6 +277,129 @@ bool overlayIsInCameraView(Qt3DRender::QCamera *camera, const ca3DOverlayConfig 
     return ndc.x() >= -margin && ndc.x() <= margin
            && ndc.y() >= -margin && ndc.y() <= margin
            && ndc.z() >= -margin && ndc.z() <= margin;
+}
+
+bool overlayIsInCameraView(Qt3DRender::QCamera *camera, const ca3DOverlayConfig &overlay)
+{
+    if (!camera) {
+        return false;
+    }
+
+    const float overlayWidth = static_cast<float>(overlay.size.width() > 0.0 ? overlay.size.width() : 1.5);
+    const float overlayHeight = static_cast<float>(overlay.size.height() > 0.0 ? overlay.size.height() : 1.0);
+    const QQuaternion overlayRotation = rotationFromEuler(overlay.rotation);
+    const QVector3D right = normalizedOrFallback(overlayRotation.rotatedVector(QVector3D(1.0f, 0.0f, 0.0f)), QVector3D(1.0f, 0.0f, 0.0f)) * (overlayWidth * 0.5f);
+    const QVector3D up = normalizedOrFallback(overlayRotation.rotatedVector(QVector3D(0.0f, 1.0f, 0.0f)), QVector3D(0.0f, 1.0f, 0.0f)) * (overlayHeight * 0.5f);
+    const QMatrix4x4 viewProjection = camera->projectionMatrix() * camera->viewMatrix();
+    const QVector3D corners[] = {
+        overlay.position - right - up,
+        overlay.position + right - up,
+        overlay.position - right + up,
+        overlay.position + right + up
+    };
+
+    for (const QVector3D &corner : corners) {
+        if (pointIsInCameraView(viewProjection, corner)) {
+            return true;
+        }
+    }
+    return pointIsInCameraView(viewProjection, overlay.position);
+}
+
+QImage emptyOverlayTexture(const QSize &designSize)
+{
+    const QSize imageSize = designSize.expandedTo(QSize(1, 1));
+    QImage image(imageSize, QImage::Format_ARGB32_Premultiplied);
+    image.fill(Qt::transparent);
+    return image;
+}
+
+qreal configuredOverlayMaxScale()
+{
+    bool ok = false;
+    const qreal scale = QString::fromLocal8Bit(qgetenv("CAQTDM_3D_OVERLAY_MAX_SCALE")).toDouble(&ok);
+    return ok && scale > 0.0 ? scale : kOverlayMaxTextureScale;
+}
+
+int configuredOverlayMaxPixels()
+{
+    const int pixels = qEnvironmentVariableIntValue("CAQTDM_3D_OVERLAY_MAX_PIXELS");
+    return pixels > 0 ? pixels : kOverlayMaxTexturePixels;
+}
+
+bool projectToSurface(const QMatrix4x4 &viewProjection,
+                      const QVector3D &point,
+                      const QSize &surfaceSize,
+                      QPointF *surfacePoint)
+{
+    const QVector4D clip = viewProjection * QVector4D(point, 1.0f);
+    if (clip.w() <= 0.0f) {
+        return false;
+    }
+
+    const QVector3D ndc = clip.toVector3DAffine();
+    const qreal x = (static_cast<qreal>(ndc.x()) * 0.5 + 0.5) * surfaceSize.width();
+    const qreal y = (0.5 - static_cast<qreal>(ndc.y()) * 0.5) * surfaceSize.height();
+    *surfacePoint = QPointF(x, y);
+    return true;
+}
+
+qreal overlayTextureScale(Qt3DRender::QCamera *camera,
+                          const ca3DOverlayConfig &overlay,
+                          const QSize &designSize,
+                          const QSize &surfaceSize)
+{
+    if (!camera || designSize.isEmpty() || surfaceSize.isEmpty()) {
+        return 1.0;
+    }
+
+    const float overlayWidth = static_cast<float>(overlay.size.width() > 0.0 ? overlay.size.width() : 1.5);
+    const float overlayHeight = static_cast<float>(overlay.size.height() > 0.0 ? overlay.size.height() : 1.0);
+    const QQuaternion overlayRotation = rotationFromEuler(overlay.rotation);
+    const QVector3D right = normalizedOrFallback(overlayRotation.rotatedVector(QVector3D(1.0f, 0.0f, 0.0f)), QVector3D(1.0f, 0.0f, 0.0f)) * (overlayWidth * 0.5f);
+    const QVector3D up = normalizedOrFallback(overlayRotation.rotatedVector(QVector3D(0.0f, 1.0f, 0.0f)), QVector3D(0.0f, 1.0f, 0.0f)) * (overlayHeight * 0.5f);
+    const QMatrix4x4 viewProjection = camera->projectionMatrix() * camera->viewMatrix();
+    const QVector3D corners[] = {
+        overlay.position - right - up,
+        overlay.position + right - up,
+        overlay.position - right + up,
+        overlay.position + right + up
+    };
+
+    bool havePoint = false;
+    qreal minX = 0.0;
+    qreal maxX = 0.0;
+    qreal minY = 0.0;
+    qreal maxY = 0.0;
+    for (const QVector3D &corner : corners) {
+        QPointF point;
+        if (!projectToSurface(viewProjection, corner, surfaceSize, &point)) {
+            continue;
+        }
+        if (!havePoint) {
+            minX = maxX = point.x();
+            minY = maxY = point.y();
+            havePoint = true;
+        } else {
+            minX = qMin(minX, point.x());
+            maxX = qMax(maxX, point.x());
+            minY = qMin(minY, point.y());
+            maxY = qMax(maxY, point.y());
+        }
+    }
+    if (!havePoint) {
+        return 1.0;
+    }
+
+    const qreal projectedScale = qMax((maxX - minX) / designSize.width(),
+                                      (maxY - minY) / designSize.height());
+    qreal scale = qBound(kOverlayMinTextureScale, projectedScale, configuredOverlayMaxScale());
+    const int maxPixels = configuredOverlayMaxPixels();
+    const qreal scaledPixels = designSize.width() * scale * designSize.height() * scale;
+    if (scaledPixels > maxPixels) {
+        scale *= qSqrt(maxPixels / scaledPixels);
+    }
+    return qMax(0.25, scale);
 }
 
 QVector3D cameraForward(Qt3DRender::QCamera *camera)
@@ -338,6 +458,7 @@ ca3DWidget::ca3DWidget(QWidget *parent)
     , thisFallbackView(new QWidget(this))
     , thisFallbackSnapshotLabel(new QLabel(thisFallbackView))
     , thisCameraPreset(0)
+    , thisStable3DSize()
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     , thisFallbackMode(true)
 #else
@@ -351,6 +472,7 @@ ca3DWidget::ca3DWidget(QWidget *parent)
 #endif
 {
     setMinimumSize(120, 80);
+    setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     setAutoFillBackground(true);
 
     QPalette pal = palette();
@@ -375,11 +497,20 @@ ca3DWidget::ca3DWidget(QWidget *parent)
     thisFallbackSnapshotLabel->setPalette(pal);
     layout->addWidget(thisFallbackView);
 
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-    QTimer::singleShot(0, this, [this]() { maybeInitialize3DView(); });
-#endif
-
     updatePlaceholderText();
+}
+
+QSize ca3DWidget::sizeHint() const
+{
+    if (thisStable3DSize.isValid()) {
+        return thisStable3DSize;
+    }
+    return QSize(640, 480);
+}
+
+QSize ca3DWidget::minimumSizeHint() const
+{
+    return QSize(120, 80);
 }
 
 ca3DWidget::~ca3DWidget()
@@ -726,6 +857,14 @@ void ca3DWidget::resizeEvent(QResizeEvent *event)
     }
 }
 
+void ca3DWidget::showEvent(QShowEvent *event)
+{
+    QWidget::showEvent(event);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    maybeInitialize3DView();
+#endif
+}
+
 void ca3DWidget::setObjectAxisValue(const QString &objectId, const QString &axisId, double value)
 {
     qCDebug(ca3DWidgetLog) << "setObjectAxisValue" << objectId << axisId << value;
@@ -1061,12 +1200,25 @@ void ca3DWidget::maybeInitialize3DView()
 
 void ca3DWidget::initialize3DView()
 {
+    if (!thisStable3DSize.isValid()) {
+        thisStable3DSize = size().expandedTo(QSize(120, 80));
+        setMinimumSize(thisStable3DSize);
+    }
+
+    thisStatusLabel->hide();
+    thisFallbackView->hide();
+
     this3DView = new Qt3DExtras::Qt3DWindow();
     this3DView->defaultFrameGraph()->setClearColor(QColor(30, 34, 40));
     thisViewContainer = QWidget::createWindowContainer(this3DView, this);
-    thisViewContainer->setMinimumSize(120, 80);
+    thisViewContainer->setMinimumSize(thisStable3DSize);
+    thisViewContainer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     thisViewContainer->setFocusPolicy(Qt::StrongFocus);
-    layout()->addWidget(thisViewContainer);
+    if (QVBoxLayout *boxLayout = qobject_cast<QVBoxLayout *>(layout())) {
+        boxLayout->addWidget(thisViewContainer, 1);
+    } else {
+        layout()->addWidget(thisViewContainer);
+    }
 }
 
 bool ca3DWidget::shouldUse2DFallback() const
@@ -1145,24 +1297,32 @@ void ca3DWidget::rebuild3DOverlays()
         texture->setGenerateMipMaps(false);
         texture->setMinificationFilter(Qt3DRender::QAbstractTexture::Linear);
         texture->setMagnificationFilter(Qt3DRender::QAbstractTexture::Linear);
+        overlayManager->setProperty("ca3DOverlayActive", false);
         LiveWidgetTextureImage *textureImage = new LiveWidgetTextureImage(
-            overlayManager->renderSnapshot(kOverlayTextureScale).flipped(Qt::Vertical), texture);
+            emptyOverlayTexture(designSize).flipped(Qt::Vertical), texture);
         texture->addTextureImage(textureImage);
         textureImage->update();
-        overlayManager->takeTextureDirty();
 
         QTimer *liveTextureTimer = new QTimer(overlayManager);
         liveTextureTimer->setTimerType(Qt::CoarseTimer);
         const std::shared_ptr<int> textureTimerTick(new int(0));
         connect(liveTextureTimer, &QTimer::timeout, overlayManager,
-                [overlayManager, textureImage, textureTimerTick]() {
-                    ++(*textureTimerTick);
-                    const bool refreshForCaret = overlayManager->hasFocusedTextInput() && (*textureTimerTick % 5 == 0);
-                    const bool refreshIdle = *textureTimerTick % 20 == 0;
-                    if (!overlayManager->takeTextureDirty() && !refreshForCaret && !refreshIdle) {
+                [overlayManager, textureImage, textureTimerTick, renderWindow = this3DView, overlay, designSize]() {
+                    if (!overlayManager->property("ca3DOverlayActive").toBool()) {
                         return;
                     }
-                    textureImage->setImage(overlayManager->renderSnapshot(kOverlayTextureScale).flipped(Qt::Vertical));
+
+                    ++(*textureTimerTick);
+                    const bool refreshForCaret = overlayManager->hasFocusedTextInput() && (*textureTimerTick % 5 == 0);
+                    if (!overlayManager->takeTextureDirty() && !refreshForCaret) {
+                        return;
+                    }
+                    const QSize surfaceSize = renderWindow ? renderWindow->size() : QSize();
+                    const qreal scale = overlayTextureScale(renderWindow ? renderWindow->camera() : Q_NULLPTR,
+                                                            overlay,
+                                                            designSize,
+                                                            surfaceSize);
+                    textureImage->setImage(overlayManager->renderSnapshot(scale).flipped(Qt::Vertical));
                 });
         liveTextureTimer->start(100);
 
@@ -1265,7 +1425,7 @@ void ca3DWidget::apply3DOverlayVisibility(int preset)
         } else if (overlay.visibilityMode == ca3DOverlayConfig::InView) {
             visible = (thisConfig.cameraPresets.isEmpty() || presetMatches) && inView;
         } else {
-            visible = thisConfig.cameraPresets.isEmpty() || presetMatches;
+            visible = (thisConfig.cameraPresets.isEmpty() || presetMatches) && inView;
         }
         entity->setEnabled(visible);
         qCDebug(ca3DWidgetLog) << "apply3DOverlayVisibility" << overlay.id
@@ -1280,8 +1440,13 @@ void ca3DWidget::apply3DOverlayVisibility(int preset)
             filter->setProperty("ca3DOverlayActive", visible);
         }
         ca3DOverlayWidgetManager *manager = this3DOverlayManagersById.value(overlay.id, Q_NULLPTR);
-        if (!visible && manager) {
-            manager->clearOverlayFocus();
+        if (manager) {
+            manager->setProperty("ca3DOverlayActive", visible);
+            if (visible) {
+                manager->markTextureDirty();
+            } else if (!visible) {
+                manager->clearOverlayFocus();
+            }
         }
     }
 }

@@ -1,6 +1,7 @@
 #include "ca3doverlaywidgetmanager.h"
 
 #include <QApplication>
+#include <QChildEvent>
 #include <QFile>
 #include <QFocusEvent>
 #include <QKeyEvent>
@@ -37,7 +38,7 @@ QWidget *scrollBarAncestor(QWidget *widget) {
 ca3DOverlayWidgetManager::ca3DOverlayWidgetManager(QWidget *parent)
     : QWidget(parent), thisLoadedWidget(Q_NULLPTR), thisContentRoot(Q_NULLPTR),
       thisFocusedOverlayWidget(Q_NULLPTR), thisMouseCaptureWidget(Q_NULLPTR),
-      thisTextureDirty(true) {
+      thisRenderingSnapshot(false), thisTextureDirty(true) {
   setWindowFlags(Qt::Widget | Qt::FramelessWindowHint);
   setAttribute(Qt::WA_TranslucentBackground);
 }
@@ -92,6 +93,7 @@ void ca3DOverlayWidgetManager::loadWidgetsFromUi(const QString &uiFilePath) {
   thisContentRoot->setGeometry(QRect(QPoint(0, 0), thisSourceDesignSize));
   thisLoadedWidget->setAttribute(Qt::WA_DontShowOnScreen);
   thisLoadedWidget->show();
+  installDirtyTracking(thisLoadedWidget);
   QApplication::processEvents();
 }
 
@@ -110,10 +112,47 @@ QImage ca3DOverlayWidgetManager::renderSnapshot(qreal scale) const {
   targetPainter.setRenderHint(QPainter::TextAntialiasing, true);
   targetPainter.setRenderHint(QPainter::SmoothPixmapTransform, true);
   targetPainter.scale(scale, scale);
+  thisRenderingSnapshot = true;
   thisContentRoot->render(&targetPainter, QPoint(),
                           QRect(QPoint(0, 0), thisSourceDesignSize),
                           QWidget::DrawChildren);
+  thisRenderingSnapshot = false;
   return image;
+}
+
+bool ca3DOverlayWidgetManager::eventFilter(QObject *watched, QEvent *event) {
+  if (!event) {
+    return QWidget::eventFilter(watched, event);
+  }
+
+  if (event->type() == QEvent::ChildAdded) {
+    QChildEvent *childEvent = static_cast<QChildEvent *>(event);
+    if (QWidget *childWidget = qobject_cast<QWidget *>(childEvent->child())) {
+      installDirtyTracking(childWidget);
+      markTextureDirty();
+    }
+  } else if (!thisRenderingSnapshot) {
+    switch (event->type()) {
+    case QEvent::UpdateRequest:
+    case QEvent::LayoutRequest:
+    case QEvent::Resize:
+    case QEvent::Move:
+    case QEvent::Show:
+    case QEvent::Hide:
+    case QEvent::EnabledChange:
+    case QEvent::FontChange:
+    case QEvent::PaletteChange:
+    case QEvent::StyleChange:
+    case QEvent::DynamicPropertyChange:
+    case QEvent::ContentsRectChange:
+      markTextureDirty();
+      break;
+    default:
+      break;
+    }
+  }
+
+  return QWidget::eventFilter(watched, event);
 }
 
 bool ca3DOverlayWidgetManager::sendMouseEvent(const QPointF &designPosition,
@@ -206,6 +245,20 @@ bool ca3DOverlayWidgetManager::takeTextureDirty() {
 }
 
 void ca3DOverlayWidgetManager::markTextureDirty() { thisTextureDirty = true; }
+
+void ca3DOverlayWidgetManager::installDirtyTracking(QWidget *widget) {
+  if (!widget) {
+    return;
+  }
+
+  widget->installEventFilter(this);
+  const QList<QWidget *> children = widget->findChildren<QWidget *>();
+  for (QWidget *child : children) {
+    if (child) {
+      child->installEventFilter(this);
+    }
+  }
+}
 
 void ca3DOverlayWidgetManager::clearOverlayFocus() {
   if (!thisFocusedOverlayWidget) {

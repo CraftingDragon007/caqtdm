@@ -33,12 +33,18 @@ public:
     void markTextureDirty();
     void clearOverlayFocus();
 
+protected:
+    bool eventFilter(QObject *watched, QEvent *event) override;
+
 private:
+    void installDirtyTracking(QWidget *widget);
+
     QWidget *thisLoadedWidget;
     QWidget *thisContentRoot;
     QWidget *thisFocusedOverlayWidget;
     QWidget *thisMouseCaptureWidget;
     QSize thisSourceDesignSize;
+    mutable bool thisRenderingSnapshot;
     bool thisTextureDirty;
 };
 

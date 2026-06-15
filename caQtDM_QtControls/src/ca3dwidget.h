@@ -18,6 +18,7 @@
 class QLabel;
 class QObject;
 class QResizeEvent;
+class QShowEvent;
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 class ca3DOverlayWidgetManager;
@@ -51,6 +52,8 @@ public:
     bool getFallbackMode() const { return thisFallbackMode; }
     bool getConfigValid() const { return thisConfigValid; }
     QStringList getConfigErrors() const { return thisConfigErrors; }
+    QSize sizeHint() const override;
+    QSize minimumSizeHint() const override;
     QList<QWidget*> overlayRootWidgets() const;
     QString overlayMacro(QWidget *rootWidget) const;
     QString overlayIncludePath(QWidget *rootWidget) const;
@@ -87,6 +90,7 @@ private:
 
 protected:
     void resizeEvent(QResizeEvent *event);
+    void showEvent(QShowEvent *event);
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     void maybeInitialize3DView();
@@ -109,6 +113,7 @@ protected:
     ca3DSceneConfig thisConfig;
     QStringList thisConfigErrors;
     int thisCameraPreset;
+    QSize thisStable3DSize;
     bool thisFallbackMode;
     bool thisConfigValid;
     bool thisDesignerMode;
