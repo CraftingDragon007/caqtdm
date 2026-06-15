@@ -9,7 +9,7 @@ _caqtdm_env_finish() {
   local status=$1
   local sourced=$_caqtdm_env_sourced
   unset -f _caqtdm_env_finish _caqtdm_env_quote _caqtdm_env_command_dir _caqtdm_env_qmake_version
-  unset -f _caqtdm_env_detect_qmake _caqtdm_env_valid_qmake _caqtdm_env_detect_qt_module _caqtdm_env_detect_qwt_lib_name _caqtdm_env_detect_epics_host_arch _caqtdm_env_detect_epics _caqtdm_env_detect
+  unset -f _caqtdm_env_detect_qmake _caqtdm_env_valid_qmake _caqtdm_env_valid_make _caqtdm_env_detect_make _caqtdm_env_detect_qt_module _caqtdm_env_detect_qwt_lib_name _caqtdm_env_detect_epics_host_arch _caqtdm_env_detect_epics _caqtdm_env_detect
   unset -f _caqtdm_env_prompt_value _caqtdm_env_prompt_yes_no _caqtdm_env_configure _caqtdm_env_unset_config_vars
   unset -f _caqtdm_env_write _caqtdm_env_load _caqtdm_env_print _caqtdm_env_need_config _caqtdm_env_prompt_missing_required
   unset _caqtdm_env_sourced _caqtdm_env_script_dir _caqtdm_env_file _caqtdm_env_arg _caqtdm_env_action _caqtdm_env_prefer_qt _caqtdm_env_command _caqtdm_env_requested_qmake _caqtdm_env_requested_make
@@ -55,6 +55,40 @@ _caqtdm_env_valid_qmake() {
   fi
   version=$(_caqtdm_env_qmake_version "$qmake")
   [[ "$version" == [0-9]*.[0-9]* ]]
+}
+
+_caqtdm_env_valid_make() {
+  local make_cmd=$1 version_line
+  [ -n "$make_cmd" ] || return 1
+  if ! command -v "$make_cmd" >/dev/null 2>&1 && [ ! -x "$make_cmd" ]; then
+    return 1
+  fi
+  version_line=$("$make_cmd" --version 2>/dev/null | sed -n '1p')
+  [[ "$version_line" == *"GNU Make"* ]]
+}
+
+_caqtdm_env_detect_make() {
+  local candidate
+
+  if [ -n "${MAKE:-}" ]; then
+    if _caqtdm_env_valid_make "$MAKE"; then
+      return 0
+    fi
+
+    echo "Configured MAKE is not GNU make: $MAKE" >&2
+    return 1
+  fi
+
+  for candidate in make gmake; do
+    command -v "$candidate" >/dev/null 2>&1 || continue
+    if _caqtdm_env_valid_make "$candidate"; then
+      MAKE=$(command -v "$candidate")
+      return 0
+    fi
+  done
+
+  MAKE=${MAKE:-gmake}
+  return 1
 }
 
 _caqtdm_env_detect_qt_module() {
@@ -141,9 +175,21 @@ _caqtdm_env_detect_qwt() {
     QWTINCLUDE=
   fi
   if [ "$qt_major" = 5 ]; then
-    local qwt_include_candidates=(/usr/include/qt5/qwt /usr/include/qwt)
+    local qwt_include_candidates=(
+      /usr/local/include/qt5/qwt5
+      /usr/local/include/qt5/qwt
+      /usr/include/qt5/qwt
+      /usr/local/include/qwt
+      /usr/include/qwt
+    )
   else
-    local qwt_include_candidates=(/usr/include/qt6/qwt /usr/include/qwt)
+    local qwt_include_candidates=(
+      /usr/local/include/qt6/qwt6
+      /usr/local/include/qt6/qwt
+      /usr/include/qt6/qwt
+      /usr/local/include/qwt
+      /usr/include/qwt
+    )
   fi
   for qwt_include_candidate in "${qwt_include_candidates[@]}"; do
     if [ -d "$qwt_include_candidate" ] && { [ -z "${QWTINCLUDE:-}" ] || [ "$QWTINCLUDE" = /usr/include/qwt ]; }; then
@@ -155,7 +201,17 @@ _caqtdm_env_detect_qwt() {
   if [ -n "${QWTLIB:-}" ] && ! compgen -G "$QWTLIB/libqwt*.so*" >/dev/null; then
     QWTLIB=
   fi
-  for qwt_lib_candidate in "$QWTHOME/lib64" "$QWTHOME/lib" /usr/lib64 /usr/lib; do
+  for qwt_lib_candidate in \
+    "$QWTHOME/lib/qt6" \
+    "$QWTHOME/lib/qt5" \
+    "$QWTHOME/lib64" \
+    "$QWTHOME/lib" \
+    /usr/local/lib/qt6 \
+    /usr/local/lib/qt5 \
+    /usr/local/lib64 \
+    /usr/local/lib \
+    /usr/lib64 \
+    /usr/lib; do
     if [ -z "${QWTLIB:-}" ] && compgen -G "$qwt_lib_candidate/libqwt*.so*" >/dev/null; then
       QWTLIB=$qwt_lib_candidate
       break
@@ -275,7 +331,7 @@ _caqtdm_env_detect_epics() {
   fi
 
   if [ -z "${EPICS_BASE:-}" ]; then
-    for candidate in "$caget_root" "$caget_root/base"; do
+    for candidate in "$caget_root" "$caget_root/base" /usr/local/epics-base; do
       [ -n "$candidate" ] || continue
       if [ -d "$candidate/include" ] && [ -d "$candidate/lib" ]; then
         EPICS_BASE=$candidate
@@ -310,7 +366,7 @@ _caqtdm_env_detect_epics() {
 _caqtdm_env_detect() {
   local qmake_ok=0 qt_version qt_major
   _caqtdm_env_detect_qmake || qmake_ok=1
-  MAKE=${MAKE:-make}
+  _caqtdm_env_detect_make || true
   qt_version=$(_caqtdm_env_qmake_version "$QMAKE")
   qt_major=${qt_version%%.*}
 
@@ -402,6 +458,7 @@ _caqtdm_env_configure() {
   echo
 
   _caqtdm_env_prompt_value QMAKE "qmake executable"
+  _caqtdm_env_prompt_value MAKE "GNU make executable"
   _caqtdm_env_prompt_value QTHOME "Qt installation directory"
   _caqtdm_env_prompt_value QWTHOME "Qwt installation directory"
   _caqtdm_env_prompt_value QWTINCLUDE "Qwt include directory"
@@ -455,6 +512,10 @@ _caqtdm_env_prompt_missing_required() {
 
   if [ "$changed_qmake" -eq 1 ] && _caqtdm_env_valid_qmake "${QMAKE:-}"; then
     QTHOME=$(_caqtdm_env_command_dir "$QMAKE")
+  fi
+
+  if ! _caqtdm_env_valid_make "${MAKE:-}"; then
+    _caqtdm_env_prompt_value MAKE "GNU make executable"
   fi
 
   [ -d "${QTHOME:-}" ] || _caqtdm_env_prompt_value QTHOME "Qt installation directory"
@@ -555,6 +616,7 @@ _caqtdm_env_print() {
 
 _caqtdm_env_need_config() {
   _caqtdm_env_valid_qmake "${QMAKE:-}" || return 0
+  _caqtdm_env_valid_make "${MAKE:-}" || return 0
   [ -d "$QTHOME" ] || return 0
   [ -d "$QWTINCLUDE" ] || return 0
   [ -d "$QWTLIB" ] || return 0
