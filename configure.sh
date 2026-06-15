@@ -103,23 +103,21 @@ _caqtdm_env_detect_qmake() {
   local candidate version
 
   if [ "$_caqtdm_env_prefer_qt" = 5 ]; then
-    local preferred_candidates=(qmake-qt5 qmake5 qmake)
+    local primary_major=5
+    local fallback_major=6
+    local primary_candidates=(qmake-qt5 qmake5 qmake)
     local fallback_candidates=(qmake6 qmake-qt6 qmake)
   else
-    local preferred_candidates=(qmake6 qmake-qt6 qmake)
+    local primary_major=6
+    local fallback_major=5
+    local primary_candidates=(qmake6 qmake-qt6 qmake)
     local fallback_candidates=(qmake-qt5 qmake5 qmake)
   fi
 
-  for candidate in "${preferred_candidates[@]}"; do
+  for candidate in "${primary_candidates[@]}"; do
     command -v "$candidate" >/dev/null 2>&1 || continue
     version=$(_caqtdm_env_qmake_version "$candidate")
-    if [ "$_caqtdm_env_prefer_qt" = 5 ]; then
-      if [[ "$candidate" == *5* || "$version" == 5.* ]]; then
-        QMAKE=$(command -v "$candidate")
-        QTHOME=$(_caqtdm_env_command_dir "$candidate")
-        return 0
-      fi
-    elif [[ "$candidate" == *6* || "$version" == 6.* ]]; then
+    if [[ "$version" == "$primary_major".* ]]; then
       QMAKE=$(command -v "$candidate")
       QTHOME=$(_caqtdm_env_command_dir "$candidate")
       return 0
@@ -128,10 +126,22 @@ _caqtdm_env_detect_qmake() {
 
   for candidate in "${fallback_candidates[@]}"; do
     command -v "$candidate" >/dev/null 2>&1 || continue
+    version=$(_caqtdm_env_qmake_version "$candidate")
+    if [[ "$version" != "$fallback_major".* ]]; then
+      continue
+    fi
     QMAKE=$(command -v "$candidate")
     QTHOME=$(_caqtdm_env_command_dir "$candidate")
     return 0
   done
+
+  for candidate in qmake6 qmake-qt6 qmake-qt5 qmake5 qmake; do
+    command -v "$candidate" >/dev/null 2>&1 || continue
+    QMAKE=$(command -v "$candidate")
+    QTHOME=$(_caqtdm_env_command_dir "$candidate")
+    return 0
+  done
+
   if [ "$_caqtdm_env_prefer_qt" = 5 ]; then
     QMAKE=${QMAKE:-qmake-qt5}
   else
@@ -157,13 +167,15 @@ _caqtdm_env_detect_epics_host_arch() {
 }
 
 _caqtdm_env_detect() {
-  local qmake_ok=0
+  local qmake_ok=0 qt_version qt_major
   _caqtdm_env_detect_qmake || qmake_ok=1
+  qt_version=$(_caqtdm_env_qmake_version "$QMAKE")
+  qt_major=${qt_version%%.*}
 
   QWTHOME=${QWTHOME:-/usr}
   if command -v pkg-config >/dev/null 2>&1; then
     local qwt_pkg qwt_pkg_candidates
-    if [ "$_caqtdm_env_prefer_qt" = 5 ]; then
+    if [ "$qt_major" = 5 ]; then
       qwt_pkg_candidates=(qwt-qt5 qwt5-qt5 qwt Qt5Qwt6)
     else
       qwt_pkg_candidates=(Qt6Qwt6 qwt-qt6 qwt6-qt6 qwt)
@@ -404,6 +416,7 @@ for _caqtdm_env_arg in "$@"; do
     --help|-h)
       echo "Usage: $_caqtdm_env_command [--reconfigure|--redetect] [--prefer-qt5]"
       echo "Loads .buildenv, creating it automatically on first use."
+      echo "By default Qt 6 is detected first, falling back to Qt 5 if Qt 6 is unavailable."
       echo "Use --reconfigure to edit the current .buildenv values."
       echo "Use --redetect to ignore .buildenv and detect local settings again."
       echo "Use --prefer-qt5 to detect qmake-qt5/qmake5 and Qt 5 Qwt libraries first."
