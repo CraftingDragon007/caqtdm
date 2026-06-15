@@ -113,11 +113,63 @@ _caqtdm_env_detect_qwt_lib_name() {
     fi
   done
 
-  QWTLIBNAME=${QWTLIBNAME:-qwt}
+  return 1
+}
+
+_caqtdm_env_detect_qwt() {
+  local qt_major=$1 qwt_pkg qwt_pkg_candidates qwt_lib_candidate qwt_include_candidate
+
+  unset QWTINCLUDE QWTLIB QWTVERSION QWTLIBNAME
+  QWTHOME=${QWTHOME:-/usr}
+
+  if command -v pkg-config >/dev/null 2>&1; then
+    if [ "$qt_major" = 5 ]; then
+      qwt_pkg_candidates=(qwt-qt5 qwt5-qt5 Qt5Qwt6 qwt)
+    else
+      qwt_pkg_candidates=(Qt6Qwt6 qwt-qt6 qwt6-qt6 qwt)
+    fi
+    for qwt_pkg in "${qwt_pkg_candidates[@]}"; do
+      pkg-config --exists "$qwt_pkg" 2>/dev/null || continue
+      QWTINCLUDE=$(pkg-config --variable=includedir "$qwt_pkg" 2>/dev/null)
+      QWTLIB=$(pkg-config --variable=libdir "$qwt_pkg" 2>/dev/null)
+      QWTVERSION=$(pkg-config --modversion "$qwt_pkg" 2>/dev/null)
+      break
+    done
+  fi
+
+  if [ -n "${QWTINCLUDE:-}" ] && [ ! -d "$QWTINCLUDE" ]; then
+    QWTINCLUDE=
+  fi
+  if [ "$qt_major" = 5 ]; then
+    local qwt_include_candidates=(/usr/include/qt5/qwt /usr/include/qwt)
+  else
+    local qwt_include_candidates=(/usr/include/qt6/qwt /usr/include/qwt)
+  fi
+  for qwt_include_candidate in "${qwt_include_candidates[@]}"; do
+    if [ -d "$qwt_include_candidate" ] && { [ -z "${QWTINCLUDE:-}" ] || [ "$QWTINCLUDE" = /usr/include/qwt ]; }; then
+      QWTINCLUDE=$qwt_include_candidate
+      break
+    fi
+  done
+
+  if [ -n "${QWTLIB:-}" ] && ! compgen -G "$QWTLIB/libqwt*.so*" >/dev/null; then
+    QWTLIB=
+  fi
+  for qwt_lib_candidate in "$QWTHOME/lib64" "$QWTHOME/lib" /usr/lib64 /usr/lib; do
+    if [ -z "${QWTLIB:-}" ] && compgen -G "$qwt_lib_candidate/libqwt*.so*" >/dev/null; then
+      QWTLIB=$qwt_lib_candidate
+      break
+    fi
+  done
+
+  [ -n "${QWTINCLUDE:-}" ] && [ -d "$QWTINCLUDE" ] || return 1
+  [ -n "${QWTLIB:-}" ] && [ -d "$QWTLIB" ] || return 1
+  _caqtdm_env_detect_qwt_lib_name || return 1
+  QWTVERSION=${QWTVERSION:-6.1}
 }
 
 _caqtdm_env_detect_qmake() {
-  local candidate version
+  local candidate version primary_found=0
 
   if [ "$_caqtdm_env_prefer_qt" = 5 ]; then
     local primary_major=5
@@ -135,6 +187,7 @@ _caqtdm_env_detect_qmake() {
     command -v "$candidate" >/dev/null 2>&1 || continue
     version=$(_caqtdm_env_qmake_version "$candidate")
     if [[ "$version" == "$primary_major".* ]]; then
+      primary_found=1
       QMAKE=$(command -v "$candidate")
       QTHOME=$(_caqtdm_env_command_dir "$candidate")
       return 0
@@ -146,6 +199,9 @@ _caqtdm_env_detect_qmake() {
     version=$(_caqtdm_env_qmake_version "$candidate")
     if [[ "$version" != "$fallback_major".* ]]; then
       continue
+    fi
+    if [ "$primary_found" -eq 0 ] && [ "$_caqtdm_env_prefer_qt" != 5 ]; then
+      echo "Qt 6 qmake was not found; falling back to Qt 5."
     fi
     QMAKE=$(command -v "$candidate")
     QTHOME=$(_caqtdm_env_command_dir "$candidate")
@@ -247,42 +303,17 @@ _caqtdm_env_detect() {
   qt_version=$(_caqtdm_env_qmake_version "$QMAKE")
   qt_major=${qt_version%%.*}
 
-  QWTHOME=${QWTHOME:-/usr}
-  if command -v pkg-config >/dev/null 2>&1; then
-    local qwt_pkg qwt_pkg_candidates
-    if [ "$qt_major" = 5 ]; then
-      qwt_pkg_candidates=(qwt-qt5 qwt5-qt5 qwt Qt5Qwt6)
-    else
-      qwt_pkg_candidates=(Qt6Qwt6 qwt-qt6 qwt6-qt6 qwt)
+  if ! _caqtdm_env_detect_qwt "$qt_major"; then
+    if [ "$_caqtdm_env_prefer_qt" != 5 ] && [ "$qt_major" = 6 ]; then
+      echo "Qt 6 was found, but matching Qt 6 Qwt was not found; falling back to Qt 5."
+      _caqtdm_env_prefer_qt=5
+      unset QMAKE QTHOME
+      _caqtdm_env_detect_qmake || qmake_ok=1
+      qt_version=$(_caqtdm_env_qmake_version "$QMAKE")
+      qt_major=${qt_version%%.*}
+      _caqtdm_env_detect_qwt "$qt_major" || true
     fi
-    for qwt_pkg in "${qwt_pkg_candidates[@]}"; do
-      pkg-config --exists "$qwt_pkg" 2>/dev/null || continue
-      QWTINCLUDE=$(pkg-config --variable=includedir "$qwt_pkg" 2>/dev/null)
-      QWTLIB=$(pkg-config --variable=libdir "$qwt_pkg" 2>/dev/null)
-      QWTVERSION=$(pkg-config --modversion "$qwt_pkg" 2>/dev/null)
-      break
-    done
   fi
-  if [ -z "${QWTINCLUDE:-}" ]; then
-    if [ "$qt_major" = 5 ]; then
-      local qwt_include_candidates=(/usr/include/qt5/qwt /usr/include/qwt)
-    else
-      local qwt_include_candidates=(/usr/include/qt6/qwt /usr/include/qwt)
-    fi
-    local qwt_include_candidate
-    for qwt_include_candidate in "${qwt_include_candidates[@]}"; do
-      if [ -d "$qwt_include_candidate" ]; then
-        QWTINCLUDE=$qwt_include_candidate
-        break
-      fi
-    done
-  fi
-  QWTINCLUDE=${QWTINCLUDE:-/usr/include/qwt}
-  QWTLIB=${QWTLIB:-$QWTHOME/lib}
-  if [ -z "$QWTLIBNAME" ] || [ -z "$QWTVERSION" ]; then
-    _caqtdm_env_detect_qwt_lib_name
-  fi
-  QWTVERSION=${QWTVERSION:-6.1}
 
   _caqtdm_env_detect_epics
   EPICS4LOCATION=${EPICS4LOCATION:-}
