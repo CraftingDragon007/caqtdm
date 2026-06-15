@@ -9,9 +9,9 @@ _caqtdm_env_finish() {
   local status=$1
   local sourced=$_caqtdm_env_sourced
   unset -f _caqtdm_env_finish _caqtdm_env_quote _caqtdm_env_command_dir _caqtdm_env_qmake_version
-  unset -f _caqtdm_env_detect_qmake _caqtdm_env_detect_qt_module _caqtdm_env_detect_qwt_lib_name _caqtdm_env_detect_epics_host_arch _caqtdm_env_detect
+  unset -f _caqtdm_env_detect_qmake _caqtdm_env_valid_qmake _caqtdm_env_detect_qt_module _caqtdm_env_detect_qwt_lib_name _caqtdm_env_detect_epics_host_arch _caqtdm_env_detect_epics _caqtdm_env_detect
   unset -f _caqtdm_env_prompt_value _caqtdm_env_prompt_yes_no _caqtdm_env_configure _caqtdm_env_unset_config_vars
-  unset -f _caqtdm_env_write _caqtdm_env_load _caqtdm_env_print _caqtdm_env_need_config
+  unset -f _caqtdm_env_write _caqtdm_env_load _caqtdm_env_print _caqtdm_env_need_config _caqtdm_env_prompt_missing_required
   unset _caqtdm_env_sourced _caqtdm_env_script_dir _caqtdm_env_file _caqtdm_env_arg _caqtdm_env_action _caqtdm_env_prefer_qt _caqtdm_env_command
   if [ "$sourced" -eq 1 ]; then
     return "$status"
@@ -24,8 +24,15 @@ _caqtdm_env_quote() {
 }
 
 _caqtdm_env_command_dir() {
-  local command_path=$1
+  local command_path=$1 install_prefix
+  install_prefix=$("$command_path" -query QT_INSTALL_PREFIX 2>/dev/null | tr -d '\r')
+  if [ -n "$install_prefix" ] && [ -d "$install_prefix" ]; then
+    printf "%s\n" "$install_prefix"
+    return 0
+  fi
+
   command_path=$(command -v "$command_path" 2>/dev/null) || return 1
+  command_path=$(readlink -f "$command_path" 2>/dev/null || printf "%s" "$command_path")
   cd "$(dirname "$command_path")/.." 2>/dev/null && pwd -P
 }
 
@@ -38,6 +45,16 @@ _caqtdm_env_qmake_version() {
   fi
 
   "$1" --version 2>/dev/null | sed -n 's/.*Using Qt version \([^ ]*\).*/\1/p' | tr -d '\r'
+}
+
+_caqtdm_env_valid_qmake() {
+  local qmake=$1 version
+  [ -n "$qmake" ] || return 1
+  if ! command -v "$qmake" >/dev/null 2>&1 && [ ! -x "$qmake" ]; then
+    return 1
+  fi
+  version=$(_caqtdm_env_qmake_version "$qmake")
+  [[ "$version" == [0-9]*.[0-9]* ]]
 }
 
 _caqtdm_env_detect_qt_module() {
@@ -137,6 +154,8 @@ _caqtdm_env_detect_qmake() {
 
   for candidate in qmake6 qmake-qt6 qmake-qt5 qmake5 qmake; do
     command -v "$candidate" >/dev/null 2>&1 || continue
+    version=$(_caqtdm_env_qmake_version "$candidate")
+    [[ "$version" == [0-9]*.[0-9]* ]] || continue
     QMAKE=$(command -v "$candidate")
     QTHOME=$(_caqtdm_env_command_dir "$candidate")
     return 0
@@ -156,14 +175,70 @@ _caqtdm_env_detect_epics_host_arch() {
     return 0
   fi
 
-  local epics_host_arch
-  for epics_host_arch in "$EPICS_BASE/startup/EpicsHostArch" /usr/lib/epics/base/startup/EpicsHostArch; do
+  local epics_host_arch caget_path caget_bin_dir
+  for epics_host_arch in "${EPICS_BASE:-}/startup/EpicsHostArch"; do
     [ -x "$epics_host_arch" ] || continue
     EPICS_HOST_ARCH=$($epics_host_arch 2>/dev/null)
     [ -n "$EPICS_HOST_ARCH" ] && return 0
   done
 
-  EPICS_HOST_ARCH=$(uname -s 2>/dev/null | tr '[:upper:]' '[:lower:]')-$(uname -m 2>/dev/null)
+  caget_path=$(command -v caget 2>/dev/null || true)
+  if [ -n "$caget_path" ]; then
+    caget_path=$(readlink -f "$caget_path" 2>/dev/null || printf "%s" "$caget_path")
+    caget_bin_dir=$(dirname "$caget_path")
+    if [ "$(basename "$(dirname "$caget_bin_dir")")" = "bin" ]; then
+      EPICS_HOST_ARCH=$(basename "$caget_bin_dir")
+      return 0
+    fi
+  fi
+
+  return 1
+}
+
+_caqtdm_env_detect_epics() {
+  local caget_path caget_bin_dir caget_root candidate lib_candidate include_candidate
+
+  caget_path=$(command -v caget 2>/dev/null || true)
+  if [ -n "$caget_path" ]; then
+    caget_path=$(readlink -f "$caget_path" 2>/dev/null || printf "%s" "$caget_path")
+    caget_bin_dir=$(dirname "$caget_path")
+    if [ "$(basename "$(dirname "$caget_bin_dir")")" = "bin" ]; then
+      caget_root=$(dirname "$(dirname "$caget_bin_dir")")
+      EPICS_HOST_ARCH=${EPICS_HOST_ARCH:-$(basename "$caget_bin_dir")}
+    fi
+  fi
+
+  if [ -z "${EPICS_BASE:-}" ]; then
+    for candidate in "$caget_root" "$caget_root/base"; do
+      [ -n "$candidate" ] || continue
+      if [ -d "$candidate/include" ] && [ -d "$candidate/lib" ]; then
+        EPICS_BASE=$candidate
+        break
+      fi
+    done
+  fi
+
+  _caqtdm_env_detect_epics_host_arch || true
+
+  if [ -n "${EPICS_BASE:-}" ]; then
+    for include_candidate in "$EPICS_BASE/include" "$EPICS_BASE/base/include"; do
+      if [ -z "${EPICSINCLUDE:-}" ] && [ -d "$include_candidate" ]; then
+        EPICSINCLUDE=$include_candidate
+        break
+      fi
+    done
+
+    for lib_candidate in \
+      "${EPICS_BASE}/lib/${EPICS_HOST_ARCH:-}" \
+      "$EPICS_BASE/lib" \
+      "${EPICS_BASE}/base/lib/${EPICS_HOST_ARCH:-}" \
+      "$EPICS_BASE/base/lib"; do
+      if [ -z "${EPICSLIB:-}" ] && [ -d "$lib_candidate" ]; then
+        EPICSLIB=$lib_candidate
+        break
+      fi
+    done
+  fi
 }
 
 _caqtdm_env_detect() {
@@ -195,19 +270,7 @@ _caqtdm_env_detect() {
   fi
   QWTVERSION=${QWTVERSION:-6.1}
 
-  if [ -z "$EPICS_BASE" ]; then
-    local epics_base_candidate
-    for epics_base_candidate in /usr/lib/epics/base /usr/local/epics/base /opt/epics/base; do
-      if [ -d "$epics_base_candidate" ]; then
-        EPICS_BASE=$epics_base_candidate
-        break
-      fi
-    done
-  fi
-  EPICS_BASE=${EPICS_BASE:-/usr/lib/epics/base}
-  _caqtdm_env_detect_epics_host_arch
-  EPICSINCLUDE=${EPICSINCLUDE:-$EPICS_BASE/include}
-  EPICSLIB=${EPICSLIB:-$EPICS_BASE/lib/$EPICS_HOST_ARCH}
+  _caqtdm_env_detect_epics
   EPICS4LOCATION=${EPICS4LOCATION:-}
 
   QTCONTROLS_LIBS=${QTCONTROLS_LIBS:-$_caqtdm_env_script_dir/caQtDM_Binaries}
@@ -291,8 +354,12 @@ _caqtdm_env_configure() {
   _caqtdm_env_prompt_value QWTLIBNAME "Qwt library name"
   _caqtdm_env_prompt_value EPICS_BASE "EPICS base directory"
   _caqtdm_env_prompt_value EPICS_HOST_ARCH "EPICS host architecture"
-  EPICSINCLUDE=${EPICSINCLUDE:-$EPICS_BASE/include}
-  EPICSLIB=${EPICSLIB:-$EPICS_BASE/lib/$EPICS_HOST_ARCH}
+  if [ -n "${EPICS_BASE:-}" ]; then
+    EPICSINCLUDE=${EPICSINCLUDE:-$EPICS_BASE/include}
+    if [ -n "${EPICS_HOST_ARCH:-}" ]; then
+      EPICSLIB=${EPICSLIB:-$EPICS_BASE/lib/$EPICS_HOST_ARCH}
+    fi
+  fi
   _caqtdm_env_prompt_value EPICSINCLUDE "EPICS include directory"
   _caqtdm_env_prompt_value EPICSLIB "EPICS library directory"
 
@@ -315,6 +382,42 @@ _caqtdm_env_configure() {
     _caqtdm_env_prompt_value CAQTDM_MODBUS "Build Modbus support, 1=yes empty=no"
     _caqtdm_env_prompt_value CAQTDM_OPCUA "Build OPC UA support, 1=yes empty=no"
   fi
+}
+
+_caqtdm_env_prompt_missing_required() {
+  local changed_qmake=0
+
+  echo
+  echo "Only missing or invalid required values will be prompted."
+  echo "Press Enter to keep the value shown in brackets."
+  echo
+
+  if ! _caqtdm_env_valid_qmake "${QMAKE:-}"; then
+    _caqtdm_env_prompt_value QMAKE "qmake executable"
+    changed_qmake=1
+  fi
+
+  if [ "$changed_qmake" -eq 1 ] && _caqtdm_env_valid_qmake "${QMAKE:-}"; then
+    QTHOME=$(_caqtdm_env_command_dir "$QMAKE")
+  fi
+
+  [ -d "${QTHOME:-}" ] || _caqtdm_env_prompt_value QTHOME "Qt installation directory"
+  [ -d "${QWTHOME:-}" ] || _caqtdm_env_prompt_value QWTHOME "Qwt installation directory"
+  [ -d "${QWTINCLUDE:-}" ] || _caqtdm_env_prompt_value QWTINCLUDE "Qwt include directory"
+  [ -d "${QWTLIB:-}" ] || _caqtdm_env_prompt_value QWTLIB "Qwt library directory"
+  [ -n "${QWTVERSION:-}" ] || _caqtdm_env_prompt_value QWTVERSION "Qwt version"
+  [ -n "${QWTLIBNAME:-}" ] || _caqtdm_env_prompt_value QWTLIBNAME "Qwt library name"
+  [ -d "${EPICS_BASE:-}" ] || _caqtdm_env_prompt_value EPICS_BASE "EPICS base directory"
+  [ -n "${EPICS_HOST_ARCH:-}" ] || _caqtdm_env_prompt_value EPICS_HOST_ARCH "EPICS host architecture"
+
+  if [ -n "${EPICS_BASE:-}" ]; then
+    EPICSINCLUDE=${EPICSINCLUDE:-$EPICS_BASE/include}
+    if [ -n "${EPICS_HOST_ARCH:-}" ]; then
+      EPICSLIB=${EPICSLIB:-$EPICS_BASE/lib/$EPICS_HOST_ARCH}
+    fi
+  fi
+  [ -d "${EPICSINCLUDE:-}" ] || _caqtdm_env_prompt_value EPICSINCLUDE "EPICS include directory"
+  [ -d "${EPICSLIB:-}" ] || _caqtdm_env_prompt_value EPICSLIB "EPICS library directory"
 }
 
 _caqtdm_env_unset_config_vars() {
@@ -392,7 +495,7 @@ _caqtdm_env_print() {
 }
 
 _caqtdm_env_need_config() {
-  [ -x "$QMAKE" ] || [ -x "$(command -v "$QMAKE" 2>/dev/null)" ] || return 0
+  _caqtdm_env_valid_qmake "${QMAKE:-}" || return 0
   [ -d "$QTHOME" ] || return 0
   [ -d "$QWTINCLUDE" ] || return 0
   [ -d "$QWTLIB" ] || return 0
@@ -482,8 +585,8 @@ if [ ! -f "$_caqtdm_env_file" ]; then
       _caqtdm_env_write
     fi
   else
-    echo "Automatic configuration needs input. Please review the detected values."
-    _caqtdm_env_configure 1
+    echo "Automatic configuration needs input."
+    _caqtdm_env_prompt_missing_required
     _caqtdm_env_write
   fi
 fi
