@@ -16,11 +16,13 @@ obj/
 moc_*
 
 # Generated files
+.buildenv
+compile_commands.json
 ui_main.h
 caQtDM_Binaries/
 qrc_qtcontrols.cpp
-qrc_qtcontrolsplugin.cpp
 qrc_caQtDM.cpp
+qrc_*.cpp
 
 #Binaries
 *.MSI
@@ -31,9 +33,16 @@ qrc_caQtDM.cpp
 *.OBJ
 *.PDB
 *.o
+*.apk
+
+# Android Signing
+*.keystore
+*.idsig
 
 #Tools
 .vs
+.idea
+.clangd
 .qtc_clangd
 
 # Unit tests
@@ -42,3 +51,4 @@ caQtDM_UnitTests/tst_logging/tst_logging
 caQtDM_UnitTests/tst_qtcontrols/tst_qtcontrols
 caQtDM_UnitTests/tst_lib/tst_lib
 caQtDM_UnitTests/tst_plugins/tst_bsread/tst_bsread
+caQtDM_UnitTests/tst_viewer/tst_viewer
