@@ -12,7 +12,7 @@ _caqtdm_env_finish() {
   unset -f _caqtdm_env_detect_qmake _caqtdm_env_valid_qmake _caqtdm_env_detect_qt_module _caqtdm_env_detect_qwt_lib_name _caqtdm_env_detect_epics_host_arch _caqtdm_env_detect_epics _caqtdm_env_detect
   unset -f _caqtdm_env_prompt_value _caqtdm_env_prompt_yes_no _caqtdm_env_configure _caqtdm_env_unset_config_vars
   unset -f _caqtdm_env_write _caqtdm_env_load _caqtdm_env_print _caqtdm_env_need_config _caqtdm_env_prompt_missing_required
-  unset _caqtdm_env_sourced _caqtdm_env_script_dir _caqtdm_env_file _caqtdm_env_arg _caqtdm_env_action _caqtdm_env_prefer_qt _caqtdm_env_command
+  unset _caqtdm_env_sourced _caqtdm_env_script_dir _caqtdm_env_file _caqtdm_env_arg _caqtdm_env_action _caqtdm_env_prefer_qt _caqtdm_env_command _caqtdm_env_requested_qmake _caqtdm_env_requested_make
   if [ "$sourced" -eq 1 ]; then
     return "$status"
   fi
@@ -171,6 +171,16 @@ _caqtdm_env_detect_qwt() {
 _caqtdm_env_detect_qmake() {
   local candidate version primary_found=0
 
+  if [ -n "${QMAKE:-}" ]; then
+    if _caqtdm_env_valid_qmake "$QMAKE"; then
+      QTHOME=$(_caqtdm_env_command_dir "$QMAKE")
+      return 0
+    fi
+
+    echo "Configured QMAKE is not usable: $QMAKE" >&2
+    return 1
+  fi
+
   if [ "$_caqtdm_env_prefer_qt" = 5 ]; then
     local primary_major=5
     local fallback_major=6
@@ -300,11 +310,12 @@ _caqtdm_env_detect_epics() {
 _caqtdm_env_detect() {
   local qmake_ok=0 qt_version qt_major
   _caqtdm_env_detect_qmake || qmake_ok=1
+  MAKE=${MAKE:-make}
   qt_version=$(_caqtdm_env_qmake_version "$QMAKE")
   qt_major=${qt_version%%.*}
 
   if ! _caqtdm_env_detect_qwt "$qt_major"; then
-    if [ "$_caqtdm_env_prefer_qt" != 5 ] && [ "$qt_major" = 6 ]; then
+    if [ -z "${_caqtdm_env_requested_qmake:-}" ] && [ "$_caqtdm_env_prefer_qt" != 5 ] && [ "$qt_major" = 6 ]; then
       echo "Qt 6 was found, but matching Qt 6 Qwt was not found; falling back to Qt 5."
       _caqtdm_env_prefer_qt=5
       unset QMAKE QTHOME
@@ -468,6 +479,7 @@ _caqtdm_env_prompt_missing_required() {
 _caqtdm_env_unset_config_vars() {
   unset \
     QMAKE QTHOME QWTHOME QWTINCLUDE QWTLIB QWTVERSION QWTLIBNAME \
+    MAKE \
     EPICS_BASE EPICS_HOST_ARCH EPICSINCLUDE EPICSLIB EPICS4LOCATION \
     QTCONTROLS_LIBS CAQTDM_COLLECT QTBASE QTDM_RPATH \
     CAQTDM_CA_ARCHIVELIBS CAQTDM_LOGGING_ARCHIVELIBS \
@@ -482,6 +494,7 @@ _caqtdm_env_write() {
     local name value
     for name in \
       QMAKE QTHOME QWTHOME QWTINCLUDE QWTLIB QWTVERSION QWTLIBNAME \
+      MAKE \
       EPICS_BASE EPICS_HOST_ARCH EPICSINCLUDE EPICSLIB EPICS4LOCATION \
       QTCONTROLS_LIBS CAQTDM_COLLECT QTBASE QTDM_RPATH \
       CAQTDM_CA_ARCHIVELIBS CAQTDM_LOGGING_ARCHIVELIBS \
@@ -508,6 +521,7 @@ _caqtdm_env_print() {
   echo
   echo "Build:"
   printf "  %-28s %s\n" QMAKE "$QMAKE"
+  printf "  %-28s %s\n" MAKE "$MAKE"
   printf "  %-28s %s\n" QTHOME "$QTHOME"
   printf "  %-28s %s\n" QWTHOME "$QWTHOME"
   printf "  %-28s %s\n" QWTINCLUDE "$QWTINCLUDE"
@@ -554,6 +568,8 @@ _caqtdm_env_script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)
 _caqtdm_env_file="$_caqtdm_env_script_dir/.buildenv"
 _caqtdm_env_action=load
 _caqtdm_env_prefer_qt=6
+_caqtdm_env_requested_qmake=${QMAKE:-}
+_caqtdm_env_requested_make=${MAKE:-}
 _caqtdm_env_command="./configure.sh"
 if [ "$_caqtdm_env_sourced" -eq 1 ]; then
   _caqtdm_env_command="source ./configure.sh"
@@ -592,6 +608,8 @@ done
 case "$_caqtdm_env_action" in
   reconfigure)
     [ -f "$_caqtdm_env_file" ] && _caqtdm_env_load
+    [ -z "$_caqtdm_env_requested_qmake" ] || QMAKE=$_caqtdm_env_requested_qmake
+    [ -z "$_caqtdm_env_requested_make" ] || MAKE=$_caqtdm_env_requested_make
     [ -f "$_caqtdm_env_file" ] || _caqtdm_env_detect
     _caqtdm_env_configure 0
     _caqtdm_env_write
@@ -602,6 +620,8 @@ case "$_caqtdm_env_action" in
     ;;
   redetect)
     _caqtdm_env_unset_config_vars
+    [ -z "$_caqtdm_env_requested_qmake" ] || QMAKE=$_caqtdm_env_requested_qmake
+    [ -z "$_caqtdm_env_requested_make" ] || MAKE=$_caqtdm_env_requested_make
     _caqtdm_env_detect
     _caqtdm_env_print
     if ! _caqtdm_env_prompt_yes_no "Use these redetected settings?" y; then
