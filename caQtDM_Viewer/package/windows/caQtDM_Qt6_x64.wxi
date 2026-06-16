@@ -19,6 +19,11 @@
 	<File Id="QT6XML.DLL" Name="Qt6Xml.dll" Source="$(env.QTHOME)\bin\Qt6Xml.dll" />
 	<File Id="QT6CONCURRENT.DLL" Name="Qt6Concurrent.dll" Source="$(env.QTHOME)\bin\Qt6Concurrent.dll" />
 	<File Id="QT6CORE.DLL" Name="Qt6Core.dll" Source="$(env.QTHOME)\bin\Qt6Core.dll" />
+	<File Id="QT63DCORE.DLL" Name="Qt63DCore.dll" Source="$(env.QTHOME)\bin\Qt63DCore.dll" />
+	<File Id="QT63DEXTRAS.DLL" Name="Qt63DExtras.dll" Source="$(env.QTHOME)\bin\Qt63DExtras.dll" />
+	<File Id="QT63DINPUT.DLL" Name="Qt63DInput.dll" Source="$(env.QTHOME)\bin\Qt63DInput.dll" />
+	<File Id="QT63DLOGIC.DLL" Name="Qt63DLogic.dll" Source="$(env.QTHOME)\bin\Qt63DLogic.dll" />
+	<File Id="QT63DRENDER.DLL" Name="Qt63DRender.dll" Source="$(env.QTHOME)\bin\Qt63DRender.dll" />
 	<File Id="QT6DESIGNER.DLL" Name="Qt6Designer.dll" Source="$(env.QTHOME)\bin\Qt6Designer.dll" />
 	<File Id="QT6DESIGNERCOMPONENTS.DLL" Name="Qt6DesignerComponents.dll" Source="$(env.QTHOME)\bin\Qt6DesignerComponents.dll" />
 	<File Id="QT6GUI.DLL" Name="Qt6Gui.dll" Source="$(env.QTHOME)\bin\Qt6Gui.dll" />

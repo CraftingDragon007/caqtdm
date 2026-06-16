@@ -62,6 +62,7 @@ BuildRequires: qt6-qtbase-devel
 BuildRequires: qt6-qttools-devel
 BuildRequires: qt6-qtsvg-devel
 BuildRequires: qt6-qtserialbus-devel
+BuildRequires: qt6-qt3d-devel
 BuildRequires: qt6-qt5compat-devel
 BuildRequires: qt6-qtlocation-devel
 BuildRequires: qwt-qt6-devel
@@ -175,6 +176,7 @@ Requires: qwt-qt6 zeromq
 Requires: epics-base%{EPICS_TARGET_VERSION}
 Requires: qt6-qt5compat
 Requires: qt6-qtlocation
+Requires: qt6-qt3d
 Requires: python3
 %description bin-qt6
 %endif
@@ -724,4 +726,3 @@ fi
 %endif
 
 %changelog
-

@@ -10,7 +10,7 @@ on:
     - cron: '0 2 * * *'
 
 env:
-  QT_MODULES: 'qtserialbus qtpositioning qt5compat qtserialport qtmultimedia qtsensors qtwebsockets qtimageformats qtwebview'
+  QT_MODULES: 'qtserialbus qtpositioning qt5compat qtserialport qt3d qtmultimedia qtsensors qtwebsockets qtimageformats qtwebview'
 
   DEPS_INSTALL_ROOT: ${{ github.workspace }}\deps
 
