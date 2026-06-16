@@ -3018,7 +3018,7 @@ Building:
 
 Certificate Creation:
 	In Qt-6 the certificate (and other pki stuff) is generated when caQtDM is started without such a configuration already existing. In Qt-5 it is not possible to auto-generate a certificate, thus secure communication as described below is impossible.
-	You can, however, generate your own certificate using the bash script provided in ``caQtDM_Lib/caQtDM_Plugins/opcua/create_certificate.sh``. This requires OpenSSL to be available on your system to run.
+	You can, however, generate your own certificate using the bash script provided in ``caQtDM_Plugins/opcua/create_certificate.sh``. This requires OpenSSL to be available on your system to run.
 	After generating the certificate (and key), simply place both files in the local appdata directory under ``/pki/own/[cert/private]``, respectively. caQtDM will automatically use this certificate next time.
 	CAUTION: Qt-5 does also not show very good errors, so if you see weird errors or simply a ``BadConnectionClosed``, it may be that your client certificate needs to be trusted first by the server. Qt-6 has dedicated error handling for that.
 

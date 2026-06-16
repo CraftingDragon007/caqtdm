@@ -20,7 +20,7 @@ FORMS += ../../caQtDM_Viewer/src/main.ui
 INCLUDEPATH += ../../caQtDM_QtControls/src \
     ../../caQtDM_Lib \
     ../../caQtDM_Lib/src \
-    ../../caQtDM_Lib/caQtDM_Plugins \
+    ../../caQtDM_Plugins \
     ../../caQtDM_Parsers/adlParserSrc \
     ../../caQtDM_Parsers/edlParserSrc \
     $$(QWTINCLUDE) \

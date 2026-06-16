@@ -667,7 +667,7 @@ caQtDM_Lib {
                 CONFIG += release
                 SOURCES +=     fingerswipegesture.cpp
       		HEADERS +=     fingerswipegesture.h
-                INCLUDEPATH += ./caQtDM_Plugins
+			    INCLUDEPATH += ../caQtDM_Plugins
 		ios {
       			INCLUDEPATH += $(EPICSINCLUDE)/os/iOS
                         INCLUDEPATH += $(EPICSINCLUDE)/compiler/clang
@@ -857,18 +857,19 @@ caQtDM_Viewer {
                     LIBS += $$OUT_PWD/../caQtDM_QtControls/plugins/libqtcontrols_monitors_plugin.a
                     LIBS += $$OUT_PWD/../caQtDM_QtControls/plugins/libqtcontrols_graphics_plugin.a
                     LIBS += $$OUT_PWD/../caQtDM_QtControls/plugins/libqtcontrols_utilities_plugin.a
-                    LIBS += $$OUT_PWD/../caQtDM_Lib/caQtDM_Plugins/demo/libdemo_plugin.a
-                    LIBS += $$OUT_PWD/../caQtDM_Lib/caQtDM_Plugins/epics3/libepics3_plugin.a
-                    LIBS += $$OUT_PWD/../caQtDM_Lib/caQtDM_Plugins/archive/archiveSF/libarchiveSF_plugin.a
-                    LIBS += $$OUT_PWD/../caQtDM_Lib/caQtDM_Plugins/environment/libenvironment_plugin.a
+                    LIBS += $$OUT_PWD/../caQtDM_Plugins/demo/libdemo_plugin.a
+                    LIBS += $$OUT_PWD/../caQtDM_Plugins/epics3/libepics3_plugin.a
+                    LIBS += $$OUT_PWD/../caQtDM_Plugins/archive/archiveSF/libarchiveSF_plugin.a
+                    LIBS += $$OUT_PWD/../caQtDM_Plugins/environment/libenvironment_plugin.a
+
                     modbus {
-                        LIBS += $$OUT_PWD/../caQtDM_Lib/caQtDM_Plugins/modbus/libmodbus_plugin.a
+					    LIBS += $$OUT_PWD/../caQtDM_Plugins/modbus/libmodbus_plugin.a
                     }
                     gps {
-                        LIBS += $$OUT_PWD/../caQtDM_Lib/caQtDM_Plugins/gps/libgps_plugin.a
+					    LIBS += $$OUT_PWD/../caQtDM_Plugins/gps/libgps_plugin.a
                     }
                     epics7{
-                        LIBS += $$OUT_PWD/../caQtDM_Lib/caQtDM_Plugins/epics4/libepics4_plugin.a
+					    LIBS += $$OUT_PWD/../caQtDM_Plugins/epics4/libepics4_plugin.a
                         LIBS += $(EPICSLIB)/libpvAccess.a
                         LIBS += $(EPICSLIB)/libpvAccessCA.a
                         LIBS += $(EPICSLIB)/libpvData.a
@@ -982,13 +983,13 @@ caQtDM_Viewer {
                          QMAKE_EXTRA_TARGETS +=payload_dir
                     }
                     epics4: {
-                                    LIBS += $$OUT_PWD/../caQtDM_Lib/caQtDM_Plugins/epics4/libepics4_plugin.a
+					                LIBS += $$OUT_PWD/../caQtDM_Plugins/epics4/libepics4_plugin.a
                     }
                     archiveSF:{
-                                    LIBS += $$OUT_PWD/../caQtDM_Lib/caQtDM_Plugins/archive/archiveSF/libarchiveSF_plugin.a
+					                LIBS += $$OUT_PWD/../caQtDM_Plugins/archive/archiveSF/libarchiveSF_plugin.a
                     }
                     archiveHTTP: {
-                            LIBS += $$OUT_PWD/../caQtDM_Lib/caQtDM_Plugins/archive/archiveHTTP/libarchiveHTTP_plugin.a
+                            LIBS += $$OUT_PWD/../caQtDM_Plugins/archive/archiveHTTP/libarchiveHTTP_plugin.a
                     }
 
         }
