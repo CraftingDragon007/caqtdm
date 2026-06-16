@@ -247,8 +247,12 @@ jobs:
         shell: pwsh
         run: |
           $MSVC_SUFFIX = ""
-          if ($env:VC_TOOLS_VERSION) {
-            $vcToolParts = $env:VC_TOOLS_VERSION.Split('.')
+          $vcToolsVersion = if ($env:VCToolsVersion) { $env:VCToolsVersion } else { $env:VC_TOOLS_VERSION }
+          Write-Host "VCToolsVersion=$env:VCToolsVersion"
+          Write-Host "VC_TOOLS_VERSION=$env:VC_TOOLS_VERSION"
+          Write-Host "VisualStudioVersion=$env:VisualStudioVersion"
+          if ($vcToolsVersion) {
+            $vcToolParts = $vcToolsVersion.Split('.')
             if ($vcToolParts.Length -ge 2 -and $vcToolParts[0] -eq "14") {
               $MSVC_SUFFIX = "v14$($vcToolParts[1].Substring(0, 1))"
             }
@@ -268,8 +272,9 @@ jobs:
         shell: pwsh
         run : |
           $zmqVersionUnderscore = "${{ matrix.zeromq-version }}".Replace(".", "_")
-          Add-Content -Path $env:GITHUB_ENV -Value "ZMQLIBRARY=libzmq-${{ env.MSVC_SUFFIX }}-mt-$zmqVersionUnderscore.dll"
-          Add-Content -Path $env:GITHUB_ENV -Value "ZMQ_LIB_NAME=libzmq-${{ env.MSVC_SUFFIX }}-mt-$zmqVersionUnderscore.lib"
+          Add-Content -Path $env:GITHUB_ENV -Value "ZMQLIBRARY=libzmq-${env:MSVC_SUFFIX}-mt-$zmqVersionUnderscore.dll"
+          Add-Content -Path $env:GITHUB_ENV -Value "ZMQ_LIB_NAME=libzmq-${env:MSVC_SUFFIX}-mt-$zmqVersionUnderscore.lib"
+          Write-Host "Using ZeroMQ library suffix: ${env:MSVC_SUFFIX}"
 
       - name: Create EPICS Base directory
         if: steps.cache-epics.outputs.cache-hit != 'true'
