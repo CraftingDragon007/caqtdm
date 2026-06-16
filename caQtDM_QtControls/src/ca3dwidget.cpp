@@ -56,6 +56,8 @@ namespace
 constexpr qreal kOverlayMinTextureScale = 0.75;
 constexpr qreal kOverlayMaxTextureScale = 2.0;
 constexpr int kOverlayMaxTexturePixels = 1048576;
+constexpr float kCameraMinPitchDegrees = -89.0f;
+constexpr float kCameraMaxPitchDegrees = 89.0f;
 
 QQuaternion rotationFromEuler(const QVector3D &rotation)
 {
@@ -412,6 +414,12 @@ QVector3D cameraRight(Qt3DRender::QCamera *camera)
     return normalizedOrFallback(QVector3D::crossProduct(cameraForward(camera), camera->upVector()), QVector3D(1.0f, 0.0f, 0.0f));
 }
 
+float cameraPitchDegrees(const QVector3D &forward)
+{
+    const QVector3D normalizedForward = normalizedOrFallback(forward, QVector3D(0.0f, 0.0f, -1.0f));
+    return qRadiansToDegrees(qAsin(qBound(-1.0f, normalizedForward.y(), 1.0f)));
+}
+
 void moveCameraAlong(Qt3DRender::QCamera *camera, const QVector3D &direction, double distance)
 {
     const QVector3D delta = direction * static_cast<float>(distance);
@@ -424,10 +432,17 @@ void turnCameraBy(Qt3DRender::QCamera *camera, double yawDelta, double pitchDelt
     const float viewDistance = qMax((camera->viewCenter() - camera->position()).length(), 1.0f);
     QVector3D forward = cameraForward(camera);
     if (!qFuzzyIsNull(yawDelta)) {
-        forward = QQuaternion::fromAxisAndAngle(camera->upVector(), static_cast<float>(yawDelta)).rotatedVector(forward);
+        forward = QQuaternion::fromAxisAndAngle(QVector3D(0.0f, 1.0f, 0.0f), static_cast<float>(yawDelta)).rotatedVector(forward);
     }
     if (!qFuzzyIsNull(pitchDelta)) {
-        forward = QQuaternion::fromAxisAndAngle(cameraRight(camera), static_cast<float>(pitchDelta)).rotatedVector(forward);
+        const float currentPitch = cameraPitchDegrees(forward);
+        const float targetPitch = qBound(kCameraMinPitchDegrees,
+                                         currentPitch + static_cast<float>(pitchDelta),
+                                         kCameraMaxPitchDegrees);
+        const float allowedPitchDelta = targetPitch - currentPitch;
+        const QVector3D right = normalizedOrFallback(QVector3D::crossProduct(forward, QVector3D(0.0f, 1.0f, 0.0f)),
+                                                     QVector3D(1.0f, 0.0f, 0.0f));
+        forward = QQuaternion::fromAxisAndAngle(right, allowedPitchDelta).rotatedVector(forward);
     }
 
     camera->setViewCenter(camera->position() + normalizedOrFallback(forward, QVector3D(0.0f, 0.0f, -1.0f)) * viewDistance);
@@ -739,14 +754,18 @@ void ca3DWidget::setCameraRotation(double yaw, double pitch)
     }
 
     const float yawRadians = qDegreesToRadians(static_cast<float>(yaw));
-    const float pitchRadians = qDegreesToRadians(static_cast<float>(pitch));
+    const float clampedPitch = qBound(kCameraMinPitchDegrees,
+                                      static_cast<float>(pitch),
+                                      kCameraMaxPitchDegrees);
+    const float pitchRadians = qDegreesToRadians(clampedPitch);
     const float cosPitch = qCos(pitchRadians);
     const QVector3D forward(qSin(yawRadians) * cosPitch,
                             qSin(pitchRadians),
                             -qCos(yawRadians) * cosPitch);
 
     Qt3DRender::QCamera *camera = this3DView->camera();
-    camera->setViewCenter(camera->position() + forward * 100.0f);
+    const float viewDistance = qMax((camera->viewCenter() - camera->position()).length(), 1.0f);
+    camera->setViewCenter(camera->position() + normalizedOrFallback(forward, QVector3D(0.0f, 0.0f, -1.0f)) * viewDistance);
     camera->setUpVector(QVector3D(0.0f, 1.0f, 0.0f));
     apply3DOverlayVisibility(thisCameraPreset);
     qCDebug(ca3DWidgetLog) << "setCameraRotation applied" << cameraDebugState(camera);
