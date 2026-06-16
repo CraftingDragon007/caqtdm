@@ -126,6 +126,8 @@ case "$action" in
   build)
     echo "========== make -j$jobs =========="
     "$make_cmd" -j"$jobs"
+    echo "========== make -C caQtDM_UnitTests check =========="
+    "$make_cmd" -C caQtDM_UnitTests check
     ;;
   clean)
     echo "========== make clean =========="
