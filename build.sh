@@ -15,6 +15,7 @@ Options:
                    Generate compile_commands.json from a make dry run.
   --clean          Run make clean, generating Makefiles first if needed.
   --distclean      Run make distclean, generating Makefiles first if needed.
+  --skip-tests     Do not run unit tests after a successful build.
   -j, --jobs N     Number of parallel build jobs. Defaults to nproc.
   -h, --help       Show this help.
 
@@ -24,6 +25,7 @@ EOF
 
 action=build
 force_qmake=0
+skip_tests=0
 jobs=
 
 while [ "$#" -gt 0 ]; do
@@ -39,6 +41,9 @@ while [ "$#" -gt 0 ]; do
       ;;
     --distclean)
       action=distclean
+      ;;
+    --skip-tests)
+      skip_tests=1
       ;;
     -j|--jobs)
       shift
@@ -126,8 +131,12 @@ case "$action" in
   build)
     echo "========== make -j$jobs =========="
     "$make_cmd" -j"$jobs"
-    echo "========== make -C caQtDM_UnitTests check =========="
-    "$make_cmd" -C caQtDM_UnitTests check
+    if [ -n "${CAQTDM_NOTESTS:-}" ]; then
+      echo "========== unit tests disabled by CAQTDM_NOTESTS =========="
+    elif [ "$skip_tests" -eq 0 ]; then
+      echo "========== make -C caQtDM_UnitTests check =========="
+      "$make_cmd" -C caQtDM_UnitTests check
+    fi
     ;;
   clean)
     echo "========== make clean =========="

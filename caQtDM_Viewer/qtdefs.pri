@@ -164,18 +164,17 @@ else {
       message( "Configuring build for GPS plugin" )
     }
 }
-# Unittests at the moment not in the homebrew build
-_HOMEBREWMAKEJOBS = $$(HOMEBREW_MAKE_JOBS)
-isEmpty(_HOMEBREWMAKEJOBS) {
-    !MOBILE{
-        message("caQtDM will be build with unit tests")
-        CONFIG += caqtdm_with_tests
-    }
-}
-else {
-    message( "caQtDM will be build without unit tests" )
-}
 
+# Unit tests are disabled for Homebrew builds or when CAQTDM_NOTESTS is set
+_HOMEBREWMAKEJOBS = $$(HOMEBREW_MAKE_JOBS)
+_CAQTDM_NOTESTS  = $$(CAQTDM_NOTESTS)
+
+MOBILE|!isEmpty(_HOMEBREWMAKEJOBS)|!isEmpty(_CAQTDM_NOTESTS) {
+    message("caQtDM will be built without unit tests")
+} else {
+    message("caQtDM will be built with unit tests")
+    CONFIG += caqtdm_with_tests
+}
 
 
 

@@ -401,6 +401,7 @@ _caqtdm_env_detect() {
   ZMQLIB=${ZMQLIB:-/usr/lib}
 
   CAQTDM_NORPATH=${CAQTDM_NORPATH:-}
+  CAQTDM_NOTESTS=${CAQTDM_NOTESTS:-}
   if _caqtdm_env_detect_qt_module positioning; then
     CAQTDM_GPS=1
   else
@@ -491,6 +492,7 @@ _caqtdm_env_configure() {
     _caqtdm_env_prompt_value ZMQINC "ZeroMQ include directory"
     _caqtdm_env_prompt_value ZMQLIB "ZeroMQ library directory"
     _caqtdm_env_prompt_value CAQTDM_NORPATH "Disable RPATH, 1=yes empty=no"
+    _caqtdm_env_prompt_value CAQTDM_NOTESTS "Disable unit test build, 1=yes empty=no"
     _caqtdm_env_prompt_value CAQTDM_GPS "Build GPS support, 1=yes empty=no"
     _caqtdm_env_prompt_value CAQTDM_MODBUS "Build Modbus support, 1=yes empty=no"
     _caqtdm_env_prompt_value CAQTDM_OPCUA "Build OPC UA support, 1=yes empty=no"
@@ -545,7 +547,7 @@ _caqtdm_env_unset_config_vars() {
     QTCONTROLS_LIBS CAQTDM_COLLECT QTBASE QTDM_RPATH \
     CAQTDM_CA_ARCHIVELIBS CAQTDM_LOGGING_ARCHIVELIBS \
     PYTHONVERSION PYTHONINCLUDE PYTHONLIB ZMQINC ZMQLIB \
-    CAQTDM_NORPATH CAQTDM_GPS CAQTDM_MODBUS CAQTDM_OPCUA
+    CAQTDM_NORPATH CAQTDM_NOTESTS CAQTDM_GPS CAQTDM_MODBUS CAQTDM_OPCUA
 }
 
 _caqtdm_env_write() {
@@ -560,10 +562,10 @@ _caqtdm_env_write() {
       QTCONTROLS_LIBS CAQTDM_COLLECT QTBASE QTDM_RPATH \
       CAQTDM_CA_ARCHIVELIBS CAQTDM_LOGGING_ARCHIVELIBS \
       PYTHONVERSION PYTHONINCLUDE PYTHONLIB ZMQINC ZMQLIB \
-      CAQTDM_NORPATH CAQTDM_GPS CAQTDM_MODBUS CAQTDM_OPCUA; do
+      CAQTDM_NORPATH CAQTDM_NOTESTS CAQTDM_GPS CAQTDM_MODBUS CAQTDM_OPCUA; do
       eval "value=\${$name-}"
       case "$name:$value" in
-        CAQTDM_NORPATH:0|CAQTDM_GPS:0|CAQTDM_MODBUS:0|CAQTDM_OPCUA:0) value= ;;
+        CAQTDM_NORPATH:0|CAQTDM_NOTESTS:0|CAQTDM_GPS:0|CAQTDM_MODBUS:0|CAQTDM_OPCUA:0) value= ;;
       esac
       printf "export %s=%s\n" "$name" "$(_caqtdm_env_quote "$value")"
     done
@@ -608,6 +610,7 @@ _caqtdm_env_print() {
   printf "  %-28s %s\n" CAQTDM_MODBUS "${CAQTDM_MODBUS:-disabled}"
   printf "  %-28s %s\n" CAQTDM_OPCUA "${CAQTDM_OPCUA:-disabled}"
   printf "  %-28s %s\n" CAQTDM_NORPATH "${CAQTDM_NORPATH:-disabled}"
+  printf "  %-28s %s\n" CAQTDM_NOTESTS "${CAQTDM_NOTESTS:-disabled}"
   echo
   echo "Run '$_caqtdm_env_command --reconfigure' to change these settings."
   echo "Run './build.sh' to build caQtDM with this configuration."
