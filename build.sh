@@ -16,6 +16,7 @@ Options:
   --clean          Run make clean, generating Makefiles first if needed.
   --distclean      Run make distclean, generating Makefiles first if needed.
   --skip-tests     Do not run unit tests after a successful build.
+  --quiet          Suppress normal command output; errors still go to stderr.
   -j, --jobs N     Number of parallel build jobs. Defaults to nproc.
   -h, --help       Show this help.
 
@@ -26,7 +27,22 @@ EOF
 action=build
 force_qmake=0
 skip_tests=0
+quiet=0
 jobs=
+
+log() {
+  if [ "$quiet" -eq 0 ]; then
+    echo "$@"
+  fi
+}
+
+run() {
+  if [ "$quiet" -eq 1 ]; then
+    "$@" >/dev/null
+  else
+    "$@"
+  fi
+}
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -44,6 +60,9 @@ while [ "$#" -gt 0 ]; do
       ;;
     --skip-tests)
       skip_tests=1
+      ;;
+    --quiet)
+      quiet=1
       ;;
     -j|--jobs)
       shift
@@ -108,8 +127,8 @@ mkdir -p \
   "${CAQTDM_COLLECT:-$script_dir/caQtDM_Binaries}/controlsystems"
 
 if [ "$force_qmake" -eq 1 ] || [ ! -f Makefile ]; then
-  echo "========== qmake all.pro =========="
-  "$QMAKE" all.pro
+  log "========== qmake all.pro =========="
+  run "$QMAKE" all.pro
 fi
 
 generate_compile_commands() {
@@ -122,31 +141,31 @@ generate_compile_commands() {
     exit 1
   fi
 
-  echo "========== generate compile_commands.json =========="
+  log "========== generate compile_commands.json =========="
   LC_ALL=C "$make_cmd" -n -B -k -j1 all >"$dry_run_file" 2>/dev/null || true
-  ./generate_compile_commands.sh "$script_dir" "$dry_run_file"
+  run ./generate_compile_commands.sh "$script_dir" "$dry_run_file"
 }
 
 case "$action" in
   build)
-    echo "========== make -j$jobs =========="
-    "$make_cmd" -j"$jobs"
+    log "========== make -j$jobs =========="
+    run "$make_cmd" -j"$jobs"
     if [ -n "${CAQTDM_NOTESTS:-}" ]; then
-      echo "========== unit tests disabled by CAQTDM_NOTESTS =========="
+      log "========== unit tests disabled by CAQTDM_NOTESTS =========="
     elif [ "$skip_tests" -eq 0 ]; then
-      echo "========== make -C caQtDM_UnitTests check =========="
-      "$make_cmd" -C caQtDM_UnitTests check
+      log "========== make -C caQtDM_UnitTests check =========="
+      run "$make_cmd" -C caQtDM_UnitTests check
     fi
     ;;
   clean)
-    echo "========== make clean =========="
-    "$make_cmd" clean
+    log "========== make clean =========="
+    run "$make_cmd" clean
     ;;
   compile_commands)
     generate_compile_commands
     ;;
   distclean)
-    echo "========== make distclean =========="
-    "$make_cmd" distclean
+    log "========== make distclean =========="
+    run "$make_cmd" distclean
     ;;
 esac
