@@ -248,8 +248,9 @@ jobs:
         run: |
           $MSVC_SUFFIX = ""
           if ($env:VC_TOOLS_VERSION) {
-            $vcToolParts = $env:VC_TOOLS_VERSION.Split('.'); if ($vcToolParts.Length -ge 2 -and $vcToolParts[0] -eq "14") {
-            if ($vcToolParts[1] -eq "2") { $MSVC_SUFFIX = "v142" } elseif ($vcToolParts[1] -eq "3") { $MSVC_SUFFIX = "v143" }
+            $vcToolParts = $env:VC_TOOLS_VERSION.Split('.')
+            if ($vcToolParts.Length -ge 2 -and $vcToolParts[0] -eq "14") {
+              $MSVC_SUFFIX = "v14$($vcToolParts[1].Substring(0, 1))"
             }
           }
           if (-not $MSVC_SUFFIX) {
