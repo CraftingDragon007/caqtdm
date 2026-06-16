@@ -400,6 +400,7 @@ Q_LOGGING_CATEGORY(wmSignalRescaleLog, "caqtdm.widgets.wmsignalrescale")
 #ifndef MOBILE // Names cannot be duplicated, and on mobile we only have one translatable unit as output, so this would cause duplication
                // For regular builds they need to be defined here, since their other definition in the respective widget source files ends up in another translatable unit.
 Q_LOGGING_CATEGORY(caCartesianPlotLog, "caqtdm.widgets.cacartesianplot")
+Q_LOGGING_CATEGORY(ca3DWidgetLog, "caqtdm.widgets.ca3dwidget")
 Q_LOGGING_CATEGORY(caImageLog, "caqtdm.widgets.caimage")
 Q_LOGGING_CATEGORY(caCalcLog, "caqtdm.widgets.cacalc")
 Q_LOGGING_CATEGORY(caMimeDisplayLog, "caqtdm.widgets.camimedisplay")
