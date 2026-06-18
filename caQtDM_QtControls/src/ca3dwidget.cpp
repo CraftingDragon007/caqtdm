@@ -30,8 +30,11 @@
 #include <cmath>
 #include <memory>
 
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0) && !defined(MOBILE)
 #include <QtDesigner/QDesignerFormWindowInterface>
+#endif
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 #include <Qt3DCore/QEntity>
 #include <Qt3DCore/QTransform>
 #include <Qt3DExtras/QDiffuseMapMaterial>
@@ -1166,7 +1169,7 @@ void ca3DWidget::applyFallbackPreset(int preset)
 
 bool ca3DWidget::isDesignerMode() const
 {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0) && !defined(MOBILE)
     // Qt Designer preview creates a normal top-level widget. Only the editable
     // form surface has a QDesignerFormWindowInterface and must avoid native
     // QWindow containers because they break drag/drop and selection handling.
