@@ -28,9 +28,7 @@ contains(QT_VER_MAJ, 5) {
 contains(QT_VER_MAJ, 6) {
       QT += widgets concurrent opengl core network xml
       QT += 3dcore 3drender 3dinput 3dlogic 3dextras
-      !android {
-        QT += uitools
-      }
+      QT += uitools
       CONFIG  += plugin cahmi
       ios | android {
             QT += uiplugin
