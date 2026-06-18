@@ -35,6 +35,9 @@ unix:!macx:!ios:!android{
 
 contains(QT_VER_MAJ, 6) {
     QT     += core gui svg uitools network opengl xml
+    MOBILE {
+        QT += 3dcore 3drender 3dinput 3dlogic 3dextras
+    }
     CONFIG += qt warn_on thread widgets
     modbus{
        QT += serialbus
@@ -142,4 +145,3 @@ DISTFILES += \
     src/Android/gradlew \
     src/Android/gradlew.bat
 }
-
