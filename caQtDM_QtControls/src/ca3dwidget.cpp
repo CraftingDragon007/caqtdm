@@ -12,6 +12,9 @@
 #include <QFrame>
 #include <QApplication>
 #include <QFileInfo>
+#include <QGraphicsProxyWidget>
+#include <QGraphicsScene>
+#include <QGraphicsView>
 #include <QKeyEvent>
 #include <QLabel>
 #include <QLoggingCategory>
@@ -24,8 +27,11 @@
 #include <QQuaternion>
 #include <QResizeEvent>
 #include <QTimer>
+#include <QUiLoader>
 #include <QVector4D>
 #include <QVBoxLayout>
+#include <QXmlStreamReader>
+#include <QScrollBar>
 #include <QtMath>
 #include <cmath>
 #include <memory>
@@ -329,6 +335,125 @@ int configuredOverlayMaxPixels()
     return pixels > 0 ? pixels : kOverlayMaxTexturePixels;
 }
 
+QSize uiRootDesignSize(const QString &uiFilePath)
+{
+    QFile file(uiFilePath);
+    if (!file.open(QIODevice::ReadOnly)) {
+        return QSize();
+    }
+
+    QXmlStreamReader reader(&file);
+    bool inRootWidget = false;
+    bool inGeometry = false;
+    bool inWidth = false;
+    bool inHeight = false;
+    int depth = 0;
+    int rootWidgetDepth = -1;
+    int width = 0;
+    int height = 0;
+
+    while (!reader.atEnd()) {
+        const QXmlStreamReader::TokenType token = reader.readNext();
+        if (token == QXmlStreamReader::StartElement) {
+            depth++;
+            const auto name = reader.name();
+            if (!inRootWidget && name == QLatin1String("widget")) {
+                inRootWidget = true;
+                rootWidgetDepth = depth;
+            } else if (inRootWidget && depth == rootWidgetDepth + 1 && name == QLatin1String("property")
+                       && reader.attributes().value(QLatin1String("name")) == QLatin1String("geometry")) {
+                inGeometry = true;
+            } else if (inGeometry && name == QLatin1String("width")) {
+                inWidth = true;
+            } else if (inGeometry && name == QLatin1String("height")) {
+                inHeight = true;
+            }
+        } else if (token == QXmlStreamReader::Characters) {
+            if (inWidth) {
+                width = reader.text().toInt();
+            } else if (inHeight) {
+                height = reader.text().toInt();
+            }
+        } else if (token == QXmlStreamReader::EndElement) {
+            const auto name = reader.name();
+            if (name == QLatin1String("width")) {
+                inWidth = false;
+            } else if (name == QLatin1String("height")) {
+                inHeight = false;
+            } else if (name == QLatin1String("property") && inGeometry) {
+                inGeometry = false;
+                if (width > 0 && height > 0) {
+                    return QSize(width, height);
+                }
+            } else if (name == QLatin1String("widget") && depth == rootWidgetDepth) {
+                break;
+            }
+            depth--;
+        }
+    }
+
+    return QSize();
+}
+
+QRect fallbackOverlayGeometry(QWidget *fallbackView, const ca3DOverlayConfig &overlay)
+{
+    if (!overlay.fallbackGeometry.isEmpty()) {
+        return overlay.fallbackGeometry;
+    }
+
+    const QSize fallbackSize = fallbackView ? fallbackView->size().expandedTo(QSize(120, 80)) : QSize(640, 480);
+    const QSize designSize = uiRootDesignSize(overlay.includeFileResolved);
+    if (designSize.isEmpty()) {
+        return QRect(QPoint(0, 0), fallbackSize);
+    }
+
+    QSize fittedSize = designSize;
+    fittedSize.scale(fallbackSize, Qt::KeepAspectRatio);
+    const QPoint topLeft((fallbackSize.width() - fittedSize.width()) / 2,
+                         (fallbackSize.height() - fittedSize.height()) / 2);
+    return QRect(topLeft, fittedSize);
+}
+
+void markFallbackOverlayOwner(QWidget *rootWidget, QObject *owner)
+{
+    if (!rootWidget || !owner) {
+        return;
+    }
+
+    rootWidget->setProperty("ca3DOverlayOwner", QVariant::fromValue(owner));
+    const QList<QWidget *> children = rootWidget->findChildren<QWidget *>();
+    for (QWidget *child : children) {
+        child->setProperty("ca3DOverlayOwner", QVariant::fromValue(owner));
+    }
+}
+
+void applyFallbackWidgetScale(QGraphicsView *view, QWidget *rootWidget, const ca3DOverlayConfig &overlay, const QRect &geometry)
+{
+    if (!view || !rootWidget || geometry.isEmpty()) {
+        return;
+    }
+
+    const QSize designSize = uiRootDesignSize(overlay.includeFileResolved);
+    if (designSize.isEmpty()) {
+        return;
+    }
+
+    const double scaleX = static_cast<double>(geometry.width()) / designSize.width();
+    const double scaleY = static_cast<double>(geometry.height()) / designSize.height();
+
+    view->setGeometry(geometry);
+    view->setSceneRect(QRectF(QPointF(0.0, 0.0), QSizeF(designSize)));
+    if (QGraphicsScene *scene = view->scene()) {
+        const QList<QGraphicsItem *> items = scene->items();
+        for (QGraphicsItem *item : items) {
+            if (QGraphicsProxyWidget *proxy = qgraphicsitem_cast<QGraphicsProxyWidget *>(item)) {
+                proxy->setPos(0.0, 0.0);
+                proxy->setScale(qMin(scaleX, scaleY));
+            }
+        }
+    }
+}
+
 bool projectToSurface(const QMatrix4x4 &viewProjection,
                       const QVector3D &point,
                       const QSize &surfaceSize,
@@ -556,11 +681,27 @@ QList<QWidget*> ca3DWidget::overlayRootWidgets() const
         }
     }
 #endif
+    if (thisFallbackMode) {
+        for (QWidget *widget : thisFallbackOverlayRootWidgets) {
+            if (widget) {
+                roots.append(widget);
+            }
+        }
+    }
     return roots;
 }
 
 QString ca3DWidget::overlayMacro(QWidget *rootWidget) const
 {
+    if (thisFallbackMode) {
+        for (const ca3DOverlayConfig &overlay : thisConfig.overlays) {
+            QWidget *widget = thisFallbackOverlayRootWidgets.value(overlay.id, Q_NULLPTR);
+            if (widget == rootWidget) {
+                return overlay.macro;
+            }
+        }
+        return QString();
+    }
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     for (const ca3DOverlayConfig &overlay : thisConfig.overlays) {
         ca3DOverlayWidgetManager *manager = this3DOverlayManagersById.value(overlay.id, Q_NULLPTR);
@@ -568,14 +709,24 @@ QString ca3DWidget::overlayMacro(QWidget *rootWidget) const
             return overlay.macro;
         }
     }
-#else
-    Q_UNUSED(rootWidget);
 #endif
     return QString();
 }
 
 QString ca3DWidget::overlayIncludePath(QWidget *rootWidget) const
 {
+    if (thisFallbackMode) {
+        for (const ca3DOverlayConfig &overlay : thisConfig.overlays) {
+            QWidget *widget = thisFallbackOverlayRootWidgets.value(overlay.id, Q_NULLPTR);
+            if (widget == rootWidget) {
+                const QFileInfo fileInfo(overlay.includeFileResolved.isEmpty() ? overlay.includeFile : overlay.includeFileResolved);
+                if (!fileInfo.path().isEmpty()) {
+                    return fileInfo.path() + QStringLiteral("/");
+                }
+            }
+        }
+        return QString();
+    }
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     for (const ca3DOverlayConfig &overlay : thisConfig.overlays) {
         ca3DOverlayWidgetManager *manager = this3DOverlayManagersById.value(overlay.id, Q_NULLPTR);
@@ -874,6 +1025,9 @@ void ca3DWidget::resizeEvent(QResizeEvent *event)
     if (thisFallbackSnapshotLabel && thisFallbackView) {
         thisFallbackSnapshotLabel->setGeometry(thisFallbackView->rect());
     }
+    if (thisFallbackMode && thisFallbackView && thisFallbackView->isVisible()) {
+        applyFallbackPreset(thisCameraPreset);
+    }
 }
 
 void ca3DWidget::showEvent(QShowEvent *event)
@@ -1070,42 +1224,76 @@ void ca3DWidget::rebuildFallbackView()
     }
 
     thisStatusLabel->hide();
+    QPalette fallbackPalette = thisFallbackView->palette();
+    fallbackPalette.setColor(QPalette::Window, thisConfig.backgroundColor);
+    thisFallbackView->setAutoFillBackground(true);
+    thisFallbackView->setPalette(fallbackPalette);
+    thisFallbackSnapshotLabel->setPalette(fallbackPalette);
     thisFallbackView->show();
     thisFallbackSnapshotLabel->setGeometry(thisFallbackView->rect());
     thisFallbackSnapshotLabel->lower();
 
-    for (const ca3DOverlayConfig &overlay : thisConfig.overlays) {
-        if (overlay.includeFileResolved.isEmpty() || overlay.fallbackGeometry.isEmpty()) {
+    foreach (const ca3DOverlayConfig &overlay, thisConfig.overlays) {
+        if (overlay.includeFileResolved.isEmpty()) {
             continue;
         }
 
-        caInclude *include = new caInclude(thisFallbackView);
-        include->setObjectName(QStringLiteral("ca3DOverlay_%1").arg(overlay.id));
-        include->setLoadIncludes(true);
-        include->setFrameShape(caInclude::NoFrame);
-        include->setAttribute(Qt::WA_TranslucentBackground, overlay.transparentBackground);
-        include->setAutoFillBackground(!overlay.transparentBackground);
-        include->setGeometry(overlay.fallbackGeometry);
-        include->setFileName(overlay.includeFileResolved);
-        include->hide();
-        thisFallbackOverlayWidgets.insert(overlay.id, include);
+        QFile file(overlay.includeFileResolved);
+        if (!file.open(QIODevice::ReadOnly)) {
+            continue;
+        }
+
+        QUiLoader loader;
+        QWidget *fallbackRoot = loader.load(&file, Q_NULLPTR);
+        file.close();
+        if (!fallbackRoot) {
+            continue;
+        }
+
+        fallbackRoot->setObjectName(QStringLiteral("ca3DOverlay_%1").arg(overlay.id));
+        fallbackRoot->setWindowFlags(Qt::Widget);
+        fallbackRoot->setAttribute(Qt::WA_TranslucentBackground, overlay.transparentBackground);
+        fallbackRoot->setAutoFillBackground(!overlay.transparentBackground);
+        fallbackRoot->ensurePolished();
+        markFallbackOverlayOwner(fallbackRoot, this);
+
+        QGraphicsView *fallbackView = new QGraphicsView(thisFallbackView);
+        fallbackView->setObjectName(QStringLiteral("ca3DOverlayView_%1").arg(overlay.id));
+        fallbackView->setFrameShape(QFrame::NoFrame);
+        fallbackView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        fallbackView->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        fallbackView->setAlignment(Qt::AlignLeft | Qt::AlignTop);
+        fallbackView->setBackgroundBrush(Qt::transparent);
+        fallbackView->setStyleSheet(QStringLiteral("background: transparent"));
+        fallbackView->viewport()->setAutoFillBackground(false);
+
+        QGraphicsScene *scene = new QGraphicsScene(fallbackView);
+        fallbackView->setScene(scene);
+        scene->addWidget(fallbackRoot);
+        const QRect geometry = fallbackOverlayGeometry(thisFallbackView, overlay);
+        applyFallbackWidgetScale(fallbackView, fallbackRoot, overlay, geometry);
+        fallbackView->hide();
+        thisFallbackOverlayWidgets.insert(overlay.id, fallbackView);
+        thisFallbackOverlayRootWidgets.insert(overlay.id, fallbackRoot);
     }
 
     const int preset = thisCameraPreset > 0 || thisConfig.cameraPresets.isEmpty()
                        ? thisCameraPreset
                        : thisConfig.cameraPresets.first().id;
     applyFallbackPreset(preset);
+    emit overlayWidgetsRebuilt();
 }
 
 void ca3DWidget::clearFallbackView()
 {
-    for (QWidget *widget : thisFallbackOverlayWidgets) {
+    foreach (QWidget *widget, thisFallbackOverlayWidgets) {
         if (widget) {
             widget->hide();
             widget->deleteLater();
         }
     }
     thisFallbackOverlayWidgets.clear();
+    thisFallbackOverlayRootWidgets.clear();
     thisFallbackSnapshotPixmap = QPixmap();
     if (thisFallbackSnapshotLabel) {
         thisFallbackSnapshotLabel->clear();
@@ -1118,13 +1306,17 @@ void ca3DWidget::applyFallbackPreset(int preset)
         return;
     }
 
-    const ca3DCameraPresetConfig *selectedPreset = Q_NULLPTR;
-    for (const ca3DCameraPresetConfig &cameraPreset : thisConfig.cameraPresets) {
-        if (cameraPreset.id == preset) {
-            selectedPreset = &cameraPreset;
-            break;
-        }
-    }
+    const auto presetIt = std::find_if(
+        thisConfig.cameraPresets.cbegin(),
+        thisConfig.cameraPresets.cend(),
+        [&preset](const ca3DCameraPresetConfig &cameraPreset) {
+            return cameraPreset.id == preset;
+        });
+
+    const ca3DCameraPresetConfig *selectedPreset =
+        presetIt != thisConfig.cameraPresets.cend()
+            ? &*presetIt
+            : nullptr;
 
     if (!thisConfig.cameraPresets.isEmpty() && !selectedPreset) {
         return;
@@ -1135,16 +1327,17 @@ void ca3DWidget::applyFallbackPreset(int preset)
         thisFallbackSnapshotLabel->setPixmap(thisFallbackSnapshotPixmap);
     } else {
         thisFallbackSnapshotPixmap = QPixmap();
-        thisFallbackSnapshotLabel->clear();
+        if (thisFallbackSnapshotLabel)
+            thisFallbackSnapshotLabel->clear();
     }
 
-    for (QWidget *widget : thisFallbackOverlayWidgets) {
+    foreach (QWidget *widget, thisFallbackOverlayWidgets) {
         if (widget) {
             widget->hide();
         }
     }
 
-    for (const ca3DOverlayConfig &overlay : thisConfig.overlays) {
+    foreach (const ca3DOverlayConfig &overlay, thisConfig.overlays) {
         QWidget *widget = thisFallbackOverlayWidgets.value(overlay.id, Q_NULLPTR);
         if (!widget) {
             continue;
@@ -1157,7 +1350,11 @@ void ca3DWidget::applyFallbackPreset(int preset)
         }
 
         if (visible) {
-            widget->setGeometry(overlay.fallbackGeometry);
+            const QRect geometry = fallbackOverlayGeometry(thisFallbackView, overlay);
+            widget->setGeometry(geometry);
+            if (QGraphicsView *view = qobject_cast<QGraphicsView *>(widget)) {
+                applyFallbackWidgetScale(view, thisFallbackOverlayRootWidgets.value(overlay.id, Q_NULLPTR), overlay, geometry);
+            }
             widget->show();
             widget->raise();
         }
@@ -1281,7 +1478,7 @@ void ca3DWidget::rebuild3DOverlays()
         return;
     }
 
-    for (const ca3DOverlayConfig &overlay : thisConfig.overlays) {
+    foreach (const ca3DOverlayConfig &overlay, thisConfig.overlays) {
         if (overlay.includeFileResolved.isEmpty()) {
             continue;
         }

@@ -5304,6 +5304,20 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
     bool thisInstance = false;
     QWidget *widget = w;
     if(w == (QWidget*) Q_NULLPTR) return;
+    for (QWidget *markedWidget = widget; markedWidget; markedWidget = markedWidget->parentWidget()) {
+        QObject *owner = markedWidget->property("ca3DOverlayOwner").value<QObject *>();
+        if(ca3DWidget *widget3D = qobject_cast<ca3DWidget *>(owner)) {
+            QWidget *parent = widget3D;
+            while (parent) {
+                if(parent == myWidget) {
+                    thisInstance = true;
+                    break;
+                }
+                parent = parent->parentWidget();
+            }
+            if(thisInstance) break;
+        }
+    }
     while (widget->parentWidget()) {
         widget = widget->parentWidget() ;
         if(widget == myWidget) {

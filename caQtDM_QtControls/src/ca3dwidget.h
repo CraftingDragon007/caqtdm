@@ -109,6 +109,7 @@ protected:
     QLabel *thisFallbackSnapshotLabel;
     QPixmap thisFallbackSnapshotPixmap;
     QMap<QString, QWidget*> thisFallbackOverlayWidgets;
+    QMap<QString, QWidget*> thisFallbackOverlayRootWidgets;
     QString thisSceneConfig;
     ca3DSceneConfig thisConfig;
     QStringList thisConfigErrors;
