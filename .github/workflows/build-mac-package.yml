@@ -83,9 +83,9 @@ jobs:
       - name: Install build tools (OpenSSL for Qt OPC UA)
         run: |
           set -euo pipefail
-          brew remove rustup xcodes
-          brew remove python3 python@3.13
           brew uninstall --cask --force $(brew list --cask)
+          brew remove rustup xcodes aws-sam-cli azure-cli pipx
+          brew remove python3 python@3.13
           brew update
           brew upgrade
           brew install openssl@3 || true
