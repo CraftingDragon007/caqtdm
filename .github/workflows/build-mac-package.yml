@@ -85,7 +85,7 @@ jobs:
           set -euo pipefail
           brew uninstall --cask --force $(brew list --cask)
           brew remove rustup xcodes aws-sam-cli azure-cli pipx
-          brew remove python3 python@3.13
+          brew remove python3
           brew update
           brew upgrade
           brew install openssl@3 || true
