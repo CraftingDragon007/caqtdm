@@ -84,10 +84,12 @@ jobs:
         run: |
           set -euo pipefail
           brew remove rustup xcodes
-          brew remove firefox google-chrome microsoft-edge
+          brew remove python3 python@3.13
+          brew uninstall --cask --force $(brew list --cask)
           brew update
           brew upgrade
           brew install openssl@3 || true
+          brew install python@3.14
           echo "OPENSSL_ROOT_DIR=$(brew --prefix openssl@3)" >> "$GITHUB_ENV"
 
       - name: Create dependencies install directory
