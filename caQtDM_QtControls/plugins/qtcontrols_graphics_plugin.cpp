@@ -40,6 +40,9 @@
 
 #include "designerPluginTexts.h"
 #include "plugin_xml_helper.h"
+#ifndef MOBILE
+#include "ca3dwidgettaskmenu.h"
+#endif
 
 CustomWidgetInterface_Graphics::CustomWidgetInterface_Graphics(QObject *parent): QObject(parent), d_isInitialized(false)
 {
@@ -65,6 +68,12 @@ void CustomWidgetInterface_Graphics::initialize(QDesignerFormEditorInterface *fo
         Q_ASSERT(manager != 0);
         manager->registerExtensions(new caDoubleTabWidgetExtensionFactory(manager),
                                     Q_TYPEID(QDesignerContainerExtension));
+    }
+    if(d_name.contains("ca3DWidget")) {
+        QExtensionManager *manager = formEditor->extensionManager();
+        Q_ASSERT(manager != 0);
+        manager->registerExtensions(new ca3DWidgetTaskMenuFactory(manager),
+                                    Q_TYPEID(QDesignerTaskMenuExtension));
     }
 #else
     Q_UNUSED(formEditor);

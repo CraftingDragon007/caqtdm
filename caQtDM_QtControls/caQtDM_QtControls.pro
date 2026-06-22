@@ -176,8 +176,10 @@ XDR_HACK {
     HEADERS +=  src/pvtaskmenu.h src/pvdialog.h
     SOURCES +=  src/cadoubletabwidgetextensionfactory.cpp  src/cadoubletabwidgetextension.cpp
     SOURCES +=  src/capolylinetaskmenu.cpp src/capolylinedialog.cpp
+    SOURCES +=  src/ca3dwidgettaskmenu.cpp src/ca3dconfigdialog.cpp
     HEADERS +=  src/cadoubletabwidgetextension.h
     HEADERS +=  src/cadoubletabwidgetextensionfactory.h  src/capolylinetaskmenu.h
+    HEADERS +=  src/ca3dwidgettaskmenu.h src/ca3dconfigdialog.h
 }
 
 HEADERS += src/networkaccess.h src/fileFunctions.h \
