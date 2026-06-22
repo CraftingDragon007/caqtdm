@@ -29,6 +29,16 @@
 #include <QJsonDocument>
 #include <iostream>
 
+namespace
+{
+QWidget *createRawChannelProxy(const QString &channel, QWidget *parent)
+{
+    caLineEdit *proxy = new caLineEdit(parent);
+    proxy->setPV(channel);
+    return proxy;
+}
+}
+
 void PVDialog::print_out(const wchar_t* output)
 {
     std::wcout << output << "\n";
@@ -36,6 +46,7 @@ void PVDialog::print_out(const wchar_t* output)
 }
 
 PVDialog::PVDialog(QWidget *tic, QWidget *parent) : QDialog(parent)
+  , editRawChannel(false)
 {
     QString stylesheet("QDialog {background: rgb(154,192,205);} \
                        QLineEdit {color: black; background: rgb(255, 255, 127)};");
@@ -460,6 +471,13 @@ PVDialog::PVDialog(QWidget *tic, QWidget *parent) : QDialog(parent)
     setFixedHeight(dialogHeight);
 }
 
+PVDialog::PVDialog(const QString &channel, QWidget *parent)
+    : PVDialog(createRawChannelProxy(channel, parent), parent)
+{
+    editRawChannel = true;
+    rawEditedChannel = channel;
+}
+
 QSize PVDialog::sizeHint() const
 {
     return QSize(250, 250);
@@ -467,50 +485,52 @@ QSize PVDialog::sizeHint() const
 
 void PVDialog::saveState()
 {
-    if (QDesignerFormWindowInterface *formWindow = QDesignerFormWindowInterface::findFormWindow(
-            entry)) {
-        QString channel("");
-        QString pv = pvLine->toPlainText();
-        QString prefix = prefixComboBox->currentText();
-        QJsonObject root;
-        bool B_dbnd = dbndCheckBox->isChecked();
-        bool B_rate = rateCheckBox->isChecked();
-        bool B_array = arrayCheckBox->isChecked();
-        bool B_sync = syncCheckBox->isChecked();
-        bool B_ts = tsCheckBox->isChecked();
-        bool B_dec = decCheckBox->isChecked();
-        if (B_dbnd) {
-            root["dbnd"] = QJsonObject{{dbndComboBox->currentText(), dbndDoubleValue->value()}};
+    QString channel("");
+    QString pv = pvLine->toPlainText();
+    QString prefix = prefixComboBox->currentText();
+    QJsonObject root;
+    bool B_dbnd = dbndCheckBox->isChecked();
+    bool B_rate = rateCheckBox->isChecked();
+    bool B_array = arrayCheckBox->isChecked();
+    bool B_sync = syncCheckBox->isChecked();
+    bool B_ts = tsCheckBox->isChecked();
+    bool B_dec = decCheckBox->isChecked();
+    if (B_dbnd) {
+        root["dbnd"] = QJsonObject{{dbndComboBox->currentText(), dbndDoubleValue->value()}};
+    }
+    if (B_rate) {
+        root["caqtdm_monitor"] = QJsonObject{{"maxdisplayrate", rateIntValue->value()}};
+    }
+    if (B_dec) {
+        root["dec"] = QJsonObject{{"n", decIntValue->value()}};
+    }
+    if (B_array) {
+        root["arr"] = QJsonObject{{"s", arrayIntValue_s->value()},
+                                   {"i", arrayIntValue_i->value()},
+                                   {"e", arrayIntValue_e->value()}};
+    }
+    if (B_sync) {
+        root["sync"] = QJsonObject{{syncComboBox->currentText(), syncLine->text()}};
+    }
+    if (B_ts) {
+        root["ts"] = QJsonObject();
+    }
+    if (pv.size() > 0) {
+        if (prefix.size() > 0) {
+            channel = prefix + "://" + pv;
+        } else {
+            channel = pv;
         }
-        if (B_rate) {
-            root["caqtdm_monitor"] = QJsonObject{{"maxdisplayrate", rateIntValue->value()}};
+        if (B_dbnd || B_rate || B_array || B_sync || B_ts || B_dec) {
+            QString strng = QJsonDocument(root).toJson(QJsonDocument::Compact);
+            channel.append(".");
+            channel.append(strng);
         }
-        if (B_dec) {
-            root["dec"] = QJsonObject{{"n", decIntValue->value()}};
-        }
-        if (B_array) {
-            root["arr"] = QJsonObject{{"s", arrayIntValue_s->value()},
-                                       {"i", arrayIntValue_i->value()},
-                                       {"e", arrayIntValue_e->value()}};
-        }
-        if (B_sync) {
-            root["sync"] = QJsonObject{{syncComboBox->currentText(), syncLine->text()}};
-        }
-        if (B_ts) {
-            root["ts"] = QJsonObject();
-        }
-        if (pv.size() > 0) {
-            if (prefix.size() > 0) {
-                channel = prefix + "://" + pv;
-            } else {
-                channel = pv;
-            }
-            if (B_dbnd || B_rate || B_array || B_sync || B_ts || B_dec) {
-                QString strng = QJsonDocument(root).toJson(QJsonDocument::Compact);
-                channel.append(".");
-                channel.append(strng);
-            }
-        }
+    }
+
+    if (editRawChannel) {
+        rawEditedChannel = channel;
+    } else if (QDesignerFormWindowInterface *formWindow = QDesignerFormWindowInterface::findFormWindow(entry)) {
         if (caCamera *w = qobject_cast<caCamera *>(entry)) {
             Q_UNUSED(w);
             formWindow->cursor()->setProperty("channelData", channel);

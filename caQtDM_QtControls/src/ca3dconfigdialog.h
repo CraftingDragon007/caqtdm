@@ -27,6 +27,7 @@ private slots:
     void removeObjectRow();
     void addBindingRow();
     void removeBindingRow();
+    void editSelectedBindingPv();
     void validateRawJson();
     void applyChanges();
     void accept() override;

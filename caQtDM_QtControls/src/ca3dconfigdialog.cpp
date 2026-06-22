@@ -6,6 +6,7 @@
 
 #include "ca3dconfig.h"
 #include "ca3dwidget.h"
+#include "pvdialog.h"
 
 #include <QComboBox>
 #include <QDialogButtonBox>
@@ -96,14 +97,17 @@ void ca3DConfigDialog::buildUi()
     QHBoxLayout *bindingsButtons = new QHBoxLayout();
     QPushButton *addBindingButton = new QPushButton(tr("Add Binding"), bindingsPage);
     QPushButton *removeBindingButton = new QPushButton(tr("Remove Selected"), bindingsPage);
+    QPushButton *editPvButton = new QPushButton(tr("Edit PV..."), bindingsPage);
     bindingsButtons->addWidget(addBindingButton);
     bindingsButtons->addWidget(removeBindingButton);
+    bindingsButtons->addWidget(editPvButton);
     bindingsButtons->addStretch();
     bindingsLayout->addWidget(bindingsTable);
     bindingsLayout->addLayout(bindingsButtons);
     tabs->addTab(bindingsPage, tr("Bindings"));
     connect(addBindingButton, SIGNAL(clicked()), this, SLOT(addBindingRow()));
     connect(removeBindingButton, SIGNAL(clicked()), this, SLOT(removeBindingRow()));
+    connect(editPvButton, SIGNAL(clicked()), this, SLOT(editSelectedBindingPv()));
 
     QWidget *rawPage = new QWidget(tabs);
     QVBoxLayout *rawLayout = new QVBoxLayout(rawPage);
@@ -268,6 +272,21 @@ void ca3DConfigDialog::addBindingRow()
 void ca3DConfigDialog::removeBindingRow()
 {
     bindingsTable->removeRow(bindingsTable->currentRow());
+}
+
+void ca3DConfigDialog::editSelectedBindingPv()
+{
+    const int row = bindingsTable->currentRow();
+    if (row < 0) {
+        showErrors(QStringList() << tr("Select a binding row before editing its PV"));
+        return;
+    }
+
+    PVDialog dialog(tableText(bindingsTable, row, 1), this);
+    if (dialog.exec() == QDialog::Accepted) {
+        setTableText(bindingsTable, row, 1, dialog.editedChannel());
+        showErrors(QStringList());
+    }
 }
 
 void ca3DConfigDialog::validateRawJson()

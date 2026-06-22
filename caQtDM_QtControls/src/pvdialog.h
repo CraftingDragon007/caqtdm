@@ -65,8 +65,10 @@ class QTCON_EXPORT PVDialog : public QDialog
 public:
 
     explicit PVDialog(QWidget *plugin = 0, QWidget *parent = 0);
+    explicit PVDialog(const QString &channel, QWidget *parent = 0);
 
     QSize sizeHint() const;
+    QString editedChannel() const { return rawEditedChannel; }
 
 #ifndef UNIT_TESTING
 private slots:
@@ -84,6 +86,8 @@ public:
     void print_out(const wchar_t *output);
 
     QWidget *thisWidget;
+    bool editRawChannel;
+    QString rawEditedChannel;
     QCheckBox *dbndCheckBox, *arrayCheckBox, *syncCheckBox, *rateCheckBox, *tsCheckBox, *decCheckBox;
     QCheckBox *autocompletionCheckBox;
     QLabel    *pvLabel, *dbndLabel, *arrayLabel, *syncLabel, *rateLabel, *decLabel, *autoLabel;
