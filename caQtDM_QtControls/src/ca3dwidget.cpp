@@ -337,6 +337,7 @@ int configuredOverlayMaxPixels()
     const int pixels = qEnvironmentVariableIntValue("CAQTDM_3D_OVERLAY_MAX_PIXELS");
     return pixels > 0 ? pixels : kOverlayMaxTexturePixels;
 }
+#endif
 
 QSize uiRootDesignSize(const QString &uiFilePath)
 {
@@ -457,6 +458,7 @@ void applyFallbackWidgetScale(QGraphicsView *view, QWidget *rootWidget, const ca
     }
 }
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 bool projectToSurface(const QMatrix4x4 &viewProjection,
                       const QVector3D &point,
                       const QSize &surfaceSize,
