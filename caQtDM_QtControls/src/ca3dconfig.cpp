@@ -73,6 +73,29 @@ QString stringFromObject(const QJsonObject &object, const QString &name)
     return object.value(name).toString().trimmed();
 }
 
+QPair<int, int> lineAndColumnForOffset(const QString &text, int offset)
+{
+    int line = 1;
+    int column = 1;
+    const int boundedOffset = qBound(0, offset, text.toUtf8().size());
+    int byteOffset = 0;
+
+    for (const QChar &character : text) {
+        if (byteOffset >= boundedOffset) {
+            break;
+        }
+        byteOffset += QString(character).toUtf8().size();
+        if (character == QLatin1Char('\n')) {
+            line++;
+            column = 1;
+        } else {
+            column++;
+        }
+    }
+
+    return qMakePair(line, column);
+}
+
 QString inferMeshType(const QString &mesh)
 {
     const QString suffix = QFileInfo(mesh).suffix().toLower();
@@ -212,7 +235,11 @@ bool ca3DConfigParser::parse(const QString &json, ca3DSceneConfig *config, QStri
     const QJsonDocument document = QJsonDocument::fromJson(json.toUtf8(), &parseError);
     if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
         if (errors) {
-            errors->append(QStringLiteral("Invalid sceneConfig JSON: %1").arg(parseError.errorString()));
+            const QPair<int, int> position = lineAndColumnForOffset(json, parseError.offset);
+            errors->append(QStringLiteral("Invalid sceneConfig JSON at line %1, character %2: %3")
+                           .arg(position.first)
+                           .arg(position.second)
+                           .arg(parseError.errorString()));
         }
         return false;
     }

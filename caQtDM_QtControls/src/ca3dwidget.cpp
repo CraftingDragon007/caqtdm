@@ -1229,9 +1229,14 @@ void ca3DWidget::setDynamicBindingComponent(const ca3DObjectConfig &object, cons
 void ca3DWidget::updatePlaceholderText()
 {
     const QString mode = thisFallbackMode ? QStringLiteral("2D fallback") : QStringLiteral("Qt6 3D");
-    const QString configState = thisSceneConfig.trimmed().isEmpty()
-                                ? QStringLiteral("no sceneConfig")
-                                : (thisConfigValid ? QStringLiteral("sceneConfig ok") : QStringLiteral("sceneConfig errors: %1").arg(thisConfigErrors.count()));
+    QString configState;
+    if (thisSceneConfig.trimmed().isEmpty()) {
+        configState = QStringLiteral("no sceneConfig");
+    } else if (thisConfigValid) {
+        configState = QStringLiteral("sceneConfig ok");
+    } else {
+        configState = QStringLiteral("sceneConfig errors:\n%1").arg(thisConfigErrors.join(QStringLiteral("\n")));
+    }
 
     thisStatusLabel->setText(QStringLiteral("ca3DWidget\n%1\nPreset: %2\nObjects: %3  Overlays: %4  Cameras: %5\n%6")
                              .arg(mode)
