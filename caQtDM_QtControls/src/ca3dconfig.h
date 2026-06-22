@@ -24,6 +24,32 @@ struct QTCON_EXPORT ca3DAxisConfig
     double factor = 1.0;
 };
 
+struct QTCON_EXPORT ca3DBindingConfig
+{
+    enum BindingTarget {
+        TranslationX,
+        TranslationY,
+        TranslationZ,
+        RotationX,
+        RotationY,
+        RotationZ,
+        InvalidTarget
+    };
+
+    enum BindingMode { Relative, Absolute };
+
+    QString channel;
+    QString targetName;
+    BindingTarget target = InvalidTarget;
+    BindingMode mode = Relative;
+    double scale = 1.0;
+    double offset = 0.0;
+    double minimum = 0.0;
+    double maximum = 0.0;
+    bool hasMinimum = false;
+    bool hasMaximum = false;
+};
+
 struct QTCON_EXPORT ca3DObjectConfig
 {
     QString id;
@@ -40,6 +66,7 @@ struct QTCON_EXPORT ca3DObjectConfig
     QVector3D configuredOriginPosition;
     QVector3D configuredOriginRotation;
     QList<ca3DAxisConfig> axes;
+    QList<ca3DBindingConfig> bindings;
 };
 
 struct QTCON_EXPORT ca3DOverlayConfig

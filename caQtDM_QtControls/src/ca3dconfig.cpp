@@ -128,6 +128,50 @@ ca3DOverlayConfig::VisibilityMode visibilityModeFromString(const QString &value,
     return ca3DOverlayConfig::PresetOnly;
 }
 
+ca3DBindingConfig::BindingTarget bindingTargetFromString(const QString &value, QStringList *errors)
+{
+    const QString target = value.trimmed();
+    if (target == QStringLiteral("translation.x")) {
+        return ca3DBindingConfig::TranslationX;
+    }
+    if (target == QStringLiteral("translation.y")) {
+        return ca3DBindingConfig::TranslationY;
+    }
+    if (target == QStringLiteral("translation.z")) {
+        return ca3DBindingConfig::TranslationZ;
+    }
+    if (target == QStringLiteral("rotation.x")) {
+        return ca3DBindingConfig::RotationX;
+    }
+    if (target == QStringLiteral("rotation.y")) {
+        return ca3DBindingConfig::RotationY;
+    }
+    if (target == QStringLiteral("rotation.z")) {
+        return ca3DBindingConfig::RotationZ;
+    }
+
+    if (errors) {
+        errors->append(QStringLiteral("Unknown object binding target '%1'").arg(value));
+    }
+    return ca3DBindingConfig::InvalidTarget;
+}
+
+ca3DBindingConfig::BindingMode bindingModeFromString(const QString &value, QStringList *errors)
+{
+    const QString mode = value.trimmed();
+    if (mode.isEmpty() || mode == QStringLiteral("relative")) {
+        return ca3DBindingConfig::Relative;
+    }
+    if (mode == QStringLiteral("absolute")) {
+        return ca3DBindingConfig::Absolute;
+    }
+
+    if (errors) {
+        errors->append(QStringLiteral("Unknown object binding mode '%1'").arg(value));
+    }
+    return ca3DBindingConfig::Relative;
+}
+
 void appendMissingFileError(const QString &fieldName, const QString &fileName, QStringList *errors)
 {
     if (errors && !fileName.trimmed().isEmpty()) {
@@ -242,6 +286,33 @@ bool ca3DConfigParser::parse(const QString &json, ca3DSceneConfig *config, QStri
                 errors->append(QStringLiteral("Axis without id on object '%1'").arg(item.id));
             }
             item.axes.append(axis);
+        }
+
+        const QJsonArray bindings = object.value(QStringLiteral("bindings")).toArray();
+        for (const QJsonValue &bindingValue : bindings) {
+            const QJsonObject bindingObject = bindingValue.toObject();
+            ca3DBindingConfig binding;
+            binding.channel = stringFromObject(bindingObject, QStringLiteral("channel"));
+            binding.targetName = stringFromObject(bindingObject, QStringLiteral("target"));
+            binding.target = bindingTargetFromString(binding.targetName, errors);
+            binding.mode = bindingModeFromString(stringFromObject(bindingObject, QStringLiteral("mode")), errors);
+            binding.scale = bindingObject.value(QStringLiteral("scale")).toDouble(1.0);
+            binding.offset = bindingObject.value(QStringLiteral("offset")).toDouble(0.0);
+            if (bindingObject.contains(QStringLiteral("min"))) {
+                binding.minimum = bindingObject.value(QStringLiteral("min")).toDouble();
+                binding.hasMinimum = true;
+            }
+            if (bindingObject.contains(QStringLiteral("max"))) {
+                binding.maximum = bindingObject.value(QStringLiteral("max")).toDouble();
+                binding.hasMaximum = true;
+            }
+            if (binding.channel.isEmpty() && errors) {
+                errors->append(QStringLiteral("Binding without channel on object '%1'").arg(item.id));
+            }
+            if (binding.target == ca3DBindingConfig::InvalidTarget && errors) {
+                errors->append(QStringLiteral("Binding without valid target on object '%1'").arg(item.id));
+            }
+            item.bindings.append(binding);
         }
 
         config->objects.append(item);

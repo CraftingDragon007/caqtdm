@@ -57,6 +57,7 @@ public:
     QList<QWidget*> overlayRootWidgets() const;
     QString overlayMacro(QWidget *rootWidget) const;
     QString overlayIncludePath(QWidget *rootWidget) const;
+    QStringList objectBindingChannels() const;
 
 public slots:
     void setCameraPreset(int preset);
@@ -75,6 +76,7 @@ public slots:
     void setObjectAxisValue(const QString &objectId, const QString &axisId, double value);
     void setObjectTranslation(const QString &objectId, double x, double y, double z);
     void setObjectRotation(const QString &objectId, double rx, double ry, double rz);
+    void setObjectBindingValue(int bindingIndex, double value);
 
 signals:
     void overlayWidgetsRebuilt();
@@ -87,6 +89,7 @@ private:
     void clearFallbackView();
     void applyFallbackPreset(int preset);
     bool isDesignerMode() const;
+    void setDynamicBindingComponent(const ca3DObjectConfig &object, const ca3DBindingConfig &binding, double value);
 
 protected:
     void resizeEvent(QResizeEvent *event);
@@ -118,6 +121,8 @@ protected:
     bool thisFallbackMode;
     bool thisConfigValid;
     bool thisDesignerMode;
+    QMap<QString, QVector3D> thisDynamicTranslations;
+    QMap<QString, QVector3D> thisDynamicRotations;
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     Qt3DExtras::Qt3DWindow *this3DView;
@@ -128,8 +133,6 @@ protected:
     QMap<QString, QObject*> this3DOverlayEventFiltersById;
     QList<ca3DOverlayWidgetManager*> this3DOverlayManagers;
     QList<QObject*> this3DOverlayEventFilters;
-    QMap<QString, QVector3D> thisDynamicTranslations;
-    QMap<QString, QVector3D> thisDynamicRotations;
 #endif
 };
 

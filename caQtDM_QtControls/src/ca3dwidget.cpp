@@ -78,6 +78,55 @@ QVector3D normalizedOrFallback(const QVector3D &vector, const QVector3D &fallbac
     return vector.lengthSquared() > 0.0f ? vector.normalized() : fallback;
 }
 
+void setVectorComponent(QVector3D *vector, ca3DBindingConfig::BindingTarget target, float value)
+{
+    if (!vector) {
+        return;
+    }
+
+    switch (target) {
+    case ca3DBindingConfig::TranslationX:
+    case ca3DBindingConfig::RotationX:
+        vector->setX(value);
+        break;
+    case ca3DBindingConfig::TranslationY:
+    case ca3DBindingConfig::RotationY:
+        vector->setY(value);
+        break;
+    case ca3DBindingConfig::TranslationZ:
+    case ca3DBindingConfig::RotationZ:
+        vector->setZ(value);
+        break;
+    case ca3DBindingConfig::InvalidTarget:
+        break;
+    }
+}
+
+float vectorComponent(const QVector3D &vector, ca3DBindingConfig::BindingTarget target)
+{
+    switch (target) {
+    case ca3DBindingConfig::TranslationX:
+    case ca3DBindingConfig::RotationX:
+        return vector.x();
+    case ca3DBindingConfig::TranslationY:
+    case ca3DBindingConfig::RotationY:
+        return vector.y();
+    case ca3DBindingConfig::TranslationZ:
+    case ca3DBindingConfig::RotationZ:
+        return vector.z();
+    case ca3DBindingConfig::InvalidTarget:
+        return 0.0f;
+    }
+    return 0.0f;
+}
+
+bool bindingIsTranslation(ca3DBindingConfig::BindingTarget target)
+{
+    return target == ca3DBindingConfig::TranslationX
+           || target == ca3DBindingConfig::TranslationY
+           || target == ca3DBindingConfig::TranslationZ;
+}
+
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 class LiveWidgetTextureImage final : public Qt3DRender::QPaintedTextureImage
 {
@@ -672,6 +721,8 @@ void ca3DWidget::setSceneConfig(const QString &config)
 
     thisSceneConfig = config;
     thisConfigValid = ca3DConfigParser::parse(thisSceneConfig, &thisConfig, &thisConfigErrors);
+    thisDynamicTranslations.clear();
+    thisDynamicRotations.clear();
     rebuildScene();
     updatePlaceholderText();
 }
@@ -746,6 +797,17 @@ QString ca3DWidget::overlayIncludePath(QWidget *rootWidget) const
     Q_UNUSED(rootWidget);
 #endif
     return QString();
+}
+
+QStringList ca3DWidget::objectBindingChannels() const
+{
+    QStringList channels;
+    for (const ca3DObjectConfig &object : thisConfig.objects) {
+        for (const ca3DBindingConfig &binding : object.bindings) {
+            channels.append(binding.channel);
+        }
+    }
+    return channels;
 }
 
 void ca3DWidget::setCameraPreset(int preset)
@@ -1103,6 +1165,65 @@ void ca3DWidget::setObjectRotation(const QString &objectId, double rx, double ry
     Q_UNUSED(ry);
     Q_UNUSED(rz);
 #endif
+}
+
+void ca3DWidget::setObjectBindingValue(int bindingIndex, double value)
+{
+    qCDebug(ca3DWidgetLog) << "setObjectBindingValue" << bindingIndex << value;
+    if (bindingIndex < 0) {
+        qCWarning(ca3DWidgetLog) << "setObjectBindingValue ignored negative binding index" << bindingIndex;
+        return;
+    }
+
+    int currentIndex = 0;
+    for (const ca3DObjectConfig &object : thisConfig.objects) {
+        for (const ca3DBindingConfig &binding : object.bindings) {
+            if (currentIndex == bindingIndex) {
+                setDynamicBindingComponent(object, binding, value);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+                applyObjectTransform(object.id);
+#endif
+                qCDebug(ca3DWidgetLog) << "setObjectBindingValue applied" << bindingIndex << object.id << binding.targetName << value;
+                return;
+            }
+            currentIndex++;
+        }
+    }
+
+    qCWarning(ca3DWidgetLog) << "setObjectBindingValue ignored unknown binding index" << bindingIndex;
+}
+
+void ca3DWidget::setDynamicBindingComponent(const ca3DObjectConfig &object, const ca3DBindingConfig &binding, double value)
+{
+    if (binding.target == ca3DBindingConfig::InvalidTarget) {
+        return;
+    }
+
+    double mapped = value * binding.scale + binding.offset;
+    if (binding.hasMinimum) {
+        mapped = qMax(mapped, binding.minimum);
+    }
+    if (binding.hasMaximum) {
+        mapped = qMin(mapped, binding.maximum);
+    }
+
+    const bool isTranslation = bindingIsTranslation(binding.target);
+    QVector3D dynamicVector = isTranslation
+                              ? thisDynamicTranslations.value(object.id)
+                              : thisDynamicRotations.value(object.id);
+    if (binding.mode == ca3DBindingConfig::Absolute) {
+        const QVector3D baseVector = isTranslation
+                                     ? object.position + object.configuredOriginPosition
+                                     : object.rotation + object.configuredOriginRotation;
+        mapped -= vectorComponent(baseVector, binding.target);
+    }
+
+    setVectorComponent(&dynamicVector, binding.target, static_cast<float>(mapped));
+    if (isTranslation) {
+        thisDynamicTranslations[object.id] = dynamicVector;
+    } else {
+        thisDynamicRotations[object.id] = dynamicVector;
+    }
 }
 
 void ca3DWidget::updatePlaceholderText()

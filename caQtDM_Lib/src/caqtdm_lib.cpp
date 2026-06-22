@@ -2525,8 +2525,20 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         //==================================================================================================================
     } else if(ca3DWidget* widget3D = qobject_cast<ca3DWidget *>(w1)) {
 
-        qCDebug(ca3DWidgetLog) << "treat ca3DWidget overlays" << w1;
+        qCDebug(ca3DWidgetLog) << "treat ca3DWidget overlays and object bindings" << w1;
         widget3D->setProperty("Taken", true);
+
+        QList<QVariant> monitorList;
+        const QStringList bindingChannels = widget3D->objectBindingChannels();
+        for (int i = 0; i < bindingChannels.count(); ++i) {
+            specData[0] = i;
+            int num = addMonitor(myWidget, &kData, bindingChannels.at(i), w1, specData, map, &pv);
+            monitorList.append(num);
+        }
+        if (!monitorList.isEmpty()) {
+            widget3D->setProperty("MonitorList", monitorList);
+        }
+
         if (!widget3D->property("ca3DOverlayRuntimeHookInstalled").toBool()) {
             widget3D->setProperty("ca3DOverlayRuntimeHookInstalled", true);
             connect(widget3D, &ca3DWidget::overlayWidgetsRebuilt, this, [this, widget3D, macro]() {
@@ -5342,8 +5354,24 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
         return;
     }
 
+    if(ca3DWidget *widget3D = qobject_cast<ca3DWidget *>(w)) {
+        if(data.edata.connected) {
+            double value = data.edata.rvalue;
+            switch (data.edata.fieldtype) {
+            case caINT:
+            case caLONG:
+            case caENUM:
+                value = data.edata.ivalue;
+                break;
+            default:
+                break;
+            }
+            widget3D->setObjectBindingValue(data.specData[0], value);
+        }
+    }
+
     // any caWidget with caWidgetInterface
-    if (caWidgetInterface* wif = dynamic_cast<caWidgetInterface *>(w)) {
+    else if (caWidgetInterface* wif = dynamic_cast<caWidgetInterface *>(w)) {
         wif->caDataUpdate(units, String, data);
     }
 
