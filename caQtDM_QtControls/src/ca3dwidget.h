@@ -106,6 +106,7 @@ private:
     void setDynamicBindingComponent(const ca3DObjectConfig &object, const ca3DBindingConfig &binding, double value);
 
 protected:
+    bool eventFilter(QObject *watched, QEvent *event) override;
     void resizeEvent(QResizeEvent *event);
     void showEvent(QShowEvent *event);
 

@@ -697,6 +697,8 @@ ca3DWidget::ca3DWidget(QWidget *parent)
     thisFallbackSnapshotLabel->setScaledContents(true);
     thisFallbackSnapshotLabel->setAutoFillBackground(true);
     thisFallbackSnapshotLabel->setPalette(pal);
+    thisFallbackSnapshotLabel->setAttribute(Qt::WA_TransparentForMouseEvents);
+    thisFallbackView->installEventFilter(this);
     layout->addWidget(thisFallbackView);
 
     updatePlaceholderText();
@@ -970,14 +972,17 @@ void ca3DWidget::setCameraPreset(int preset)
     }
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    const int resolvedPreset = preset > 0 || thisConfig.cameraPresets.isEmpty()
+                               ? preset
+                               : thisConfig.cameraPresets.first().id;
     bool presetFound = thisConfig.cameraPresets.isEmpty();
     if (presetFound) {
-        thisCameraPreset = preset;
+        thisCameraPreset = resolvedPreset;
     }
     for (const ca3DCameraPresetConfig &cameraPreset : thisConfig.cameraPresets) {
-        if (cameraPreset.id == preset) {
+        if (cameraPreset.id == resolvedPreset) {
             presetFound = true;
-            thisCameraPreset = preset;
+            thisCameraPreset = resolvedPreset;
             applyCameraPresetConfig(cameraPreset);
             break;
         }
@@ -987,7 +992,7 @@ void ca3DWidget::setCameraPreset(int preset)
         return;
     }
     apply3DOverlayVisibility(thisCameraPreset);
-    qCDebug(ca3DWidgetLog) << "setCameraPreset applied" << preset
+    qCDebug(ca3DWidgetLog) << "setCameraPreset applied" << resolvedPreset
                             << cameraDebugState(this3DView ? this3DView->camera() : Q_NULLPTR);
 #else
     thisCameraPreset = preset;
@@ -1237,6 +1242,15 @@ void ca3DWidget::setCameraViewCenter(double x, double y, double z)
 #endif
 }
 
+bool ca3DWidget::eventFilter(QObject *watched, QEvent *event)
+{
+    if (watched == thisFallbackView && event->type() == QEvent::Resize) {
+        thisFallbackSnapshotLabel->setGeometry(thisFallbackView->rect());
+        applyFallbackPreset(thisCameraPreset);
+    }
+    return QWidget::eventFilter(watched, event);
+}
+
 void ca3DWidget::resizeEvent(QResizeEvent *event)
 {
     QWidget::resizeEvent(event);
@@ -1253,6 +1267,10 @@ void ca3DWidget::showEvent(QShowEvent *event)
     QWidget::showEvent(event);
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     maybeInitialize3DView();
+#else
+    if (thisFallbackMode) {
+        rebuildFallbackView();
+    }
 #endif
 }
 
@@ -1379,7 +1397,7 @@ void ca3DWidget::setDynamicBindingComponent(const ca3DObjectConfig &object, cons
 
 void ca3DWidget::updatePlaceholderText()
 {
-    const QString mode = thisFallbackMode ? QStringLiteral("2D fallback") : QStringLiteral("Qt6 3D");
+    const QString mode = thisFallbackMode ? QStringLiteral("2D fallback") : QStringLiteral("Qt 3D");
     QString configState;
     if (thisSceneConfig.trimmed().isEmpty()) {
         configState = QStringLiteral("no sceneConfig");
@@ -1588,11 +1606,14 @@ void ca3DWidget::applyFallbackPreset(int preset)
         return;
     }
 
+    const int resolvedPreset = preset > 0 || thisConfig.cameraPresets.isEmpty()
+                               ? preset
+                               : thisConfig.cameraPresets.first().id;
     const auto presetIt = std::find_if(
         thisConfig.cameraPresets.cbegin(),
         thisConfig.cameraPresets.cend(),
-        [&preset](const ca3DCameraPresetConfig &cameraPreset) {
-            return cameraPreset.id == preset;
+        [&resolvedPreset](const ca3DCameraPresetConfig &cameraPreset) {
+            return cameraPreset.id == resolvedPreset;
         });
 
     const ca3DCameraPresetConfig *selectedPreset =
@@ -1605,8 +1626,16 @@ void ca3DWidget::applyFallbackPreset(int preset)
     }
 
     if (selectedPreset && !selectedPreset->snapshotResolved.isEmpty()) {
-        thisFallbackSnapshotPixmap.load(selectedPreset->snapshotResolved);
-        thisFallbackSnapshotLabel->setPixmap(thisFallbackSnapshotPixmap);
+        if (thisFallbackSnapshotPixmap.load(selectedPreset->snapshotResolved)) {
+            thisFallbackSnapshotLabel->setGeometry(thisFallbackView->rect());
+            thisFallbackSnapshotLabel->setPixmap(thisFallbackSnapshotPixmap);
+            thisFallbackSnapshotLabel->show();
+            thisFallbackSnapshotLabel->lower();
+        } else {
+            qCWarning(ca3DWidgetLog) << "applyFallbackPreset could not load snapshot" << selectedPreset->snapshotResolved;
+            thisFallbackSnapshotPixmap = QPixmap();
+            thisFallbackSnapshotLabel->clear();
+        }
     } else {
         thisFallbackSnapshotPixmap = QPixmap();
         if (thisFallbackSnapshotLabel)
