@@ -51,6 +51,7 @@
 #include <Qt3DExtras/QTextureMaterial>
 #include <Qt3DExtras/Qt3DWindow>
 #include <Qt3DRender/QCamera>
+#include <Qt3DRender/QFrameGraphNode>
 #include <Qt3DRender/QMesh>
 #include <Qt3DRender/QPaintedTextureImage>
 #include <Qt3DRender/QPointLight>
@@ -872,7 +873,7 @@ QPixmap ca3DWidget::grab3DSnapshot(bool includeOverlays)
 bool ca3DWidget::capture3DSnapshot(bool includeOverlays)
 {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-    if (!this3DView || !this3DView->defaultFrameGraph()) {
+    if (!this3DView || !this3DView->activeFrameGraph()) {
         emit snapshotCaptureFailed(tr("3D preview is not available"));
         return false;
     }
@@ -892,10 +893,18 @@ bool ca3DWidget::capture3DSnapshot(bool includeOverlays)
     }
 
     if (!thisRenderCapture) {
-        thisRenderCapture = new Qt3DRender::QRenderCapture(this3DView->defaultFrameGraph());
+        thisRenderCapture = new Qt3DRender::QRenderCapture();
+        Qt3DRender::QFrameGraphNode *activeFrameGraph = this3DView->activeFrameGraph();
+        if (activeFrameGraph) {
+            activeFrameGraph->setParent(thisRenderCapture);
+        }
+        this3DView->setActiveFrameGraph(thisRenderCapture);
     }
 
-    thisPendingCaptureReply = thisRenderCapture->requestCapture();
+    const QSize captureSize = thisViewContainer ? thisViewContainer->size() : size();
+    thisPendingCaptureReply = captureSize.isValid()
+                              ? thisRenderCapture->requestCapture(QRect(QPoint(0, 0), captureSize))
+                              : thisRenderCapture->requestCapture();
     if (!thisPendingCaptureReply) {
         restoreSnapshotOverlayStates();
         emit snapshotCaptureFailed(tr("Could not start 3D snapshot capture"));
