@@ -26,6 +26,7 @@
 #include <QPainter>
 #include <QQuaternion>
 #include <QResizeEvent>
+#include <QScreen>
 #include <QTimer>
 #include <QUiLoader>
 #include <QVector4D>
@@ -53,6 +54,8 @@
 #include <Qt3DRender/QMesh>
 #include <Qt3DRender/QPaintedTextureImage>
 #include <Qt3DRender/QPointLight>
+#include <Qt3DRender/QRenderCapture>
+#include <Qt3DRender/QRenderCaptureReply>
 #include <Qt3DRender/QTexture>
 #include <Qt3DRender/QTextureImage>
 #include <QUrl>
@@ -660,9 +663,13 @@ ca3DWidget::ca3DWidget(QWidget *parent)
 #endif
     , thisConfigValid(true)
     , thisDesignerMode(false)
+    , thisForce3DPreview(false)
+    , thisSnapshotCapturePending(false)
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     , this3DView(Q_NULLPTR)
     , thisRootEntity(Q_NULLPTR)
+    , thisRenderCapture(Q_NULLPTR)
+    , thisPendingCaptureReply(Q_NULLPTR)
 #endif
 {
     setMinimumSize(120, 80);
@@ -808,6 +815,141 @@ QStringList ca3DWidget::objectBindingChannels() const
         }
     }
     return channels;
+}
+
+void ca3DWidget::setForce3DPreview(bool enabled)
+{
+    thisForce3DPreview = enabled;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    if (enabled) {
+        thisDesignerMode = false;
+        thisFallbackMode = false;
+        maybeInitialize3DView();
+    }
+#else
+    Q_UNUSED(enabled);
+#endif
+}
+
+QPixmap ca3DWidget::grab3DSnapshot(bool includeOverlays)
+{
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    QMap<QString, bool> overlayStates;
+    if (!includeOverlays) {
+        for (auto it = this3DOverlayEntities.begin(); it != this3DOverlayEntities.end(); ++it) {
+            if (it.value()) {
+                overlayStates.insert(it.key(), it.value()->isEnabled());
+                it.value()->setEnabled(false);
+            }
+        }
+    }
+
+    qApp->processEvents();
+    QPixmap pixmap;
+    if (pixmap.isNull() && this3DView && this3DView->screen()) {
+        pixmap = this3DView->screen()->grabWindow(this3DView->winId());
+    }
+    if (pixmap.isNull()) {
+        pixmap = thisViewContainer ? thisViewContainer->grab() : grab();
+    }
+
+    for (auto it = overlayStates.begin(); it != overlayStates.end(); ++it) {
+        Qt3DCore::QEntity *entity = this3DOverlayEntities.value(it.key(), Q_NULLPTR);
+        if (entity) {
+            entity->setEnabled(it.value());
+        }
+    }
+    if (!includeOverlays) {
+        apply3DOverlayVisibility(thisCameraPreset);
+    }
+    return pixmap;
+#else
+    Q_UNUSED(includeOverlays);
+    return grab();
+#endif
+}
+
+bool ca3DWidget::capture3DSnapshot(bool includeOverlays)
+{
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    if (!this3DView || !this3DView->defaultFrameGraph()) {
+        emit snapshotCaptureFailed(tr("3D preview is not available"));
+        return false;
+    }
+    if (thisSnapshotCapturePending) {
+        emit snapshotCaptureFailed(tr("A 3D snapshot capture is already running"));
+        return false;
+    }
+
+    thisSnapshotOverlayStates.clear();
+    if (!includeOverlays) {
+        for (auto it = this3DOverlayEntities.begin(); it != this3DOverlayEntities.end(); ++it) {
+            if (it.value()) {
+                thisSnapshotOverlayStates.insert(it.key(), it.value()->isEnabled());
+                it.value()->setEnabled(false);
+            }
+        }
+    }
+
+    if (!thisRenderCapture) {
+        thisRenderCapture = new Qt3DRender::QRenderCapture(this3DView->defaultFrameGraph());
+    }
+
+    thisPendingCaptureReply = thisRenderCapture->requestCapture();
+    if (!thisPendingCaptureReply) {
+        restoreSnapshotOverlayStates();
+        emit snapshotCaptureFailed(tr("Could not start 3D snapshot capture"));
+        return false;
+    }
+
+    thisSnapshotCapturePending = true;
+    connect(thisPendingCaptureReply, SIGNAL(completed()), this, SLOT(handleSnapshotCaptureCompleted()));
+    QTimer::singleShot(3000, this, SLOT(handleSnapshotCaptureTimeout()));
+    return true;
+#else
+    Q_UNUSED(includeOverlays);
+    emit snapshotCaptured(grab());
+    return true;
+#endif
+}
+
+void ca3DWidget::handleSnapshotCaptureCompleted()
+{
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    if (!thisSnapshotCapturePending || !thisPendingCaptureReply) {
+        return;
+    }
+
+    Qt3DRender::QRenderCaptureReply *reply = thisPendingCaptureReply;
+    thisPendingCaptureReply = Q_NULLPTR;
+    thisSnapshotCapturePending = false;
+    const QImage image = reply->image();
+    reply->deleteLater();
+    restoreSnapshotOverlayStates();
+
+    if (image.isNull()) {
+        emit snapshotCaptureFailed(tr("3D snapshot capture returned an empty image"));
+        return;
+    }
+    emit snapshotCaptured(QPixmap::fromImage(image));
+#endif
+}
+
+void ca3DWidget::handleSnapshotCaptureTimeout()
+{
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    if (!thisSnapshotCapturePending) {
+        return;
+    }
+
+    if (thisPendingCaptureReply) {
+        thisPendingCaptureReply->deleteLater();
+        thisPendingCaptureReply = Q_NULLPTR;
+    }
+    thisSnapshotCapturePending = false;
+    restoreSnapshotOverlayStates();
+    emit snapshotCaptureFailed(tr("3D snapshot capture timed out"));
+#endif
 }
 
 void ca3DWidget::setCameraPreset(int preset)
@@ -1494,6 +1636,9 @@ void ca3DWidget::applyFallbackPreset(int preset)
 
 bool ca3DWidget::isDesignerMode() const
 {
+    if (thisForce3DPreview) {
+        return false;
+    }
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0) && !defined(MOBILE)
     // Qt Designer preview creates a normal top-level widget. Only the editable
     // form surface has a QDesignerFormWindowInterface and must avoid native
@@ -1520,6 +1665,20 @@ void ca3DWidget::clearScene()
 }
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+void ca3DWidget::restoreSnapshotOverlayStates()
+{
+    for (auto it = thisSnapshotOverlayStates.begin(); it != thisSnapshotOverlayStates.end(); ++it) {
+        Qt3DCore::QEntity *entity = this3DOverlayEntities.value(it.key(), Q_NULLPTR);
+        if (entity) {
+            entity->setEnabled(it.value());
+        }
+    }
+    if (!thisSnapshotOverlayStates.isEmpty()) {
+        apply3DOverlayVisibility(thisCameraPreset);
+    }
+    thisSnapshotOverlayStates.clear();
+}
+
 void ca3DWidget::maybeInitialize3DView()
 {
     thisDesignerMode = isDesignerMode();

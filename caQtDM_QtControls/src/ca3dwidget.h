@@ -31,6 +31,11 @@ class QTransform;
 namespace Qt3DExtras {
 class Qt3DWindow;
 }
+
+namespace Qt3DRender {
+class QRenderCapture;
+class QRenderCaptureReply;
+}
 #endif
 
 class QTCON_EXPORT ca3DWidget : public QWidget
@@ -58,6 +63,9 @@ public:
     QString overlayMacro(QWidget *rootWidget) const;
     QString overlayIncludePath(QWidget *rootWidget) const;
     QStringList objectBindingChannels() const;
+    void setForce3DPreview(bool enabled);
+    QPixmap grab3DSnapshot(bool includeOverlays = false);
+    bool capture3DSnapshot(bool includeOverlays = false);
 
 public slots:
     void setCameraPreset(int preset);
@@ -80,6 +88,12 @@ public slots:
 
 signals:
     void overlayWidgetsRebuilt();
+    void snapshotCaptured(const QPixmap &pixmap);
+    void snapshotCaptureFailed(const QString &error);
+
+private slots:
+    void handleSnapshotCaptureCompleted();
+    void handleSnapshotCaptureTimeout();
 
 private:
     void updatePlaceholderText();
@@ -104,6 +118,7 @@ protected:
     void apply3DOverlayVisibility(int preset);
     void applyCameraPresetConfig(const ca3DCameraPresetConfig &preset);
     void applyObjectTransform(const QString &objectId);
+    void restoreSnapshotOverlayStates();
 #endif
 
     QLabel *thisStatusLabel;
@@ -121,6 +136,8 @@ protected:
     bool thisFallbackMode;
     bool thisConfigValid;
     bool thisDesignerMode;
+    bool thisForce3DPreview;
+    bool thisSnapshotCapturePending;
     QMap<QString, QVector3D> thisDynamicTranslations;
     QMap<QString, QVector3D> thisDynamicRotations;
 
@@ -133,6 +150,9 @@ protected:
     QMap<QString, QObject*> this3DOverlayEventFiltersById;
     QList<ca3DOverlayWidgetManager*> this3DOverlayManagers;
     QList<QObject*> this3DOverlayEventFilters;
+    QMap<QString, bool> thisSnapshotOverlayStates;
+    Qt3DRender::QRenderCapture *thisRenderCapture;
+    Qt3DRender::QRenderCaptureReply *thisPendingCaptureReply;
 #endif
 };
 

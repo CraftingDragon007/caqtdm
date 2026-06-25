@@ -10,6 +10,7 @@
 
 #include <QComboBox>
 #include <QDialogButtonBox>
+#include <QFileDialog>
 #include <QHeaderView>
 #include <QHBoxLayout>
 #include <QJsonArray>
@@ -23,6 +24,8 @@
 #include <QTableWidgetItem>
 #include <QTabWidget>
 #include <QVBoxLayout>
+#include <QtDesigner/QDesignerFormWindowCursorInterface>
+#include <QtDesigner/QDesignerFormWindowInterface>
 
 namespace
 {
@@ -44,6 +47,10 @@ QJsonArray vectorArray(const QString &x, const QString &y, const QString &z)
 ca3DConfigDialog::ca3DConfigDialog(ca3DWidget *widget, QWidget *parent)
     : QDialog(parent ? parent : widget)
     , widget3D(widget)
+    , previewWidget(Q_NULLPTR)
+    , previewPresetCombo(Q_NULLPTR)
+    , captureSnapshotButton(Q_NULLPTR)
+    , pendingSnapshotPreset(0)
     , tabs(Q_NULLPTR)
     , objectsTable(Q_NULLPTR)
     , bindingsTable(Q_NULLPTR)
@@ -109,6 +116,28 @@ void ca3DConfigDialog::buildUi()
     connect(removeBindingButton, SIGNAL(clicked()), this, SLOT(removeBindingRow()));
     connect(editPvButton, SIGNAL(clicked()), this, SLOT(editSelectedBindingPv()));
 
+    QWidget *previewPage = new QWidget(tabs);
+    QVBoxLayout *previewLayout = new QVBoxLayout(previewPage);
+    QHBoxLayout *previewButtons = new QHBoxLayout();
+    previewPresetCombo = new QComboBox(previewPage);
+    QPushButton *refreshPreviewButton = new QPushButton(tr("Refresh Preview"), previewPage);
+    captureSnapshotButton = new QPushButton(tr("Capture Snapshot..."), previewPage);
+    previewButtons->addWidget(new QLabel(tr("Camera preset:"), previewPage));
+    previewButtons->addWidget(previewPresetCombo);
+    previewButtons->addWidget(refreshPreviewButton);
+    previewButtons->addWidget(captureSnapshotButton);
+    previewButtons->addStretch();
+    previewWidget = new ca3DWidget(previewPage);
+    previewWidget->setMinimumSize(640, 360);
+    previewWidget->setForce3DPreview(true);
+    previewLayout->addLayout(previewButtons);
+    previewLayout->addWidget(previewWidget, 1);
+    tabs->addTab(previewPage, tr("Preview"));
+    connect(refreshPreviewButton, SIGNAL(clicked()), this, SLOT(refreshPreview()));
+    connect(captureSnapshotButton, SIGNAL(clicked()), this, SLOT(captureSnapshot()));
+    connect(previewWidget, SIGNAL(snapshotCaptured(QPixmap)), this, SLOT(finishSnapshotCapture(QPixmap)));
+    connect(previewWidget, SIGNAL(snapshotCaptureFailed(QString)), this, SLOT(failSnapshotCapture(QString)));
+
     QWidget *rawPage = new QWidget(tabs);
     QVBoxLayout *rawLayout = new QVBoxLayout(rawPage);
     rawJsonEdit = new QPlainTextEdit(rawPage);
@@ -136,6 +165,8 @@ void ca3DConfigDialog::loadFromWidget()
     const QString json = widget3D ? widget3D->getSceneConfig() : QString();
     rawJsonEdit->setPlainText(json);
     populateTablesFromJson(json);
+    populatePresetSelector(json);
+    refreshPreview();
 }
 
 void ca3DConfigDialog::populateTablesFromJson(const QString &json)
@@ -186,6 +217,38 @@ void ca3DConfigDialog::populateTablesFromJson(const QString &json)
             setTableText(bindingsTable, bindingRow, 7, binding.hasMaximum ? numberString(binding.maximum) : QString());
         }
     }
+}
+
+void ca3DConfigDialog::populatePresetSelector(const QString &json)
+{
+    if (!previewPresetCombo) {
+        return;
+    }
+
+    const QVariant selected = previewPresetCombo->currentData();
+    previewPresetCombo->clear();
+    ca3DSceneConfig config;
+    QStringList errors;
+    if (!ca3DConfigParser::parse(json, &config, &errors) || config.cameraPresets.isEmpty()) {
+        previewPresetCombo->addItem(tr("No preset"), 0);
+        return;
+    }
+
+    for (const ca3DCameraPresetConfig &preset : config.cameraPresets) {
+        const QString label = preset.name.isEmpty()
+                              ? QString::number(preset.id)
+                              : QStringLiteral("%1 - %2").arg(preset.id).arg(preset.name);
+        previewPresetCombo->addItem(label, preset.id);
+    }
+    const int index = previewPresetCombo->findData(selected);
+    if (index >= 0) {
+        previewPresetCombo->setCurrentIndex(index);
+    }
+}
+
+QString ca3DConfigDialog::currentEditorJson() const
+{
+    return tabs->currentWidget() == rawJsonEdit->parentWidget() ? rawJsonEdit->toPlainText() : jsonFromTables();
 }
 
 QString ca3DConfigDialog::jsonFromTables() const
@@ -289,12 +352,114 @@ void ca3DConfigDialog::editSelectedBindingPv()
     }
 }
 
+void ca3DConfigDialog::refreshPreview()
+{
+    if (!previewWidget) {
+        return;
+    }
+
+    const QString json = currentEditorJson();
+    QStringList errors;
+    if (!validateJson(json, &errors)) {
+        showErrors(errors);
+        return;
+    }
+
+    previewWidget->setForce3DPreview(true);
+    previewWidget->setSceneConfig(json);
+    populatePresetSelector(json);
+    const int preset = previewPresetCombo ? previewPresetCombo->currentData().toInt() : 0;
+    if (preset > 0) {
+        previewWidget->setCameraPreset(preset);
+    }
+    showErrors(QStringList());
+}
+
+void ca3DConfigDialog::captureSnapshot()
+{
+    refreshPreview();
+    const int preset = previewPresetCombo ? previewPresetCombo->currentData().toInt() : 0;
+    const QString defaultName = preset > 0
+                                ? QStringLiteral("3d_preset_%1.png").arg(preset)
+                                : QStringLiteral("3d_snapshot.png");
+    const QString fileName = QFileDialog::getSaveFileName(this,
+                                                          tr("Save 3D Snapshot"),
+                                                          defaultName,
+                                                          tr("PNG Images (*.png)"));
+    if (fileName.isEmpty()) {
+        return;
+    }
+
+    pendingSnapshotFileName = fileName;
+    pendingSnapshotPreset = preset;
+    if (captureSnapshotButton) {
+        captureSnapshotButton->setEnabled(false);
+    }
+    showErrors(QStringList() << tr("Capturing 3D background snapshot without overlays..."));
+    if (!previewWidget || !previewWidget->capture3DSnapshot(false)) {
+        if (captureSnapshotButton) {
+            captureSnapshotButton->setEnabled(true);
+        }
+        pendingSnapshotFileName.clear();
+        pendingSnapshotPreset = 0;
+    }
+}
+
+void ca3DConfigDialog::finishSnapshotCapture(const QPixmap &snapshot)
+{
+    const QString fileName = pendingSnapshotFileName;
+    const int preset = pendingSnapshotPreset;
+    pendingSnapshotFileName.clear();
+    pendingSnapshotPreset = 0;
+    if (captureSnapshotButton) {
+        captureSnapshotButton->setEnabled(true);
+    }
+
+    if (snapshot.isNull() || !snapshot.save(fileName, "PNG")) {
+        showErrors(QStringList() << tr("Could not save snapshot '%1'").arg(fileName));
+        return;
+    }
+
+    QJsonParseError parseError;
+    QJsonDocument document = QJsonDocument::fromJson(currentEditorJson().toUtf8(), &parseError);
+    if (parseError.error == QJsonParseError::NoError && document.isObject() && preset > 0) {
+        QJsonObject root = document.object();
+        QJsonArray presets = root.value(QStringLiteral("cameraPresets")).toArray();
+        for (int i = 0; i < presets.count(); ++i) {
+            QJsonObject presetObject = presets.at(i).toObject();
+            if (presetObject.value(QStringLiteral("id")).toInt() == preset) {
+                presetObject.insert(QStringLiteral("snapshot"), fileName);
+                presets.replace(i, presetObject);
+                break;
+            }
+        }
+        root.insert(QStringLiteral("cameraPresets"), presets);
+        const QString json = QString::fromUtf8(QJsonDocument(root).toJson(QJsonDocument::Indented));
+        rawJsonEdit->setPlainText(json);
+        populateTablesFromJson(json);
+        populatePresetSelector(json);
+    }
+
+    showErrors(QStringList() << tr("Saved 3D background snapshot without overlays: %1").arg(fileName));
+}
+
+void ca3DConfigDialog::failSnapshotCapture(const QString &error)
+{
+    pendingSnapshotFileName.clear();
+    pendingSnapshotPreset = 0;
+    if (captureSnapshotButton) {
+        captureSnapshotButton->setEnabled(true);
+    }
+    showErrors(QStringList() << error);
+}
+
 void ca3DConfigDialog::validateRawJson()
 {
     QStringList errors;
     if (validateJson(rawJsonEdit->toPlainText(), &errors)) {
         showErrors(QStringList() << tr("JSON is valid"));
         populateTablesFromJson(rawJsonEdit->toPlainText());
+        populatePresetSelector(rawJsonEdit->toPlainText());
     } else {
         showErrors(errors);
     }
@@ -302,17 +467,22 @@ void ca3DConfigDialog::validateRawJson()
 
 void ca3DConfigDialog::applyChanges()
 {
-    const QString json = tabs->currentWidget() == rawJsonEdit->parentWidget() ? rawJsonEdit->toPlainText() : jsonFromTables();
+    const QString json = currentEditorJson();
     QStringList errors;
     if (!validateJson(json, &errors)) {
         showErrors(errors);
         return;
     }
     if (widget3D) {
-        widget3D->setSceneConfig(json);
+        if (QDesignerFormWindowInterface *formWindow = QDesignerFormWindowInterface::findFormWindow(widget3D)) {
+            formWindow->cursor()->setProperty("sceneConfig", json);
+        } else {
+            widget3D->setSceneConfig(json);
+        }
     }
     rawJsonEdit->setPlainText(json);
     populateTablesFromJson(json);
+    populatePresetSelector(json);
 }
 
 void ca3DConfigDialog::accept()

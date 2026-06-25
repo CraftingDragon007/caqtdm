@@ -10,10 +10,14 @@
 
 class ca3DWidget;
 class QDialogButtonBox;
+class QComboBox;
 class QLabel;
 class QPlainTextEdit;
+class QPixmap;
+class QPushButton;
 class QTableWidget;
 class QTabWidget;
+class QWidget;
 
 class QTCON_EXPORT ca3DConfigDialog : public QDialog
 {
@@ -28,6 +32,10 @@ private slots:
     void addBindingRow();
     void removeBindingRow();
     void editSelectedBindingPv();
+    void refreshPreview();
+    void captureSnapshot();
+    void finishSnapshotCapture(const QPixmap &snapshot);
+    void failSnapshotCapture(const QString &error);
     void validateRawJson();
     void applyChanges();
     void accept() override;
@@ -36,6 +44,8 @@ private:
     void buildUi();
     void loadFromWidget();
     void populateTablesFromJson(const QString &json);
+    void populatePresetSelector(const QString &json);
+    QString currentEditorJson() const;
     QString jsonFromTables() const;
     void updateRawJsonFromTables();
     bool validateJson(const QString &json, QStringList *errors) const;
@@ -46,6 +56,11 @@ private:
     void showErrors(const QStringList &errors);
 
     ca3DWidget *widget3D;
+    ca3DWidget *previewWidget;
+    QComboBox *previewPresetCombo;
+    QPushButton *captureSnapshotButton;
+    QString pendingSnapshotFileName;
+    int pendingSnapshotPreset;
     QTabWidget *tabs;
     QTableWidget *objectsTable;
     QTableWidget *bindingsTable;
