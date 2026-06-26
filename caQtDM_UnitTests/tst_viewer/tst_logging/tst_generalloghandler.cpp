@@ -34,6 +34,7 @@
 #endif
 
 #include <QTest>
+#include <QThread>
 
 #define ENV_LOG_HANDLERS "CAQTDM_LOGGING_HANDLERS"
 
@@ -80,7 +81,12 @@ void TestGeneralLogHandler::cleanup()
 
     QMutexLocker locker(&GeneralLogHandler::s_mutex);
     for (auto existingLogHandler : GeneralLogHandler::s_logHandlers) {
-        delete existingLogHandler;
+        QObject *object = dynamic_cast<QObject *>(existingLogHandler);
+        if (object && object->thread() != QThread::currentThread() && object->thread() && object->thread()->isRunning()) {
+            QMetaObject::invokeMethod(object, [object]() { delete object; }, Qt::BlockingQueuedConnection);
+        } else {
+            delete existingLogHandler;
+        }
     }
     GeneralLogHandler::s_logHandlers.clear();
 
