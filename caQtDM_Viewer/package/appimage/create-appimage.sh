@@ -294,6 +294,71 @@ copy_runtime_library() {
   install -Dm755 "$source" "$APPDIR/usr/lib/$name"
 }
 
+copy_mesa_egl_vendor_config() {
+  local vendor_dir="$APPDIR/usr/share/glvnd/egl_vendor.d"
+
+  if ! find_runtime_library libEGL_mesa.so.0 >/dev/null; then
+    return 0
+  fi
+
+  msg "Bundling Mesa EGL vendor configuration"
+  install -dm755 "$vendor_dir"
+  cat > "$vendor_dir/50_mesa.json" <<'EOF'
+{
+    "file_format_version" : "1.0.0",
+    "ICD" : {
+        "library_path" : "libEGL_mesa.so.0"
+    }
+}
+EOF
+}
+
+copy_mesa_dri_drivers() {
+  local triplet="$(host_triplet)"
+  local source_dir
+  local driver
+  local dest_dir="$APPDIR/usr/lib/dri"
+  local copied=0
+
+  for source_dir in \
+    "/usr/lib/dri" \
+    "/usr/lib64/dri" \
+    ${triplet:+"/usr/lib/$triplet/dri"} \
+    ${triplet:+"/lib/$triplet/dri"}; do
+    [ -d "$source_dir" ] || continue
+
+    while IFS= read -r -d '' driver; do
+      install -dm755 "$dest_dir"
+      cp -a "$driver" "$dest_dir/"
+      copied=1
+    done < <(find "$source_dir" -maxdepth 1 \( -type f -o -type l \) -name '*_dri.so' -print0)
+  done
+
+  if [ "$copied" -eq 1 ]; then
+    msg "Bundled Mesa DRI drivers"
+    return 0
+  fi
+
+  return 1
+}
+
+copy_mesa_egl_runtime() {
+  if ! find_runtime_library libEGL_mesa.so.0 >/dev/null; then
+    return 0
+  fi
+
+  if ! copy_mesa_dri_drivers; then
+    msg "Mesa EGL vendor library found, but no Mesa DRI drivers found; not forcing bundled Mesa EGL"
+    return 0
+  fi
+
+  copy_runtime_library libEGL_mesa.so.0
+  copy_runtime_library libgbm.so.1
+  copy_runtime_library libglapi.so.0
+  copy_runtime_library libdrm.so.2
+  copy_mesa_egl_vendor_config
+}
+
 copy_extra_runtime_libraries() {
   local library
 
@@ -312,6 +377,7 @@ copy_extra_runtime_libraries() {
     libEGL.so.1; do
     copy_runtime_library "$library"
   done
+  copy_mesa_egl_runtime
 
   # Minimal Rocky/RHEL installations do not necessarily include these runtime
   # pieces even though they are common on developer workstations.
@@ -929,6 +995,12 @@ CAQTDM_PYTHON_DIR="\$(find "\$APPDIR/usr/lib" -maxdepth 1 -type d -name 'python3
 export LD_LIBRARY_PATH="\$CAQTDM_LIB_DIR:\$CAQTDM_LIB_DIR/controlsystems:\$CAQTDM_LIB_DIR/designer:\$APPDIR/usr/lib\${LD_LIBRARY_PATH:+:\$LD_LIBRARY_PATH}"
 export QT_PLUGIN_PATH="\$APPDIR/usr/plugins:\$APPDIR/usr/lib/$target_qt_dir/plugins:\$CAQTDM_LIB_DIR\${QT_PLUGIN_PATH:+:\$QT_PLUGIN_PATH}"
 export QT_QPA_PLATFORM_PLUGIN_PATH="\$APPDIR/usr/plugins/platforms"
+if [ -d "\$APPDIR/usr/share/glvnd/egl_vendor.d" ]; then
+  export __EGL_VENDOR_LIBRARY_DIRS="\$APPDIR/usr/share/glvnd/egl_vendor.d\${__EGL_VENDOR_LIBRARY_DIRS:+:\$__EGL_VENDOR_LIBRARY_DIRS}"
+fi
+if [ -d "\$APPDIR/usr/lib/dri" ]; then
+  export LIBGL_DRIVERS_PATH="\$APPDIR/usr/lib/dri\${LIBGL_DRIVERS_PATH:+:\$LIBGL_DRIVERS_PATH}"
+fi
 if [ -n "\$CAQTDM_PYTHON_DIR" ]; then
   export PYTHONHOME="\$APPDIR/usr"
   export PYTHONPATH="\$CAQTDM_PYTHON_DIR:\$CAQTDM_PYTHON_DIR/lib-dynload\${PYTHONPATH:+:\$PYTHONPATH}"

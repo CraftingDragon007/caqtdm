@@ -89,6 +89,7 @@ RUN dnf -y --setopt=install_weak_deps=False install \
       libxcb-devel \
       libxkbcommon-devel \
       libxkbcommon-x11-devel \
+      mesa-dri-drivers \
       mesa-libEGL-devel \
       mesa-libGL-devel \
       mesa-libGLU-devel \
