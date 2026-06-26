@@ -113,6 +113,7 @@ protected:
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     void maybeInitialize3DView();
     void initialize3DView();
+    void update3DViewGeometry();
     bool shouldUse2DFallback() const;
     void rebuild3DOverlays();
     void clear3DOverlays();
@@ -133,7 +134,6 @@ protected:
     ca3DSceneConfig thisConfig;
     QStringList thisConfigErrors;
     int thisCameraPreset;
-    QSize thisStable3DSize;
     bool thisFallbackMode;
     bool thisConfigValid;
     bool thisDesignerMode;

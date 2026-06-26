@@ -656,7 +656,6 @@ ca3DWidget::ca3DWidget(QWidget *parent)
     , thisFallbackView(new QWidget(this))
     , thisFallbackSnapshotLabel(new QLabel(thisFallbackView))
     , thisCameraPreset(0)
-    , thisStable3DSize()
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     , thisFallbackMode(true)
 #else
@@ -706,9 +705,6 @@ ca3DWidget::ca3DWidget(QWidget *parent)
 
 QSize ca3DWidget::sizeHint() const
 {
-    if (thisStable3DSize.isValid()) {
-        return thisStable3DSize;
-    }
     return QSize(640, 480);
 }
 
@@ -1254,6 +1250,9 @@ bool ca3DWidget::eventFilter(QObject *watched, QEvent *event)
 void ca3DWidget::resizeEvent(QResizeEvent *event)
 {
     QWidget::resizeEvent(event);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    update3DViewGeometry();
+#endif
     if (thisFallbackSnapshotLabel && thisFallbackView) {
         thisFallbackSnapshotLabel->setGeometry(thisFallbackView->rect());
     }
@@ -1744,24 +1743,39 @@ void ca3DWidget::maybeInitialize3DView()
 
 void ca3DWidget::initialize3DView()
 {
-    if (!thisStable3DSize.isValid()) {
-        thisStable3DSize = size().expandedTo(QSize(120, 80));
-        setMinimumSize(thisStable3DSize);
-    }
-
     thisStatusLabel->hide();
     thisFallbackView->hide();
 
     this3DView = new Qt3DExtras::Qt3DWindow();
     this3DView->defaultFrameGraph()->setClearColor(QColor(30, 34, 40));
     thisViewContainer = QWidget::createWindowContainer(this3DView, this);
-    thisViewContainer->setMinimumSize(thisStable3DSize);
+    thisViewContainer->setMinimumSize(QSize(120, 80));
     thisViewContainer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     thisViewContainer->setFocusPolicy(Qt::StrongFocus);
     if (QVBoxLayout *boxLayout = qobject_cast<QVBoxLayout *>(layout())) {
         boxLayout->addWidget(thisViewContainer, 1);
     } else {
         layout()->addWidget(thisViewContainer);
+    }
+    update3DViewGeometry();
+    QTimer::singleShot(0, this, &ca3DWidget::update3DViewGeometry);
+}
+
+void ca3DWidget::update3DViewGeometry()
+{
+    if (!this3DView || !thisViewContainer) {
+        return;
+    }
+
+    const QSize viewSize = thisViewContainer->size().expandedTo(QSize(120, 80));
+    if (this3DView->size() != viewSize) {
+        this3DView->resize(viewSize);
+    }
+
+    Qt3DRender::QCamera *camera = this3DView->camera();
+    if (camera && viewSize.height() > 0) {
+        camera->lens()->setAspectRatio(static_cast<float>(viewSize.width()) / static_cast<float>(viewSize.height()));
+        apply3DOverlayVisibility(thisCameraPreset);
     }
 }
 
@@ -1770,6 +1784,10 @@ bool ca3DWidget::shouldUse2DFallback() const
     if (qEnvironmentVariableIntValue("CAQTDM_3D_FORCE_FALLBACK") > 0) {
         qCWarning(ca3DWidgetLog) << "shouldUse2DFallback forced by CAQTDM_3D_FORCE_FALLBACK";
         return true;
+    }
+
+    if (thisForce3DPreview) {
+        return false;
     }
 
     QOpenGLContext context;
@@ -2009,10 +2027,14 @@ void ca3DWidget::applyCameraPresetConfig(const ca3DCameraPresetConfig &preset)
                             -qCos(yawRadians) * cosPitch);
 
     Qt3DRender::QCamera *camera = this3DView->camera();
+    const QSize viewSize = thisViewContainer ? thisViewContainer->size().expandedTo(QSize(120, 80)) : QSize(640, 480);
+    const float aspectRatio = viewSize.height() > 0
+                              ? static_cast<float>(viewSize.width()) / static_cast<float>(viewSize.height())
+                              : 16.0f / 9.0f;
     camera->setPosition(preset.position);
     camera->setViewCenter(preset.hasViewCenter ? preset.viewCenter : preset.position + forward * 100.0f);
     camera->setUpVector(normalizedOrFallback(preset.upVector, QVector3D(0.0f, 1.0f, 0.0f)));
-    camera->lens()->setPerspectiveProjection(static_cast<float>(preset.fov), 16.0f / 9.0f, 0.1f, 100000.0f);
+    camera->lens()->setPerspectiveProjection(static_cast<float>(preset.fov), aspectRatio, 0.1f, 100000.0f);
     qCDebug(ca3DWidgetLog) << "applyCameraPresetConfig" << preset.id
                             << "hasViewCenter" << preset.hasViewCenter
                             << "fov" << preset.fov
