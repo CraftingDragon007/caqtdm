@@ -39,6 +39,10 @@ Q_LOGGING_CATEGORY(fileLogHandlerLog, "caqtdm.logging.file")
 
 FileLogHandler::FileLogHandler(QObject *parent)
     : QObject(parent)
+    , m_logBufferTimer(Q_NULLPTR)
+    , m_logBufferTimeoutMs(DEFAULT_BUFFER_TIMEOUT_S * 1000)
+    , m_logBufferMaxSize(DEFAULT_BUFFER_SIZE)
+    , m_logFileMaxSizeB(DEFAULT_FILE_SIZE_B)
 {
     const QString localAppDataDirectory = QStandardPaths::writableLocation(
         QStandardPaths::AppLocalDataLocation);
@@ -83,9 +87,10 @@ FileLogHandler::~FileLogHandler()
     if (QThread::currentThread() != this->thread()) {
         QMetaObject::invokeMethod(
             this,
-            [=]() {
+            [this]() {
                 if (m_logBufferTimer) {
                     delete m_logBufferTimer;
+                    m_logBufferTimer = Q_NULLPTR;
                 }
             },
             Qt::BlockingQueuedConnection);

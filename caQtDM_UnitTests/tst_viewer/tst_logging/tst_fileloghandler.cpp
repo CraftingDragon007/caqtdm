@@ -28,6 +28,7 @@
 #include "fileloghandler.h"
 
 #include <QStandardPaths>
+#include <QTemporaryDir>
 #include <QTest>
 
 #define ENV_FILE_COUNT "CAQTDM_LOGGING_FILE_COUNT"
@@ -38,9 +39,18 @@
 // Note about logfile creation: These do NOT overwrite the regular caQtDM application logs.
 // Instead, since this is a separate executable, they are put into the AppLocalDataLocation for tst_logging.
 
+TestFileLogHandler::~TestFileLogHandler()
+{
+    delete m_dataHomeDir;
+}
+
 void TestFileLogHandler::initTestCase()
 {
     // code to be executed before the first test function
+
+    m_dataHomeDir = new QTemporaryDir(QDir::tempPath() + QSL("/caQtDM-UnitTests-Viewer-XXXXXX"));
+    QVERIFY(m_dataHomeDir->isValid());
+    qputenv("XDG_DATA_HOME", QFile::encodeName(m_dataHomeDir->path()));
 
     // Create log directory if necessary
     const QString logDirPath = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)

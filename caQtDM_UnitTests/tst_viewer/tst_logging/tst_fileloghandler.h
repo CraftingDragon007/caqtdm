@@ -28,11 +28,14 @@
 
 #include <QObject>
 
+class QTemporaryDir;
+
 class TestFileLogHandler : public QObject
 {
     Q_OBJECT
 public:
     TestFileLogHandler() = default;
+    ~TestFileLogHandler() override;
 
 private slots:
     void initTestCase();
@@ -45,6 +48,9 @@ private slots:
     void bufferTimeoutFlushes();
     void fileCreationAndTruncationWorks();
     void cleanupOldLogsWorks();
+
+private:
+    QTemporaryDir *m_dataHomeDir = nullptr;
 };
 
 #endif // TST_FILELOGHANDLER_H
