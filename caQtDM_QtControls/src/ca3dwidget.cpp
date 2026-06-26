@@ -1831,6 +1831,7 @@ void ca3DWidget::rebuild3DOverlays()
 
         ca3DOverlayWidgetManager *overlayManager = new ca3DOverlayWidgetManager(this);
         overlayManager->loadWidgetsFromUi(overlay.includeFileResolved);
+        markFallbackOverlayOwner(overlayManager, this);
         const QSize designSize = overlayManager->sourceDesignSize();
         if (designSize.isEmpty()) {
             overlayManager->deleteLater();

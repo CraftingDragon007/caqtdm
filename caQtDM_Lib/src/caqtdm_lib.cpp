@@ -10294,6 +10294,9 @@ void CaQtDM_Lib::grabSwipeGesture(Qt::GestureType fingerSwipeGestureTypeID)
 void CaQtDM_Lib::resizeEvent ( QResizeEvent * event )
 {
     double factX, factY;
+    const auto is3DOverlayWidget = [](QWidget *widget) -> bool {
+        return widget && widget->property("ca3DOverlayOwner").value<QObject *>();
+    };
 
     qCDebug(caQtDMLibLog) << "resize" << event->size();
     QMainWindow *main = this->findChild<QMainWindow *>();
@@ -10442,6 +10445,7 @@ void CaQtDM_Lib::resizeEvent ( QResizeEvent * event )
             // resize some minor stuff before leaving this routine
             QList<QWidget *> all = myWidget->findChildren<QWidget *>();
             foreach(QWidget* widget, all) {
+                if(is3DOverlayWidget(widget)) continue;
                 QString className(widget->metaObject()->className());
                 QVariant var=widget->property("GeometryList");
                 QVariantList list = var.toList();
@@ -10457,6 +10461,7 @@ void CaQtDM_Lib::resizeEvent ( QResizeEvent * event )
     // do all resize work ourselves
     QList<QWidget *> all = myWidget->findChildren<QWidget *>();
     foreach(QWidget* widget, all) {
+        if(is3DOverlayWidget(widget)) continue;
         QString className(widget->metaObject()->className());
 
         // give wmsignalpropagator the resize factors
