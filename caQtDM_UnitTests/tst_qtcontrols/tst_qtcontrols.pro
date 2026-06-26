@@ -9,6 +9,11 @@ SOURCES += tst_qtcontrols.cpp \
 HEADERS += tst_pvdialog.h \
     fakeformwindow.h
 
+greaterThan(QT_VER_MAJ, 5) {
+    SOURCES += tst_ca3dconfig.cpp
+    HEADERS += tst_ca3dconfig.h
+}
+
 # --- Tested classes below ---
 
 HEADERS += ../../caQtDM_QtControls/src/pvdialog.h

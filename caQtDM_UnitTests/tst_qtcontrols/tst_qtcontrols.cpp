@@ -26,6 +26,9 @@
 #include <QCoreApplication>
 #include <QTest>
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#include "tst_ca3dconfig.h"
+#endif
 #include "tst_pvdialog.h"
 
 int main(int argc, char **argv)
@@ -42,6 +45,20 @@ int main(int argc, char **argv)
         TestPVDialog tc;
         status |= QTest::qExec(&tc, argc, argv);
     }
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    {
+        TestCa3DConfig tc;
+        status |= QTest::qExec(&tc, argc, argv);
+    }
+    {
+        TestCa3DWidget tc;
+        status |= QTest::qExec(&tc, argc, argv);
+    }
+    {
+        TestCa3DOverlayWidgetManager tc;
+        status |= QTest::qExec(&tc, argc, argv);
+    }
+#endif
 
     return status;
 }
