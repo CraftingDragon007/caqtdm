@@ -23,6 +23,22 @@
 #include <QTemporaryDir>
 #include <QTest>
 
+void TestCa3DConfigDialog::initTestCase()
+{
+    hadForceFallbackValue = qEnvironmentVariableIsSet("CAQTDM_3D_FORCE_FALLBACK");
+    previousForceFallbackValue = qgetenv("CAQTDM_3D_FORCE_FALLBACK");
+    qputenv("CAQTDM_3D_FORCE_FALLBACK", QByteArrayLiteral("1"));
+}
+
+void TestCa3DConfigDialog::cleanupTestCase()
+{
+    if (hadForceFallbackValue) {
+        qputenv("CAQTDM_3D_FORCE_FALLBACK", previousForceFallbackValue);
+    } else {
+        qunsetenv("CAQTDM_3D_FORCE_FALLBACK");
+    }
+}
+
 void TestCa3DConfigDialog::appliesStructuredOverlayChanges()
 {
     QTemporaryDir tempDir;
