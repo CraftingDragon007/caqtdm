@@ -13,6 +13,8 @@ class TestCa3DConfigDialog : public QObject
 
 private slots:
     void appliesStructuredOverlayChanges();
+    void keepsNewRowsWhenValidatingRawJson();
+    void allowsApplyingWithMissingOverlayFile();
 };
 
 #endif

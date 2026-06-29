@@ -54,6 +54,7 @@ private:
     QString currentEditorJson() const;
     QString jsonFromTables() const;
     void updateRawJsonFromTables();
+    static bool validateJsonSyntax(const QString &json, QStringList *errors, QJsonObject *root = Q_NULLPTR);
     static bool validateJson(const QString &json, QStringList *errors);
     QString tableText(QTableWidget *table, int row, int column) const;
     void setTableText(QTableWidget *table, int row, int column, const QString &text);

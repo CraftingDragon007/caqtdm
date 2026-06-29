@@ -24,6 +24,7 @@
 #include <QListWidget>
 #include <QMap>
 #include <QMessageBox>
+#include <QJsonParseError>
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QRegularExpression>
@@ -323,15 +324,18 @@ void ca3DConfigDialog::loadFromWidget()
 void ca3DConfigDialog::populateTablesFromJson(const QString &json)
 {
     QScopedValueRollback<bool> updatingGuard(updatingUi, true);
-    ca3DSceneConfig config;
-    QStringList errors;
-    if (!ca3DConfigParser::parse(json, &config, &errors)) {
-        showErrors(errors);
+    QStringList syntaxErrors;
+    if (!validateJsonSyntax(json, &syntaxErrors)) {
+        showErrors(syntaxErrors);
         tabs->setCurrentWidget(rawJsonEdit->parentWidget());
         return;
     }
 
-    showErrors(QStringList());
+    ca3DSceneConfig config;
+    QStringList errors;
+    ca3DConfigParser::parse(json, &config, &errors);
+
+    showErrors(errors);
     objectsTable->setRowCount(0);
     bindingsTable->setRowCount(0);
     overlaysTable->setRowCount(0);
@@ -439,9 +443,16 @@ void ca3DConfigDialog::populatePresetSelector(const QString &json)
 
     const QVariant selected = previewPresetCombo->currentData();
     previewPresetCombo->clear();
+    QStringList syntaxErrors;
+    if (!validateJsonSyntax(json, &syntaxErrors)) {
+        previewPresetCombo->addItem(tr("No preset"), 0);
+        return;
+    }
+
     ca3DSceneConfig config;
     QStringList errors;
-    if (!ca3DConfigParser::parse(json, &config, &errors) || config.cameraPresets.isEmpty()) {
+    ca3DConfigParser::parse(json, &config, &errors);
+    if (config.cameraPresets.isEmpty()) {
         previewPresetCombo->addItem(tr("No preset"), 0);
         return;
     }
@@ -818,7 +829,7 @@ void ca3DConfigDialog::validateRawJson()
 {
     QStringList errors;
     showErrors(QStringList());
-    if (validateJson(rawJsonEdit->toPlainText(), &errors)) {
+    if (validateJsonSyntax(rawJsonEdit->toPlainText(), &errors)) {
         rawValidationLabel->setText(tr("JSON is valid"));
         rawValidationLabel->setToolTip(QString());
         populateTablesFromJson(rawJsonEdit->toPlainText());
@@ -834,10 +845,16 @@ void ca3DConfigDialog::applyChanges()
 {
     const QString json = currentEditorJson();
     QStringList errors;
-    if (!validateJson(json, &errors)) {
+    if (!validateJsonSyntax(json, &errors)) {
         showErrors(errors);
         return;
     }
+
+    ca3DSceneConfig config;
+    QStringList warnings;
+    ca3DConfigParser::parse(json, &config, &warnings);
+    showErrors(warnings);
+
     if (widget3D) {
         if (QDesignerFormWindowInterface *formWindow = QDesignerFormWindowInterface::findFormWindow(widget3D)) {
             formWindow->cursor()->setProperty("sceneConfig", json);
@@ -856,6 +873,9 @@ void ca3DConfigDialog::applyChanges()
 void ca3DConfigDialog::markChanged()
 {
     if (!updatingUi && buttonBox) {
+        if (sender() != rawJsonEdit) {
+            updateRawJsonFromTables();
+        }
         if (rawValidationLabel) {
             rawValidationLabel->clear();
             rawValidationLabel->setToolTip(QString());
@@ -865,16 +885,75 @@ void ca3DConfigDialog::markChanged()
     }
 }
 
+void ca3DConfigDialog::updateRawJsonFromTables()
+{
+    if (!rawJsonEdit) {
+        return;
+    }
+    QScopedValueRollback<bool> updatingGuard(updatingUi, true);
+    rawJsonEdit->setPlainText(jsonFromTables());
+}
+
 void ca3DConfigDialog::accept()
 {
     applyChanges();
-    if (errorLabel->text().isEmpty()) {
+    QStringList errors;
+    if (validateJsonSyntax(currentEditorJson(), &errors)) {
         QDialog::accept();
     }
 }
 
+bool ca3DConfigDialog::validateJsonSyntax(const QString &json, QStringList *errors, QJsonObject *root)
+{
+    if (errors) {
+        errors->clear();
+    }
+    if (root) {
+        *root = QJsonObject();
+    }
+
+    if (json.trimmed().isEmpty()) {
+        if (root) {
+            *root = QJsonObject();
+        }
+        return true;
+    }
+
+    QJsonParseError parseError;
+    const QJsonDocument document = QJsonDocument::fromJson(json.toUtf8(), &parseError);
+    if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
+        if (errors) {
+            const QByteArray utf8 = json.toUtf8();
+            int line = 1;
+            int column = 1;
+            const int boundedOffset = qBound(0, parseError.offset, utf8.size());
+            for (int i = 0; i < boundedOffset; ++i) {
+                if (utf8.at(i) == '\n') {
+                    ++line;
+                    column = 1;
+                } else {
+                    ++column;
+                }
+            }
+            errors->append(QStringLiteral("Invalid sceneConfig JSON at line %1, character %2: %3")
+                           .arg(line)
+                           .arg(column)
+                           .arg(parseError.errorString()));
+        }
+        return false;
+    }
+
+    if (root) {
+        *root = document.object();
+    }
+    return true;
+}
+
 bool ca3DConfigDialog::validateJson(const QString &json, QStringList *errors)
 {
+    if (!validateJsonSyntax(json, errors)) {
+        return false;
+    }
     ca3DSceneConfig config;
     return ca3DConfigParser::parse(json, &config, errors);
 }

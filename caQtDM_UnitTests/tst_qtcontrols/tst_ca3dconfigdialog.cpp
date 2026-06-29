@@ -155,3 +155,78 @@ void TestCa3DConfigDialog::appliesStructuredOverlayChanges()
     QCOMPARE(root.value(QStringLiteral("backgroundColor")).toString(), QStringLiteral("#112233"));
     QCOMPARE(root.value(QStringLiteral("cameraPresets")).toArray().count(), 1);
 }
+
+void TestCa3DConfigDialog::keepsNewRowsWhenValidatingRawJson()
+{
+    ca3DWidget widget;
+    widget.setSceneConfig(QString());
+    ca3DConfigDialog dialog(&widget);
+
+    QTableWidget *presetsTable = dialog.findChild<QTableWidget *>(QStringLiteral("presetsTable"));
+    QPlainTextEdit *rawEdit = dialog.findChild<QPlainTextEdit *>();
+    QVERIFY(presetsTable);
+    QVERIFY(rawEdit);
+    QCOMPARE(presetsTable->rowCount(), 0);
+
+    QVERIFY(QMetaObject::invokeMethod(&dialog, "addPresetRow", Qt::DirectConnection));
+    QCOMPARE(presetsTable->rowCount(), 1);
+    const QJsonObject root = QJsonDocument::fromJson(rawEdit->toPlainText().toUtf8()).object();
+    QCOMPARE(root.value(QStringLiteral("cameraPresets")).toArray().count(), 1);
+
+    QVERIFY(QMetaObject::invokeMethod(&dialog, "validateRawJson", Qt::DirectConnection));
+    QCOMPARE(presetsTable->rowCount(), 1);
+}
+
+void TestCa3DConfigDialog::allowsApplyingWithMissingOverlayFile()
+{
+    const QString json = QString::fromLatin1(R"json({
+        "objects": [],
+        "overlays": [{
+            "id": "missing_overlay",
+            "includeFile": "does_not_exist.ui",
+            "position": [0, 0, 0],
+            "rotation": [0, 0, 0],
+            "size": [1.5, 1.0]
+        }],
+        "cameraPresets": [{
+            "id": 1,
+            "position": [0, 0, 10]
+        }]
+    })json");
+
+    ca3DWidget widget;
+    ca3DConfigDialog dialog(&widget);
+    QPlainTextEdit *rawEdit = dialog.findChild<QPlainTextEdit *>();
+    QLabel *validationLabel = dialog.findChild<QLabel *>(QStringLiteral("rawValidationLabel"));
+    QLabel *errorLabel = dialog.findChild<QLabel *>(QStringLiteral("errorLabel"));
+    QDialogButtonBox *buttonBox = dialog.findChild<QDialogButtonBox *>();
+    QVERIFY(rawEdit);
+    QVERIFY(validationLabel);
+    QVERIFY(errorLabel);
+    QVERIFY(buttonBox);
+
+    rawEdit->setPlainText(json);
+    QVERIFY(QMetaObject::invokeMethod(&dialog, "validateRawJson", Qt::DirectConnection));
+    QCOMPARE(validationLabel->text(), QStringLiteral("JSON is valid"));
+    QVERIFY(errorLabel->text().contains(QStringLiteral("includeFile 'does_not_exist.ui' was not found")));
+
+    QPushButton *applyButton = buttonBox->button(QDialogButtonBox::Apply);
+    QVERIFY(applyButton);
+    QVERIFY(applyButton->isEnabled());
+    QVERIFY(QMetaObject::invokeMethod(&dialog, "applyChanges", Qt::DirectConnection));
+    QVERIFY(!applyButton->isEnabled());
+    ca3DSceneConfig config;
+    QStringList errors;
+    QVERIFY(!ca3DConfigParser::parse(widget.getSceneConfig(), &config, &errors));
+    QVERIFY(errors.contains(QStringLiteral("includeFile 'does_not_exist.ui' was not found in CAQTDM_DISPLAY_PATH")));
+    QCOMPARE(config.overlays.count(), 1);
+    QCOMPARE(config.overlays.first().id, QStringLiteral("missing_overlay"));
+    QCOMPARE(config.overlays.first().includeFile, QStringLiteral("does_not_exist.ui"));
+    QCOMPARE(config.overlays.first().position, QVector3D(0.0f, 0.0f, 0.0f));
+    QCOMPARE(config.overlays.first().rotation, QVector3D(0.0f, 0.0f, 0.0f));
+    QCOMPARE(config.overlays.first().size, QSizeF(1.5, 1.0));
+    QCOMPARE(config.cameraPresets.count(), 1);
+    QCOMPARE(config.cameraPresets.first().id, 1);
+    QCOMPARE(config.cameraPresets.first().position, QVector3D(0.0f, 0.0f, 10.0f));
+    QVERIFY(errorLabel->text().contains(QStringLiteral("includeFile 'does_not_exist.ui' was not found")));
+}
