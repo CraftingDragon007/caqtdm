@@ -68,6 +68,7 @@ private:
     QComboBox *previewPresetCombo;
     QPushButton *captureSnapshotButton;
     QString pendingSnapshotFileName;
+    QString pendingSnapshotConfigPath;
     int pendingSnapshotPreset;
     QTabWidget *tabs;
     QTableWidget *objectsTable;

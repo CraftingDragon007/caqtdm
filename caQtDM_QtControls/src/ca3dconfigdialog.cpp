@@ -11,7 +11,9 @@
 #include <QComboBox>
 #include <QCheckBox>
 #include <QDialogButtonBox>
+#include <QDir>
 #include <QFileDialog>
+#include <QFileInfo>
 #include <QHeaderView>
 #include <QHBoxLayout>
 #include <QJsonArray>
@@ -19,8 +21,10 @@
 #include <QJsonObject>
 #include <QLabel>
 #include <QMap>
+#include <QMessageBox>
 #include <QPlainTextEdit>
 #include <QPushButton>
+#include <QRegularExpression>
 #include <QScopedValueRollback>
 #include <QTableWidget>
 #include <QTableWidgetItem>
@@ -66,6 +70,42 @@ QJsonArray rectArray(const QString &x, const QString &y, const QString &width, c
     array.append(width.toInt());
     array.append(height.toInt());
     return array;
+}
+
+QString safeFileNameComponent(QString value, const QString &fallback)
+{
+    value = value.trimmed();
+    value.replace(QRegularExpression(QStringLiteral("[^A-Za-z0-9._-]+")), QStringLiteral("_"));
+    return value.isEmpty() ? fallback : value;
+}
+
+QString panelFileName(ca3DWidget *widget)
+{
+    if (QDesignerFormWindowInterface *formWindow = QDesignerFormWindowInterface::findFormWindow(widget)) {
+        return formWindow->fileName();
+    }
+    return widget && widget->window() ? widget->window()->windowFilePath() : QString();
+}
+
+QString relativeSnapshotPath(const QString &fileName, const QString &panelDirectory)
+{
+    QStringList baseDirectories;
+    if (!panelDirectory.isEmpty()) {
+        baseDirectories.append(panelDirectory);
+    }
+    baseDirectories.append(QDir::currentPath());
+    const QStringList displayPaths = QString::fromLocal8Bit(qgetenv("CAQTDM_DISPLAY_PATH"))
+                                     .split(QDir::listSeparator(), Qt::SkipEmptyParts);
+    baseDirectories.append(displayPaths);
+
+    const QString absoluteFileName = QFileInfo(fileName).absoluteFilePath();
+    for (const QString &baseDirectory : baseDirectories) {
+        const QString relative = QDir(QFileInfo(baseDirectory).absoluteFilePath()).relativeFilePath(absoluteFileName);
+        if (relative != QStringLiteral("..") && !relative.startsWith(QStringLiteral("../"))) {
+            return QDir::cleanPath(relative);
+        }
+    }
+    return fileName;
 }
 }
 
@@ -666,18 +706,32 @@ void ca3DConfigDialog::captureSnapshot()
 {
     refreshPreview();
     const int preset = previewPresetCombo ? previewPresetCombo->currentData().toInt() : 0;
-    const QString defaultName = preset > 0
-                                ? QStringLiteral("3d_preset_%1.png").arg(preset)
-                                : QStringLiteral("3d_snapshot.png");
+    const QString formFileName = panelFileName(widget3D);
+    const QFileInfo formFileInfo(formFileName);
+    const QString panelName = safeFileNameComponent(formFileInfo.completeBaseName(), QStringLiteral("panel"));
+    const QString widgetName = safeFileNameComponent(widget3D ? widget3D->objectName() : QString(), QStringLiteral("ca3dwidget"));
+    const QString defaultName = QStringLiteral("%1_%2_preset_%3.png").arg(panelName, widgetName).arg(preset);
+    const QString initialDirectory = formFileInfo.absolutePath().isEmpty()
+                                     ? QDir::currentPath()
+                                     : formFileInfo.absolutePath();
+
+    const QString displayPath = QString::fromLocal8Bit(qgetenv("CAQTDM_DISPLAY_PATH"));
+    QMessageBox::information(this,
+                             tr("Snapshot Location"),
+                             tr("Save the snapshot in a directory listed in CAQTDM_DISPLAY_PATH or in the panel's runtime working directory. "
+                                "This allows sceneConfig to use a portable relative path instead of an absolute path.\n\n"
+                                "Current working directory: %1\nCAQTDM_DISPLAY_PATH: %2")
+                             .arg(QDir::currentPath(), displayPath.isEmpty() ? tr("not set") : displayPath));
     const QString fileName = QFileDialog::getSaveFileName(this,
                                                           tr("Save 3D Snapshot"),
-                                                          defaultName,
+                                                          QDir(initialDirectory).filePath(defaultName),
                                                           tr("PNG Images (*.png)"));
     if (fileName.isEmpty()) {
         return;
     }
 
     pendingSnapshotFileName = fileName;
+    pendingSnapshotConfigPath = relativeSnapshotPath(fileName, formFileInfo.absolutePath());
     pendingSnapshotPreset = preset;
     if (captureSnapshotButton) {
         captureSnapshotButton->setEnabled(false);
@@ -688,6 +742,7 @@ void ca3DConfigDialog::captureSnapshot()
             captureSnapshotButton->setEnabled(true);
         }
         pendingSnapshotFileName.clear();
+        pendingSnapshotConfigPath.clear();
         pendingSnapshotPreset = 0;
     }
 }
@@ -695,8 +750,10 @@ void ca3DConfigDialog::captureSnapshot()
 void ca3DConfigDialog::finishSnapshotCapture(const QPixmap &snapshot)
 {
     const QString fileName = pendingSnapshotFileName;
+    const QString configPath = pendingSnapshotConfigPath;
     const int preset = pendingSnapshotPreset;
     pendingSnapshotFileName.clear();
+    pendingSnapshotConfigPath.clear();
     pendingSnapshotPreset = 0;
     if (captureSnapshotButton) {
         captureSnapshotButton->setEnabled(true);
@@ -715,7 +772,7 @@ void ca3DConfigDialog::finishSnapshotCapture(const QPixmap &snapshot)
         for (int i = 0; i < presets.count(); ++i) {
             QJsonObject presetObject = presets.at(i).toObject();
             if (presetObject.value(QStringLiteral("id")).toInt() == preset) {
-                presetObject.insert(QStringLiteral("snapshot"), fileName);
+                presetObject.insert(QStringLiteral("snapshot"), configPath);
                 presets.replace(i, presetObject);
                 break;
             }
@@ -734,6 +791,7 @@ void ca3DConfigDialog::finishSnapshotCapture(const QPixmap &snapshot)
 void ca3DConfigDialog::failSnapshotCapture(const QString &error)
 {
     pendingSnapshotFileName.clear();
+    pendingSnapshotConfigPath.clear();
     pendingSnapshotPreset = 0;
     if (captureSnapshotButton) {
         captureSnapshotButton->setEnabled(true);
