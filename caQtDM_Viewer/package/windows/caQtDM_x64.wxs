@@ -108,6 +108,14 @@
                             </Component>
                         </Directory>
                         <?endif?>
+                        <?if $(env.CAQTDMQTVER) = QT6 ?>
+                        <Directory Id="GEOMETRYLOADERS" Name="geometryloaders">
+                            <Component Id="geometryloaders" Guid="E3484A2D-8EDC-420F-9A35-7443DCD046CE" Win64="yes">
+                                <File Id="DEFAULTGEOMETRYLOADER.DLL" Name="defaultgeometryloader.dll" Source="$(env.QTHOME)\plugins\geometryloaders\defaultgeometryloader.dll" />
+                                <File Id="GLTFGEOMETRYLOADER.DLL" Name="gltfgeometryloader.dll" Source="$(env.QTHOME)\plugins\geometryloaders\gltfgeometryloader.dll" />
+                            </Component>
+                        </Directory>
+                        <?endif?>
                         <Directory Id="PLATFORMS" Name="platforms">
                             <Component Id="platforms" Guid="E774C793-5FDB-4609-A9F4-98B7796F04B1" Win64="yes">
                                 <File Id="QMINIMAL.DLL" Name="qminimal.dll" Source="$(env.QTHOME)\plugins\platforms\qminimal.dll" />
@@ -115,6 +123,21 @@
                                 <File Id="QWINDOWS.DLL" Name="qwindows.dll" Source="$(env.QTHOME)\plugins\platforms\qwindows.dll" />
                             </Component>
                         </Directory>
+                        <?if $(env.CAQTDMQTVER) = QT6 ?>
+                        <Directory Id="RENDERERS" Name="renderers">
+                            <Component Id="renderers" Guid="50C1F2CA-F094-4429-940B-B52E2A85ECA2" Win64="yes">
+                                <File Id="OPENGLRENDERER.DLL" Name="openglrenderer.dll" Source="$(env.QTHOME)\plugins\renderers\openglrenderer.dll" />
+                                <File Id="RHIRENDERER.DLL" Name="rhirenderer.dll" Source="$(env.QTHOME)\plugins\renderers\rhirenderer.dll" />
+                            </Component>
+                        </Directory>
+                        <Directory Id="SCENEPARSERS" Name="sceneparsers">
+                            <Component Id="sceneparsers" Guid="D558ACAF-E880-4AE6-B2B0-159A79B54A5A" Win64="yes">
+                                <File Id="ASSIMPSCENEIMPORT.DLL" Name="assimpsceneimport.dll" Source="$(env.QTHOME)\plugins\sceneparsers\assimpsceneimport.dll" />
+                                <File Id="GLTFSCENEEXPORT.DLL" Name="gltfsceneexport.dll" Source="$(env.QTHOME)\plugins\sceneparsers\gltfsceneexport.dll" />
+                                <File Id="GLTFSCENEIMPORT.DLL" Name="gltfsceneimport.dll" Source="$(env.QTHOME)\plugins\sceneparsers\gltfsceneimport.dll" />
+                            </Component>
+                        </Directory>
+                        <?endif?>
                         <Directory Id="IMAGEFORMATS" Name="imageformats">
                             <Component Id="imageformats" Win64="yes" Guid="3FB66204-032F-4F63-9AD0-7DC531F8769D">
                                 <File Id="QJPEG.DLL" Name="qjpeg.dll" Source="$(env.QTHOME)\plugins\imageformats\qjpeg.dll" />
@@ -176,6 +199,9 @@
             <?elseif $(env.CAQTDMQTVER) = QT6 ?>
             <ComponentRef Id="Qt_6.10.0" />
             <ComponentRef Id="tls" />
+            <ComponentRef Id="geometryloaders" />
+            <ComponentRef Id="renderers" />
+            <ComponentRef Id="sceneparsers" />
             <?else?>
             <ComponentRef Id="Qt_5.15.0" />
             <?endif?>

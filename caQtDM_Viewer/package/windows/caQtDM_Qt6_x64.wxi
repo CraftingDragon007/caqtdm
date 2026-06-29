@@ -20,6 +20,7 @@
 	<File Id="QT6CONCURRENT.DLL" Name="Qt6Concurrent.dll" Source="$(env.QTHOME)\bin\Qt6Concurrent.dll" />
 	<File Id="QT6CORE.DLL" Name="Qt6Core.dll" Source="$(env.QTHOME)\bin\Qt6Core.dll" />
 	<File Id="QT63DCORE.DLL" Name="Qt63DCore.dll" Source="$(env.QTHOME)\bin\Qt63DCore.dll" />
+	<File Id="QT63DANIMATION.DLL" Name="Qt63DAnimation.dll" Source="$(env.QTHOME)\bin\Qt63DAnimation.dll" />
 	<File Id="QT63DEXTRAS.DLL" Name="Qt63DExtras.dll" Source="$(env.QTHOME)\bin\Qt63DExtras.dll" />
 	<File Id="QT63DINPUT.DLL" Name="Qt63DInput.dll" Source="$(env.QTHOME)\bin\Qt63DInput.dll" />
 	<File Id="QT63DLOGIC.DLL" Name="Qt63DLogic.dll" Source="$(env.QTHOME)\bin\Qt63DLogic.dll" />
@@ -37,5 +38,7 @@
 	<File Id="QT6PRINTSUPPORT.DLL" Name="Qt6PrintSupport.dll" Source="$(env.QTHOME)\bin\Qt6PrintSupport.dll" />
 	<File Id="QT6QML.DLL" Name="Qt6Qml.dll" Source="$(env.QTHOME)\bin\Qt6Qml.dll" />
 	<File Id="QT6QUICK.DLL" Name="Qt6Quick.dll" Source="$(env.QTHOME)\bin\Qt6Quick.dll" />
+	<File Id="QT6SHADERTOOLS.DLL" Name="Qt6ShaderTools.dll" Source="$(env.QTHOME)\bin\Qt6ShaderTools.dll" />
+	<File Id="D3DCOMPILER_47.DLL" Name="D3Dcompiler_47.dll" Source="$(env.QTHOME)\bin\D3Dcompiler_47.dll" />
 </Component>
 </Include>
