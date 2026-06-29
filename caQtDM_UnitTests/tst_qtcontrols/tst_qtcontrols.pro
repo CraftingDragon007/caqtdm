@@ -10,8 +10,10 @@ HEADERS += tst_pvdialog.h \
     fakeformwindow.h
 
 greaterThan(QT_VER_MAJ, 5) {
-    SOURCES += tst_ca3dconfig.cpp
-    HEADERS += tst_ca3dconfig.h
+    SOURCES += tst_ca3dconfig.cpp \
+        tst_ca3dconfigdialog.cpp
+    HEADERS += tst_ca3dconfig.h \
+        tst_ca3dconfigdialog.h
 }
 
 # --- Tested classes below ---

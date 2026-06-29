@@ -28,6 +28,7 @@
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 #include "tst_ca3dconfig.h"
+#include "tst_ca3dconfigdialog.h"
 #endif
 #include "tst_pvdialog.h"
 
@@ -48,6 +49,10 @@ int main(int argc, char **argv)
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     {
         TestCa3DConfig tc;
+        status |= QTest::qExec(&tc, argc, argv);
+    }
+    {
+        TestCa3DConfigDialog tc;
         status |= QTest::qExec(&tc, argc, argv);
     }
     {

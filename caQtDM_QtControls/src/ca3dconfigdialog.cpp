@@ -9,6 +9,7 @@
 #include "pvdialog.h"
 
 #include <QComboBox>
+#include <QCheckBox>
 #include <QDialogButtonBox>
 #include <QFileDialog>
 #include <QHeaderView>
@@ -42,6 +43,24 @@ QJsonArray vectorArray(const QString &x, const QString &y, const QString &z)
     array.append(z.toDouble());
     return array;
 }
+
+QJsonArray sizeArray(const QString &width, const QString &height)
+{
+    QJsonArray array;
+    array.append(width.toDouble());
+    array.append(height.toDouble());
+    return array;
+}
+
+QJsonArray rectArray(const QString &x, const QString &y, const QString &width, const QString &height)
+{
+    QJsonArray array;
+    array.append(x.toInt());
+    array.append(y.toInt());
+    array.append(width.toInt());
+    array.append(height.toInt());
+    return array;
+}
 }
 
 ca3DConfigDialog::ca3DConfigDialog(ca3DWidget *widget, QWidget *parent)
@@ -54,6 +73,7 @@ ca3DConfigDialog::ca3DConfigDialog(ca3DWidget *widget, QWidget *parent)
     , tabs(Q_NULLPTR)
     , objectsTable(Q_NULLPTR)
     , bindingsTable(Q_NULLPTR)
+    , overlaysTable(Q_NULLPTR)
     , rawJsonEdit(Q_NULLPTR)
     , errorLabel(Q_NULLPTR)
     , buttonBox(Q_NULLPTR)
@@ -115,6 +135,31 @@ void ca3DConfigDialog::buildUi()
     connect(addBindingButton, SIGNAL(clicked()), this, SLOT(addBindingRow()));
     connect(removeBindingButton, SIGNAL(clicked()), this, SLOT(removeBindingRow()));
     connect(editPvButton, SIGNAL(clicked()), this, SLOT(editSelectedBindingPv()));
+
+    QWidget *overlaysPage = new QWidget(tabs);
+    QVBoxLayout *overlaysLayout = new QVBoxLayout(overlaysPage);
+    overlaysTable = new QTableWidget(overlaysPage);
+    overlaysTable->setObjectName(QStringLiteral("overlaysTable"));
+    overlaysTable->setColumnCount(18);
+    overlaysTable->setHorizontalHeaderLabels(QStringList()
+                                             << tr("id") << tr("includeFile") << tr("macro")
+                                             << tr("pos x") << tr("pos y") << tr("pos z")
+                                             << tr("rot x") << tr("rot y") << tr("rot z")
+                                             << tr("width") << tr("height") << tr("visibility")
+                                             << tr("camera preset") << tr("fallback x") << tr("fallback y")
+                                             << tr("fallback width") << tr("fallback height") << tr("transparent"));
+    overlaysTable->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    QHBoxLayout *overlaysButtons = new QHBoxLayout();
+    QPushButton *addOverlayButton = new QPushButton(tr("Add Overlay"), overlaysPage);
+    QPushButton *removeOverlayButton = new QPushButton(tr("Remove Selected"), overlaysPage);
+    overlaysButtons->addWidget(addOverlayButton);
+    overlaysButtons->addWidget(removeOverlayButton);
+    overlaysButtons->addStretch();
+    overlaysLayout->addWidget(overlaysTable);
+    overlaysLayout->addLayout(overlaysButtons);
+    tabs->addTab(overlaysPage, tr("Overlays"));
+    connect(addOverlayButton, SIGNAL(clicked()), this, SLOT(addOverlayRow()));
+    connect(removeOverlayButton, SIGNAL(clicked()), this, SLOT(removeOverlayRow()));
 
     QWidget *previewPage = new QWidget(tabs);
     QVBoxLayout *previewLayout = new QVBoxLayout(previewPage);
@@ -182,6 +227,7 @@ void ca3DConfigDialog::populateTablesFromJson(const QString &json)
     showErrors(QStringList());
     objectsTable->setRowCount(0);
     bindingsTable->setRowCount(0);
+    overlaysTable->setRowCount(0);
 
     for (const ca3DObjectConfig &object : config.objects) {
         const int row = objectsTable->rowCount();
@@ -216,6 +262,43 @@ void ca3DConfigDialog::populateTablesFromJson(const QString &json)
             setTableText(bindingsTable, bindingRow, 6, binding.hasMinimum ? numberString(binding.minimum) : QString());
             setTableText(bindingsTable, bindingRow, 7, binding.hasMaximum ? numberString(binding.maximum) : QString());
         }
+    }
+
+    for (const ca3DOverlayConfig &overlay : config.overlays) {
+        const int row = overlaysTable->rowCount();
+        overlaysTable->insertRow(row);
+        setTableText(overlaysTable, row, 0, overlay.id);
+        setTableText(overlaysTable, row, 1, overlay.includeFile);
+        setTableText(overlaysTable, row, 2, overlay.macro);
+        setTableText(overlaysTable, row, 3, numberString(overlay.position.x()));
+        setTableText(overlaysTable, row, 4, numberString(overlay.position.y()));
+        setTableText(overlaysTable, row, 5, numberString(overlay.position.z()));
+        setTableText(overlaysTable, row, 6, numberString(overlay.rotation.x()));
+        setTableText(overlaysTable, row, 7, numberString(overlay.rotation.y()));
+        setTableText(overlaysTable, row, 8, numberString(overlay.rotation.z()));
+        setTableText(overlaysTable, row, 9, numberString(overlay.size.width()));
+        setTableText(overlaysTable, row, 10, numberString(overlay.size.height()));
+        QString visibility = QStringLiteral("presetOnly");
+        if (overlay.visibilityMode == ca3DOverlayConfig::InView) {
+            visibility = QStringLiteral("inView");
+        } else if (overlay.visibilityMode == ca3DOverlayConfig::AlwaysWhenInView) {
+            visibility = QStringLiteral("alwaysWhenInView");
+        }
+        setTableCombo(overlaysTable, row, 11,
+                      QStringList() << QStringLiteral("presetOnly") << QStringLiteral("inView")
+                                    << QStringLiteral("alwaysWhenInView"), visibility);
+        setTableText(overlaysTable, row, 12, overlay.cameraPreset > 0 ? QString::number(overlay.cameraPreset) : QString());
+        if (!overlay.fallbackGeometry.isEmpty()) {
+            setTableText(overlaysTable, row, 13, QString::number(overlay.fallbackGeometry.x()));
+            setTableText(overlaysTable, row, 14, QString::number(overlay.fallbackGeometry.y()));
+            setTableText(overlaysTable, row, 15, QString::number(overlay.fallbackGeometry.width()));
+            setTableText(overlaysTable, row, 16, QString::number(overlay.fallbackGeometry.height()));
+        } else {
+            for (int column = 13; column <= 16; ++column) {
+                setTableText(overlaysTable, row, column, QString());
+            }
+        }
+        setTableCheck(overlaysTable, row, 17, overlay.transparentBackground);
     }
 }
 
@@ -259,6 +342,7 @@ QString ca3DConfigDialog::jsonFromTables() const
                        ? document.object()
                        : QJsonObject();
     QJsonArray objects;
+    QJsonArray overlays;
     QMap<QString, QJsonArray> bindingsByObject;
 
     for (int row = 0; row < bindingsTable->rowCount(); ++row) {
@@ -299,6 +383,33 @@ QString ca3DConfigDialog::jsonFromTables() const
     }
 
     root.insert(QStringLiteral("objects"), objects);
+    for (int row = 0; row < overlaysTable->rowCount(); ++row) {
+        QJsonObject overlay;
+        overlay.insert(QStringLiteral("id"), tableText(overlaysTable, row, 0));
+        overlay.insert(QStringLiteral("includeFile"), tableText(overlaysTable, row, 1));
+        if (!tableText(overlaysTable, row, 2).isEmpty()) {
+            overlay.insert(QStringLiteral("macro"), tableText(overlaysTable, row, 2));
+        }
+        overlay.insert(QStringLiteral("position"), vectorArray(tableText(overlaysTable, row, 3), tableText(overlaysTable, row, 4), tableText(overlaysTable, row, 5)));
+        overlay.insert(QStringLiteral("rotation"), vectorArray(tableText(overlaysTable, row, 6), tableText(overlaysTable, row, 7), tableText(overlaysTable, row, 8)));
+        overlay.insert(QStringLiteral("size"), sizeArray(tableText(overlaysTable, row, 9), tableText(overlaysTable, row, 10)));
+        overlay.insert(QStringLiteral("visibilityMode"), tableComboText(overlaysTable, row, 11));
+        if (!tableText(overlaysTable, row, 12).isEmpty()) {
+            overlay.insert(QStringLiteral("cameraPreset"), tableText(overlaysTable, row, 12).toInt());
+        }
+        bool hasFallbackGeometry = false;
+        for (int column = 13; column <= 16; ++column) {
+            hasFallbackGeometry = hasFallbackGeometry || !tableText(overlaysTable, row, column).isEmpty();
+        }
+        if (hasFallbackGeometry) {
+            overlay.insert(QStringLiteral("fallbackGeometry"),
+                           rectArray(tableText(overlaysTable, row, 13), tableText(overlaysTable, row, 14),
+                                     tableText(overlaysTable, row, 15), tableText(overlaysTable, row, 16)));
+        }
+        overlay.insert(QStringLiteral("transparentBackground"), tableCheck(overlaysTable, row, 17));
+        overlays.append(overlay);
+    }
+    root.insert(QStringLiteral("overlays"), overlays);
     return QString::fromUtf8(QJsonDocument(root).toJson(QJsonDocument::Indented));
 }
 
@@ -335,6 +446,29 @@ void ca3DConfigDialog::addBindingRow()
 void ca3DConfigDialog::removeBindingRow()
 {
     bindingsTable->removeRow(bindingsTable->currentRow());
+}
+
+void ca3DConfigDialog::addOverlayRow()
+{
+    const int row = overlaysTable->rowCount();
+    overlaysTable->insertRow(row);
+    for (int column = 0; column < overlaysTable->columnCount() - 1; ++column) {
+        setTableText(overlaysTable, row, column, QString());
+    }
+    for (int column = 3; column <= 8; ++column) {
+        setTableText(overlaysTable, row, column, QStringLiteral("0"));
+    }
+    setTableText(overlaysTable, row, 9, QStringLiteral("1.5"));
+    setTableText(overlaysTable, row, 10, QStringLiteral("1.0"));
+    setTableCombo(overlaysTable, row, 11,
+                  QStringList() << QStringLiteral("presetOnly") << QStringLiteral("inView")
+                                << QStringLiteral("alwaysWhenInView"), QStringLiteral("presetOnly"));
+    setTableCheck(overlaysTable, row, 17, true);
+}
+
+void ca3DConfigDialog::removeOverlayRow()
+{
+    overlaysTable->removeRow(overlaysTable->currentRow());
 }
 
 void ca3DConfigDialog::editSelectedBindingPv()
@@ -523,6 +657,20 @@ QString ca3DConfigDialog::tableComboText(QTableWidget *table, int row, int colum
 {
     QComboBox *combo = table ? qobject_cast<QComboBox *>(table->cellWidget(row, column)) : Q_NULLPTR;
     return combo ? combo->currentText() : tableText(table, row, column);
+}
+
+void ca3DConfigDialog::setTableCheck(QTableWidget *table, int row, int column, bool checked)
+{
+    QCheckBox *checkBox = new QCheckBox(table);
+    checkBox->setChecked(checked);
+    checkBox->setStyleSheet(QStringLiteral("margin-left: 8px"));
+    table->setCellWidget(row, column, checkBox);
+}
+
+bool ca3DConfigDialog::tableCheck(QTableWidget *table, int row, int column) const
+{
+    QCheckBox *checkBox = table ? qobject_cast<QCheckBox *>(table->cellWidget(row, column)) : Q_NULLPTR;
+    return checkBox && checkBox->isChecked();
 }
 
 void ca3DConfigDialog::showErrors(const QStringList &errors)
