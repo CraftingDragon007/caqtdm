@@ -44,7 +44,7 @@ void TestCa3DConfigDialog::appliesStructuredOverlayChanges()
         "overlays": [{
             "id": "panel",
             "includeFile": "%1",
-            "position": [1, 2, 3],
+            "position": [1.2, 2, 3],
             "rotation": [4, 5, 6],
             "size": [7, 8],
             "visibilityMode": "presetOnly",
@@ -63,6 +63,7 @@ void TestCa3DConfigDialog::appliesStructuredOverlayChanges()
     QTableWidget *table = dialog.findChild<QTableWidget *>(QStringLiteral("overlaysTable"));
     QVERIFY(table);
     QCOMPARE(table->rowCount(), 1);
+    QCOMPARE(table->item(0, 3)->text(), QStringLiteral("1.2"));
     QDialogButtonBox *buttonBox = dialog.findChild<QDialogButtonBox *>();
     QVERIFY(buttonBox);
     QPushButton *applyButton = buttonBox->button(QDialogButtonBox::Apply);

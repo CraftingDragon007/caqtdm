@@ -36,6 +36,11 @@ QString numberString(double value)
     return QString::number(value, 'g', 12);
 }
 
+QString numberString(float value)
+{
+    return QString::number(static_cast<double>(value), 'g', 8);
+}
+
 QJsonArray vectorArray(const QString &x, const QString &y, const QString &z)
 {
     QJsonArray array;
