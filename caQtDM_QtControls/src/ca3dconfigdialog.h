@@ -41,6 +41,7 @@ private slots:
     void failSnapshotCapture(const QString &error);
     void validateRawJson();
     void applyChanges();
+    void markChanged();
     void accept() override;
 
 private:
@@ -71,8 +72,10 @@ private:
     QTableWidget *bindingsTable;
     QTableWidget *overlaysTable;
     QPlainTextEdit *rawJsonEdit;
+    QLabel *rawValidationLabel;
     QLabel *errorLabel;
     QDialogButtonBox *buttonBox;
+    bool updatingUi;
 };
 
 #endif

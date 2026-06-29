@@ -10,10 +10,14 @@
 
 #include <QCheckBox>
 #include <QComboBox>
+#include <QDialogButtonBox>
 #include <QFile>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QLabel>
+#include <QPlainTextEdit>
+#include <QPushButton>
 #include <QTableWidget>
 #include <QTemporaryDir>
 #include <QTest>
@@ -59,8 +63,35 @@ void TestCa3DConfigDialog::appliesStructuredOverlayChanges()
     QTableWidget *table = dialog.findChild<QTableWidget *>(QStringLiteral("overlaysTable"));
     QVERIFY(table);
     QCOMPARE(table->rowCount(), 1);
+    QDialogButtonBox *buttonBox = dialog.findChild<QDialogButtonBox *>();
+    QVERIFY(buttonBox);
+    QPushButton *applyButton = buttonBox->button(QDialogButtonBox::Apply);
+    QVERIFY(applyButton);
+    QVERIFY(!applyButton->isEnabled());
+    QVERIFY(QMetaObject::invokeMethod(&dialog, "validateRawJson", Qt::DirectConnection));
+    QVERIFY(!applyButton->isEnabled());
+    QLabel *validationLabel = dialog.findChild<QLabel *>(QStringLiteral("rawValidationLabel"));
+    QVERIFY(validationLabel);
+    QCOMPARE(validationLabel->text(), QStringLiteral("JSON is valid"));
+    QLabel *errorLabel = dialog.findChild<QLabel *>(QStringLiteral("errorLabel"));
+    QVERIFY(errorLabel);
+    QVERIFY(errorLabel->isHidden());
+
+    QPlainTextEdit *rawEdit = dialog.findChild<QPlainTextEdit *>();
+    QVERIFY(rawEdit);
+    rawEdit->setPlainText(QStringLiteral("{"));
+    QVERIFY(QMetaObject::invokeMethod(&dialog, "validateRawJson", Qt::DirectConnection));
+    QVERIFY(validationLabel->text().contains(QStringLiteral("Invalid sceneConfig JSON")));
+    QVERIFY(errorLabel->isHidden());
+    rawEdit->setPlainText(json);
+    QVERIFY(QMetaObject::invokeMethod(&dialog, "validateRawJson", Qt::DirectConnection));
+    QCOMPARE(validationLabel->text(), QStringLiteral("JSON is valid"));
+    QVERIFY(errorLabel->isHidden());
+    QVERIFY(QMetaObject::invokeMethod(&dialog, "applyChanges", Qt::DirectConnection));
+    QVERIFY(!applyButton->isEnabled());
 
     table->item(0, 2)->setText(QStringLiteral("P=TEST"));
+    QVERIFY(applyButton->isEnabled());
     table->item(0, 3)->setText(QStringLiteral("10.5"));
     table->item(0, 12)->setText(QStringLiteral("1"));
     table->item(0, 13)->setText(QStringLiteral("20"));
@@ -75,6 +106,7 @@ void TestCa3DConfigDialog::appliesStructuredOverlayChanges()
     transparent->setChecked(false);
 
     QVERIFY(QMetaObject::invokeMethod(&dialog, "applyChanges", Qt::DirectConnection));
+    QVERIFY(!applyButton->isEnabled());
 
     ca3DSceneConfig config;
     QStringList errors;

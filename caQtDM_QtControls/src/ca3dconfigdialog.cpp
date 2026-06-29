@@ -21,6 +21,7 @@
 #include <QMap>
 #include <QPlainTextEdit>
 #include <QPushButton>
+#include <QScopedValueRollback>
 #include <QTableWidget>
 #include <QTableWidgetItem>
 #include <QTabWidget>
@@ -75,8 +76,10 @@ ca3DConfigDialog::ca3DConfigDialog(ca3DWidget *widget, QWidget *parent)
     , bindingsTable(Q_NULLPTR)
     , overlaysTable(Q_NULLPTR)
     , rawJsonEdit(Q_NULLPTR)
+    , rawValidationLabel(Q_NULLPTR)
     , errorLabel(Q_NULLPTR)
     , buttonBox(Q_NULLPTR)
+    , updatingUi(false)
 {
     buildUi();
     loadFromWidget();
@@ -187,13 +190,21 @@ void ca3DConfigDialog::buildUi()
     QVBoxLayout *rawLayout = new QVBoxLayout(rawPage);
     rawJsonEdit = new QPlainTextEdit(rawPage);
     QPushButton *validateButton = new QPushButton(tr("Validate Raw JSON"), rawPage);
+    rawValidationLabel = new QLabel(rawPage);
+    rawValidationLabel->setObjectName(QStringLiteral("rawValidationLabel"));
+    rawValidationLabel->setFixedHeight(validateButton->sizeHint().height());
+    QHBoxLayout *validationLayout = new QHBoxLayout();
+    validationLayout->addWidget(validateButton);
+    validationLayout->addWidget(rawValidationLabel, 1);
     rawLayout->addWidget(rawJsonEdit);
-    rawLayout->addWidget(validateButton);
+    rawLayout->addLayout(validationLayout);
     tabs->addTab(rawPage, tr("Raw JSON"));
     connect(validateButton, SIGNAL(clicked()), this, SLOT(validateRawJson()));
 
     errorLabel = new QLabel(this);
+    errorLabel->setObjectName(QStringLiteral("errorLabel"));
     errorLabel->setWordWrap(true);
+    errorLabel->hide();
     buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Apply | QDialogButtonBox::Cancel, this);
 
     layout->addWidget(tabs);
@@ -203,19 +214,28 @@ void ca3DConfigDialog::buildUi()
     connect(buttonBox->button(QDialogButtonBox::Apply), SIGNAL(clicked()), this, SLOT(applyChanges()));
     connect(buttonBox, SIGNAL(accepted()), this, SLOT(accept()));
     connect(buttonBox, SIGNAL(rejected()), this, SLOT(reject()));
+    connect(objectsTable, SIGNAL(cellChanged(int,int)), this, SLOT(markChanged()));
+    connect(bindingsTable, SIGNAL(cellChanged(int,int)), this, SLOT(markChanged()));
+    connect(overlaysTable, SIGNAL(cellChanged(int,int)), this, SLOT(markChanged()));
+    connect(rawJsonEdit, SIGNAL(textChanged()), this, SLOT(markChanged()));
+    buttonBox->button(QDialogButtonBox::Apply)->setEnabled(false);
 }
 
 void ca3DConfigDialog::loadFromWidget()
 {
+    updatingUi = true;
     const QString json = widget3D ? widget3D->getSceneConfig() : QString();
     rawJsonEdit->setPlainText(json);
     populateTablesFromJson(json);
     populatePresetSelector(json);
     refreshPreview();
+    updatingUi = false;
+    buttonBox->button(QDialogButtonBox::Apply)->setEnabled(false);
 }
 
 void ca3DConfigDialog::populateTablesFromJson(const QString &json)
 {
+    QScopedValueRollback<bool> updatingGuard(updatingUi, true);
     ca3DSceneConfig config;
     QStringList errors;
     if (!ca3DConfigParser::parse(json, &config, &errors)) {
@@ -421,11 +441,15 @@ void ca3DConfigDialog::addObjectRow()
         setTableText(objectsTable, row, column, QString());
     }
     setTableText(objectsTable, row, 13, QStringLiteral("1.0"));
+    markChanged();
 }
 
 void ca3DConfigDialog::removeObjectRow()
 {
-    objectsTable->removeRow(objectsTable->currentRow());
+    if (objectsTable->currentRow() >= 0) {
+        objectsTable->removeRow(objectsTable->currentRow());
+        markChanged();
+    }
 }
 
 void ca3DConfigDialog::addBindingRow()
@@ -441,11 +465,15 @@ void ca3DConfigDialog::addBindingRow()
     setTableText(bindingsTable, row, 3, QStringLiteral("1.0"));
     setTableText(bindingsTable, row, 4, QStringLiteral("0.0"));
     setTableCombo(bindingsTable, row, 5, QStringList() << QStringLiteral("relative") << QStringLiteral("absolute"), QStringLiteral("relative"));
+    markChanged();
 }
 
 void ca3DConfigDialog::removeBindingRow()
 {
-    bindingsTable->removeRow(bindingsTable->currentRow());
+    if (bindingsTable->currentRow() >= 0) {
+        bindingsTable->removeRow(bindingsTable->currentRow());
+        markChanged();
+    }
 }
 
 void ca3DConfigDialog::addOverlayRow()
@@ -464,11 +492,15 @@ void ca3DConfigDialog::addOverlayRow()
                   QStringList() << QStringLiteral("presetOnly") << QStringLiteral("inView")
                                 << QStringLiteral("alwaysWhenInView"), QStringLiteral("presetOnly"));
     setTableCheck(overlaysTable, row, 17, true);
+    markChanged();
 }
 
 void ca3DConfigDialog::removeOverlayRow()
 {
-    overlaysTable->removeRow(overlaysTable->currentRow());
+    if (overlaysTable->currentRow() >= 0) {
+        overlaysTable->removeRow(overlaysTable->currentRow());
+        markChanged();
+    }
 }
 
 void ca3DConfigDialog::editSelectedBindingPv()
@@ -483,6 +515,7 @@ void ca3DConfigDialog::editSelectedBindingPv()
     if (dialog.exec() == QDialog::Accepted) {
         setTableText(bindingsTable, row, 1, dialog.editedChannel());
         showErrors(QStringList());
+        markChanged();
     }
 }
 
@@ -572,6 +605,7 @@ void ca3DConfigDialog::finishSnapshotCapture(const QPixmap &snapshot)
         rawJsonEdit->setPlainText(json);
         populateTablesFromJson(json);
         populatePresetSelector(json);
+        markChanged();
     }
 
     showErrors(QStringList() << tr("Saved 3D background snapshot without overlays: %1").arg(fileName));
@@ -590,12 +624,16 @@ void ca3DConfigDialog::failSnapshotCapture(const QString &error)
 void ca3DConfigDialog::validateRawJson()
 {
     QStringList errors;
+    showErrors(QStringList());
     if (validateJson(rawJsonEdit->toPlainText(), &errors)) {
-        showErrors(QStringList() << tr("JSON is valid"));
+        rawValidationLabel->setText(tr("JSON is valid"));
+        rawValidationLabel->setToolTip(QString());
         populateTablesFromJson(rawJsonEdit->toPlainText());
         populatePresetSelector(rawJsonEdit->toPlainText());
     } else {
-        showErrors(errors);
+        const QString errorText = errors.join(QStringLiteral("; "));
+        rawValidationLabel->setText(errorText);
+        rawValidationLabel->setToolTip(errorText);
     }
 }
 
@@ -614,9 +652,24 @@ void ca3DConfigDialog::applyChanges()
             widget3D->setSceneConfig(json);
         }
     }
+    updatingUi = true;
     rawJsonEdit->setPlainText(json);
     populateTablesFromJson(json);
     populatePresetSelector(json);
+    updatingUi = false;
+    buttonBox->button(QDialogButtonBox::Apply)->setEnabled(false);
+}
+
+void ca3DConfigDialog::markChanged()
+{
+    if (!updatingUi && buttonBox) {
+        if (rawValidationLabel) {
+            rawValidationLabel->clear();
+            rawValidationLabel->setToolTip(QString());
+        }
+        showErrors(QStringList());
+        buttonBox->button(QDialogButtonBox::Apply)->setEnabled(true);
+    }
 }
 
 void ca3DConfigDialog::accept()
@@ -651,6 +704,7 @@ void ca3DConfigDialog::setTableCombo(QTableWidget *table, int row, int column, c
     const int index = combo->findText(currentText);
     combo->setCurrentIndex(index >= 0 ? index : 0);
     table->setCellWidget(row, column, combo);
+    connect(combo, SIGNAL(currentIndexChanged(int)), this, SLOT(markChanged()));
 }
 
 QString ca3DConfigDialog::tableComboText(QTableWidget *table, int row, int column) const
@@ -665,6 +719,7 @@ void ca3DConfigDialog::setTableCheck(QTableWidget *table, int row, int column, b
     checkBox->setChecked(checked);
     checkBox->setStyleSheet(QStringLiteral("margin-left: 8px"));
     table->setCellWidget(row, column, checkBox);
+    connect(checkBox, SIGNAL(toggled(bool)), this, SLOT(markChanged()));
 }
 
 bool ca3DConfigDialog::tableCheck(QTableWidget *table, int row, int column) const
@@ -677,9 +732,12 @@ void ca3DConfigDialog::showErrors(const QStringList &errors)
 {
     if (errors.isEmpty()) {
         errorLabel->clear();
+        errorLabel->hide();
     } else if (errors.count() == 1 && errors.first() == tr("JSON is valid")) {
         errorLabel->setText(errors.first());
+        errorLabel->show();
     } else {
         errorLabel->setText(errors.join(QStringLiteral("\n")));
+        errorLabel->show();
     }
 }
