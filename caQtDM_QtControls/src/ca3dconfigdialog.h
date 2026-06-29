@@ -34,6 +34,8 @@ private slots:
     void removeBindingRow();
     void addOverlayRow();
     void removeOverlayRow();
+    void addPresetRow();
+    void removePresetRow();
     void editSelectedBindingPv();
     void refreshPreview();
     void captureSnapshot();
@@ -52,7 +54,7 @@ private:
     QString currentEditorJson() const;
     QString jsonFromTables() const;
     void updateRawJsonFromTables();
-    bool validateJson(const QString &json, QStringList *errors) const;
+    static bool validateJson(const QString &json, QStringList *errors);
     QString tableText(QTableWidget *table, int row, int column) const;
     void setTableText(QTableWidget *table, int row, int column, const QString &text);
     void setTableCombo(QTableWidget *table, int row, int column, const QStringList &items, const QString &currentText);
@@ -71,6 +73,7 @@ private:
     QTableWidget *objectsTable;
     QTableWidget *bindingsTable;
     QTableWidget *overlaysTable;
+    QTableWidget *presetsTable;
     QPlainTextEdit *rawJsonEdit;
     QLabel *rawValidationLabel;
     QLabel *errorLabel;

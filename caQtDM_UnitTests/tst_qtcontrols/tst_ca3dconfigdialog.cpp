@@ -64,6 +64,9 @@ void TestCa3DConfigDialog::appliesStructuredOverlayChanges()
     QVERIFY(table);
     QCOMPARE(table->rowCount(), 1);
     QCOMPARE(table->item(0, 3)->text(), QStringLiteral("1.2"));
+    QTableWidget *presetsTable = dialog.findChild<QTableWidget *>(QStringLiteral("presetsTable"));
+    QVERIFY(presetsTable);
+    QCOMPARE(presetsTable->rowCount(), 1);
     QDialogButtonBox *buttonBox = dialog.findChild<QDialogButtonBox *>();
     QVERIFY(buttonBox);
     QPushButton *applyButton = buttonBox->button(QDialogButtonBox::Apply);
@@ -105,6 +108,14 @@ void TestCa3DConfigDialog::appliesStructuredOverlayChanges()
     QCheckBox *transparent = qobject_cast<QCheckBox *>(table->cellWidget(0, 17));
     QVERIFY(transparent);
     transparent->setChecked(false);
+    presetsTable->item(0, 1)->setText(QStringLiteral("Front camera"));
+    presetsTable->item(0, 2)->setText(QStringLiteral("4.5"));
+    presetsTable->item(0, 5)->setText(QStringLiteral("1"));
+    presetsTable->item(0, 6)->setText(QStringLiteral("2"));
+    presetsTable->item(0, 7)->setText(QStringLiteral("3"));
+    presetsTable->item(0, 11)->setText(QStringLiteral("12.5"));
+    presetsTable->item(0, 13)->setText(QStringLiteral("35"));
+    presetsTable->item(0, 15)->setText(QStringLiteral("panel, secondary"));
 
     QVERIFY(QMetaObject::invokeMethod(&dialog, "applyChanges", Qt::DirectConnection));
     QVERIFY(!applyButton->isEnabled());
@@ -121,6 +132,16 @@ void TestCa3DConfigDialog::appliesStructuredOverlayChanges()
     QCOMPARE(overlay.cameraPreset, 1);
     QCOMPARE(overlay.fallbackGeometry, QRect(20, 30, 400, 250));
     QVERIFY(!overlay.transparentBackground);
+
+    QCOMPARE(config.cameraPresets.count(), 1);
+    const ca3DCameraPresetConfig preset = config.cameraPresets.first();
+    QCOMPARE(preset.name, QStringLiteral("Front camera"));
+    QCOMPARE(preset.position.x(), 4.5f);
+    QVERIFY(preset.hasViewCenter);
+    QCOMPARE(preset.viewCenter, QVector3D(1.0f, 2.0f, 3.0f));
+    QCOMPARE(preset.yaw, 12.5);
+    QCOMPARE(preset.fov, 35.0);
+    QCOMPARE(preset.overlays, QStringList() << QStringLiteral("panel") << QStringLiteral("secondary"));
 
     const QJsonObject root = QJsonDocument::fromJson(widget.getSceneConfig().toUtf8()).object();
     QCOMPARE(root.value(QStringLiteral("backgroundColor")).toString(), QStringLiteral("#112233"));

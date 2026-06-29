@@ -80,6 +80,7 @@ ca3DConfigDialog::ca3DConfigDialog(ca3DWidget *widget, QWidget *parent)
     , objectsTable(Q_NULLPTR)
     , bindingsTable(Q_NULLPTR)
     , overlaysTable(Q_NULLPTR)
+    , presetsTable(Q_NULLPTR)
     , rawJsonEdit(Q_NULLPTR)
     , rawValidationLabel(Q_NULLPTR)
     , errorLabel(Q_NULLPTR)
@@ -169,6 +170,31 @@ void ca3DConfigDialog::buildUi()
     connect(addOverlayButton, SIGNAL(clicked()), this, SLOT(addOverlayRow()));
     connect(removeOverlayButton, SIGNAL(clicked()), this, SLOT(removeOverlayRow()));
 
+    QWidget *presetsPage = new QWidget(tabs);
+    QVBoxLayout *presetsLayout = new QVBoxLayout(presetsPage);
+    presetsTable = new QTableWidget(presetsPage);
+    presetsTable->setObjectName(QStringLiteral("presetsTable"));
+    presetsTable->setColumnCount(16);
+    presetsTable->setHorizontalHeaderLabels(QStringList()
+                                            << tr("id") << tr("name")
+                                            << tr("pos x") << tr("pos y") << tr("pos z")
+                                            << tr("view x") << tr("view y") << tr("view z")
+                                            << tr("up x") << tr("up y") << tr("up z")
+                                            << tr("yaw") << tr("pitch") << tr("fov")
+                                            << tr("snapshot") << tr("overlays"));
+    presetsTable->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    QHBoxLayout *presetsButtons = new QHBoxLayout();
+    QPushButton *addPresetButton = new QPushButton(tr("Add Preset"), presetsPage);
+    QPushButton *removePresetButton = new QPushButton(tr("Remove Selected"), presetsPage);
+    presetsButtons->addWidget(addPresetButton);
+    presetsButtons->addWidget(removePresetButton);
+    presetsButtons->addStretch();
+    presetsLayout->addWidget(presetsTable);
+    presetsLayout->addLayout(presetsButtons);
+    tabs->addTab(presetsPage, tr("Camera Presets"));
+    connect(addPresetButton, SIGNAL(clicked()), this, SLOT(addPresetRow()));
+    connect(removePresetButton, SIGNAL(clicked()), this, SLOT(removePresetRow()));
+
     QWidget *previewPage = new QWidget(tabs);
     QVBoxLayout *previewLayout = new QVBoxLayout(previewPage);
     QHBoxLayout *previewButtons = new QHBoxLayout();
@@ -222,6 +248,7 @@ void ca3DConfigDialog::buildUi()
     connect(objectsTable, SIGNAL(cellChanged(int,int)), this, SLOT(markChanged()));
     connect(bindingsTable, SIGNAL(cellChanged(int,int)), this, SLOT(markChanged()));
     connect(overlaysTable, SIGNAL(cellChanged(int,int)), this, SLOT(markChanged()));
+    connect(presetsTable, SIGNAL(cellChanged(int,int)), this, SLOT(markChanged()));
     connect(rawJsonEdit, SIGNAL(textChanged()), this, SLOT(markChanged()));
     buttonBox->button(QDialogButtonBox::Apply)->setEnabled(false);
 }
@@ -253,8 +280,9 @@ void ca3DConfigDialog::populateTablesFromJson(const QString &json)
     objectsTable->setRowCount(0);
     bindingsTable->setRowCount(0);
     overlaysTable->setRowCount(0);
+    presetsTable->setRowCount(0);
 
-    for (const ca3DObjectConfig &object : config.objects) {
+    foreach (const ca3DObjectConfig &object, config.objects) {
         const int row = objectsTable->rowCount();
         objectsTable->insertRow(row);
         setTableText(objectsTable, row, 0, object.id);
@@ -289,7 +317,7 @@ void ca3DConfigDialog::populateTablesFromJson(const QString &json)
         }
     }
 
-    for (const ca3DOverlayConfig &overlay : config.overlays) {
+    foreach (const ca3DOverlayConfig &overlay, config.overlays) {
         const int row = overlaysTable->rowCount();
         overlaysTable->insertRow(row);
         setTableText(overlaysTable, row, 0, overlay.id);
@@ -325,6 +353,27 @@ void ca3DConfigDialog::populateTablesFromJson(const QString &json)
         }
         setTableCheck(overlaysTable, row, 17, overlay.transparentBackground);
     }
+
+    foreach (const ca3DCameraPresetConfig &preset, config.cameraPresets) {
+        const int row = presetsTable->rowCount();
+        presetsTable->insertRow(row);
+        setTableText(presetsTable, row, 0, QString::number(preset.id));
+        setTableText(presetsTable, row, 1, preset.name);
+        setTableText(presetsTable, row, 2, numberString(preset.position.x()));
+        setTableText(presetsTable, row, 3, numberString(preset.position.y()));
+        setTableText(presetsTable, row, 4, numberString(preset.position.z()));
+        setTableText(presetsTable, row, 5, preset.hasViewCenter ? numberString(preset.viewCenter.x()) : QString());
+        setTableText(presetsTable, row, 6, preset.hasViewCenter ? numberString(preset.viewCenter.y()) : QString());
+        setTableText(presetsTable, row, 7, preset.hasViewCenter ? numberString(preset.viewCenter.z()) : QString());
+        setTableText(presetsTable, row, 8, numberString(preset.upVector.x()));
+        setTableText(presetsTable, row, 9, numberString(preset.upVector.y()));
+        setTableText(presetsTable, row, 10, numberString(preset.upVector.z()));
+        setTableText(presetsTable, row, 11, numberString(preset.yaw));
+        setTableText(presetsTable, row, 12, numberString(preset.pitch));
+        setTableText(presetsTable, row, 13, numberString(preset.fov));
+        setTableText(presetsTable, row, 14, preset.snapshot);
+        setTableText(presetsTable, row, 15, preset.overlays.join(QStringLiteral(", ")));
+    }
 }
 
 void ca3DConfigDialog::populatePresetSelector(const QString &json)
@@ -342,7 +391,7 @@ void ca3DConfigDialog::populatePresetSelector(const QString &json)
         return;
     }
 
-    for (const ca3DCameraPresetConfig &preset : config.cameraPresets) {
+    foreach (const ca3DCameraPresetConfig &preset, config.cameraPresets) {
         const QString label = preset.name.isEmpty()
                               ? QString::number(preset.id)
                               : QStringLiteral("%1 - %2").arg(preset.id).arg(preset.name);
@@ -368,6 +417,7 @@ QString ca3DConfigDialog::jsonFromTables() const
                        : QJsonObject();
     QJsonArray objects;
     QJsonArray overlays;
+    QJsonArray presets;
     QMap<QString, QJsonArray> bindingsByObject;
 
     for (int row = 0; row < bindingsTable->rowCount(); ++row) {
@@ -435,6 +485,38 @@ QString ca3DConfigDialog::jsonFromTables() const
         overlays.append(overlay);
     }
     root.insert(QStringLiteral("overlays"), overlays);
+    for (int row = 0; row < presetsTable->rowCount(); ++row) {
+        QJsonObject preset;
+        preset.insert(QStringLiteral("id"), tableText(presetsTable, row, 0).toInt());
+        if (!tableText(presetsTable, row, 1).isEmpty()) {
+            preset.insert(QStringLiteral("name"), tableText(presetsTable, row, 1));
+        }
+        preset.insert(QStringLiteral("position"), vectorArray(tableText(presetsTable, row, 2), tableText(presetsTable, row, 3), tableText(presetsTable, row, 4)));
+        bool hasViewCenter = false;
+        for (int column = 5; column <= 7; ++column) {
+            hasViewCenter = hasViewCenter || !tableText(presetsTable, row, column).isEmpty();
+        }
+        if (hasViewCenter) {
+            preset.insert(QStringLiteral("viewCenter"), vectorArray(tableText(presetsTable, row, 5), tableText(presetsTable, row, 6), tableText(presetsTable, row, 7)));
+        }
+        preset.insert(QStringLiteral("upVector"), vectorArray(tableText(presetsTable, row, 8), tableText(presetsTable, row, 9), tableText(presetsTable, row, 10)));
+        preset.insert(QStringLiteral("yaw"), tableText(presetsTable, row, 11).isEmpty() ? 0.0 : tableText(presetsTable, row, 11).toDouble());
+        preset.insert(QStringLiteral("pitch"), tableText(presetsTable, row, 12).isEmpty() ? 0.0 : tableText(presetsTable, row, 12).toDouble());
+        preset.insert(QStringLiteral("fov"), tableText(presetsTable, row, 13).isEmpty() ? 45.0 : tableText(presetsTable, row, 13).toDouble());
+        if (!tableText(presetsTable, row, 14).isEmpty()) {
+            preset.insert(QStringLiteral("snapshot"), tableText(presetsTable, row, 14));
+        }
+        QJsonArray presetOverlays;
+        const QStringList overlayIds = tableText(presetsTable, row, 15).split(QLatin1Char(','), Qt::SkipEmptyParts);
+        for (const QString &overlayId : overlayIds) {
+            presetOverlays.append(overlayId.trimmed());
+        }
+        if (!presetOverlays.isEmpty()) {
+            preset.insert(QStringLiteral("overlays"), presetOverlays);
+        }
+        presets.append(preset);
+    }
+    root.insert(QStringLiteral("cameraPresets"), presets);
     return QString::fromUtf8(QJsonDocument(root).toJson(QJsonDocument::Indented));
 }
 
@@ -504,6 +586,39 @@ void ca3DConfigDialog::removeOverlayRow()
 {
     if (overlaysTable->currentRow() >= 0) {
         overlaysTable->removeRow(overlaysTable->currentRow());
+        markChanged();
+    }
+}
+
+void ca3DConfigDialog::addPresetRow()
+{
+    int nextId = 1;
+    for (int existingRow = 0; existingRow < presetsTable->rowCount(); ++existingRow) {
+        nextId = qMax(nextId, tableText(presetsTable, existingRow, 0).toInt() + 1);
+    }
+
+    const int row = presetsTable->rowCount();
+    presetsTable->insertRow(row);
+    for (int column = 0; column < presetsTable->columnCount(); ++column) {
+        setTableText(presetsTable, row, column, QString());
+    }
+    setTableText(presetsTable, row, 0, QString::number(nextId));
+    for (int column = 2; column <= 4; ++column) {
+        setTableText(presetsTable, row, column, QStringLiteral("0"));
+    }
+    setTableText(presetsTable, row, 8, QStringLiteral("0"));
+    setTableText(presetsTable, row, 9, QStringLiteral("1"));
+    setTableText(presetsTable, row, 10, QStringLiteral("0"));
+    setTableText(presetsTable, row, 11, QStringLiteral("0"));
+    setTableText(presetsTable, row, 12, QStringLiteral("0"));
+    setTableText(presetsTable, row, 13, QStringLiteral("45"));
+    markChanged();
+}
+
+void ca3DConfigDialog::removePresetRow()
+{
+    if (presetsTable->currentRow() >= 0) {
+        presetsTable->removeRow(presetsTable->currentRow());
         markChanged();
     }
 }
@@ -685,7 +800,7 @@ void ca3DConfigDialog::accept()
     }
 }
 
-bool ca3DConfigDialog::validateJson(const QString &json, QStringList *errors) const
+bool ca3DConfigDialog::validateJson(const QString &json, QStringList *errors)
 {
     ca3DSceneConfig config;
     return ca3DConfigParser::parse(json, &config, errors);
