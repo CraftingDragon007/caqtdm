@@ -38,7 +38,7 @@ log() {
 
 run() {
   if [ "$quiet" -eq 1 ]; then
-    "$@" >/dev/null
+    "$@" >/dev/null 2>&1
   else
     "$@"
   fi
