@@ -90,8 +90,13 @@ QJsonArray rectArray(const QString &x, const QString &y, const QString &width, c
 
 QString safeFileNameComponent(QString value, const QString &fallback)
 {
+    static const QRegularExpression invalidFileNameChars(
+        QStringLiteral("[^A-Za-z0-9._-]+")
+        );
+
     value = value.trimmed();
-    value.replace(QRegularExpression(QStringLiteral("[^A-Za-z0-9._-]+")), QStringLiteral("_"));
+    value.replace(invalidFileNameChars, QStringLiteral("_"));
+
     return value.isEmpty() ? fallback : value;
 }
 
@@ -573,7 +578,7 @@ QString ca3DConfigDialog::jsonFromTables() const
             preset.insert(QStringLiteral("snapshot"), tableText(presetsTable, row, 14));
         }
         QJsonArray presetOverlays;
-        for (const QString &overlayId : presetOverlayIds(row)) {
+        foreach (const QString &overlayId, presetOverlayIds(row)) {
             presetOverlays.append(overlayId);
         }
         if (!presetOverlays.isEmpty()) {

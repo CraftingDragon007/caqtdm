@@ -51,12 +51,12 @@ public:
     explicit ca3DWidget(QWidget *parent = 0);
     ~ca3DWidget();
 
-    QString getSceneConfig() const { return thisSceneConfig; }
+    const QString &getSceneConfig() const { return thisSceneConfig; }
     void setSceneConfig(const QString &config);
 
     bool getFallbackMode() const { return thisFallbackMode; }
     bool getConfigValid() const { return thisConfigValid; }
-    QStringList getConfigErrors() const { return thisConfigErrors; }
+    const QStringList &getConfigErrors() const { return thisConfigErrors; }
     QSize sizeHint() const override;
     QSize minimumSizeHint() const override;
     QList<QWidget*> overlayRootWidgets() const;
@@ -107,8 +107,8 @@ private:
 
 protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
-    void resizeEvent(QResizeEvent *event);
-    void showEvent(QShowEvent *event);
+    void resizeEvent(QResizeEvent *event) override;
+    void showEvent(QShowEvent *event) override;
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     void maybeInitialize3DView();

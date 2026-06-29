@@ -237,9 +237,9 @@ bool ca3DConfigParser::parse(const QString &json, ca3DSceneConfig *config, QStri
         if (errors) {
             const QPair<int, int> position = lineAndColumnForOffset(json, parseError.offset);
             errors->append(QStringLiteral("Invalid sceneConfig JSON at line %1, character %2: %3")
-                           .arg(position.first)
-                           .arg(position.second)
-                           .arg(parseError.errorString()));
+                               .arg(position.first)
+                               .arg(position.second)
+                               .arg(parseError.errorString()));
         }
         return false;
     }
@@ -256,32 +256,32 @@ bool ca3DConfigParser::parse(const QString &json, ca3DSceneConfig *config, QStri
         ca3DObjectConfig item;
         item.id = stringFromObject(object, QStringLiteral("id"));
         item.mesh = object.contains(QStringLiteral("mesh"))
-                    ? stringFromObject(object, QStringLiteral("mesh"))
-                    : stringFromObject(object, QStringLiteral("meshFile"));
+                        ? stringFromObject(object, QStringLiteral("mesh"))
+                        : stringFromObject(object, QStringLiteral("meshFile"));
         item.meshResolved = resolveDisplayFile(item.mesh);
         item.type = stringFromObject(object, QStringLiteral("type"));
         if (item.type.isEmpty()) {
             item.type = inferMeshType(item.mesh);
         }
         item.texture = object.contains(QStringLiteral("texture"))
-                       ? stringFromObject(object, QStringLiteral("texture"))
-                       : stringFromObject(object, QStringLiteral("textureFile"));
+                           ? stringFromObject(object, QStringLiteral("texture"))
+                           : stringFromObject(object, QStringLiteral("textureFile"));
         item.textureResolved = resolveDisplayFile(item.texture);
         const QJsonValue materialColorValue = object.value(QStringLiteral("materialColor"));
         if (!materialColorValue.isUndefined() && !materialColorValue.isNull()) {
             item.materialColor = colorFromValue(materialColorValue,
-                                               item.materialColor,
-                                               QStringLiteral("object.materialColor"),
-                                               errors);
+                                                item.materialColor,
+                                                QStringLiteral("object.materialColor"),
+                                                errors);
             item.hasMaterialColor = item.materialColor.isValid();
         }
         if (object.value(QStringLiteral("material")).isObject()) {
             const QJsonValue nestedMaterialColorValue = object.value(QStringLiteral("material")).toObject().value(QStringLiteral("color"));
             if (!nestedMaterialColorValue.isUndefined() && !nestedMaterialColorValue.isNull()) {
                 item.materialColor = colorFromValue(nestedMaterialColorValue,
-                                                   item.materialColor,
-                                                   QStringLiteral("object.material.color"),
-                                                   errors);
+                                                    item.materialColor,
+                                                    QStringLiteral("object.material.color"),
+                                                    errors);
                 item.hasMaterialColor = item.materialColor.isValid();
             }
         }
@@ -357,8 +357,8 @@ bool ca3DConfigParser::parse(const QString &json, ca3DSceneConfig *config, QStri
         item.rotation = vectorFromArray(object.value(QStringLiteral("rotation")), QStringLiteral("overlay.rotation"), errors);
         item.size = sizeFromArray(object.value(QStringLiteral("size")), QStringLiteral("overlay.size"), errors);
         const QString visibility = object.contains(QStringLiteral("visibilityMode"))
-                                   ? stringFromObject(object, QStringLiteral("visibilityMode"))
-                                   : stringFromObject(object, QStringLiteral("visibility"));
+                                       ? stringFromObject(object, QStringLiteral("visibilityMode"))
+                                       : stringFromObject(object, QStringLiteral("visibility"));
         item.visibilityMode = visibilityModeFromString(visibility, errors);
         item.cameraPreset = object.value(QStringLiteral("cameraPreset")).toInt(0);
         item.fallbackGeometry = rectFromArray(object.value(QStringLiteral("fallbackGeometry")), QStringLiteral("overlay.fallbackGeometry"), errors);
