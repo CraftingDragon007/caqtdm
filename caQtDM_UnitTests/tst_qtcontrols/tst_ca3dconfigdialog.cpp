@@ -53,6 +53,7 @@ void TestCa3DConfigDialog::appliesStructuredOverlayChanges()
         "cameraPresets": [{
             "id": 1,
             "position": [0, 0, 10],
+            "viewCenter": [0, 0.9, 0],
             "overlays": ["panel"]
         }]
     })json").arg(overlayFile);
@@ -67,6 +68,7 @@ void TestCa3DConfigDialog::appliesStructuredOverlayChanges()
     QTableWidget *presetsTable = dialog.findChild<QTableWidget *>(QStringLiteral("presetsTable"));
     QVERIFY(presetsTable);
     QCOMPARE(presetsTable->rowCount(), 1);
+    QCOMPARE(presetsTable->item(0, 6)->text(), QStringLiteral("0.9"));
     QDialogButtonBox *buttonBox = dialog.findChild<QDialogButtonBox *>();
     QVERIFY(buttonBox);
     QPushButton *applyButton = buttonBox->button(QDialogButtonBox::Apply);

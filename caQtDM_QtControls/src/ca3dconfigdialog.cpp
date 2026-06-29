@@ -33,6 +33,9 @@
 #include <QtDesigner/QDesignerFormWindowCursorInterface>
 #include <QtDesigner/QDesignerFormWindowInterface>
 
+#include <array>
+#include <charconv>
+
 namespace
 {
 QString numberString(double value)
@@ -42,7 +45,17 @@ QString numberString(double value)
 
 QString numberString(float value)
 {
-    return QString::number(static_cast<double>(value), 'g', 8);
+    std::array<char, 32> buffer;
+    const std::to_chars_result result = std::to_chars(
+        buffer.data(),
+        buffer.data() + buffer.size(),
+        value,
+        std::chars_format::general);
+
+    if (result.ec == std::errc()) {
+        return QString::fromLatin1(buffer.data(), static_cast<int>(result.ptr - buffer.data()));
+    }
+    return QString::number(static_cast<double>(value), 'g', 7);
 }
 
 QJsonArray vectorArray(const QString &x, const QString &y, const QString &z)
