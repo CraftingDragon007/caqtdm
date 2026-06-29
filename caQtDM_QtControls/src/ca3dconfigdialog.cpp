@@ -20,6 +20,8 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QLabel>
+#include <QLineEdit>
+#include <QListWidget>
 #include <QMap>
 #include <QMessageBox>
 #include <QPlainTextEdit>
@@ -234,7 +236,7 @@ void ca3DConfigDialog::buildUi()
                                             << tr("view x") << tr("view y") << tr("view z")
                                             << tr("up x") << tr("up y") << tr("up z")
                                             << tr("yaw") << tr("pitch") << tr("fov")
-                                            << tr("snapshot") << tr("overlays"));
+                                            << tr("snapshot") << tr("overlays (multiple)"));
     presetsTable->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
     QHBoxLayout *presetsButtons = new QHBoxLayout();
     QPushButton *addPresetButton = new QPushButton(tr("Add Preset"), presetsPage);
@@ -425,7 +427,7 @@ void ca3DConfigDialog::populateTablesFromJson(const QString &json)
         setTableText(presetsTable, row, 12, numberString(preset.pitch));
         setTableText(presetsTable, row, 13, numberString(preset.fov));
         setTableText(presetsTable, row, 14, preset.snapshot);
-        setTableText(presetsTable, row, 15, preset.overlays.join(QStringLiteral(", ")));
+        setPresetOverlaySelector(row, preset.overlays);
     }
 }
 
@@ -560,9 +562,8 @@ QString ca3DConfigDialog::jsonFromTables() const
             preset.insert(QStringLiteral("snapshot"), tableText(presetsTable, row, 14));
         }
         QJsonArray presetOverlays;
-        const QStringList overlayIds = tableText(presetsTable, row, 15).split(QLatin1Char(','), Qt::SkipEmptyParts);
-        for (const QString &overlayId : overlayIds) {
-            presetOverlays.append(overlayId.trimmed());
+        for (const QString &overlayId : presetOverlayIds(row)) {
+            presetOverlays.append(overlayId);
         }
         if (!presetOverlays.isEmpty()) {
             preset.insert(QStringLiteral("overlays"), presetOverlays);
@@ -665,6 +666,7 @@ void ca3DConfigDialog::addPresetRow()
     setTableText(presetsTable, row, 11, QStringLiteral("0"));
     setTableText(presetsTable, row, 12, QStringLiteral("0"));
     setTableText(presetsTable, row, 13, QStringLiteral("45"));
+    setPresetOverlaySelector(row, QStringList());
     markChanged();
 }
 
@@ -917,6 +919,92 @@ bool ca3DConfigDialog::tableCheck(QTableWidget *table, int row, int column) cons
 {
     QCheckBox *checkBox = table ? qobject_cast<QCheckBox *>(table->cellWidget(row, column)) : Q_NULLPTR;
     return checkBox && checkBox->isChecked();
+}
+
+void ca3DConfigDialog::setPresetOverlaySelector(int row, const QStringList &selectedOverlayIds)
+{
+    QWidget *selector = new QWidget(presetsTable);
+    QHBoxLayout *layout = new QHBoxLayout(selector);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(4);
+    QLineEdit *summary = new QLineEdit(selector);
+    summary->setObjectName(QStringLiteral("presetOverlaySelection"));
+    summary->setReadOnly(true);
+    summary->setPlaceholderText(tr("No overlays selected"));
+    summary->setText(selectedOverlayIds.join(QStringLiteral(", ")));
+    QPushButton *selectButton = new QPushButton(tr("Select..."), selector);
+    layout->addWidget(summary, 1);
+    layout->addWidget(selectButton);
+    selector->setMinimumWidth(260);
+    presetsTable->setCellWidget(row, 15, selector);
+
+    connect(summary, SIGNAL(textChanged(QString)), this, SLOT(markChanged()));
+    connect(selectButton, &QPushButton::clicked, this, [this, summary]() {
+        QDialog dialog(this);
+        dialog.setWindowTitle(tr("Select Preset Overlays"));
+        QVBoxLayout *dialogLayout = new QVBoxLayout(&dialog);
+        QListWidget *overlayList = new QListWidget(&dialog);
+
+        QStringList availableOverlayIds;
+        for (int overlayRow = 0; overlayRow < overlaysTable->rowCount(); ++overlayRow) {
+            const QString overlayId = tableText(overlaysTable, overlayRow, 0);
+            if (!overlayId.isEmpty() && !availableOverlayIds.contains(overlayId)) {
+                availableOverlayIds.append(overlayId);
+            }
+        }
+        QStringList selectedIds;
+        const QStringList displayedIds = summary->text().split(QLatin1Char(','), Qt::SkipEmptyParts);
+        for (const QString &displayedId : displayedIds) {
+            const QString selectedId = displayedId.trimmed();
+            if (!selectedId.isEmpty()) {
+                selectedIds.append(selectedId);
+            }
+            if (!selectedId.isEmpty() && !availableOverlayIds.contains(selectedId)) {
+                availableOverlayIds.append(selectedId);
+            }
+        }
+        for (const QString &overlayId : availableOverlayIds) {
+            QListWidgetItem *item = new QListWidgetItem(overlayId, overlayList);
+            item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+            item->setCheckState(selectedIds.contains(overlayId) ? Qt::Checked : Qt::Unchecked);
+        }
+
+        QDialogButtonBox *dialogButtons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+        dialogLayout->addWidget(overlayList);
+        dialogLayout->addWidget(dialogButtons);
+        connect(dialogButtons, SIGNAL(accepted()), &dialog, SLOT(accept()));
+        connect(dialogButtons, SIGNAL(rejected()), &dialog, SLOT(reject()));
+        if (dialog.exec() != QDialog::Accepted) {
+            return;
+        }
+
+        QStringList checkedIds;
+        for (int itemIndex = 0; itemIndex < overlayList->count(); ++itemIndex) {
+            QListWidgetItem *item = overlayList->item(itemIndex);
+            if (item->checkState() == Qt::Checked) {
+                checkedIds.append(item->text());
+            }
+        }
+        summary->setText(checkedIds.join(QStringLiteral(", ")));
+    });
+}
+
+QStringList ca3DConfigDialog::presetOverlayIds(int row) const
+{
+    QWidget *selector = presetsTable ? presetsTable->cellWidget(row, 15) : Q_NULLPTR;
+    QLineEdit *summary = selector ? selector->findChild<QLineEdit *>(QStringLiteral("presetOverlaySelection")) : Q_NULLPTR;
+    QStringList result;
+    if (!summary) {
+        return result;
+    }
+    const QStringList ids = summary->text().split(QLatin1Char(','), Qt::SkipEmptyParts);
+    for (const QString &id : ids) {
+        const QString trimmedId = id.trimmed();
+        if (!trimmedId.isEmpty()) {
+            result.append(trimmedId);
+        }
+    }
+    return result;
 }
 
 void ca3DConfigDialog::showErrors(const QStringList &errors)

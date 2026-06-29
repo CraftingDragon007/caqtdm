@@ -16,6 +16,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QLabel>
+#include <QLineEdit>
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QTableWidget>
@@ -117,7 +118,12 @@ void TestCa3DConfigDialog::appliesStructuredOverlayChanges()
     presetsTable->item(0, 7)->setText(QStringLiteral("3"));
     presetsTable->item(0, 11)->setText(QStringLiteral("12.5"));
     presetsTable->item(0, 13)->setText(QStringLiteral("35"));
-    presetsTable->item(0, 15)->setText(QStringLiteral("panel, secondary"));
+    QWidget *presetOverlaySelector = presetsTable->cellWidget(0, 15);
+    QVERIFY(presetOverlaySelector);
+    QLineEdit *presetOverlaySummary = presetOverlaySelector->findChild<QLineEdit *>(QStringLiteral("presetOverlaySelection"));
+    QVERIFY(presetOverlaySummary);
+    QCOMPARE(presetOverlaySummary->text(), QStringLiteral("panel"));
+    presetOverlaySummary->setText(QStringLiteral("panel, secondary"));
 
     QVERIFY(QMetaObject::invokeMethod(&dialog, "applyChanges", Qt::DirectConnection));
     QVERIFY(!applyButton->isEnabled());

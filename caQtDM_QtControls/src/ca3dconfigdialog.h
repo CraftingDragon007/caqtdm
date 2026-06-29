@@ -61,6 +61,8 @@ private:
     QString tableComboText(QTableWidget *table, int row, int column) const;
     void setTableCheck(QTableWidget *table, int row, int column, bool checked);
     bool tableCheck(QTableWidget *table, int row, int column) const;
+    void setPresetOverlaySelector(int row, const QStringList &selectedOverlayIds);
+    QStringList presetOverlayIds(int row) const;
     void showErrors(const QStringList &errors);
 
     ca3DWidget *widget3D;
