@@ -277,6 +277,11 @@ void ca3DConfigDialog::buildUi()
     connect(captureSnapshotButton, SIGNAL(clicked()), this, SLOT(captureSnapshot()));
     connect(previewWidget, SIGNAL(snapshotCaptured(QPixmap)), this, SLOT(finishSnapshotCapture(QPixmap)));
     connect(previewWidget, SIGNAL(snapshotCaptureFailed(QString)), this, SLOT(failSnapshotCapture(QString)));
+    connect(tabs, &QTabWidget::currentChanged, this, [this, previewPage](int) {
+        if (tabs && tabs->currentWidget() == previewPage) {
+            refreshPreview();
+        }
+    });
 
     QWidget *rawPage = new QWidget(tabs);
     QVBoxLayout *rawLayout = new QVBoxLayout(rawPage);
@@ -321,7 +326,6 @@ void ca3DConfigDialog::loadFromWidget()
     rawJsonEdit->setPlainText(json);
     populateTablesFromJson(json);
     populatePresetSelector(json);
-    refreshPreview();
     updatingUi = false;
     buttonBox->button(QDialogButtonBox::Apply)->setEnabled(false);
 }
