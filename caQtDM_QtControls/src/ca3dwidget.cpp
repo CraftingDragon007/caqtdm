@@ -1654,8 +1654,7 @@ void ca3DWidget::applyFallbackPreset(int preset)
 
         bool visible = thisConfig.cameraPresets.isEmpty();
         if (selectedPreset) {
-            visible = selectedPreset->overlays.contains(overlay.id)
-            || (overlay.cameraPreset > 0 && overlay.cameraPreset == selectedPreset->id);
+            visible = selectedPreset->overlays.contains(overlay.id);
         }
 
         if (visible) {
@@ -1976,9 +1975,7 @@ void ca3DWidget::apply3DOverlayVisibility(int preset)
             continue;
         }
 
-        const bool presetMatches = selectedPreset
-                                   && (selectedPreset->overlays.contains(overlay.id)
-                                       || (overlay.cameraPreset > 0 && overlay.cameraPreset == selectedPreset->id));
+        const bool presetMatches = selectedPreset && selectedPreset->overlays.contains(overlay.id);
         const bool inView = overlayIsInCameraView(this3DView ? this3DView->camera() : Q_NULLPTR, overlay);
 
         bool visible = false;

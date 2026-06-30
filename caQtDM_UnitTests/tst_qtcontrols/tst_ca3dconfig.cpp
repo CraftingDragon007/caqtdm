@@ -77,7 +77,6 @@ QString jsonWithFiles(const QString &mesh,
       "rotation": [1, 2, 3],
       "size": [5.5, 6.5],
       "visibility": "alwaysWhenInView",
-      "cameraPreset": 2,
       "fallbackGeometry": [10, 20, 300, 200],
       "transparentBackground": false
     }
@@ -240,7 +239,6 @@ void TestCa3DConfig::parsesSceneConfigUtilityFields()
     QCOMPARE(parsedOverlay.size.width(), 5.5);
     QCOMPARE(parsedOverlay.size.height(), 6.5);
     QCOMPARE(parsedOverlay.visibilityMode, ca3DOverlayConfig::AlwaysWhenInView);
-    QCOMPARE(parsedOverlay.cameraPreset, 2);
     QCOMPARE(parsedOverlay.fallbackGeometry, QRect(10, 20, 300, 200));
     QCOMPARE(parsedOverlay.transparentBackground, false);
 
@@ -255,6 +253,23 @@ void TestCa3DConfig::parsesSceneConfigUtilityFields()
     QCOMPARE(preset.fov, 35.0);
     QCOMPARE(preset.snapshotResolved, snapshot);
     QCOMPARE(preset.overlays, QStringList() << QStringLiteral("panel"));
+}
+
+void TestCa3DConfig::parsesCameraPresetsWithoutOverlays()
+{
+    const QString json = QStringLiteral(R"json({
+        "cameraPresets": [
+            { "id": 1, "position": [0, 0, 10] },
+            { "id": 2, "position": [0, 0, 20], "overlays": [] }
+        ]
+    })json");
+
+    ca3DSceneConfig config;
+    QStringList errors;
+    QVERIFY2(ca3DConfigParser::parse(json, &config, &errors), qPrintable(errors.join(QLatin1Char('\n'))));
+    QCOMPARE(config.cameraPresets.count(), 2);
+    QVERIFY(config.cameraPresets.at(0).overlays.isEmpty());
+    QVERIFY(config.cameraPresets.at(1).overlays.isEmpty());
 }
 
 void TestCa3DConfig::rejectsInvalidUtilityFields()
@@ -391,7 +406,6 @@ void TestCa3DWidget::ca3DWidgetBuildsForcedFallbackOverlays()
       "id": "panel",
       "includeFile": "%1",
       "macro": "P=MOTOR",
-      "cameraPreset": 1,
       "fallbackGeometry": [10, 20, 320, 200],
       "transparentBackground": true
     }
@@ -401,6 +415,10 @@ void TestCa3DWidget::ca3DWidgetBuildsForcedFallbackOverlays()
       "id": 1,
       "snapshot": "%2",
       "overlays": ["panel"]
+    },
+    {
+      "id": 2,
+      "overlays": []
     }
   ]
 }
@@ -425,6 +443,10 @@ void TestCa3DWidget::ca3DWidgetBuildsForcedFallbackOverlays()
     QCOMPARE(overlayViews.count(), 1);
     QVERIFY(overlayViews.first()->isVisible());
     QCOMPARE(overlayViews.first()->geometry(), QRect(10, 20, 320, 200));
+
+    widget.setCameraPreset(2);
+    QTest::qWait(20);
+    QVERIFY(!overlayViews.first()->isVisible());
 
     if (oldForceFallback.isNull()) {
         qunsetenv("CAQTDM_3D_FORCE_FALLBACK");

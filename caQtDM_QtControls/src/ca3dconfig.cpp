@@ -360,7 +360,6 @@ bool ca3DConfigParser::parse(const QString &json, ca3DSceneConfig *config, QStri
                                        ? stringFromObject(object, QStringLiteral("visibilityMode"))
                                        : stringFromObject(object, QStringLiteral("visibility"));
         item.visibilityMode = visibilityModeFromString(visibility, errors);
-        item.cameraPreset = object.value(QStringLiteral("cameraPreset")).toInt(0);
         item.fallbackGeometry = rectFromArray(object.value(QStringLiteral("fallbackGeometry")), QStringLiteral("overlay.fallbackGeometry"), errors);
         item.transparentBackground = object.value(QStringLiteral("transparentBackground")).toBool(true);
 

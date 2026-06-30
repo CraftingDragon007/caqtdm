@@ -116,15 +116,14 @@ void TestCa3DConfigDialog::appliesStructuredOverlayChanges()
     table->item(0, 2)->setText(QStringLiteral("P=TEST"));
     QVERIFY(applyButton->isEnabled());
     table->item(0, 3)->setText(QStringLiteral("10.5"));
-    table->item(0, 12)->setText(QStringLiteral("1"));
-    table->item(0, 13)->setText(QStringLiteral("20"));
-    table->item(0, 14)->setText(QStringLiteral("30"));
-    table->item(0, 15)->setText(QStringLiteral("400"));
-    table->item(0, 16)->setText(QStringLiteral("250"));
+    table->item(0, 12)->setText(QStringLiteral("20"));
+    table->item(0, 13)->setText(QStringLiteral("30"));
+    table->item(0, 14)->setText(QStringLiteral("400"));
+    table->item(0, 15)->setText(QStringLiteral("250"));
     QComboBox *visibility = qobject_cast<QComboBox *>(table->cellWidget(0, 11));
     QVERIFY(visibility);
     visibility->setCurrentText(QStringLiteral("alwaysWhenInView"));
-    QCheckBox *transparent = qobject_cast<QCheckBox *>(table->cellWidget(0, 17));
+    QCheckBox *transparent = qobject_cast<QCheckBox *>(table->cellWidget(0, 16));
     QVERIFY(transparent);
     transparent->setChecked(false);
     presetsTable->item(0, 1)->setText(QStringLiteral("Front camera"));
@@ -153,7 +152,6 @@ void TestCa3DConfigDialog::appliesStructuredOverlayChanges()
     QCOMPARE(overlay.macro, QStringLiteral("P=TEST"));
     QCOMPARE(overlay.position.x(), 10.5f);
     QCOMPARE(overlay.visibilityMode, ca3DOverlayConfig::AlwaysWhenInView);
-    QCOMPARE(overlay.cameraPreset, 1);
     QCOMPARE(overlay.fallbackGeometry, QRect(20, 30, 400, 250));
     QVERIFY(!overlay.transparentBackground);
 
@@ -187,7 +185,10 @@ void TestCa3DConfigDialog::keepsNewRowsWhenValidatingRawJson()
     QVERIFY(QMetaObject::invokeMethod(&dialog, "addPresetRow", Qt::DirectConnection));
     QCOMPARE(presetsTable->rowCount(), 1);
     const QJsonObject root = QJsonDocument::fromJson(rawEdit->toPlainText().toUtf8()).object();
-    QCOMPARE(root.value(QStringLiteral("cameraPresets")).toArray().count(), 1);
+    const QJsonArray presets = root.value(QStringLiteral("cameraPresets")).toArray();
+    QCOMPARE(presets.count(), 1);
+    QVERIFY(presets.first().toObject().value(QStringLiteral("overlays")).isArray());
+    QVERIFY(presets.first().toObject().value(QStringLiteral("overlays")).toArray().isEmpty());
 
     QVERIFY(QMetaObject::invokeMethod(&dialog, "validateRawJson", Qt::DirectConnection));
     QCOMPARE(presetsTable->rowCount(), 1);

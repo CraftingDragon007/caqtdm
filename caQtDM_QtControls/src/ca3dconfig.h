@@ -81,7 +81,6 @@ struct QTCON_EXPORT ca3DOverlayConfig
     QVector3D rotation;
     QSizeF size;
     VisibilityMode visibilityMode = PresetOnly;
-    int cameraPreset = 0;
     QRect fallbackGeometry;
     bool transparentBackground = true;
 };

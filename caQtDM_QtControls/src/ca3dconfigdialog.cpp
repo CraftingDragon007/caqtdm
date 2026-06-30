@@ -210,13 +210,13 @@ void ca3DConfigDialog::buildUi()
     QVBoxLayout *overlaysLayout = new QVBoxLayout(overlaysPage);
     overlaysTable = new QTableWidget(overlaysPage);
     overlaysTable->setObjectName(QStringLiteral("overlaysTable"));
-    overlaysTable->setColumnCount(18);
+    overlaysTable->setColumnCount(17);
     overlaysTable->setHorizontalHeaderLabels(QStringList()
                                              << tr("id") << tr("includeFile") << tr("macro")
                                              << tr("pos x") << tr("pos y") << tr("pos z")
                                              << tr("rot x") << tr("rot y") << tr("rot z")
                                              << tr("width") << tr("height") << tr("visibility")
-                                             << tr("camera preset") << tr("fallback x") << tr("fallback y")
+                                             << tr("fallback x") << tr("fallback y")
                                              << tr("fallback width") << tr("fallback height") << tr("transparent"));
     overlaysTable->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
     QHBoxLayout *overlaysButtons = new QHBoxLayout();
@@ -408,18 +408,17 @@ void ca3DConfigDialog::populateTablesFromJson(const QString &json)
         setTableCombo(overlaysTable, row, 11,
                       QStringList() << QStringLiteral("presetOnly") << QStringLiteral("inView")
                                     << QStringLiteral("alwaysWhenInView"), visibility);
-        setTableText(overlaysTable, row, 12, overlay.cameraPreset > 0 ? QString::number(overlay.cameraPreset) : QString());
         if (!overlay.fallbackGeometry.isEmpty()) {
-            setTableText(overlaysTable, row, 13, QString::number(overlay.fallbackGeometry.x()));
-            setTableText(overlaysTable, row, 14, QString::number(overlay.fallbackGeometry.y()));
-            setTableText(overlaysTable, row, 15, QString::number(overlay.fallbackGeometry.width()));
-            setTableText(overlaysTable, row, 16, QString::number(overlay.fallbackGeometry.height()));
+            setTableText(overlaysTable, row, 12, QString::number(overlay.fallbackGeometry.x()));
+            setTableText(overlaysTable, row, 13, QString::number(overlay.fallbackGeometry.y()));
+            setTableText(overlaysTable, row, 14, QString::number(overlay.fallbackGeometry.width()));
+            setTableText(overlaysTable, row, 15, QString::number(overlay.fallbackGeometry.height()));
         } else {
-            for (int column = 13; column <= 16; ++column) {
+            for (int column = 12; column <= 15; ++column) {
                 setTableText(overlaysTable, row, column, QString());
             }
         }
-        setTableCheck(overlaysTable, row, 17, overlay.transparentBackground);
+        setTableCheck(overlaysTable, row, 16, overlay.transparentBackground);
     }
 
     foreach (const ca3DCameraPresetConfig &preset, config.cameraPresets) {
@@ -544,19 +543,16 @@ QString ca3DConfigDialog::jsonFromTables() const
         overlay.insert(QStringLiteral("rotation"), vectorArray(tableText(overlaysTable, row, 6), tableText(overlaysTable, row, 7), tableText(overlaysTable, row, 8)));
         overlay.insert(QStringLiteral("size"), sizeArray(tableText(overlaysTable, row, 9), tableText(overlaysTable, row, 10)));
         overlay.insert(QStringLiteral("visibilityMode"), tableComboText(overlaysTable, row, 11));
-        if (!tableText(overlaysTable, row, 12).isEmpty()) {
-            overlay.insert(QStringLiteral("cameraPreset"), tableText(overlaysTable, row, 12).toInt());
-        }
         bool hasFallbackGeometry = false;
-        for (int column = 13; column <= 16; ++column) {
+        for (int column = 12; column <= 15; ++column) {
             hasFallbackGeometry = hasFallbackGeometry || !tableText(overlaysTable, row, column).isEmpty();
         }
         if (hasFallbackGeometry) {
             overlay.insert(QStringLiteral("fallbackGeometry"),
-                           rectArray(tableText(overlaysTable, row, 13), tableText(overlaysTable, row, 14),
-                                     tableText(overlaysTable, row, 15), tableText(overlaysTable, row, 16)));
+                           rectArray(tableText(overlaysTable, row, 12), tableText(overlaysTable, row, 13),
+                                     tableText(overlaysTable, row, 14), tableText(overlaysTable, row, 15)));
         }
-        overlay.insert(QStringLiteral("transparentBackground"), tableCheck(overlaysTable, row, 17));
+        overlay.insert(QStringLiteral("transparentBackground"), tableCheck(overlaysTable, row, 16));
         overlays.append(overlay);
     }
     root.insert(QStringLiteral("overlays"), overlays);
@@ -585,9 +581,7 @@ QString ca3DConfigDialog::jsonFromTables() const
         foreach (const QString &overlayId, presetOverlayIds(row)) {
             presetOverlays.append(overlayId);
         }
-        if (!presetOverlays.isEmpty()) {
-            preset.insert(QStringLiteral("overlays"), presetOverlays);
-        }
+        preset.insert(QStringLiteral("overlays"), presetOverlays);
         presets.append(preset);
     }
     root.insert(QStringLiteral("cameraPresets"), presets);
@@ -652,7 +646,7 @@ void ca3DConfigDialog::addOverlayRow()
     setTableCombo(overlaysTable, row, 11,
                   QStringList() << QStringLiteral("presetOnly") << QStringLiteral("inView")
                                 << QStringLiteral("alwaysWhenInView"), QStringLiteral("presetOnly"));
-    setTableCheck(overlaysTable, row, 17, true);
+    setTableCheck(overlaysTable, row, 16, true);
     markChanged();
 }
 
