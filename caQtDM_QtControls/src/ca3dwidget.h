@@ -87,6 +87,16 @@ public slots:
     void setObjectBindingValue(int bindingIndex, double value);
 
 signals:
+    void cameraPositionXChanged(double x);
+    void cameraPositionXChanged(int x);
+    void cameraPositionYChanged(double y);
+    void cameraPositionYChanged(int y);
+    void cameraPositionZChanged(double z);
+    void cameraPositionZChanged(int z);
+    void cameraYawChanged(double yaw);
+    void cameraYawChanged(int yaw);
+    void cameraPitchChanged(double pitch);
+    void cameraPitchChanged(int pitch);
     void overlayWidgetsRebuilt();
     void snapshotCaptured(const QPixmap &pixmap);
     void snapshotCaptureFailed(const QString &error);
@@ -102,6 +112,8 @@ private:
     void rebuildFallbackView();
     void clearFallbackView();
     void applyFallbackPreset(int preset);
+    void emitCameraPositionSignals(const QVector3D &position);
+    void emitCameraRotationSignals(double yaw, double pitch);
     bool isDesignerMode() const;
     void setDynamicBindingComponent(const ca3DObjectConfig &object, const ca3DBindingConfig &binding, double value);
 

@@ -602,6 +602,12 @@ float cameraPitchDegrees(const QVector3D &forward)
     return qRadiansToDegrees(qAsin(qBound(-1.0f, normalizedForward.y(), 1.0f)));
 }
 
+float cameraYawDegrees(const QVector3D &forward)
+{
+    const QVector3D normalizedForward = normalizedOrFallback(forward, QVector3D(0.0f, 0.0f, -1.0f));
+    return qRadiansToDegrees(qAtan2(normalizedForward.x(), -normalizedForward.z()));
+}
+
 void moveCameraAlong(Qt3DRender::QCamera *camera, const QVector3D &direction, double distance)
 {
     const QVector3D delta = direction * static_cast<float>(distance);
@@ -978,7 +984,12 @@ void ca3DWidget::setCameraPreset(int preset)
         if (cameraPreset.id == resolvedPreset) {
             presetFound = true;
             thisCameraPreset = resolvedPreset;
-            applyCameraPresetConfig(cameraPreset);
+            if (this3DView) {
+                applyCameraPresetConfig(cameraPreset);
+            } else {
+                emitCameraPositionSignals(cameraPreset.position);
+                emitCameraRotationSignals(cameraPreset.yaw, cameraPreset.pitch);
+            }
             break;
         }
     }
@@ -990,10 +1001,37 @@ void ca3DWidget::setCameraPreset(int preset)
     qCDebug(ca3DWidgetLog) << "setCameraPreset applied" << resolvedPreset
                            << cameraDebugState(this3DView ? this3DView->camera() : Q_NULLPTR);
 #else
-    thisCameraPreset = preset;
+    thisCameraPreset = preset > 0 || thisConfig.cameraPresets.isEmpty()
+                           ? preset
+                           : thisConfig.cameraPresets.first().id;
+    foreach (const ca3DCameraPresetConfig &cameraPreset, thisConfig.cameraPresets) {
+        if (cameraPreset.id == thisCameraPreset) {
+            emitCameraPositionSignals(cameraPreset.position);
+            emitCameraRotationSignals(cameraPreset.yaw, cameraPreset.pitch);
+            break;
+        }
+    }
 #endif
     applyFallbackPreset(thisCameraPreset);
     updatePlaceholderText();
+}
+
+void ca3DWidget::emitCameraPositionSignals(const QVector3D &position)
+{
+    emit cameraPositionXChanged(static_cast<double>(position.x()));
+    emit cameraPositionXChanged(qRound(position.x()));
+    emit cameraPositionYChanged(static_cast<double>(position.y()));
+    emit cameraPositionYChanged(qRound(position.y()));
+    emit cameraPositionZChanged(static_cast<double>(position.z()));
+    emit cameraPositionZChanged(qRound(position.z()));
+}
+
+void ca3DWidget::emitCameraRotationSignals(double yaw, double pitch)
+{
+    emit cameraYawChanged(yaw);
+    emit cameraYawChanged(qRound(yaw));
+    emit cameraPitchChanged(pitch);
+    emit cameraPitchChanged(qRound(pitch));
 }
 
 void ca3DWidget::setCameraPosition(double x, double y, double z)
@@ -1750,6 +1788,14 @@ void ca3DWidget::initialize3DView()
 
     this3DView = new Qt3DExtras::Qt3DWindow();
     this3DView->defaultFrameGraph()->setClearColor(QColor(30, 34, 40));
+    Qt3DRender::QCamera *camera = this3DView->camera();
+    connect(camera, &Qt3DRender::QCamera::positionChanged, this, [this](const QVector3D &position) {
+        emitCameraPositionSignals(position);
+    });
+    connect(camera, &Qt3DRender::QCamera::viewCenterChanged, this, [this, camera](const QVector3D &) {
+        const QVector3D forward = camera->viewCenter() - camera->position();
+        emitCameraRotationSignals(cameraYawDegrees(forward), cameraPitchDegrees(forward));
+    });
     thisViewContainer = QWidget::createWindowContainer(this3DView, this);
     thisViewContainer->setMinimumSize(QSize(120, 80));
     thisViewContainer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);

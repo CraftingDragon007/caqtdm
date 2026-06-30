@@ -15,6 +15,7 @@
 #include <QLineEdit>
 #include <QMouseEvent>
 #include <QPixmap>
+#include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTest>
 #include <QVector3D>
@@ -413,6 +414,9 @@ void TestCa3DWidget::ca3DWidgetBuildsForcedFallbackOverlays()
   "cameraPresets": [
     {
       "id": 1,
+      "position": [1, 2, 3],
+      "yaw": 15,
+      "pitch": -10,
       "snapshot": "%2",
       "overlays": ["panel"]
     },
@@ -437,8 +441,29 @@ void TestCa3DWidget::ca3DWidgetBuildsForcedFallbackOverlays()
     QCOMPARE(widget.overlayMacro(overlayRoot), QStringLiteral("P=MOTOR"));
     QCOMPARE(widget.overlayIncludePath(overlayRoot), tempDir.path() + QLatin1Char('/'));
 
+    QSignalSpy xSpy(&widget, qOverload<double>(&ca3DWidget::cameraPositionXChanged));
+    QSignalSpy ySpy(&widget, qOverload<double>(&ca3DWidget::cameraPositionYChanged));
+    QSignalSpy zSpy(&widget, qOverload<double>(&ca3DWidget::cameraPositionZChanged));
+    QSignalSpy yawSpy(&widget, qOverload<double>(&ca3DWidget::cameraYawChanged));
+    QSignalSpy pitchSpy(&widget, qOverload<double>(&ca3DWidget::cameraPitchChanged));
+    QSignalSpy xIntSpy(&widget, qOverload<int>(&ca3DWidget::cameraPositionXChanged));
+    QSignalSpy yawIntSpy(&widget, qOverload<int>(&ca3DWidget::cameraYawChanged));
     widget.setCameraPreset(1);
     QTest::qWait(20);
+    QCOMPARE(xSpy.count(), 1);
+    QCOMPARE(ySpy.count(), 1);
+    QCOMPARE(zSpy.count(), 1);
+    QCOMPARE(yawSpy.count(), 1);
+    QCOMPARE(pitchSpy.count(), 1);
+    QCOMPARE(xIntSpy.count(), 1);
+    QCOMPARE(yawIntSpy.count(), 1);
+    QCOMPARE(xSpy.takeFirst().first().toDouble(), 1.0);
+    QCOMPARE(ySpy.takeFirst().first().toDouble(), 2.0);
+    QCOMPARE(zSpy.takeFirst().first().toDouble(), 3.0);
+    QCOMPARE(yawSpy.takeFirst().first().toDouble(), 15.0);
+    QCOMPARE(pitchSpy.takeFirst().first().toDouble(), -10.0);
+    QCOMPARE(xIntSpy.takeFirst().first().toInt(), 1);
+    QCOMPARE(yawIntSpy.takeFirst().first().toInt(), 15);
     QList<QGraphicsView *> overlayViews = widget.findChildren<QGraphicsView *>(QStringLiteral("ca3DOverlayView_panel"));
     QCOMPARE(overlayViews.count(), 1);
     QVERIFY(overlayViews.first()->isVisible());
