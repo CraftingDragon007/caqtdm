@@ -467,8 +467,10 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
     controlsInterfaces = interfaces;
     pepPrint = pepprint;
     firstResize = true;
+    allowResize = false;
     loopTimer = 0;
     prcFile = false;
+    initialDisplaySize = QSize();
 
     // for cainclude, we need when updating internal positions to know about the resize factors
     this->setProperty("RESIZEX", 1.0);
@@ -621,9 +623,7 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
 
         delete file;
 
-        // define size of application
-        setMinimumSize(myWidget->width(), myWidget->height());
-        setMaximumSize(myWidget->width(), myWidget->height());
+        initialDisplaySize = myWidget->size();
 
         // add widget to the gui
         layout->addWidget(myWidget);
@@ -9776,6 +9776,23 @@ bool CaQtDM_Lib::checkJsonString(QString &inputc)
 void CaQtDM_Lib::allowResizing(bool allowresize)
 {
     allowResize = allowresize;
+    if (!myWidget || fromAS) {
+        QTimer::singleShot(50, this, SLOT(updateResize()));
+        return;
+    }
+
+    const QSize displaySize = initialDisplaySize.isValid() ? initialDisplaySize : myWidget->size();
+    if (prcFile) {
+        setMinimumSize(displaySize);
+        setMaximumSize(displaySize);
+    } else if (allowResize) {
+        setMinimumSize(displaySize / 4);
+        setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
+        setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    } else {
+        setFixedSize(displaySize);
+    }
+    resize(displaySize);
     QTimer::singleShot(50, this, SLOT(updateResize()));
 }
 

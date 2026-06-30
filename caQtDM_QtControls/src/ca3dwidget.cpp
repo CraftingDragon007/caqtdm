@@ -1264,7 +1264,11 @@ void ca3DWidget::showEvent(QShowEvent *event)
 {
     QWidget::showEvent(event);
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-    maybeInitialize3DView();
+    QTimer::singleShot(0, this, [this]() {
+        if (isVisible()) {
+            maybeInitialize3DView();
+        }
+    });
 #else
     if (thisFallbackMode) {
         rebuildFallbackView();
@@ -1765,13 +1769,10 @@ void ca3DWidget::update3DViewGeometry()
         return;
     }
 
-    const QSize viewSize = thisViewContainer->size().expandedTo(QSize(120, 80));
-    if (this3DView->size() != viewSize) {
-        this3DView->resize(viewSize);
-    }
+    const QSize viewSize = thisViewContainer->size();
 
     Qt3DRender::QCamera *camera = this3DView->camera();
-    if (camera && viewSize.height() > 0) {
+    if (camera && viewSize.width() > 0 && viewSize.height() > 0) {
         camera->lens()->setAspectRatio(static_cast<float>(viewSize.width()) / static_cast<float>(viewSize.height()));
         apply3DOverlayVisibility(thisCameraPreset);
     }

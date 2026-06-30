@@ -468,6 +468,7 @@ public:
     bool prcFile;
 
     int origWidth, origHeight;
+    QSize initialDisplaySize;
 
     struct includeData {int count; int ms; QString text;};
     QMap<QString, includeData> includeFilesList;
@@ -617,4 +618,3 @@ public slots:
 };
 
 #endif // CaQtDM_Lib_H
-

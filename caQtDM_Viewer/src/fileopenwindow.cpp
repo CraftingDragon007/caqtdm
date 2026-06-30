@@ -1142,10 +1142,6 @@ QMainWindow *FileOpenWindow::loadMainWindow(const QPoint &position, const QStrin
     }
 
     mainWindow->raise();
-    mainWindow->setMinimumSize(mainWindow->size()/4);
-    mainWindow->setMaximumSize(16777215, 16777215);
-    mainWindow->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    mainWindow->setWindowFlags( mainWindow->windowFlags() );
 
     // set some user properties
     mainWindow->setProperty("fileString", fileS);
@@ -1154,6 +1150,9 @@ QMainWindow *FileOpenWindow::loadMainWindow(const QPoint &position, const QStrin
 
     // resize the window to minimal size for .prc files
     if (fileS.contains("prc")) {
+        mainWindow->setMinimumSize(mainWindow->size()/4);
+        mainWindow->setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
+        mainWindow->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
         mainWindow->resize(mainWindow->minimumSizeHint());
     }
     activWindow = 0;
