@@ -10,7 +10,6 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}_web
   NGINX_IMAGE_NAME: ${{ github.repository }}_nginx
-  CAGW_IMAGE_NAME: ${{ github.repository }}_cagw
 
 jobs:
   build-and-push-image:
@@ -101,44 +100,3 @@ jobs:
           subject-digest: ${{ steps.push-nginx.outputs.digest }}
           push-to-registry: true
 
-  build-and-push-cagw-image:
-    runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
-      packages: write
-      attestations: write
-      id-token: write
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata for CAGW image tagging
-        id: meta-cagw
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.CAGW_IMAGE_NAME }}
-
-      - name: Build and push CAGW Docker image
-        id: push-cagw
-        uses: docker/build-push-action@v6
-        with:
-          context: ./caQtDM_Web/docker/gateway
-          file: ./caQtDM_Web/docker/gateway/Dockerfile
-          push: true
-          tags: ${{ steps.meta-cagw.outputs.tags }}
-          labels: ${{ steps.meta-cagw.outputs.labels }}
-
-      - name: Generate CAGW artifact attestation
-        uses: actions/attest-build-provenance@v3
-        with:
-          subject-name: ${{ env.REGISTRY }}/${{ env.CAGW_IMAGE_NAME }}
-          subject-digest: ${{ steps.push-cagw.outputs.digest }}
-          push-to-registry: true
