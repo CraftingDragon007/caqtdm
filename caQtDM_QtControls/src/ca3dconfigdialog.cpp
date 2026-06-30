@@ -14,6 +14,7 @@
 #include <QDir>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QFontDatabase>
 #include <QHeaderView>
 #include <QHBoxLayout>
 #include <QJsonArray>
@@ -29,9 +30,14 @@
 #include <QPushButton>
 #include <QRegularExpression>
 #include <QScopedValueRollback>
+#include <QScrollBar>
+#include <QSyntaxHighlighter>
 #include <QTableWidget>
 #include <QTableWidgetItem>
 #include <QTabWidget>
+#include <QTextCharFormat>
+#include <QTextCursor>
+#include <QTextEdit>
 #include <QVBoxLayout>
 #include <QtDesigner/QDesignerFormWindowCursorInterface>
 #include <QtDesigner/QDesignerFormWindowInterface>
@@ -41,6 +47,86 @@
 
 namespace
 {
+class JsonHighlighter : public QSyntaxHighlighter
+{
+public:
+    explicit JsonHighlighter(QTextDocument *document) : QSyntaxHighlighter(document) {}
+
+protected:
+    void highlightBlock(const QString &text) override
+    {
+        static const QRegularExpression stringExpression(QStringLiteral(R"("(?:\\.|[^"\\])*")"));
+        static const QRegularExpression numberExpression(QStringLiteral(R"(-?\b\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\b)"));
+        static const QRegularExpression literalExpression(QStringLiteral(R"(\b(?:true|false|null)\b)"));
+        static const QRegularExpression keyExpression(QStringLiteral(R"("(?:\\.|[^"\\])*"(?=\s*:))"));
+        apply(text, stringExpression, QColor(QStringLiteral("#ce9178")));
+        apply(text, numberExpression, QColor(QStringLiteral("#6a9955")));
+        apply(text, literalExpression, QColor(QStringLiteral("#c586c0")));
+        apply(text, keyExpression, QColor(QStringLiteral("#569cd6")), true);
+    }
+
+private:
+    void apply(const QString &text, const QRegularExpression &expression, const QColor &color, bool bold = false)
+    {
+        QTextCharFormat format;
+        format.setForeground(color);
+        format.setFontWeight(bold ? QFont::Bold : QFont::Normal);
+        QRegularExpressionMatchIterator matches = expression.globalMatch(text);
+        while (matches.hasNext()) {
+            const QRegularExpressionMatch match = matches.next();
+            setFormat(match.capturedStart(), match.capturedLength(), format);
+        }
+    }
+};
+
+void markJsonError(QPlainTextEdit *editor, const QString &json, int byteOffset)
+{
+    const QByteArray bytes = json.toUtf8();
+    const int position = QString::fromUtf8(bytes.left(qBound(0, byteOffset, bytes.size()))).size();
+    QTextCursor cursor(editor->document());
+    cursor.setPosition(qMin(position, qMax(0, editor->document()->characterCount() - 1)));
+    cursor.select(QTextCursor::LineUnderCursor);
+    QTextEdit::ExtraSelection selection;
+    selection.cursor = cursor;
+    selection.format.setBackground(QColor(211, 47, 47, 45));
+    selection.format.setProperty(QTextFormat::FullWidthSelection, true);
+    selection.format.setUnderlineColor(QColor(QStringLiteral("#d32f2f")));
+    selection.format.setUnderlineStyle(QTextCharFormat::WaveUnderline);
+    editor->setExtraSelections(QList<QTextEdit::ExtraSelection>() << selection);
+}
+
+void markJsonConfigErrors(QPlainTextEdit *editor, const QString &json, const QStringList &errors)
+{
+    QStringList needles;
+    static const QRegularExpression valueExpression(QStringLiteral("'([^']+)'"));
+    static const QRegularExpression fieldExpression(QStringLiteral(R"((?:^|\.)([A-Za-z][A-Za-z0-9]*)\s+(?:must|'))"));
+    for (const QString &error : errors) {
+        QRegularExpressionMatchIterator values = valueExpression.globalMatch(error);
+        while (values.hasNext()) needles.append(values.next().captured(1));
+        const QRegularExpressionMatch field = fieldExpression.match(error);
+        if (field.hasMatch()) needles.append(QStringLiteral("\"%1\"").arg(field.captured(1)));
+        if (error.contains(QStringLiteral("without id"))) needles.append(QStringLiteral("\"id\""));
+    }
+
+    QList<QTextEdit::ExtraSelection> selections;
+    for (const QString &needle : needles) {
+        int position = 0;
+        while ((position = json.indexOf(needle, position)) >= 0) {
+            QTextEdit::ExtraSelection selection;
+            selection.cursor = QTextCursor(editor->document());
+            selection.cursor.setPosition(position);
+            selection.cursor.setPosition(position + needle.size(), QTextCursor::KeepAnchor);
+            selection.format.setForeground(QColor(QStringLiteral("#ef6c00")));
+            selection.format.setBackground(QColor(239, 108, 0, 35));
+            selection.format.setUnderlineColor(QColor(QStringLiteral("#ef6c00")));
+            selection.format.setUnderlineStyle(QTextCharFormat::SingleUnderline);
+            selections.append(selection);
+            position += needle.size();
+        }
+    }
+    editor->setExtraSelections(selections);
+}
+
 QString numberString(double value)
 {
     return QString::number(value, 'g', 12);
@@ -286,6 +372,34 @@ void ca3DConfigDialog::buildUi()
     QWidget *rawPage = new QWidget(tabs);
     QVBoxLayout *rawLayout = new QVBoxLayout(rawPage);
     rawJsonEdit = new QPlainTextEdit(rawPage);
+    rawJsonEdit->setObjectName(QStringLiteral("rawJsonEdit"));
+    rawJsonEdit->setLineWrapMode(QPlainTextEdit::NoWrap);
+    rawJsonEdit->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
+    new JsonHighlighter(rawJsonEdit->document());
+    QPlainTextEdit *lineNumbers = new QPlainTextEdit(rawPage);
+    lineNumbers->setObjectName(QStringLiteral("rawJsonLineNumbers"));
+    lineNumbers->setReadOnly(true);
+    lineNumbers->setFocusPolicy(Qt::NoFocus);
+    lineNumbers->setLineWrapMode(QPlainTextEdit::NoWrap);
+    lineNumbers->setFont(rawJsonEdit->font());
+    lineNumbers->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    lineNumbers->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    lineNumbers->setStyleSheet(QStringLiteral("QPlainTextEdit { border: 0; color: palette(mid); background: palette(alternate-base); padding-right: 4px; }"));
+    QHBoxLayout *editorLayout = new QHBoxLayout();
+    editorLayout->setContentsMargins(0, 0, 0, 0);
+    editorLayout->setSpacing(0);
+    editorLayout->addWidget(lineNumbers);
+    editorLayout->addWidget(rawJsonEdit, 1);
+    const auto updateLineNumbers = [this, lineNumbers](int count) {
+        QStringList numbers;
+        for (int line = 1; line <= count; ++line) numbers.append(QString::number(line));
+        lineNumbers->setPlainText(numbers.join(QLatin1Char('\n')));
+        lineNumbers->setFixedWidth(rawJsonEdit->fontMetrics().horizontalAdvance(QString(QString::number(count).size(), QLatin1Char('9'))) + 16);
+    };
+    connect(rawJsonEdit, &QPlainTextEdit::blockCountChanged, rawPage, updateLineNumbers);
+    connect(rawJsonEdit->verticalScrollBar(), &QScrollBar::valueChanged,
+            lineNumbers->verticalScrollBar(), &QScrollBar::setValue);
+    updateLineNumbers(rawJsonEdit->blockCount());
     QPushButton *validateButton = new QPushButton(tr("Validate Raw JSON"), rawPage);
     rawValidationLabel = new QLabel(rawPage);
     rawValidationLabel->setObjectName(QStringLiteral("rawValidationLabel"));
@@ -293,7 +407,7 @@ void ca3DConfigDialog::buildUi()
     QHBoxLayout *validationLayout = new QHBoxLayout();
     validationLayout->addWidget(validateButton);
     validationLayout->addWidget(rawValidationLabel, 1);
-    rawLayout->addWidget(rawJsonEdit);
+    rawLayout->addLayout(editorLayout, 1);
     rawLayout->addLayout(validationLayout);
     tabs->addTab(rawPage, tr("Raw JSON"));
     connect(validateButton, SIGNAL(clicked()), this, SLOT(validateRawJson()));
@@ -832,15 +946,32 @@ void ca3DConfigDialog::validateRawJson()
 {
     QStringList errors;
     showErrors(QStringList());
+    rawJsonEdit->setExtraSelections(QList<QTextEdit::ExtraSelection>());
     if (validateJsonSyntax(rawJsonEdit->toPlainText(), &errors)) {
-        rawValidationLabel->setText(tr("JSON is valid"));
-        rawValidationLabel->setToolTip(QString());
+        ca3DSceneConfig config;
+        ca3DConfigParser::parse(rawJsonEdit->toPlainText(), &config, &errors);
+        if (errors.isEmpty()) {
+            rawValidationLabel->setText(tr("JSON is valid"));
+            rawValidationLabel->setToolTip(QString());
+            rawValidationLabel->setStyleSheet(QStringLiteral("color: #2e7d32; font-weight: 600"));
+        } else {
+            rawValidationLabel->setText(tr("JSON syntax is valid, but sceneConfig has errors"));
+            rawValidationLabel->setToolTip(errors.join(QStringLiteral("\n")));
+            rawValidationLabel->setStyleSheet(QStringLiteral("color: #ef6c00; font-weight: 600"));
+            markJsonConfigErrors(rawJsonEdit, rawJsonEdit->toPlainText(), errors);
+        }
         populateTablesFromJson(rawJsonEdit->toPlainText());
         populatePresetSelector(rawJsonEdit->toPlainText());
     } else {
         const QString errorText = errors.join(QStringLiteral("; "));
         rawValidationLabel->setText(errorText);
         rawValidationLabel->setToolTip(errorText);
+        rawValidationLabel->setStyleSheet(QStringLiteral("color: #d32f2f; font-weight: 600"));
+        QJsonParseError parseError;
+        QJsonDocument::fromJson(rawJsonEdit->toPlainText().toUtf8(), &parseError);
+        if (parseError.error != QJsonParseError::NoError) {
+            markJsonError(rawJsonEdit, rawJsonEdit->toPlainText(), parseError.offset);
+        }
     }
 }
 
@@ -882,7 +1013,9 @@ void ca3DConfigDialog::markChanged()
         if (rawValidationLabel) {
             rawValidationLabel->clear();
             rawValidationLabel->setToolTip(QString());
+            rawValidationLabel->setStyleSheet(QString());
         }
+        rawJsonEdit->setExtraSelections(QList<QTextEdit::ExtraSelection>());
         showErrors(QStringList());
         buttonBox->button(QDialogButtonBox::Apply)->setEnabled(true);
     }

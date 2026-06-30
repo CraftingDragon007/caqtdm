@@ -96,17 +96,25 @@ void TestCa3DConfigDialog::appliesStructuredOverlayChanges()
     QLabel *validationLabel = dialog.findChild<QLabel *>(QStringLiteral("rawValidationLabel"));
     QVERIFY(validationLabel);
     QCOMPARE(validationLabel->text(), QStringLiteral("JSON is valid"));
+    QVERIFY(validationLabel->styleSheet().contains(QStringLiteral("#2e7d32")));
     QLabel *errorLabel = dialog.findChild<QLabel *>(QStringLiteral("errorLabel"));
     QVERIFY(errorLabel);
     QVERIFY(errorLabel->isHidden());
 
-    QPlainTextEdit *rawEdit = dialog.findChild<QPlainTextEdit *>();
+    QPlainTextEdit *rawEdit = dialog.findChild<QPlainTextEdit *>(QStringLiteral("rawJsonEdit"));
+    QPlainTextEdit *lineNumbers = dialog.findChild<QPlainTextEdit *>(QStringLiteral("rawJsonLineNumbers"));
     QVERIFY(rawEdit);
+    QVERIFY(lineNumbers);
+    QCOMPARE(lineNumbers->document()->blockCount(), rawEdit->document()->blockCount());
     rawEdit->setPlainText(QStringLiteral("{"));
     QVERIFY(QMetaObject::invokeMethod(&dialog, "validateRawJson", Qt::DirectConnection));
     QVERIFY(validationLabel->text().contains(QStringLiteral("Invalid sceneConfig JSON")));
+    QVERIFY(validationLabel->styleSheet().contains(QStringLiteral("#d32f2f")));
+    QVERIFY(!rawEdit->extraSelections().isEmpty());
+    QVERIFY(rawEdit->extraSelections().first().format.property(QTextFormat::FullWidthSelection).toBool());
     QVERIFY(errorLabel->isHidden());
     rawEdit->setPlainText(json);
+    QVERIFY(rawEdit->extraSelections().isEmpty());
     QVERIFY(QMetaObject::invokeMethod(&dialog, "validateRawJson", Qt::DirectConnection));
     QCOMPARE(validationLabel->text(), QStringLiteral("JSON is valid"));
     QVERIFY(errorLabel->isHidden());
@@ -224,7 +232,10 @@ void TestCa3DConfigDialog::allowsApplyingWithMissingOverlayFile()
 
     rawEdit->setPlainText(json);
     QVERIFY(QMetaObject::invokeMethod(&dialog, "validateRawJson", Qt::DirectConnection));
-    QCOMPARE(validationLabel->text(), QStringLiteral("JSON is valid"));
+    QCOMPARE(validationLabel->text(), QStringLiteral("JSON syntax is valid, but sceneConfig has errors"));
+    QVERIFY(validationLabel->styleSheet().contains(QStringLiteral("#ef6c00")));
+    QVERIFY(!rawEdit->extraSelections().isEmpty());
+    QCOMPARE(rawEdit->extraSelections().first().format.foreground().color(), QColor(QStringLiteral("#ef6c00")));
     QVERIFY(errorLabel->text().contains(QStringLiteral("includeFile 'does_not_exist.ui' was not found")));
 
     QPushButton *applyButton = buttonBox->button(QDialogButtonBox::Apply);
