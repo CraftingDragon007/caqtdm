@@ -942,8 +942,9 @@ bool OpcUaCore::writeValue(
     auto makeValue = [=](const QVariant &ref) -> QVariant {
         switch (QT_VARIANT_TYPE(ref)) {
         case QMetaType::Double:
-        case QMetaType::Float:
             return QVariant::fromValue<double>(rdata);
+        case QMetaType::Float:
+            return QVariant::fromValue<float>(rdata);
         case QMetaType::Int:
         case QMetaType::LongLong:
         case QMetaType::Long:

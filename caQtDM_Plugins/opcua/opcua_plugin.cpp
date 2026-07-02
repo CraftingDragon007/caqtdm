@@ -91,6 +91,7 @@ int OPCUAPlugin::initCommunicationLayer(MutexKnobData *data,
         if (!url.isEmpty()) {
             fileFunction.checkFileAndDownload(opcua_database_file, url);
         }
+        qCDebug(opcuaLog) << "Search for database file" << opcua_database_file;
         searchFile *s = new searchFile(opcua_database_file);
         QString fileNameFound = s->findFile();
         delete s;
@@ -101,6 +102,8 @@ int OPCUAPlugin::initCommunicationLayer(MutexKnobData *data,
                 m_messageWindowP->postMsgEvent(QtDebugMsg, msg.toUtf8().data());
             }
             continue;
+        }else{
+            qCDebug(opcuaLog) << "found a database file" << fileNameFound;
         }
 
         QFile file(fileNameFound);

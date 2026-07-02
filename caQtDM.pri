@@ -16,6 +16,7 @@ opcua_plugin {
 		        message("opcua_plugin configuration macx")
                 INCLUDEPATH   += $(EPICSINCLUDE)/os/Linux
                 LIBS += $$(CAQTDM_COLLECT)/libcaQtDM_Lib.dylib
+                LIBS += $$(CAQTDM_COLLECT)/libqtcontrols.dylib
                 CONFIG += release
         }
 
@@ -840,6 +841,12 @@ caQtDM_Viewer {
                                     plugins_gps.files += $$(CAQTDM_COLLECT)/controlsystems/libgps_plugin.dylib
                                     QMAKE_BUNDLE_DATA += plugins_gps
                                 }
+                opcua: {
+                                    plugins_opcua.path = Contents/PlugIns/controlsystems
+                                    plugins_opcua.files += $$(CAQTDM_COLLECT)/controlsystems/libopcua_plugin.dylib
+                                    QMAKE_BUNDLE_DATA += plugins_opcua
+                                }
+
         }
 
         ios {
