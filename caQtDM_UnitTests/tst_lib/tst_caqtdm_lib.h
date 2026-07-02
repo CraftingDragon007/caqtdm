@@ -48,6 +48,7 @@ private slots:
     void parseForDisplayRateWorks();
     void parseForQRectConstWorks();
     void treatMacroWorks();
+    void expandsMacrosInCa3DSceneConfig();
 
 private:
     FakeFileOpenWindow *m_fakeFileOpenWindow;

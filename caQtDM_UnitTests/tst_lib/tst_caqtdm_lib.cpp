@@ -264,3 +264,33 @@ void TestCaQtDM_Lib::treatMacroWorks()
         QCOMPARE(doNothing, true);
     }
 }
+
+void TestCaQtDM_Lib::expandsMacrosInCa3DSceneConfig()
+{
+    ca3DWidget widget;
+    widget.setObjectName(QStringLiteral("scene"));
+    widget.setSceneConfig(QStringLiteral(R"json({
+        "backgroundColor": "$(COLOR)",
+        "objects": [{
+            "id": "$(OBJECT)",
+            "bindings": [{
+                "channel": "$(PREFIX):X",
+                "target": "translation.x",
+                "scale": $(SCALE)
+            }]
+        }],
+        "overlays": [],
+        "cameraPresets": []
+    })json"));
+    widget.setProperty("Taken", QVariant());
+
+    m_caQtDM_Lib->HandleWidget(&widget,
+                               QStringLiteral("COLOR=#123456,OBJECT=motor,PREFIX=TEST,SCALE=2.5"),
+                               false, false);
+
+    QVERIFY(widget.getConfigValid());
+    QCOMPARE(widget.objectBindingChannels(), QStringList{QStringLiteral("TEST:X")});
+    QVERIFY(widget.getSceneConfig().contains(QStringLiteral("\"id\": \"motor\"")));
+    QVERIFY(widget.getSceneConfig().contains(QStringLiteral("\"scale\": 2.5")));
+    QVERIFY(!widget.getSceneConfig().contains(QStringLiteral("$(")));
+}

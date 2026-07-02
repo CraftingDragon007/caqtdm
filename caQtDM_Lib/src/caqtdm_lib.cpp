@@ -2526,6 +2526,9 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
     } else if(ca3DWidget* widget3D = qobject_cast<ca3DWidget *>(w1)) {
 
         qCDebug(ca3DWidgetLog) << "treat ca3DWidget overlays and object bindings" << w1;
+        const QString expandedSceneConfig = treatMacro(map, widget3D->getSceneConfig(),
+                                                       &doNothing, widget3D->objectName());
+        widget3D->setSceneConfig(expandedSceneConfig);
         widget3D->setProperty("Taken", true);
 
         QList<QVariant> monitorList;
