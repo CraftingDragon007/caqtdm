@@ -1178,7 +1178,7 @@ before, many styles will be overwritten.
    ":ref:`caImage`: any image format, mostly used for animated gifs", :ref:`caThermo`, ":ref:`caShellCommand`"
    ":ref:`caInclude`: the equivalent to composite of MEDM", ":ref:`caStripPlot`", ":ref:`caSlider`"
    ":ref:`caDoubleTabWidget`: a general purpose widget", ":ref:`caByte`", ":ref:`caTextEntry`"
-   "", ":ref:`caCamera`", ":ref:`caNumeric`, :ref:`caApplyNumeric`"
+   ":ref:`ca3DWidget`: interactive 3D scenes and display overlays", ":ref:`caCamera`", ":ref:`caNumeric`, :ref:`caApplyNumeric`"
    "", ":ref:`caWaterfallPlot`", ":ref:`caToggleButton`"
    "", ":ref:`caBitNames`", ":ref:`caScriptButton`"
    "", ":ref:`caCalc`", ":ref:`caSpinBox`"
@@ -2375,6 +2375,363 @@ has no equivalent in MEDM and is not a controls object.
    enables the use of tabs. A new tab can be added in Qt Designer by right-clicking on the widget
    and using 'Insert Before' or 'Insert After' (doesnt matter which). Color of tabs can be edited via stylesheet
    (QTabBar::tab for horizontal, QPushButton:checked for vertical ones)
+
+--------------
+
+.. _ca3DWidget:
+
+``ca3DWidget``
+~~~~~~~~~~~~~~~
+has no equivalent in MEDM
+
+   **Description:**
+   The ca3DWidget displays an interactive three-dimensional scene inside a
+   caQtDM panel. A scene can contain mesh objects, control-system bindings,
+   camera presets and regular caQtDM ``.ui`` displays rendered as overlays in
+   the 3D world.
+
+   Qt6 uses Qt3D for the live scene. Qt5, systems without a usable OpenGL
+   context and systems using a software renderer use the 2D fallback. The
+   fallback combines a camera-preset snapshot with the same overlay displays,
+   so a panel remains operational when live 3D rendering is unavailable.
+
+   **Designer workflow:**
+
+   #. Place a ca3DWidget on the form.
+   #. Open its context menu and select ``Edit 3D Scene...``.
+   #. Configure objects, process-variable bindings, overlays and camera
+      presets in their respective tabs.
+   #. Use the Preview tab to inspect the current editor state and create
+      fallback snapshots.
+   #. Use the Raw JSON tab for direct editing. It provides syntax highlighting,
+      line numbers and validation markers.
+   #. Select Apply or OK, save the ``.ui`` form and reload a separately running
+      caQtDM panel. Applying a change in Qt Designer does not update an already
+      running viewer process.
+
+   The Preview tab displays the current dialog contents, including changes that
+   have not yet been applied to the ca3DWidget property.
+
+   **Properties:**
+   The following ca3DWidget-specific properties are available:
+
+   ``sceneConfig``
+      JSON object containing the complete scene definition. Use the custom
+      editor instead of editing the property as a single line in Qt Designer.
+      Type: ``QString``.
+
+   **Scene configuration:**
+   The root JSON object supports these members:
+
+   ``backgroundColor``
+      Scene background as a color string such as ``"#20242a"`` or an RGB array
+      such as ``[32, 36, 42]``. The default is a dark gray.
+
+   ``objects``
+      Array of 3D object definitions.
+
+   ``overlays``
+      Array of caQtDM display overlays rendered on planes in the 3D scene.
+
+   ``cameraPresets``
+      Array of named camera positions. Preset IDs must be positive integers.
+
+   Files in ``meshFile``, ``textureFile``, ``includeFile`` and ``snapshot`` are
+   resolved through the normal caQtDM display-file search mechanism, including
+   ``CAQTDM_DISPLAY_PATH``. Relative paths are recommended so that panels remain
+   portable.
+
+   Panel macros are expanded over the complete ``sceneConfig`` string before
+   the JSON is parsed at runtime. Macros can therefore be used in any string or
+   numeric field, including object IDs, file names, channels, transforms and
+   camera presets. The expanded text must remain valid JSON: place string macros
+   inside quotes, for example ``"channel": "$(P):X"``, and leave numeric macros
+   unquoted, for example ``"scale": $(SCALE)``. Default values and caQtDM's
+   internal macros use the same syntax as elsewhere in a panel.
+
+   **3D objects:**
+   Each entry in ``objects`` supports:
+
+   ``id``
+      Required unique object identifier.
+
+   ``meshFile`` / ``mesh``
+      Mesh file to load. The type is inferred for ``.stl`` and ``.obj`` files.
+
+   ``textureFile`` / ``texture``
+      Optional texture image.
+
+   ``materialColor``
+      Optional material color as a color string or RGB array.
+
+   ``position`` and ``rotation``
+      Three-number arrays ``[x, y, z]``. Rotation values are Euler angles in
+      degrees.
+
+   ``scale``
+      Uniform object scale. The default is ``1``.
+
+   ``configuredOriginPosition`` and ``configuredOriginRotation``
+      Optional three-number offsets added to the configured position and
+      rotation before dynamic values are applied.
+
+   ``axes``
+      Optional named movement axes used by ``setObjectAxisValue()``. An axis has
+      an ``id``, a ``type`` of ``translation`` or ``rotation``, a direction in
+      ``vector`` (translation) or ``axis`` (rotation), and an optional ``factor``.
+
+   ``bindings``
+      Optional control-system bindings. caQtDM automatically monitors every
+      binding channel and applies received numeric values to the object.
+
+   A binding supports these members:
+
+   ``channel``
+      Required process-variable name.
+
+   ``target``
+      One of ``translation.x``, ``translation.y``, ``translation.z``,
+      ``rotation.x``, ``rotation.y`` or ``rotation.z``.
+
+   ``mode``
+      ``relative`` adds the mapped dynamic component to the configured object
+      transform. ``absolute`` adjusts the dynamic component so the resulting
+      component equals the mapped value. The default is ``relative``.
+
+   ``scale`` and ``offset``
+      Map the received value using ``mapped = value * scale + offset``.
+      Defaults are ``1`` and ``0``.
+
+   ``min`` and ``max``
+      Optional limits applied to the mapped value.
+
+   **Camera presets:**
+   Each entry in ``cameraPresets`` supports:
+
+   ``id``
+      Required positive integer used by ``setCameraPreset(int)``.
+
+   ``name``
+      Optional name displayed by the custom editor.
+
+   ``position``
+      Camera position as ``[x, y, z]``.
+
+   ``yaw`` and ``pitch``
+      Camera orientation in degrees. Pitch is limited to the usable range near
+      -89 to +89 degrees. Defaults are ``0``.
+
+   ``viewCenter``
+      Optional explicit look-at point as ``[x, y, z]``.
+
+   ``upVector``
+      Optional camera up direction. The default is ``[0, 1, 0]``. A zero-length
+      vector also falls back to this default.
+
+   ``fov``
+      Vertical perspective field of view in degrees. The default is ``45``.
+
+   ``snapshot``
+      Optional fallback image captured for this preset.
+
+   ``overlays``
+      Array of overlay IDs associated with this preset. An omitted or empty
+      array selects no preset-specific overlays.
+
+   .. warning::
+
+      Do not normally specify both ``viewCenter`` and ``yaw``/``pitch``.
+      When ``viewCenter`` exists it takes precedence and the configured yaw and
+      pitch are not used to orient the camera. For camera controls and camera
+      state signals, using ``position``, ``yaw`` and ``pitch`` without
+      ``viewCenter`` is recommended.
+
+   **Overlays:**
+   Each entry in ``overlays`` supports:
+
+   ``id``
+      Required unique overlay identifier. Camera presets refer to this value.
+
+   ``includeFile``
+      ``.ui`` display loaded into the overlay. Normal caQtDM widgets, nested
+      includes and process variables inside this display remain active.
+
+   ``macro``
+      Optional macro string for the included display. If omitted, the parent
+      panel's macros are used.
+
+   ``position`` and ``rotation``
+      Plane position and Euler rotation as three-number arrays.
+
+   ``size``
+      Plane width and height in 3D world units as ``[width, height]``. The
+      included display's design size determines the texture aspect ratio, not
+      its 3D dimensions.
+
+   ``visibilityMode``
+      Overlay visibility rule:
+
+      - ``presetOnly`` — enabled for presets that list the overlay.
+      - ``inView`` — enabled for listed presets while the plane is in view.
+      - ``alwaysWhenInView`` — enabled whenever the plane is in view,
+        independently of preset membership.
+
+   ``fallbackGeometry``
+      Optional fallback rectangle ``[x, y, width, height]`` in widget pixels.
+
+   ``transparentBackground``
+      Use a transparent background when rendering the included display.
+      The default is ``true``.
+
+   **Example:**
+
+   .. code-block:: json
+
+      {
+        "backgroundColor": "#20242a",
+        "objects": [
+          {
+            "id": "motor",
+            "meshFile": "models/motor.stl",
+            "materialColor": "#808080",
+            "position": [0, 0, 0],
+            "rotation": [0, 0, 0],
+            "scale": 1,
+            "bindings": [
+              {
+                "channel": "MOTOR:X",
+                "target": "translation.x",
+                "mode": "relative",
+                "scale": 1,
+                "offset": 0,
+                "min": -100,
+                "max": 100
+              }
+            ]
+          }
+        ],
+        "overlays": [
+          {
+            "id": "motor_controls",
+            "includeFile": "panels/motor_controls.ui",
+            "macro": "P=MOTOR",
+            "position": [0, 1.2, 1.5],
+            "rotation": [0, 0, 0],
+            "size": [3, 2.2],
+            "visibilityMode": "inView",
+            "fallbackGeometry": [20, 20, 480, 320],
+            "transparentBackground": true
+          }
+        ],
+        "cameraPresets": [
+          {
+            "id": 1,
+            "name": "Overview",
+            "position": [0, 2, 5],
+            "yaw": 0,
+            "pitch": -10,
+            "upVector": [0, 1, 0],
+            "fov": 45,
+            "snapshot": "snapshots/motor_overview.png",
+            "overlays": ["motor_controls"]
+          },
+          {
+            "id": 2,
+            "name": "Model only",
+            "position": [5, 3, 5],
+            "yaw": -45,
+            "pitch": -15,
+            "fov": 45,
+            "overlays": []
+          }
+        ]
+      }
+
+   **Slots:**
+   The following slots can be connected in Qt Designer:
+
+   ``setCameraPreset(int preset)``
+      Select a configured camera preset. Passing ``0`` selects the first preset.
+
+   ``setCameraPosition(double x, double y, double z)``
+      Set the camera position while preserving its current viewing direction.
+
+   ``moveCamera(double dx, double dy, double dz)``
+      Move the camera and view center by a world-space delta.
+
+   ``moveCameraForward(double distance)`` / ``moveCameraBackward(double distance)``
+      Move along the current viewing direction.
+
+   ``moveCameraRight(double distance)`` / ``moveCameraLeft(double distance)``
+      Move along the camera's horizontal right vector.
+
+   ``setCameraRotation(double yaw, double pitch)``
+      Set camera orientation in degrees while preserving the distance to the
+      current view center.
+
+   ``turnCameraUp(double angle)`` / ``turnCameraDown(double angle)``
+      Change pitch relative to the current orientation.
+
+   ``turnCameraRight(double angle)`` / ``turnCameraLeft(double angle)``
+      Change yaw relative to the current orientation.
+
+   ``setCameraViewCenter(double x, double y, double z)``
+      Set an explicit look-at point.
+
+   ``setObjectAxisValue(QString objectId, QString axisId, double value)``
+      Apply a value through a named axis configured on an object.
+
+   ``setObjectTranslation(QString objectId, double x, double y, double z)``
+      Set the dynamic translation added to an object's configured transform.
+
+   ``setObjectRotation(QString objectId, double rx, double ry, double rz)``
+      Set the dynamic Euler rotation added to an object's configured transform.
+
+   ``setObjectBindingValue(int bindingIndex, double value)``
+      Apply a value to a binding by its flattened zero-based order. Normal
+      caQtDM operation calls this automatically for monitored binding channels.
+
+   **Signals:**
+   The following signals are emitted by the ca3DWidget:
+
+   ``cameraPositionXChanged(double x)`` / ``cameraPositionXChanged(int x)``
+      Camera X position. The integer overload is rounded to the nearest integer.
+
+   ``cameraPositionYChanged(double y)`` / ``cameraPositionYChanged(int y)``
+      Camera Y position. The integer overload is rounded to the nearest integer.
+
+   ``cameraPositionZChanged(double z)`` / ``cameraPositionZChanged(int z)``
+      Camera Z position. The integer overload is rounded to the nearest integer.
+
+   ``cameraYawChanged(double yaw)`` / ``cameraYawChanged(int yaw)``
+      Camera yaw in degrees. The integer overload is rounded.
+
+   ``cameraPitchChanged(double pitch)`` / ``cameraPitchChanged(int pitch)``
+      Camera pitch in degrees. The integer overload is rounded.
+
+   ``overlayWidgetsRebuilt()``
+      Emitted after overlay widgets are recreated. This is primarily used by
+      the caQtDM runtime to discover channels inside overlays.
+
+   ``snapshotCaptured(QPixmap pixmap)``
+      Emitted after an asynchronous 3D snapshot succeeds.
+
+   ``snapshotCaptureFailed(QString error)``
+      Emitted if asynchronous snapshot capture fails or times out.
+
+   **Fallback behavior:**
+   In fallback mode, selecting a camera preset displays its ``snapshot`` as the
+   background and places the preset's overlays using ``fallbackGeometry``. Use
+   Capture Snapshot in the custom editor to generate a snapshot without the 3D
+   overlay planes. Save snapshots next to the panel, in its runtime working
+   directory or in a directory from ``CAQTDM_DISPLAY_PATH`` so the JSON can use
+   a portable relative path.
+
+   The environment variable ``CAQTDM_3D_FORCE_FALLBACK=1`` forces fallback mode
+   and is useful for testing. ``CAQTDM_3D_OVERLAY_MAX_SCALE`` and
+   ``CAQTDM_3D_OVERLAY_MAX_PIXELS`` can limit live overlay texture resolution.
+
+--------------
 
 all controller objects
 --------------------------
@@ -3859,4 +4216,3 @@ caQtDM uses the following environment variables:
 +---------------------------------------+-----------------------------------------------------------+
 | ``CAQTDM_MODBUS_DATABASE``            | Database to use for the modbus plugin                     |
 +---------------------------------------+-----------------------------------------------------------+
-
