@@ -1013,6 +1013,8 @@ caType OPCUAPlugin::generateCaTypeFromVariant(const QVariant &value,
         return caINT;
     case QMetaType::QString:
         return caSTRING;
+    case QMetaType::QDateTime:
+        return caSTRING;
     default:
         return caDOUBLE;
     }
@@ -1045,7 +1047,9 @@ void OPCUAPlugin::updateKnobDataFromVariantSingle(knobData &kData,
         kData.edata.precision = 0;
         break;
     case caSTRING:
-        copyStringToDataB(kData, value.toString());
+        if (QT_VARIANT_TYPE(value)==QMetaType::QDateTime) {
+            copyStringToDataB(kData, value.toDateTime().toString());
+        } else copyStringToDataB(kData, value.toString());
         break;
     default:
         kData.edata.rvalue = 0.0;
