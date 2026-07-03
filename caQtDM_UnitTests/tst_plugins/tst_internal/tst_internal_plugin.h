@@ -50,6 +50,8 @@ private slots:
     void invalidJsonFallsBackToDefaults();
     void counterAdvancesWithTimerTicks();
     void writeThroughPluginWorks();
+    void channelDeletedWhenUnreferenced();
+    void persistentChannelKeepsRunning();
 
 private:
     int createMonitor(const QString &pv);

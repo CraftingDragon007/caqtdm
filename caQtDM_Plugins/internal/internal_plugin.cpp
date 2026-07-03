@@ -162,7 +162,18 @@ int InternalPlugin::pvClearMonitor(knobData *kData)
     QMap<QString, QList<int> >::iterator i = monitorIndexes.find(key);
     if(i != monitorIndexes.end()) {
         i.value().removeAll(kData->index);
-        // keep the channel itself: its value survives display reloads
+        if(i.value().isEmpty()) {
+            monitorIndexes.erase(i);
+            // reference count dropped to zero: delete the channel, unless it
+            // is persistent - then it keeps running inside the process and
+            // displays can re-attach to the live value later
+            InternalChannel *channel = channels.value(key, Q_NULLPTR);
+            if((channel != Q_NULLPTR) && !channel->persistent) {
+                channels.remove(key);
+                delete channel;
+                qCDebug(internalLog) << "channel deleted (unreferenced)" << key;
+            }
+        }
     }
     return true;
 }

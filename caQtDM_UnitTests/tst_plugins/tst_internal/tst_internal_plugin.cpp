@@ -162,6 +162,46 @@ void TestInternalPlugin::counterAdvancesWithTimerTicks()
     QCOMPARE(kData->edata.ivalue, 3L);
 }
 
+void TestInternalPlugin::channelDeletedWhenUnreferenced()
+{
+    int first = createMonitor(R"(TEMP.{"type":"long","mode":"counter","val":5,"period":100})");
+    int second = createMonitor("TEMP");
+
+    // one of two references removed: the channel stays
+    m_plugin->pvClearMonitor(m_mutexKnobData->GetMutexKnobDataPtr(first));
+    QVERIFY(m_plugin->channel("TEMP") != Q_NULLPTR);
+
+    // reference count reaches zero: the channel is deleted
+    m_plugin->pvClearMonitor(m_mutexKnobData->GetMutexKnobDataPtr(second));
+    QVERIFY(m_plugin->channel("TEMP") == Q_NULLPTR);
+
+    // a new definition starts over from its configuration
+    createMonitor(R"(TEMP.{"type":"long","mode":"counter","val":5,"period":100})");
+    QVERIFY(m_plugin->channel("TEMP") != Q_NULLPTR);
+    QCOMPARE(m_plugin->channel("TEMP")->currentValue(), 5.0);
+}
+
+void TestInternalPlugin::persistentChannelKeepsRunning()
+{
+    int index = createMonitor(R"(PCOUNT.{"type":"long","mode":"counter","val":0,"step":1,"period":100,"persistent":true})");
+    pumpTimerOnce(); // publishes and counts to 1
+
+    // removing the last reference keeps a persistent channel alive
+    m_plugin->pvClearMonitor(m_mutexKnobData->GetMutexKnobDataPtr(index));
+    QVERIFY(m_plugin->channel("PCOUNT") != Q_NULLPTR);
+
+    // and it keeps counting without any monitor
+    pumpTimerOnce();
+    pumpTimerOnce();
+    QCOMPARE(m_plugin->channel("PCOUNT")->currentValue(), 3.0);
+
+    // a display re-attaching (no JSON) continues with the live value
+    int again = createMonitor("PCOUNT");
+    pumpTimerOnce();
+    knobData *kData = m_mutexKnobData->GetMutexKnobDataPtr(again);
+    QCOMPARE(kData->edata.ivalue, 4L);
+}
+
 void TestInternalPlugin::writeThroughPluginWorks()
 {
     int index = createMonitor(R"(SETPOINT.{"type":"double","val":1.0})");

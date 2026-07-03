@@ -46,6 +46,7 @@ InternalChannel::InternalChannel()
     , high()
     , hihi()
     , loop(true)
+    , persistent(false)
     , nelm(1)
     , nord(1)
     , units("")
@@ -272,6 +273,7 @@ bool InternalChannel::configure(const QString &json, QString *errorString)
     if(object.contains("high"))   high.set(object["high"].toDouble());
     if(object.contains("hihi"))   hihi.set(object["hihi"].toDouble());
     if(object.contains("loop"))   loop = object["loop"].toBool();
+    if(object.contains("persistent")) persistent = object["persistent"].toBool();
     if(object.contains("nelm"))   nelm = qMax(1, (int) object["nelm"].toDouble());
     // NORD defaults to NELM (full array) and can never exceed it; an array
     // initialisation through "val" defines NORD unless it is given explicitly

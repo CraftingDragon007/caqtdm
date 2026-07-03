@@ -76,7 +76,11 @@ struct NativeValue
  *                      "period":1000,"drvl":0,"drvh":100,"loop":true,
  *                      "nelm":1,"nord":1,
  *                      "low":20,"lolo":10,"high":80,"hihi":90,
- *                      "units":"V","prec":2,"enums":["OFF","ON"]}
+ *                      "units":"V","prec":2,"enums":["OFF","ON"],
+ *                      "persistent":false}
+ * A channel is dropped when its last monitor disappears (reference counting),
+ * unless "persistent" is true: then it keeps running inside the process (a
+ * counter simply continues) and displays can re-attach to the live value.
  * Arrays follow the EPICS waveform record: NELM is the maximum array size,
  * NORD the number of elements actually used (defaults to NELM, updated by
  * waveform writes). A waveform is initialized by giving "val" as an array,
@@ -151,6 +155,7 @@ public:
     OptionalLimit high;
     OptionalLimit hihi;
     bool loop;
+    bool persistent;            // keeps the channel alive without any monitor
     int nelm;                   // NELM: maximum array size
     int nord;                   // NORD: number of elements actually used (<= nelm)
     QString units;
