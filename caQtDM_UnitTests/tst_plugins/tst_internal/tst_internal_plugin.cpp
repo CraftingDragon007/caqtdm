@@ -102,7 +102,7 @@ void TestInternalPlugin::pluginNameIsInternal()
 
 void TestInternalPlugin::addMonitorPublishesInitialValue()
 {
-    int index = createMonitor(R"(READY.{"type":"double","init":4.5,"units":"V"})");
+    int index = createMonitor(R"(READY.{"type":"double","val":4.5,"units":"V"})");
 
     pumpTimerOnce();
 
@@ -116,7 +116,7 @@ void TestInternalPlugin::addMonitorPublishesInitialValue()
 
 void TestInternalPlugin::channelsAreSharedByBaseName()
 {
-    int first = createMonitor(R"(SHARED.{"type":"long","init":11})");
+    int first = createMonitor(R"(SHARED.{"type":"long","val":11})");
     int second = createMonitor("SHARED"); // no JSON: attaches to the existing channel
 
     pumpTimerOnce();
@@ -129,7 +129,7 @@ void TestInternalPlugin::channelsAreSharedByBaseName()
 
     // both monitors point to the very same channel object
     QCOMPARE(m_plugin->channel("SHARED") != Q_NULLPTR, true);
-    QCOMPARE(m_plugin->channel("SHARED")->value, 11.0);
+    QCOMPARE(m_plugin->channel("SHARED")->currentValue(), 11.0);
 }
 
 void TestInternalPlugin::invalidJsonFallsBackToDefaults()
@@ -152,7 +152,7 @@ void TestInternalPlugin::invalidJsonFallsBackToDefaults()
 void TestInternalPlugin::counterAdvancesWithTimerTicks()
 {
     // period 100 ms equals the base interval: every pump is one counter step
-    int index = createMonitor(R"(COUNT.{"type":"long","mode":"counter","init":0,"step":1,"period":100})");
+    int index = createMonitor(R"(COUNT.{"type":"long","mode":"counter","val":0,"step":1,"period":100})");
 
     pumpTimerOnce(); // publishes init and executes the first step
     pumpTimerOnce();
@@ -164,7 +164,7 @@ void TestInternalPlugin::counterAdvancesWithTimerTicks()
 
 void TestInternalPlugin::writeThroughPluginWorks()
 {
-    int index = createMonitor(R"(SETPOINT.{"type":"double","init":1.0})");
+    int index = createMonitor(R"(SETPOINT.{"type":"double","val":1.0})");
     pumpTimerOnce();
 
     char pv[MAXPVLEN];

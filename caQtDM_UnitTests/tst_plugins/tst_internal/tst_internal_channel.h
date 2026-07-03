@@ -42,8 +42,10 @@ private slots:
     void configureUsesDefaults();
     void configureRejectsInvalidInput();
     void counterTicksAndWraps();
+    void nativeTypesWrapLikeEpics();
     void advanceRespectsPeriod();
     void regexGeneratorWorks();
+    void alarmLimitsWork();
     void fillKnobDataScalarTypesWork();
     void fillKnobDataArraysWork();
     void setValueWorks();

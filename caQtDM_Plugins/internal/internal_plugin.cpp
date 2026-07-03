@@ -32,7 +32,6 @@
 // period how many of these ticks it skips
 #define INTERNAL_BASE_INTERVAL 100
 
-// This needs to be done ONLY once per Plugin.
 Q_LOGGING_CATEGORY(internalLog, "caqtdm.plugins.internal")
 
 QString InternalPlugin::pluginName()

@@ -36,13 +36,15 @@
 InternalChannel::InternalChannel()
     : fieldtype(caDOUBLE)
     , mode(Constant)
-    , init(0.0)
+    , val(0.0)
     , step(1.0)
     , periodMs(1000)
-    , minimum(0.0)
-    , maximum(0.0)
-    , hasMinimum(false)
-    , hasMaximum(false)
+    , drvl()
+    , drvh()
+    , low()
+    , lolo()
+    , high()
+    , hihi()
     , loop(true)
     , nelm(1)
     , units("")
@@ -50,7 +52,7 @@ InternalChannel::InternalChannel()
     , enums()
     , text("")
     , regexPattern("")
-    , value(0.0)
+    , native()
     , needsPublish(true)
     , m_segments()
     , m_combinations(0)
@@ -244,16 +246,24 @@ bool InternalChannel::configure(const QString &json, QString *errorString)
         }
     }
 
-    if(object.contains("init"))   init = object["init"].toDouble();
+    // EPICS field names: VAL, DRVL/DRVH, LOW/LOLO/HIGH/HIHI
+    if(object.contains("val")) {
+        // for string channels VAL carries the text, otherwise the initial value
+        if(object["val"].isString()) text = object["val"].toString();
+        else                         val = object["val"].toDouble();
+    }
     if(object.contains("step"))   step = object["step"].toDouble();
     if(object.contains("period")) periodMs = qMax(10, (int) object["period"].toDouble());
-    if(object.contains("min"))  { minimum = object["min"].toDouble(); hasMinimum = true; }
-    if(object.contains("max"))  { maximum = object["max"].toDouble(); hasMaximum = true; }
+    if(object.contains("drvl"))   drvl.set(object["drvl"].toDouble());
+    if(object.contains("drvh"))   drvh.set(object["drvh"].toDouble());
+    if(object.contains("low"))    low.set(object["low"].toDouble());
+    if(object.contains("lolo"))   lolo.set(object["lolo"].toDouble());
+    if(object.contains("high"))   high.set(object["high"].toDouble());
+    if(object.contains("hihi"))   hihi.set(object["hihi"].toDouble());
     if(object.contains("loop"))   loop = object["loop"].toBool();
     if(object.contains("nelm"))   nelm = qMax(1, (int) object["nelm"].toDouble());
     if(object.contains("units"))  units = object["units"].toString();
     if(object.contains("prec"))   precision = (short) object["prec"].toDouble();
-    if(object.contains("value"))  text = object["value"].toString();
 
     if(object.contains("enums")) {
         enums.clear();
@@ -274,26 +284,51 @@ bool InternalChannel::configure(const QString &json, QString *errorString)
         m_combinations = count;
     }
 
-    value = init;
+    setCurrentValue(val);
     m_elapsedMs = 0;
     needsPublish = true;
     m_configured = true;
     return true;
 }
 
-void InternalChannel::lowHigh(double *low, double *high) const
+double InternalChannel::currentValue() const
 {
-    *low = hasMinimum ? minimum : -qInf();
-    *high = hasMaximum ? maximum : qInf();
-    // an enum cycles through its states unless explicit limits are given
+    switch(fieldtype) {
+    case caINT:   return (double) native.int16Value;
+    case caLONG:  return (double) native.int32Value;
+    case caFLOAT: return (double) native.floatValue;
+    case caENUM:  return (double) native.enumValue;
+    case caCHAR:  return (double) native.charValue;
+    default:      return native.doubleValue;   // caDOUBLE and string regex index
+    }
+}
+
+void InternalChannel::setCurrentValue(double newValue)
+{
+    // storing truncates and wraps like the native EPICS type would do
+    switch(fieldtype) {
+    case caINT:   native.int16Value = (qint16) (qint64) newValue; break;
+    case caLONG:  native.int32Value = (qint32) (qint64) newValue; break;
+    case caFLOAT: native.floatValue = (float) newValue; break;
+    case caENUM:  native.enumValue = (quint16) (qint64) newValue; break;
+    case caCHAR:  native.charValue = (quint8) (qint64) newValue; break;
+    default:      native.doubleValue = newValue; break;
+    }
+}
+
+void InternalChannel::counterRange(double *rangeLow, double *rangeHigh) const
+{
+    *rangeLow = drvl.defined ? drvl.value : -qInf();
+    *rangeHigh = drvh.defined ? drvh.value : qInf();
+    // an enum cycles through its states unless explicit drive limits are given
     if(fieldtype == caENUM && !enums.isEmpty()) {
-        if(!hasMinimum) *low = 0.0;
-        if(!hasMaximum) *high = enums.size() - 1;
+        if(!drvl.defined) *rangeLow = 0.0;
+        if(!drvh.defined) *rangeHigh = enums.size() - 1;
     }
     // a string channel with a regex pattern cycles through all combinations
     if(fieldtype == caSTRING && m_combinations > 0) {
-        if(!hasMinimum) *low = 0.0;
-        if(!hasMaximum) *high = (double) (m_combinations - 1);
+        if(!drvl.defined) *rangeLow = 0.0;
+        if(!drvh.defined) *rangeHigh = (double) (m_combinations - 1);
     }
 }
 
@@ -301,13 +336,14 @@ void InternalChannel::tick()
 {
     if(mode != Counter) return;
 
-    double low, high;
-    lowHigh(&low, &high);
+    double rangeLow, rangeHigh;
+    counterRange(&rangeLow, &rangeHigh);
 
-    double next = value + step;
-    if(next > high)     next = loop ? low : high;
-    else if(next < low) next = loop ? high : low;
-    value = next;
+    double next = currentValue() + step;
+    if(next > rangeHigh)     next = loop ? rangeLow : rangeHigh;
+    else if(next < rangeLow) next = loop ? rangeHigh : rangeLow;
+    // without drive limits the value wraps at the native type range instead
+    setCurrentValue(next);
     needsPublish = true;
 }
 
@@ -324,26 +360,40 @@ bool InternalChannel::advance(int elapsedMs)
     return changed;
 }
 
+/*
+ * Alarm evaluation like an EPICS record: crossing HIHI/LOLO raises a MAJOR
+ * alarm, crossing HIGH/LOW a MINOR alarm. Status codes follow epicsAlarm.h
+ * (HIHI=3, HIGH=4, LOLO=5, LOW=6).
+ */
+void InternalChannel::alarmState(double checkValue, short *severity, short *status) const
+{
+    if(hihi.defined && checkValue >= hihi.value)      { *severity = 2; *status = 3; }
+    else if(lolo.defined && checkValue <= lolo.value) { *severity = 2; *status = 5; }
+    else if(high.defined && checkValue >= high.value) { *severity = 1; *status = 4; }
+    else if(low.defined && checkValue <= low.value)   { *severity = 1; *status = 6; }
+    else                                              { *severity = 0; *status = 0; }
+}
+
 void InternalChannel::setValue(double rdata, qint32 idata, const QString &sdata)
 {
     switch(fieldtype) {
     case caSTRING:
         // a regex channel is positioned by index (idata), a plain one takes the text
-        if(m_combinations > 0) value = (double) idata;
+        if(m_combinations > 0) setCurrentValue((double) idata);
         else                   text = sdata;
         break;
     case caENUM: {
         int index = enums.indexOf(sdata);
-        value = (index >= 0) ? (double) index : (double) idata;
+        setCurrentValue((index >= 0) ? (double) index : (double) idata);
         break;
     }
     case caINT:
     case caLONG:
     case caCHAR:
-        value = (double) idata;
+        setCurrentValue((double) idata);
         break;
     default:
-        value = rdata;
+        setCurrentValue(rdata);
         break;
     }
     m_waveOverride.clear();
@@ -354,7 +404,7 @@ void InternalChannel::setValue(double rdata, qint32 idata, const QString &sdata)
 void InternalChannel::setWave(const QVector<double> &values)
 {
     m_waveOverride = values;
-    if(!values.isEmpty()) value = values.at(0);
+    if(!values.isEmpty()) setCurrentValue(values.at(0));
     needsPublish = true;
 }
 
@@ -362,7 +412,7 @@ double InternalChannel::elementValue(int i) const
 {
     if(i < m_waveOverride.size()) return m_waveOverride.at(i);
     // deterministic ramp: element i is the current value plus i steps
-    return value + i * step;
+    return currentValue() + i * step;
 }
 
 // allocates (or reuses) the dataB buffer of kData with the requested size
@@ -392,24 +442,30 @@ void InternalChannel::fillKnobData(knobData *kData) const
     kData->edata.accessR = true;
     kData->edata.accessW = true;
     kData->edata.precision = precision;
-    kData->edata.status = 0;
-    kData->edata.severity = 0;
     kData->edata.nelm = nelm;
     qstrncpy(kData->edata.units, units.toLatin1().constData(), caqtdm_string_t_length);
 
-    if(hasMinimum) {
-        kData->edata.lower_disp_limit = minimum;
-        kData->edata.lower_ctrl_limit = minimum;
+    // drive limits become display and control limits
+    if(drvl.defined) {
+        kData->edata.lower_disp_limit = drvl.value;
+        kData->edata.lower_ctrl_limit = drvl.value;
     }
-    if(hasMaximum) {
-        kData->edata.upper_disp_limit = maximum;
-        kData->edata.upper_ctrl_limit = maximum;
+    if(drvh.defined) {
+        kData->edata.upper_disp_limit = drvh.value;
+        kData->edata.upper_ctrl_limit = drvh.value;
     }
+
+    // alarm limits and the resulting severity/status for the current value
+    if(low.defined)  kData->edata.lower_warning_limit = low.value;
+    if(lolo.defined) kData->edata.lower_alarm_limit = lolo.value;
+    if(high.defined) kData->edata.upper_warning_limit = high.value;
+    if(hihi.defined) kData->edata.upper_alarm_limit = hihi.value;
+    alarmState(currentValue(), &kData->edata.severity, &kData->edata.status);
 
     switch(fieldtype) {
 
     case caENUM: {
-        long index = (long) value;
+        long index = (long) native.enumValue;
         if(!enums.isEmpty()) index = qBound((long) 0, index, (long) enums.size() - 1);
         kData->edata.rvalue = (double) index;
         kData->edata.ivalue = index;
@@ -427,7 +483,7 @@ void InternalChannel::fillKnobData(knobData *kData) const
         for(int i = 0; i < nelm; i++) {
             // with a regex pattern the strings are generated from the current
             // index (consecutive matches for arrays), otherwise the fixed text
-            if(m_combinations > 0) items << generatedString((qint64) value + i);
+            if(m_combinations > 0) items << generatedString((qint64) native.doubleValue + i);
             else                   items << text;
         }
         writeStringsToDataB(kData, items);
@@ -435,43 +491,43 @@ void InternalChannel::fillKnobData(knobData *kData) const
     }
 
     case caCHAR: {
-        kData->edata.rvalue = value;
-        kData->edata.ivalue = (long) value;
+        kData->edata.rvalue = (double) native.charValue;
+        kData->edata.ivalue = (long) native.charValue;
         kData->edata.valueCount = nelm;
         allocateDataB(kData, nelm + 1);
         char *ptr = (char *) kData->edata.dataB;
-        for(int i = 0; i < nelm; i++) ptr[i] = (char) ((long) elementValue(i));
+        for(int i = 0; i < nelm; i++) ptr[i] = (char) (quint8) ((qint64) elementValue(i));
         ptr[nelm] = '\0';
         break;
     }
 
     case caINT: {
-        kData->edata.rvalue = value;
-        kData->edata.ivalue = (long) value;
+        kData->edata.rvalue = (double) native.int16Value;
+        kData->edata.ivalue = (long) native.int16Value;
         kData->edata.valueCount = nelm;
         if(nelm > 1) {
-            allocateDataB(kData, nelm * (int) sizeof(int16_t));
-            int16_t *ptr = (int16_t *) kData->edata.dataB;
-            for(int i = 0; i < nelm; i++) ptr[i] = (int16_t) elementValue(i);
+            allocateDataB(kData, nelm * (int) sizeof(qint16));
+            qint16 *ptr = (qint16 *) kData->edata.dataB;
+            for(int i = 0; i < nelm; i++) ptr[i] = (qint16) (qint64) elementValue(i);
         }
         break;
     }
 
     case caLONG: {
-        kData->edata.rvalue = value;
-        kData->edata.ivalue = (long) value;
+        kData->edata.rvalue = (double) native.int32Value;
+        kData->edata.ivalue = (long) native.int32Value;
         kData->edata.valueCount = nelm;
         if(nelm > 1) {
-            allocateDataB(kData, nelm * (int) sizeof(int32_t));
-            int32_t *ptr = (int32_t *) kData->edata.dataB;
-            for(int i = 0; i < nelm; i++) ptr[i] = (int32_t) elementValue(i);
+            allocateDataB(kData, nelm * (int) sizeof(qint32));
+            qint32 *ptr = (qint32 *) kData->edata.dataB;
+            for(int i = 0; i < nelm; i++) ptr[i] = (qint32) (qint64) elementValue(i);
         }
         break;
     }
 
     case caFLOAT: {
-        kData->edata.rvalue = value;
-        kData->edata.ivalue = (long) value;
+        kData->edata.rvalue = (double) native.floatValue;
+        kData->edata.ivalue = (long) native.floatValue;
         kData->edata.valueCount = nelm;
         if(nelm > 1) {
             allocateDataB(kData, nelm * (int) sizeof(float));
@@ -483,8 +539,8 @@ void InternalChannel::fillKnobData(knobData *kData) const
 
     case caDOUBLE:
     default: {
-        kData->edata.rvalue = value;
-        kData->edata.ivalue = (long) value;
+        kData->edata.rvalue = native.doubleValue;
+        kData->edata.ivalue = (long) native.doubleValue;
         kData->edata.valueCount = nelm;
         if(nelm > 1) {
             allocateDataB(kData, nelm * (int) sizeof(double));

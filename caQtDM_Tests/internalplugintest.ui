@@ -48,14 +48,17 @@
      <item row="0" column="0">
       <widget class="caLabel" name="calabel_ramp">
        <property name="text">
-        <string>double counter 0..100 step 0.5 (200ms):</string>
+        <string>double counter 0..100 with EPICS alarms (lolo 10, low 20, high 80, hihi 90):</string>
        </property>
       </widget>
      </item>
      <item row="0" column="1">
       <widget class="caLineEdit" name="calineedit_ramp">
        <property name="channel">
-        <string>internal://RAMP.{&quot;type&quot;:&quot;double&quot;,&quot;mode&quot;:&quot;counter&quot;,&quot;init&quot;:0,&quot;step&quot;:0.5,&quot;period&quot;:200,&quot;min&quot;:0,&quot;max&quot;:100,&quot;loop&quot;:true,&quot;units&quot;:&quot;V&quot;,&quot;prec&quot;:2}</string>
+        <string>internal://RAMP.{&quot;type&quot;:&quot;double&quot;,&quot;mode&quot;:&quot;counter&quot;,&quot;val&quot;:0,&quot;step&quot;:0.5,&quot;period&quot;:200,&quot;drvl&quot;:0,&quot;drvh&quot;:100,&quot;loop&quot;:true,&quot;low&quot;:20,&quot;lolo&quot;:10,&quot;high&quot;:80,&quot;hihi&quot;:90,&quot;units&quot;:&quot;V&quot;,&quot;prec&quot;:2}</string>
+       </property>
+       <property name="colorMode">
+        <enum>caLineEdit::Alarm_Default</enum>
        </property>
       </widget>
      </item>
@@ -69,7 +72,7 @@
      <item row="1" column="1">
       <widget class="caLineEdit" name="calineedit_count">
        <property name="channel">
-        <string>internal://COUNT.{&quot;type&quot;:&quot;long&quot;,&quot;mode&quot;:&quot;counter&quot;,&quot;init&quot;:0,&quot;step&quot;:1,&quot;period&quot;:1000}</string>
+        <string>internal://COUNT.{&quot;type&quot;:&quot;long&quot;,&quot;mode&quot;:&quot;counter&quot;,&quot;val&quot;:0,&quot;step&quot;:1,&quot;period&quot;:1000}</string>
        </property>
       </widget>
      </item>
@@ -111,7 +114,7 @@
      <item row="4" column="1">
       <widget class="caLineEdit" name="calineedit_message">
        <property name="channel">
-        <string>internal://MESSAGE.{&quot;type&quot;:&quot;string&quot;,&quot;value&quot;:&quot;hello from the internal plugin&quot;}</string>
+        <string>internal://MESSAGE.{&quot;type&quot;:&quot;string&quot;,&quot;val&quot;:&quot;hello from the internal plugin&quot;}</string>
        </property>
       </widget>
      </item>
@@ -141,7 +144,7 @@
        <item>
         <widget class="caTextEntry" name="catextentry_setpoint">
          <property name="channel">
-          <string>internal://SETPOINT.{&quot;type&quot;:&quot;double&quot;,&quot;init&quot;:50,&quot;min&quot;:0,&quot;max&quot;:100}</string>
+          <string>internal://SETPOINT.{&quot;type&quot;:&quot;double&quot;,&quot;val&quot;:50,&quot;drvl&quot;:0,&quot;drvh&quot;:100}</string>
          </property>
         </widget>
        </item>
@@ -179,7 +182,7 @@
      </rect>
     </property>
     <property name="channel">
-     <string>internal://WAVE.{&quot;type&quot;:&quot;double&quot;,&quot;mode&quot;:&quot;counter&quot;,&quot;init&quot;:0,&quot;step&quot;:1,&quot;period&quot;:200,&quot;nelm&quot;:16}</string>
+     <string>internal://WAVE.{&quot;type&quot;:&quot;double&quot;,&quot;mode&quot;:&quot;counter&quot;,&quot;val&quot;:0,&quot;step&quot;:1,&quot;period&quot;:200,&quot;nelm&quot;:16}</string>
     </property>
    </widget>
   </widget>

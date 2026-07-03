@@ -29,16 +29,56 @@
 #include <QStringList>
 #include <QVector>
 
+#include <stdint.h>
+
 #include "knobData.h"
+
+// a limit coming from the JSON configuration that may or may not be defined;
+// reads nicer than parallel has* flags
+struct OptionalLimit
+{
+    double value;
+    bool defined;
+
+    OptionalLimit() : value(0.0), defined(false) {}
+    void set(double newValue) { value = newValue; defined = true; }
+};
+
+/*
+ * The current value in its native EPICS type, following the types the epics3
+ * plugin works with: dbr_short_t (caINT), dbr_long_t (caLONG), dbr_float_t
+ * (caFLOAT), dbr_double_t (caDOUBLE), dbr_enum_t (caENUM), dbr_char_t (caCHAR).
+ * Only the member matching the channel fieldtype is used, so type specific
+ * effects (int16 wrap around, float rounding, unsigned enum/char indexes)
+ * behave like with a real control system and can be tested.
+ */
+struct NativeValue
+{
+    qint16  int16Value;   // caINT   (dbr_short_t)
+    qint32  int32Value;   // caLONG  (dbr_long_t)
+    float   floatValue;   // caFLOAT (dbr_float_t)
+    double  doubleValue;  // caDOUBLE (dbr_double_t), also the index of string regex channels
+    quint16 enumValue;    // caENUM  (dbr_enum_t)
+    quint8  charValue;    // caCHAR  (dbr_char_t)
+
+    NativeValue()
+        : int16Value(0), int32Value(0), floatValue(0.0f), doubleValue(0.0)
+        , enumValue(0), charValue(0) {}
+};
 
 /*
  * One simulated channel of the "internal" test plugin.
  *
- * A channel is defined through the channel name itself:
+ * A channel is defined through the channel name itself, using the EPICS field
+ * names VAL, DRVL/DRVH (drive limits) and LOW/LOLO/HIGH/HIHI (alarm limits):
  *     internal://NAME
- *     internal://NAME.{"type":"double","mode":"counter","init":0,"step":1,
- *                      "period":1000,"min":0,"max":100,"loop":true,"nelm":1,
- *                      "units":"V","prec":2,"enums":["OFF","ON"],"value":"text"}
+ *     internal://NAME.{"type":"double","mode":"counter","val":0,"step":1,
+ *                      "period":1000,"drvl":0,"drvh":100,"loop":true,"nelm":1,
+ *                      "low":20,"lolo":10,"high":80,"hihi":90,
+ *                      "units":"V","prec":2,"enums":["OFF","ON"]}
+ * For string channels "val" carries the fixed text. When alarm limits are
+ * given, severity and status are set like an EPICS record would do, so alarm
+ * colors of widgets can be exercised and tested.
  *
  * This class holds the JSON configuration, the counter state and knows how to
  * fill a knobData structure for every EPICS data type. It has no timer and no
@@ -71,6 +111,11 @@ public:
     // one single counter step, independent of the period (used by advance and the tests)
     void tick();
 
+    // the native value converted to double / stored from double (with the
+    // truncation and wrap around of the native EPICS type)
+    double currentValue() const;
+    void setCurrentValue(double newValue);
+
     // write access (pvSetValue / pvSetWave)
     void setValue(double rdata, qint32 idata, const QString &sdata);
     void setWave(const QVector<double> &values);
@@ -78,21 +123,26 @@ public:
     // fills the edata part of kData according to the configured type and current value
     void fillKnobData(knobData *kData) const;
 
+    // current alarm severity/status for the given value, derived from low/lolo/high/hihi
+    void alarmState(double checkValue, short *severity, short *status) const;
+
     // string matching the regex pattern for the given enumeration index (string channels)
     QString generatedString(qint64 index) const;
     // number of different strings the regex pattern can produce (0 = no pattern)
     qint64 combinations() const { return m_combinations; }
 
-    // configuration, plain data (also convenient for the unit tests)
+    // configuration, plain data (also convenient for the unit tests), EPICS field names
     short fieldtype;            // caType from knobDefines.h
     Mode mode;
-    double init;
+    double val;                 // VAL: initial value
     double step;
     int periodMs;
-    double minimum;
-    double maximum;
-    bool hasMinimum;
-    bool hasMaximum;
+    OptionalLimit drvl;         // DRVL/DRVH: drive limits (counter range, display/control limits)
+    OptionalLimit drvh;
+    OptionalLimit low;          // LOW/LOLO/HIGH/HIHI: alarm limits
+    OptionalLimit lolo;
+    OptionalLimit high;
+    OptionalLimit hihi;
     bool loop;
     int nelm;
     QString units;
@@ -102,12 +152,12 @@ public:
     QString regexPattern;
 
     // state
-    double value;
+    NativeValue native;
     bool needsPublish;
 
 private:
     double elementValue(int i) const;
-    void lowHigh(double *low, double *high) const;
+    void counterRange(double *rangeLow, double *rangeHigh) const;
     static bool parseRegexPattern(const QString &pattern, QList<QStringList> *segments,
                                   qint64 *combinations, QString *errorString);
 
