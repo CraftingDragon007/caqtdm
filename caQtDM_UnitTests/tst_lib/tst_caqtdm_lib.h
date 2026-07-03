@@ -48,6 +48,8 @@ private slots:
     void parseForDisplayRateWorks();
     void parseForQRectConstWorks();
     void treatMacroWorks();
+    void getLongValueFromStringWorks();
+    void getDoubleValueFromStringWorks();
 
 private:
     FakeFileOpenWindow *m_fakeFileOpenWindow;

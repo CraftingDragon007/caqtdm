@@ -25,6 +25,9 @@
 
 #include "tst_caqtdm_lib.h"
 
+#include <cfloat>
+#include <climits>
+
 void TestCaQtDM_Lib::initTestCase()
 {
     // code to be executed before the first test function
@@ -339,4 +342,150 @@ void TestCaQtDM_Lib::treatMacroWorks()
         QCOMPARE(m_caQtDM_Lib->unknownMacrosList.size(), 1);
         QCOMPARE(m_caQtDM_Lib->unknownMacrosList.contains("(TEST2)###widget42###test.ui"), true);
     }
+}
+
+void TestCaQtDM_Lib::getLongValueFromStringWorks()
+{
+    // the function may modify the buffer ('O' -> '0'), so writable buffers are required
+    char buffer[SMALL_STRING_LENGTH];
+    char *end = Q_NULLPTR;
+
+    qstrncpy(buffer, "17", sizeof(buffer));
+    QCOMPARE(m_caQtDM_Lib->getLongValueFromString(buffer, CaQtDM_Lib_Interface::octal, &end), 15L);
+    QCOMPARE(*end, '\0');
+
+    // caQtDM represents octal values with an 'O' prefix
+    qstrncpy(buffer, "O17", sizeof(buffer));
+    QCOMPARE(m_caQtDM_Lib->getLongValueFromString(buffer, CaQtDM_Lib_Interface::octal, &end), 15L);
+    QCOMPARE(*end, '\0');
+
+    qstrncpy(buffer, "ff", sizeof(buffer));
+    QCOMPARE(m_caQtDM_Lib->getLongValueFromString(buffer, CaQtDM_Lib_Interface::hexadecimal, &end), 255L);
+    QCOMPARE(*end, '\0');
+
+    qstrncpy(buffer, "0x1F", sizeof(buffer));
+    QCOMPARE(m_caQtDM_Lib->getLongValueFromString(buffer, CaQtDM_Lib_Interface::hexadecimal, &end), 31L);
+    QCOMPARE(*end, '\0');
+
+    qstrncpy(buffer, "42", sizeof(buffer));
+    QCOMPARE(m_caQtDM_Lib->getLongValueFromString(buffer, CaQtDM_Lib_Interface::decimal, &end), 42L);
+    QCOMPARE(*end, '\0');
+
+    qstrncpy(buffer, "-42", sizeof(buffer));
+    QCOMPARE(m_caQtDM_Lib->getLongValueFromString(buffer, CaQtDM_Lib_Interface::decimal, &end), -42L);
+    QCOMPARE(*end, '\0');
+
+    // hexadecimal and octal notations are auto-detected in decimal mode
+    qstrncpy(buffer, "0x1F", sizeof(buffer));
+    QCOMPARE(m_caQtDM_Lib->getLongValueFromString(buffer, CaQtDM_Lib_Interface::decimal, &end), 31L);
+    QCOMPARE(*end, '\0');
+
+    qstrncpy(buffer, "O17", sizeof(buffer));
+    QCOMPARE(m_caQtDM_Lib->getLongValueFromString(buffer, CaQtDM_Lib_Interface::decimal, &end), 15L);
+    QCOMPARE(*end, '\0');
+
+    // trailing garbage: end points to the first unparsed character
+    qstrncpy(buffer, "42abc", sizeof(buffer));
+    QCOMPARE(m_caQtDM_Lib->getLongValueFromString(buffer, CaQtDM_Lib_Interface::decimal, &end), 42L);
+    QCOMPARE(*end, 'a');
+
+    // nothing parsed at all: end stays at the beginning of the buffer
+    qstrncpy(buffer, "abc", sizeof(buffer));
+    QCOMPARE(m_caQtDM_Lib->getLongValueFromString(buffer, CaQtDM_Lib_Interface::decimal, &end), 0L);
+    QCOMPARE(end, buffer);
+
+    // limits of long (size is platform dependent, so the inputs are generated)
+    qstrncpy(buffer, QString::number(LONG_MAX).toLatin1().constData(), sizeof(buffer));
+    QCOMPARE(m_caQtDM_Lib->getLongValueFromString(buffer, CaQtDM_Lib_Interface::decimal, &end),
+             LONG_MAX);
+    QCOMPARE(*end, '\0');
+
+    qstrncpy(buffer, QString::number(LONG_MIN).toLatin1().constData(), sizeof(buffer));
+    QCOMPARE(m_caQtDM_Lib->getLongValueFromString(buffer, CaQtDM_Lib_Interface::decimal, &end),
+             LONG_MIN);
+    QCOMPARE(*end, '\0');
+
+    // decimal overflow saturates at the limits (strtol semantics)
+    qstrncpy(buffer, "9999999999999999999999999", sizeof(buffer));
+    QCOMPARE(m_caQtDM_Lib->getLongValueFromString(buffer, CaQtDM_Lib_Interface::decimal, &end),
+             LONG_MAX);
+    QCOMPARE(*end, '\0');
+
+    qstrncpy(buffer, "-9999999999999999999999999", sizeof(buffer));
+    QCOMPARE(m_caQtDM_Lib->getLongValueFromString(buffer, CaQtDM_Lib_Interface::decimal, &end),
+             LONG_MIN);
+    QCOMPARE(*end, '\0');
+
+    // all bits set in hexadecimal is ULONG_MAX (strtoul), which maps to -1 as long
+    QString allF(int(2 * sizeof(long)), QChar('f'));
+    qstrncpy(buffer, allF.toLatin1().constData(), sizeof(buffer));
+    QCOMPARE(m_caQtDM_Lib->getLongValueFromString(buffer, CaQtDM_Lib_Interface::hexadecimal, &end),
+             -1L);
+    QCOMPARE(*end, '\0');
+}
+
+void TestCaQtDM_Lib::getDoubleValueFromStringWorks()
+{
+    char buffer[SMALL_STRING_LENGTH];
+    char *end = Q_NULLPTR;
+
+    qstrncpy(buffer, "17", sizeof(buffer));
+    QCOMPARE(m_caQtDM_Lib->getDoubleValueFromString(buffer, CaQtDM_Lib_Interface::octal, &end), 15.0);
+    QCOMPARE(*end, '\0');
+
+    qstrncpy(buffer, "ff", sizeof(buffer));
+    QCOMPARE(m_caQtDM_Lib->getDoubleValueFromString(buffer, CaQtDM_Lib_Interface::hexadecimal, &end), 255.0);
+    QCOMPARE(*end, '\0');
+
+    qstrncpy(buffer, "3.14", sizeof(buffer));
+    QCOMPARE(m_caQtDM_Lib->getDoubleValueFromString(buffer, CaQtDM_Lib_Interface::decimal, &end), 3.14);
+    QCOMPARE(*end, '\0');
+
+    qstrncpy(buffer, "-2.5e3", sizeof(buffer));
+    QCOMPARE(m_caQtDM_Lib->getDoubleValueFromString(buffer, CaQtDM_Lib_Interface::decimal, &end), -2500.0);
+    QCOMPARE(*end, '\0');
+
+    // hexadecimal notation is auto-detected in decimal mode
+    qstrncpy(buffer, "0x10", sizeof(buffer));
+    QCOMPARE(m_caQtDM_Lib->getDoubleValueFromString(buffer, CaQtDM_Lib_Interface::decimal, &end), 16.0);
+    QCOMPARE(*end, '\0');
+
+    // nothing parsed at all: end stays at the beginning of the buffer
+    qstrncpy(buffer, "abc", sizeof(buffer));
+    QCOMPARE(m_caQtDM_Lib->getDoubleValueFromString(buffer, CaQtDM_Lib_Interface::decimal, &end), 0.0);
+    QCOMPARE(end, buffer);
+
+    // limits of double survive a round trip through their string representation
+    qstrncpy(buffer, QString::number(DBL_MAX, 'g', 17).toLatin1().constData(), sizeof(buffer));
+    QCOMPARE(m_caQtDM_Lib->getDoubleValueFromString(buffer, CaQtDM_Lib_Interface::decimal, &end),
+             DBL_MAX);
+    QCOMPARE(*end, '\0');
+
+    qstrncpy(buffer, QString::number(-DBL_MAX, 'g', 17).toLatin1().constData(), sizeof(buffer));
+    QCOMPARE(m_caQtDM_Lib->getDoubleValueFromString(buffer, CaQtDM_Lib_Interface::decimal, &end),
+             -DBL_MAX);
+    QCOMPARE(*end, '\0');
+
+    qstrncpy(buffer, QString::number(DBL_MIN, 'g', 17).toLatin1().constData(), sizeof(buffer));
+    QCOMPARE(m_caQtDM_Lib->getDoubleValueFromString(buffer, CaQtDM_Lib_Interface::decimal, &end),
+             DBL_MIN);
+    QCOMPARE(*end, '\0');
+
+    // overflow yields infinity (strtod semantics)
+    qstrncpy(buffer, "1e309", sizeof(buffer));
+    double result = m_caQtDM_Lib->getDoubleValueFromString(buffer, CaQtDM_Lib_Interface::decimal,
+                                                           &end);
+    QVERIFY(qIsInf(result) && result > 0.0);
+    QCOMPARE(*end, '\0');
+
+    qstrncpy(buffer, "-1e309", sizeof(buffer));
+    result = m_caQtDM_Lib->getDoubleValueFromString(buffer, CaQtDM_Lib_Interface::decimal, &end);
+    QVERIFY(qIsInf(result) && result < 0.0);
+    QCOMPARE(*end, '\0');
+
+    // underflow yields zero
+    qstrncpy(buffer, "1e-999", sizeof(buffer));
+    QCOMPARE(m_caQtDM_Lib->getDoubleValueFromString(buffer, CaQtDM_Lib_Interface::decimal, &end),
+             0.0);
+    QCOMPARE(*end, '\0');
 }
