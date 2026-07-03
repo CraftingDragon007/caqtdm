@@ -3635,6 +3635,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         transferItem->setCaptureRange(hmiConfigWidget->captureRange());
         transferItem->setUUID(hmiConfigWidget->uuid());
         transferItem->setPID(QCoreApplication::applicationPid());
+        transferItem->setTimestamp(QDateTime::currentMSecsSinceEpoch());
         transferItem->setWidgetCallback(hmiConfigWidget);
         transferItem->setParentWindowCallback(parentWindow);
         QWriteLocker locker(&hmiConfigListLock);
