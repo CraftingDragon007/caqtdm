@@ -48,6 +48,7 @@ private slots:
     void alarmLimitsWork();
     void fillKnobDataScalarTypesWork();
     void fillKnobDataArraysWork();
+    void nordAndNelmWorkLikeEpics();
     void setValueWorks();
     void setWaveWorks();
 };

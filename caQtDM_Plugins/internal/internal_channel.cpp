@@ -47,6 +47,7 @@ InternalChannel::InternalChannel()
     , hihi()
     , loop(true)
     , nelm(1)
+    , nord(1)
     , units("")
     , precision(2)
     , enums()
@@ -248,9 +249,19 @@ bool InternalChannel::configure(const QString &json, QString *errorString)
 
     // EPICS field names: VAL, DRVL/DRVH, LOW/LOLO/HIGH/HIHI
     if(object.contains("val")) {
+        if(object["val"].isArray()) {
+            // an array initializes the waveform content (numbers or strings)
+            m_waveOverride.clear();
+            textArray.clear();
+            foreach(const QJsonValue &item, object["val"].toArray()) {
+                if(item.isString()) textArray.append(item.toString());
+                else                m_waveOverride.append(item.toDouble());
+            }
+            if(!m_waveOverride.isEmpty()) val = m_waveOverride.at(0);
+        }
         // for string channels VAL carries the text, otherwise the initial value
-        if(object["val"].isString()) text = object["val"].toString();
-        else                         val = object["val"].toDouble();
+        else if(object["val"].isString()) text = object["val"].toString();
+        else                              val = object["val"].toDouble();
     }
     if(object.contains("step"))   step = object["step"].toDouble();
     if(object.contains("period")) periodMs = qMax(10, (int) object["period"].toDouble());
@@ -262,6 +273,12 @@ bool InternalChannel::configure(const QString &json, QString *errorString)
     if(object.contains("hihi"))   hihi.set(object["hihi"].toDouble());
     if(object.contains("loop"))   loop = object["loop"].toBool();
     if(object.contains("nelm"))   nelm = qMax(1, (int) object["nelm"].toDouble());
+    // NORD defaults to NELM (full array) and can never exceed it; an array
+    // initialisation through "val" defines NORD unless it is given explicitly
+    int initLength = qMax(m_waveOverride.size(), textArray.size());
+    if(object.contains("nord"))   nord = qBound(0, (int) object["nord"].toDouble(), nelm);
+    else if(initLength > 0)       nord = qMin(initLength, nelm);
+    else                          nord = nelm;
     if(object.contains("units"))  units = object["units"].toString();
     if(object.contains("prec"))   precision = (short) object["prec"].toDouble();
 
@@ -397,6 +414,7 @@ void InternalChannel::setValue(double rdata, qint32 idata, const QString &sdata)
         break;
     }
     m_waveOverride.clear();
+    textArray.clear();
     m_elapsedMs = 0;
     needsPublish = true;
 }
@@ -404,6 +422,8 @@ void InternalChannel::setValue(double rdata, qint32 idata, const QString &sdata)
 void InternalChannel::setWave(const QVector<double> &values)
 {
     m_waveOverride = values;
+    // like an EPICS waveform record a write updates NORD, capped at NELM
+    nord = qMin(values.size(), nelm);
     if(!values.isEmpty()) setCurrentValue(values.at(0));
     needsPublish = true;
 }
@@ -478,13 +498,14 @@ void InternalChannel::fillKnobData(knobData *kData) const
     case caSTRING: {
         kData->edata.rvalue = 0.0;
         kData->edata.ivalue = 0;
-        kData->edata.valueCount = nelm;
+        kData->edata.valueCount = nord;
         QStringList items;
-        for(int i = 0; i < nelm; i++) {
-            // with a regex pattern the strings are generated from the current
-            // index (consecutive matches for arrays), otherwise the fixed text
-            if(m_combinations > 0) items << generatedString((qint64) native.doubleValue + i);
-            else                   items << text;
+        for(int i = 0; i < nord; i++) {
+            // explicit array content first, then regex generated strings
+            // (consecutive matches for arrays), otherwise the fixed text
+            if(!textArray.isEmpty())    items << textArray.value(i);
+            else if(m_combinations > 0) items << generatedString((qint64) native.doubleValue + i);
+            else                        items << text;
         }
         writeStringsToDataB(kData, items);
         break;
@@ -493,22 +514,22 @@ void InternalChannel::fillKnobData(knobData *kData) const
     case caCHAR: {
         kData->edata.rvalue = (double) native.charValue;
         kData->edata.ivalue = (long) native.charValue;
-        kData->edata.valueCount = nelm;
-        allocateDataB(kData, nelm + 1);
+        kData->edata.valueCount = nord;
+        allocateDataB(kData, nord + 1);
         char *ptr = (char *) kData->edata.dataB;
-        for(int i = 0; i < nelm; i++) ptr[i] = (char) (quint8) ((qint64) elementValue(i));
-        ptr[nelm] = '\0';
+        for(int i = 0; i < nord; i++) ptr[i] = (char) (quint8) ((qint64) elementValue(i));
+        ptr[nord] = '\0';
         break;
     }
 
     case caINT: {
         kData->edata.rvalue = (double) native.int16Value;
         kData->edata.ivalue = (long) native.int16Value;
-        kData->edata.valueCount = nelm;
+        kData->edata.valueCount = nord;
         if(nelm > 1) {
-            allocateDataB(kData, nelm * (int) sizeof(qint16));
+            allocateDataB(kData, nord * (int) sizeof(qint16));
             qint16 *ptr = (qint16 *) kData->edata.dataB;
-            for(int i = 0; i < nelm; i++) ptr[i] = (qint16) (qint64) elementValue(i);
+            for(int i = 0; i < nord; i++) ptr[i] = (qint16) (qint64) elementValue(i);
         }
         break;
     }
@@ -516,11 +537,11 @@ void InternalChannel::fillKnobData(knobData *kData) const
     case caLONG: {
         kData->edata.rvalue = (double) native.int32Value;
         kData->edata.ivalue = (long) native.int32Value;
-        kData->edata.valueCount = nelm;
+        kData->edata.valueCount = nord;
         if(nelm > 1) {
-            allocateDataB(kData, nelm * (int) sizeof(qint32));
+            allocateDataB(kData, nord * (int) sizeof(qint32));
             qint32 *ptr = (qint32 *) kData->edata.dataB;
-            for(int i = 0; i < nelm; i++) ptr[i] = (qint32) (qint64) elementValue(i);
+            for(int i = 0; i < nord; i++) ptr[i] = (qint32) (qint64) elementValue(i);
         }
         break;
     }
@@ -528,11 +549,11 @@ void InternalChannel::fillKnobData(knobData *kData) const
     case caFLOAT: {
         kData->edata.rvalue = (double) native.floatValue;
         kData->edata.ivalue = (long) native.floatValue;
-        kData->edata.valueCount = nelm;
+        kData->edata.valueCount = nord;
         if(nelm > 1) {
-            allocateDataB(kData, nelm * (int) sizeof(float));
+            allocateDataB(kData, nord * (int) sizeof(float));
             float *ptr = (float *) kData->edata.dataB;
-            for(int i = 0; i < nelm; i++) ptr[i] = (float) elementValue(i);
+            for(int i = 0; i < nord; i++) ptr[i] = (float) elementValue(i);
         }
         break;
     }
@@ -541,11 +562,11 @@ void InternalChannel::fillKnobData(knobData *kData) const
     default: {
         kData->edata.rvalue = native.doubleValue;
         kData->edata.ivalue = (long) native.doubleValue;
-        kData->edata.valueCount = nelm;
+        kData->edata.valueCount = nord;
         if(nelm > 1) {
-            allocateDataB(kData, nelm * (int) sizeof(double));
+            allocateDataB(kData, nord * (int) sizeof(double));
             double *ptr = (double *) kData->edata.dataB;
-            for(int i = 0; i < nelm; i++) ptr[i] = elementValue(i);
+            for(int i = 0; i < nord; i++) ptr[i] = elementValue(i);
         }
         break;
     }

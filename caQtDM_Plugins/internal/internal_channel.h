@@ -73,9 +73,16 @@ struct NativeValue
  * names VAL, DRVL/DRVH (drive limits) and LOW/LOLO/HIGH/HIHI (alarm limits):
  *     internal://NAME
  *     internal://NAME.{"type":"double","mode":"counter","val":0,"step":1,
- *                      "period":1000,"drvl":0,"drvh":100,"loop":true,"nelm":1,
+ *                      "period":1000,"drvl":0,"drvh":100,"loop":true,
+ *                      "nelm":1,"nord":1,
  *                      "low":20,"lolo":10,"high":80,"hihi":90,
  *                      "units":"V","prec":2,"enums":["OFF","ON"]}
+ * Arrays follow the EPICS waveform record: NELM is the maximum array size,
+ * NORD the number of elements actually used (defaults to NELM, updated by
+ * waveform writes). A waveform is initialized by giving "val" as an array,
+ * which also defines NORD unless it is set explicitly:
+ *     internal://WAVE.{"type":"double","nelm":8,"val":[1.5,2.5,3.5]}
+ *     internal://TEXTS.{"type":"string","nelm":4,"val":["one","two"]}
  * For string channels "val" carries the fixed text. When alarm limits are
  * given, severity and status are set like an EPICS record would do, so alarm
  * colors of widgets can be exercised and tested.
@@ -144,11 +151,13 @@ public:
     OptionalLimit high;
     OptionalLimit hihi;
     bool loop;
-    int nelm;
+    int nelm;                   // NELM: maximum array size
+    int nord;                   // NORD: number of elements actually used (<= nelm)
     QString units;
     short precision;
     QStringList enums;
     QString text;
+    QStringList textArray;      // string waveform content given as "val" array
     QString regexPattern;
 
     // state

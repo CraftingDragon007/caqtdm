@@ -513,6 +513,76 @@ void TestInternalChannel::fillKnobDataArraysWork()
     }
 }
 
+void TestInternalChannel::nordAndNelmWorkLikeEpics()
+{
+    QString error;
+
+    // NORD defaults to NELM (full array)
+    InternalChannel full;
+    QVERIFY(full.configure(R"({"type":"double","nelm":4})", &error));
+    QCOMPARE(full.nord, 4);
+
+    // NORD limits the used elements, NELM stays the maximum size
+    InternalChannel partial;
+    QVERIFY(partial.configure(R"({"type":"double","mode":"counter","val":10,"step":1,"nelm":8,"nord":3})", &error));
+    knobData kData = makeKnobData();
+    partial.fillKnobData(&kData);
+    QCOMPARE(kData.edata.nelm, 8);
+    QCOMPARE(kData.edata.valueCount, 3);
+    QCOMPARE(kData.edata.dataSize, (int) (3 * sizeof(double)));
+    double *values = (double *) kData.edata.dataB;
+    QCOMPARE(values[0], 10.0);
+    QCOMPARE(values[2], 12.0);
+
+    // NORD can never exceed NELM
+    InternalChannel clamped;
+    QVERIFY(clamped.configure(R"({"type":"double","nelm":4,"nord":99})", &error));
+    QCOMPARE(clamped.nord, 4);
+
+    // a waveform write updates NORD like an EPICS waveform record
+    QVector<double> wave;
+    wave << 5.0 << 6.0;
+    partial.setWave(wave);
+    QCOMPARE(partial.nord, 2);
+    partial.fillKnobData(&kData);
+    QCOMPARE(kData.edata.nelm, 8);
+    QCOMPARE(kData.edata.valueCount, 2);
+    values = (double *) kData.edata.dataB;
+    QCOMPARE(values[0], 5.0);
+    QCOMPARE(values[1], 6.0);
+    freeKnobData(&kData);
+
+    // "val" given as array initializes the waveform content and NORD
+    InternalChannel initialized;
+    QVERIFY(initialized.configure(R"({"type":"double","nelm":8,"val":[1.5,2.5,3.5]})", &error));
+    QCOMPARE(initialized.nord, 3);
+    QCOMPARE(initialized.currentValue(), 1.5);
+    knobData kInit = makeKnobData();
+    initialized.fillKnobData(&kInit);
+    QCOMPARE(kInit.edata.nelm, 8);
+    QCOMPARE(kInit.edata.valueCount, 3);
+    values = (double *) kInit.edata.dataB;
+    QCOMPARE(values[0], 1.5);
+    QCOMPARE(values[1], 2.5);
+    QCOMPARE(values[2], 3.5);
+    freeKnobData(&kInit);
+
+    // an explicitly given NORD wins over the array length
+    InternalChannel explicitNord;
+    QVERIFY(explicitNord.configure(R"({"type":"double","nelm":8,"nord":2,"val":[1,2,3]})", &error));
+    QCOMPARE(explicitNord.nord, 2);
+
+    // a string waveform is initialized with an array of strings
+    InternalChannel texts;
+    QVERIFY(texts.configure(R"({"type":"string","nelm":4,"val":["one","two"]})", &error));
+    QCOMPARE(texts.nord, 2);
+    knobData kTexts = makeKnobData();
+    texts.fillKnobData(&kTexts);
+    QCOMPARE(kTexts.edata.valueCount, 2);
+    QCOMPARE(QString((char *) kTexts.edata.dataB), QString("one\033two"));
+    freeKnobData(&kTexts);
+}
+
 void TestInternalChannel::setValueWorks()
 {
     QString error;
