@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>760</width>
+    <height>560</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>internal plugin test</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <widget class="QLabel" name="label_title">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>8</y>
+      <width>740</width>
+      <height>32</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>18</pointsize>
+     </font>
+    </property>
+    <property name="text">
+     <string>internal:// plugin test (all EPICS types, JSON configured counters)</string>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignmentFlag::AlignCenter</set>
+    </property>
+   </widget>
+   <widget class="QWidget" name="gridLayoutWidget">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>48</y>
+      <width>740</width>
+      <height>300</height>
+     </rect>
+    </property>
+    <layout class="QGridLayout" name="gridLayout">
+     <item row="0" column="0">
+      <widget class="caLabel" name="calabel_ramp">
+       <property name="text">
+        <string>double counter 0..100 step 0.5 (200ms):</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="caLineEdit" name="calineedit_ramp">
+       <property name="channel">
+        <string>internal://RAMP.{&quot;type&quot;:&quot;double&quot;,&quot;mode&quot;:&quot;counter&quot;,&quot;init&quot;:0,&quot;step&quot;:0.5,&quot;period&quot;:200,&quot;min&quot;:0,&quot;max&quot;:100,&quot;loop&quot;:true,&quot;units&quot;:&quot;V&quot;,&quot;prec&quot;:2}</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="caLabel" name="calabel_count">
+       <property name="text">
+        <string>long counter, 1 per second:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="caLineEdit" name="calineedit_count">
+       <property name="channel">
+        <string>internal://COUNT.{&quot;type&quot;:&quot;long&quot;,&quot;mode&quot;:&quot;counter&quot;,&quot;init&quot;:0,&quot;step&quot;:1,&quot;period&quot;:1000}</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0">
+      <widget class="caLabel" name="calabel_state">
+       <property name="text">
+        <string>enum cycling OFF/ON/ERROR (1s):</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="1">
+      <widget class="caLineEdit" name="calineedit_state">
+       <property name="channel">
+        <string>internal://STATE.{&quot;type&quot;:&quot;enum&quot;,&quot;mode&quot;:&quot;counter&quot;,&quot;period&quot;:1000,&quot;enums&quot;:[&quot;OFF&quot;,&quot;ON&quot;,&quot;ERROR&quot;]}</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="0">
+      <widget class="caLabel" name="calabel_state_led">
+       <property name="text">
+        <string>same enum on a LED (shared channel):</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="1">
+      <widget class="caLed" name="caled_state">
+       <property name="channel">
+        <string>internal://STATE</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="0">
+      <widget class="caLabel" name="calabel_message">
+       <property name="text">
+        <string>constant string:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="1">
+      <widget class="caLineEdit" name="calineedit_message">
+       <property name="channel">
+        <string>internal://MESSAGE.{&quot;type&quot;:&quot;string&quot;,&quot;value&quot;:&quot;hello from the internal plugin&quot;}</string>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="0">
+      <widget class="caLabel" name="calabel_setpoint">
+       <property name="text">
+        <string>writable double (entry left, readback right):</string>
+       </property>
+      </widget>
+     </item>
+     <item row="6" column="0">
+      <widget class="caLabel" name="calabel_serial">
+       <property name="text">
+        <string>string regex generator STATE-[0-9]{2} (500ms):</string>
+       </property>
+      </widget>
+     </item>
+     <item row="6" column="1">
+      <widget class="caLineEdit" name="calineedit_serial">
+       <property name="channel">
+        <string>internal://SERIAL.{&quot;type&quot;:&quot;string&quot;,&quot;mode&quot;:&quot;counter&quot;,&quot;period&quot;:500,&quot;regex&quot;:&quot;STATE-[0-9]{2}&quot;}</string>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="1">
+      <layout class="QHBoxLayout" name="horizontalLayout_setpoint">
+       <item>
+        <widget class="caTextEntry" name="catextentry_setpoint">
+         <property name="channel">
+          <string>internal://SETPOINT.{&quot;type&quot;:&quot;double&quot;,&quot;init&quot;:50,&quot;min&quot;:0,&quot;max&quot;:100}</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="caLineEdit" name="calineedit_setpoint">
+         <property name="channel">
+          <string>internal://SETPOINT</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+    </layout>
+   </widget>
+   <widget class="caLabel" name="calabel_wave">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>356</y>
+      <width>740</width>
+      <height>18</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>double waveform, 16 elements, ramp advancing every 200ms:</string>
+    </property>
+   </widget>
+   <widget class="caWaveTable" name="cawavetable_wave">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>378</y>
+      <width>740</width>
+      <height>170</height>
+     </rect>
+    </property>
+    <property name="channel">
+     <string>internal://WAVE.{&quot;type&quot;:&quot;double&quot;,&quot;mode&quot;:&quot;counter&quot;,&quot;init&quot;:0,&quot;step&quot;:1,&quot;period&quot;:200,&quot;nelm&quot;:16}</string>
+    </property>
+   </widget>
+  </widget>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>caLabel</class>
+   <extends>QLabel</extends>
+   <header>caLabel</header>
+  </customwidget>
+  <customwidget>
+   <class>caLineEdit</class>
+   <extends>QLineEdit</extends>
+   <header>caLineEdit</header>
+  </customwidget>
+  <customwidget>
+   <class>caTextEntry</class>
+   <extends>caLineEdit</extends>
+   <header>caTextEntry</header>
+  </customwidget>
+  <customwidget>
+   <class>caLed</class>
+   <extends>QWidget</extends>
+   <header>caLed</header>
+  </customwidget>
+  <customwidget>
+   <class>caWaveTable</class>
+   <extends>QTableWidget</extends>
+   <header>caWaveTable</header>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

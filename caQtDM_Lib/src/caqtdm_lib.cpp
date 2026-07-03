@@ -4439,8 +4439,9 @@ int CaQtDM_Lib::addMonitor(QWidget *thisW, knobData *kData, QString pv, QWidget 
     memset(&kData->pv,0,MAXPVLEN);
     qstrncpy(kData->pv, qasc(trimmedPV), MAXPVLEN-1);
 
-    // find the plugin we are going to use
-    if(!pluginName.contains("intern")) {
+    // find the plugin we are going to use ("intern" is the softPV pseudo plugin,
+    // exact match so that the "internal" plugin is not swallowed here)
+    if(pluginName != QLatin1String("intern")) {
         plugininterface = getControlInterface(pluginName);
         // and set it to the widget and the pointer to the data
         kData->pluginInterface = (void *) plugininterface;
