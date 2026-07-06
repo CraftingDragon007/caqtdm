@@ -1302,6 +1302,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
     QString className(w1->metaObject()->className());
     if(!className.contains("ca") && !className.contains("QTextBrowser") && !className.contains("replaceMacro") &&
+            !className.contains("genSoftPV") &&
             !className.contains("QE") && !className.contains("QTabWidget")&& !className.contains("QGroupBox")) return;
 
     int nbMonitors = 0;
@@ -1315,7 +1316,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
     qCDebug(caQtDMLibLog) << w1->metaObject()->className() << w1->objectName();
 
-    if(className.contains("ca") || className.contains("QTextBrowser") || className.contains("replaceMacro") || className.contains("QTabWidget")|| className.contains("QGroupBox")) {
+    if(className.contains("ca") || className.contains("QTextBrowser") || className.contains("replaceMacro") || className.contains("genSoftPV") || className.contains("QTabWidget")|| className.contains("QGroupBox")) {
         PRINT(printf("\n%*c %s macro=<%s>", 15 * level, '+', qasc(w1->objectName()), qasc(macro)));
         map = createMap(macro);
         // insert special macro into map
@@ -1508,6 +1509,32 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
             connect(w1, SIGNAL(changeValue(double)), this, SLOT(Callback_CaCalc(double)));
 
             calcWidget->setProperty("Taken", true);
+        }
+
+        // generic soft pvs for the internal plugin, prioritized like the caCalc softs
+        else if(genSoftPV* softpvWidget = qobject_cast<genSoftPV *>(w1)) {
+            if(treatPrimary) {
+                w1->setProperty("Taken", true);
+
+                QString pv = softpvWidget->getVariable();
+                reaffectText(map, &pv, w1);
+                if(pv.isEmpty()) {
+                    postMessage(QtWarningMsg, (char*) qasc(tr("genSoftPV widget %1 has no variable name, ignored").arg(w1->objectName())));
+                    return;
+                }
+                softpvWidget->setVariable(pv);
+
+                w1->setProperty("ObjectType", caCalc_Widget);
+                QWidget *tabWidget = getTabParent(w1);
+                w1->setProperty("parentTab", QVariant::fromValue(tabWidget));
+
+                pv = "internal://" + pv;
+                addMonitor(myWidget, &kData, qasc(pv), w1, specData, map, &pv);
+
+                w1->setContextMenuPolicy(Qt::CustomContextMenu);
+                connect(w1, SIGNAL(customContextMenuRequested(const QPoint&)), this, SLOT(ShowContextMenu(const QPoint&)));
+                w1->setProperty("Connect", false);
+            }
         }
 
         return;
@@ -6614,6 +6641,8 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
         Q_UNUSED(cahmiConfigWidget)
     } else if (wmSignalRescale *wmSignalRescaleWidget = qobject_cast<wmSignalRescale*>(w)) {
         Q_UNUSED(wmSignalRescaleWidget)
+    } else if (genSoftPV *genSoftPVWidget = qobject_cast<genSoftPV*>(w)) {
+        Q_UNUSED(genSoftPVWidget)
     } else {
         // something else (user defined monitors with non ca imageWidgets ?) ==============================================
         qCWarning(caQtDMLibLog) << "unrecognized widget" << w->metaObject()->className();

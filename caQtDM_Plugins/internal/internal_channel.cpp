@@ -78,15 +78,8 @@ QString InternalChannel::jsonPart(const QString &pv)
     return pv.mid(pos + 1).trimmed();
 }
 
-/*
- * Breaks a simple regular expression subset into segments that can be
- * enumerated deterministically:
- *   - literal characters ('\' escapes the next character)
- *   - character classes like [a-z0-9] with an optional {n} quantifier
- *   - flat alternation groups like (ON|OFF), no nesting
- * Each segment is the list of its possible values; the total number of
- * combinations is the product over all segments.
- */
+// breaks a regex subset (literals, [a-z0-9]{n} classes, flat (A|B) groups)
+// into segments whose combinations can be enumerated deterministically
 bool InternalChannel::parseRegexPattern(const QString &pattern, QList<QStringList> *segments,
                                         qint64 *combinations, QString *errorString)
 {
@@ -351,6 +344,7 @@ void InternalChannel::counterRange(double *rangeLow, double *rangeHigh) const
     }
 }
 
+// advances a value by one step and wraps (or saturates) at the range limits
 static double steppedValue(double value, double step, double rangeLow, double rangeHigh, bool loop)
 {
     double next = value + step;
@@ -369,6 +363,7 @@ void InternalChannel::tick()
     // without drive limits the value wraps at the native type range instead
     setCurrentValue(steppedValue(currentValue(), step, rangeLow, rangeHigh, loop));
 
+    // an explicitly set waveform counts as well, element by element
     for(int i = 0; i < m_waveOverride.size(); i++) {
         m_waveOverride[i] = steppedValue(m_waveOverride.at(i), step, rangeLow, rangeHigh, loop);
     }
@@ -389,11 +384,7 @@ bool InternalChannel::advance(int elapsedMs)
     return changed;
 }
 
-/*
- * Alarm evaluation like an EPICS record: crossing HIHI/LOLO raises a MAJOR
- * alarm, crossing HIGH/LOW a MINOR alarm. Status codes follow epicsAlarm.h
- * (HIHI=3, HIGH=4, LOLO=5, LOW=6).
- */
+// alarm evaluation like an EPICS record, status codes follow epicsAlarm.h
 void InternalChannel::alarmState(double checkValue, short *severity, short *status) const
 {
     if(hihi.defined && checkValue >= hihi.value)      { *severity = 2; *status = 3; }

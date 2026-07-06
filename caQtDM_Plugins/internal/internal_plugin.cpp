@@ -28,8 +28,7 @@
 #include "internal_plugin.h"
 #include "caQtDM_Plugins_global.h"
 
-// base interval of the publish timer in ms; every channel decides on its own
-// period how many of these ticks it skips
+// base interval of the publish timer in ms
 #define INTERNAL_BASE_INTERVAL 100
 
 Q_LOGGING_CATEGORY(internalLog, "caqtdm.plugins.internal")
@@ -124,9 +123,14 @@ int InternalPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
 
     QString pv = QString::fromLatin1(kData->pv);
     QString key = InternalChannel::baseName(pv);
-    QString json = InternalChannel::jsonPart(pv);
 
     qCDebug(internalLog) << "pvAddMonitor" << pv << kData->index;
+
+    // a JSON suffix in the channel name (epics filters, caqtdm_monitor) is no configuration here
+    if(!InternalChannel::jsonPart(pv).isEmpty()) {
+        qCDebug(internalLog) << "json suffix of" << pv
+                             << "ignored, internal channels are configured through a genSoftPV widget";
+    }
 
     InternalChannel *channel = channels.value(key, Q_NULLPTR);
     if(channel == Q_NULLPTR) {
@@ -134,15 +138,21 @@ int InternalPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
         channels.insert(key, channel);
     }
 
-    // the first definition with a JSON part configures the channel
-    if(!json.isEmpty() && !channel->isConfigured()) {
-        QString error;
-        if(!channel->configure(json, &error)) {
-            char asc[MAX_STRING_LENGTH];
-            snprintf(asc, MAX_STRING_LENGTH, "internal plugin: invalid configuration for %s (%s), using defaults",
-                     qasc(key), qasc(error));
-            if(messagewindowP != (MessageWindow *) Q_NULLPTR) messagewindowP->postMsgEvent(QtWarningMsg, asc);
-            qCWarning(internalLog) << asc;
+    // the configuration comes from the channelConfigJSON property of the defining widget (genSoftPV)
+    if(!channel->isConfigured()) {
+        QObject *object = (QObject *) kData->dispW;
+        if(object != (QObject *) Q_NULLPTR) {
+            QString config = object->property("channelConfigJSON").toString();
+            if(!config.isEmpty()) {
+                QString error;
+                if(!channel->configure(config, &error)) {
+                    char asc[MAX_STRING_LENGTH];
+                    snprintf(asc, MAX_STRING_LENGTH, "internal plugin: invalid configuration for %s (%s), using defaults",
+                             qasc(key), qasc(error));
+                    if(messagewindowP != (MessageWindow *) Q_NULLPTR) messagewindowP->postMsgEvent(QtWarningMsg, asc);
+                    qCWarning(internalLog) << asc;
+                }
+            }
         }
     }
 
@@ -164,9 +174,7 @@ int InternalPlugin::pvClearMonitor(knobData *kData)
         i.value().removeAll(kData->index);
         if(i.value().isEmpty()) {
             monitorIndexes.erase(i);
-            // reference count dropped to zero: delete the channel, unless it
-            // is persistent - then it keeps running inside the process and
-            // displays can re-attach to the live value later
+            // reference count dropped to zero: delete the channel, unless it is persistent
             InternalChannel *channel = channels.value(key, Q_NULLPTR);
             if((channel != Q_NULLPTR) && !channel->persistent) {
                 channels.remove(key);

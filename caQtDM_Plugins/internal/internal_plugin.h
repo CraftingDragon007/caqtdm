@@ -37,12 +37,8 @@
 // This needs to be included everywhere qCDebug, qCWarning etc are used
 #include <QLoggingCategory>
 
-/*
- * Test/simulation plugin: channels live only inside caQtDM and are configured
- * through the channel name itself, e.g.
- *     internal://RAMP.{"type":"double","mode":"counter","step":0.5,"period":200,"min":0,"max":100}
- * All EPICS data types including waveforms are supported (see InternalChannel).
- */
+// test/simulation plugin: channels live only inside caQtDM and are defined
+// through genSoftPV widgets (see InternalChannel)
 class Q_DECL_EXPORT InternalPlugin : public QObject, ControlsInterface
 {
     Q_OBJECT

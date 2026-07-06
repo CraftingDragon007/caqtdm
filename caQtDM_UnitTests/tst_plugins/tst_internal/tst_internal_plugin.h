@@ -46,20 +46,24 @@ private slots:
 
     void pluginNameIsInternal();
     void addMonitorPublishesInitialValue();
+    void configFromWidgetPropertyWorks();
+    void filterSuffixIsIgnored();
     void channelsAreSharedByBaseName();
-    void invalidJsonFallsBackToDefaults();
+    void invalidConfigFallsBackToDefaults();
     void counterAdvancesWithTimerTicks();
     void writeThroughPluginWorks();
     void channelDeletedWhenUnreferenced();
     void persistentChannelKeepsRunning();
 
 private:
-    int createMonitor(const QString &pv);
+    // registers a monitor; the configuration travels like in the real
+    // application through the channelConfigJSON property of the widget
+    int createMonitor(const QString &pv, const QString &configJSON = QString());
     void pumpTimerOnce();
 
     InternalPlugin *m_plugin;
     MutexKnobData *m_mutexKnobData;
-    QWidget *m_widget;
+    QList<QWidget *> m_widgets;
     QList<int> m_indexes;
 };
 

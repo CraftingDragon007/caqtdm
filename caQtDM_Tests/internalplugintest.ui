@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>780</width>
-    <height>660</height>
+    <height>700</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -61,7 +61,7 @@
         </size>
        </property>
        <property name="channel" stdset="0">
-        <string>internal://RAMP.{&quot;type&quot;:&quot;double&quot;,&quot;mode&quot;:&quot;counter&quot;,&quot;val&quot;:0,&quot;step&quot;:0.5,&quot;period&quot;:200,&quot;drvl&quot;:0,&quot;drvh&quot;:100,&quot;loop&quot;:true,&quot;low&quot;:20,&quot;lolo&quot;:10,&quot;high&quot;:80,&quot;hihi&quot;:90,&quot;units&quot;:&quot;V&quot;,&quot;prec&quot;:2}</string>
+        <string>internal://RAMP</string>
        </property>
        <property name="colorMode">
         <enum>caLineEdit::colMode::Alarm_Default</enum>
@@ -88,7 +88,7 @@
      <item row="2" column="0">
       <widget class="caLabel" name="calabel_count">
        <property name="text">
-        <string>long counter, 1 per second:</string>
+        <string>persistent long counter, 1 per second (survives display reload):</string>
        </property>
       </widget>
      </item>
@@ -101,7 +101,7 @@
         </size>
        </property>
        <property name="channel" stdset="0">
-        <string>internal://COUNT.{&quot;type&quot;:&quot;long&quot;,&quot;mode&quot;:&quot;counter&quot;,&quot;val&quot;:0,&quot;step&quot;:1,&quot;period&quot;:1000}</string>
+        <string>internal://COUNT</string>
        </property>
       </widget>
      </item>
@@ -121,7 +121,7 @@
         </size>
        </property>
        <property name="channel" stdset="0">
-        <string>internal://INT16.{&quot;type&quot;:&quot;int&quot;,&quot;mode&quot;:&quot;counter&quot;,&quot;val&quot;:32700,&quot;step&quot;:10,&quot;period&quot;:500}</string>
+        <string>internal://INT16</string>
        </property>
       </widget>
      </item>
@@ -141,7 +141,7 @@
         </size>
        </property>
        <property name="channel" stdset="0">
-        <string>internal://STATE.{&quot;type&quot;:&quot;enum&quot;,&quot;mode&quot;:&quot;counter&quot;,&quot;period&quot;:1000,&quot;enums&quot;:[&quot;OFF&quot;,&quot;ON&quot;,&quot;ERROR&quot;]}</string>
+        <string>internal://STATE</string>
        </property>
       </widget>
      </item>
@@ -161,7 +161,7 @@
         </size>
        </property>
        <property name="channel" stdset="0">
-        <string>internal://MESSAGE.{&quot;type&quot;:&quot;string&quot;,&quot;val&quot;:&quot;hello from the internal plugin&quot;}</string>
+        <string>internal://MESSAGE</string>
        </property>
       </widget>
      </item>
@@ -181,7 +181,7 @@
         </size>
        </property>
        <property name="channel" stdset="0">
-        <string>internal://SERIAL.{&quot;type&quot;:&quot;string&quot;,&quot;mode&quot;:&quot;counter&quot;,&quot;period&quot;:500,&quot;regex&quot;:&quot;STATE-[0-9]{2}&quot;}</string>
+        <string>internal://SERIAL</string>
        </property>
       </widget>
      </item>
@@ -203,7 +203,7 @@
           </size>
          </property>
          <property name="channel" stdset="0">
-          <string>internal://SETPOINT.{&quot;type&quot;:&quot;double&quot;,&quot;val&quot;:50,&quot;drvl&quot;:0,&quot;drvh&quot;:100}</string>
+          <string>internal://SETPOINT</string>
          </property>
         </widget>
        </item>
@@ -247,7 +247,7 @@
      </rect>
     </property>
     <property name="channel" stdset="0">
-     <string notr="true">internal://WAVE.{&quot;type&quot;:&quot;double&quot;,&quot;mode&quot;:&quot;counter&quot;,&quot;val&quot;:[ 0, 1, 2, 3, 4, 5],&quot;step&quot;:1,&quot;period&quot;:200,&quot;nelm&quot;:32,&quot;nord&quot;:16}</string>
+     <string notr="true">internal://WAVE</string>
     </property>
     <property name="numberOfRows">
      <number>16</number>
@@ -1591,7 +1591,7 @@
      </rect>
     </property>
     <property name="channel" stdset="0">
-     <string>internal://WINIT.{&quot;type&quot;:&quot;double&quot;,&quot;nelm&quot;:8,&quot;val&quot;:[1.5,2.5,3.5,4.5]}</string>
+     <string>internal://WINIT</string>
     </property>
     <property name="numberOfRows">
      <number>1</number>
@@ -1625,9 +1625,262 @@
      </property>
     </item>
    </widget>
+   <widget class="caLabel" name="calabel_definitions">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>674</y>
+      <width>88</width>
+      <height>18</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>definitions:</string>
+    </property>
+   </widget>
+   <widget class="genSoftPV" name="gensoftpv_ramp">
+    <property name="geometry">
+     <rect>
+      <x>100</x>
+      <y>674</y>
+      <width>72</width>
+      <height>18</height>
+     </rect>
+    </property>
+    <property name="variable">
+     <string>RAMP</string>
+    </property>
+    <property name="mode">
+     <enum>genSoftPV::Counter</enum>
+    </property>
+    <property name="step">
+     <double>0.5</double>
+    </property>
+    <property name="period">
+     <number>200</number>
+    </property>
+    <property name="drvl">
+     <string>0</string>
+    </property>
+    <property name="drvh">
+     <string>100</string>
+    </property>
+    <property name="low">
+     <string>20</string>
+    </property>
+    <property name="lolo">
+     <string>10</string>
+    </property>
+    <property name="high">
+     <string>80</string>
+    </property>
+    <property name="hihi">
+     <string>90</string>
+    </property>
+    <property name="units">
+     <string>V</string>
+    </property>
+    <property name="precision">
+     <number>2</number>
+    </property>
+   </widget>
+   <widget class="genSoftPV" name="gensoftpv_count">
+    <property name="geometry">
+     <rect>
+      <x>175</x>
+      <y>674</y>
+      <width>72</width>
+      <height>18</height>
+     </rect>
+    </property>
+    <property name="variable">
+     <string>COUNT</string>
+    </property>
+    <property name="dataType">
+     <enum>genSoftPV::Long</enum>
+    </property>
+    <property name="mode">
+     <enum>genSoftPV::Counter</enum>
+    </property>
+    <property name="persistent">
+     <bool>true</bool>
+    </property>
+   </widget>
+   <widget class="genSoftPV" name="gensoftpv_int16">
+    <property name="geometry">
+     <rect>
+      <x>250</x>
+      <y>674</y>
+      <width>72</width>
+      <height>18</height>
+     </rect>
+    </property>
+    <property name="variable">
+     <string>INT16</string>
+    </property>
+    <property name="dataType">
+     <enum>genSoftPV::Int</enum>
+    </property>
+    <property name="mode">
+     <enum>genSoftPV::Counter</enum>
+    </property>
+    <property name="value">
+     <string>32700</string>
+    </property>
+    <property name="step">
+     <double>10</double>
+    </property>
+    <property name="period">
+     <number>500</number>
+    </property>
+   </widget>
+   <widget class="genSoftPV" name="gensoftpv_state">
+    <property name="geometry">
+     <rect>
+      <x>325</x>
+      <y>674</y>
+      <width>72</width>
+      <height>18</height>
+     </rect>
+    </property>
+    <property name="variable">
+     <string>STATE</string>
+    </property>
+    <property name="dataType">
+     <enum>genSoftPV::Enum</enum>
+    </property>
+    <property name="mode">
+     <enum>genSoftPV::Counter</enum>
+    </property>
+    <property name="enumStrings">
+     <stringlist>
+      <string>OFF</string>
+      <string>ON</string>
+      <string>ERROR</string>
+     </stringlist>
+    </property>
+   </widget>
+   <widget class="genSoftPV" name="gensoftpv_message">
+    <property name="geometry">
+     <rect>
+      <x>400</x>
+      <y>674</y>
+      <width>72</width>
+      <height>18</height>
+     </rect>
+    </property>
+    <property name="variable">
+     <string>MESSAGE</string>
+    </property>
+    <property name="dataType">
+     <enum>genSoftPV::String</enum>
+    </property>
+    <property name="value">
+     <string>hello from the internal plugin</string>
+    </property>
+   </widget>
+   <widget class="genSoftPV" name="gensoftpv_serial">
+    <property name="geometry">
+     <rect>
+      <x>475</x>
+      <y>674</y>
+      <width>72</width>
+      <height>18</height>
+     </rect>
+    </property>
+    <property name="variable">
+     <string>SERIAL</string>
+    </property>
+    <property name="dataType">
+     <enum>genSoftPV::String</enum>
+    </property>
+    <property name="mode">
+     <enum>genSoftPV::Counter</enum>
+    </property>
+    <property name="period">
+     <number>500</number>
+    </property>
+    <property name="regex">
+     <string>STATE-[0-9]{2}</string>
+    </property>
+   </widget>
+   <widget class="genSoftPV" name="gensoftpv_setpoint">
+    <property name="geometry">
+     <rect>
+      <x>550</x>
+      <y>674</y>
+      <width>72</width>
+      <height>18</height>
+     </rect>
+    </property>
+    <property name="variable">
+     <string>SETPOINT</string>
+    </property>
+    <property name="value">
+     <string>50</string>
+    </property>
+    <property name="drvl">
+     <string>0</string>
+    </property>
+    <property name="drvh">
+     <string>100</string>
+    </property>
+   </widget>
+   <widget class="genSoftPV" name="gensoftpv_wave">
+    <property name="geometry">
+     <rect>
+      <x>625</x>
+      <y>674</y>
+      <width>72</width>
+      <height>18</height>
+     </rect>
+    </property>
+    <property name="variable">
+     <string>WAVE</string>
+    </property>
+    <property name="mode">
+     <enum>genSoftPV::Counter</enum>
+    </property>
+    <property name="value">
+     <string>0;1;2;3;4;5</string>
+    </property>
+    <property name="period">
+     <number>200</number>
+    </property>
+    <property name="nelm">
+     <number>32</number>
+    </property>
+    <property name="nord">
+     <number>16</number>
+    </property>
+   </widget>
+   <widget class="genSoftPV" name="gensoftpv_winit">
+    <property name="geometry">
+     <rect>
+      <x>700</x>
+      <y>674</y>
+      <width>72</width>
+      <height>18</height>
+     </rect>
+    </property>
+    <property name="variable">
+     <string>WINIT</string>
+    </property>
+    <property name="value">
+     <string>1.5;2.5;3.5;4.5</string>
+    </property>
+    <property name="nelm">
+     <number>8</number>
+    </property>
+   </widget>
   </widget>
  </widget>
  <customwidgets>
+  <customwidget>
+   <class>genSoftPV</class>
+   <extends>QLabel</extends>
+   <header>gensoftpv.h</header>
+  </customwidget>
   <customwidget>
    <class>caTextEntry</class>
    <extends>caLineEdit</extends>

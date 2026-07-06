@@ -44,14 +44,8 @@ struct OptionalLimit
     void set(double newValue) { value = newValue; defined = true; }
 };
 
-/*
- * The current value in its native EPICS type, following the types the epics3
- * plugin works with: dbr_short_t (caINT), dbr_long_t (caLONG), dbr_float_t
- * (caFLOAT), dbr_double_t (caDOUBLE), dbr_enum_t (caENUM), dbr_char_t (caCHAR).
- * Only the member matching the channel fieldtype is used, so type specific
- * effects (int16 wrap around, float rounding, unsigned enum/char indexes)
- * behave like with a real control system and can be tested.
- */
+// the current value in its native EPICS type (like the epics3 plugin);
+// only the member matching the channel fieldtype is used
 struct NativeValue
 {
     qint16  int16Value;   // caINT   (dbr_short_t)
@@ -67,40 +61,10 @@ struct NativeValue
 };
 
 /*
- * One simulated channel of the "internal" test plugin.
- *
- * A channel is defined through the channel name itself, using the EPICS field
- * names VAL, DRVL/DRVH (drive limits) and LOW/LOLO/HIGH/HIHI (alarm limits):
- *     internal://NAME
- *     internal://NAME.{"type":"double","mode":"counter","val":0,"step":1,
- *                      "period":1000,"drvl":0,"drvh":100,"loop":true,
- *                      "nelm":1,"nord":1,
- *                      "low":20,"lolo":10,"high":80,"hihi":90,
- *                      "units":"V","prec":2,"enums":["OFF","ON"],
- *                      "persistent":false}
- * A channel is dropped when its last monitor disappears (reference counting),
- * unless "persistent" is true: then it keeps running inside the process (a
- * counter simply continues) and displays can re-attach to the live value.
- * Arrays follow the EPICS waveform record: NELM is the maximum array size,
- * NORD the number of elements actually used (defaults to NELM, updated by
- * waveform writes). A waveform is initialized by giving "val" as an array,
- * which also defines NORD unless it is set explicitly:
- *     internal://WAVE.{"type":"double","nelm":8,"val":[1.5,2.5,3.5]}
- *     internal://TEXTS.{"type":"string","nelm":4,"val":["one","two"]}
- * For string channels "val" carries the fixed text. When alarm limits are
- * given, severity and status are set like an EPICS record would do, so alarm
- * colors of widgets can be exercised and tested.
- *
- * This class holds the JSON configuration, the counter state and knows how to
- * fill a knobData structure for every EPICS data type. It has no timer and no
- * GUI dependency, so it can be fully unit tested.
- *
- * String channels do not count; instead they can enumerate strings that match
- * a simple regular expression subset given as "regex":
- *     internal://MSG.{"type":"string","mode":"counter","regex":"STATE-[0-9]{2}"}
- * generates STATE-00, STATE-01, ... STATE-99 and wraps around. Supported are
- * literals, character classes like [a-z0-9] with an optional {n} quantifier
- * and flat alternation groups like (ON|OFF).
+ * One simulated channel of the "internal" plugin. The JSON configuration uses
+ * the EPICS field names (val, step, period, drvl/drvh, low/lolo/high/hihi,
+ * nelm/nord, units, prec, enums, regex, loop, persistent, mode, type) and is
+ * assembled by the genSoftPV widget.
  */
 class InternalChannel
 {
