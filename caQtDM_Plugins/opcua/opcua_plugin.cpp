@@ -1048,7 +1048,9 @@ void OPCUAPlugin::updateKnobDataFromVariantSingle(knobData &kData,
         break;
     case caSTRING:
         if (QT_VARIANT_TYPE(value)==QMetaType::QDateTime) {
-            copyStringToDataB(kData, value.toDateTime().toString());
+            QDateTime now = QDateTime::currentDateTime();
+            QString utcInfo = QTimeZone::systemTimeZone().displayName(now, QTimeZone::OffsetName);
+            copyStringToDataB(kData, value.toDateTime().toString(Qt::ISODateWithMs)+" ("+utcInfo+")" );
         } else copyStringToDataB(kData, value.toString());
         break;
     default:
