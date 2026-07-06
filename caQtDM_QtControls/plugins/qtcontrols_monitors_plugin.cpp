@@ -526,7 +526,7 @@ genSoftPVInterface::genSoftPVInterface(QObject* parent) : CustomWidgetInterface_
     d_toolTip = "[define generic soft process variable of any EPICS type for the internal plugin]";
     d_name = "genSoftPV";
     d_include = "genSoftPV";
-    QPixmap qpixmap = QPixmap(":pixmaps/calc.png");
+    QPixmap qpixmap = QPixmap(":pixmaps/genSoftPV.png");
     d_icon = qpixmap.scaled(70, 70, Qt::IgnoreAspectRatio, Qt::FastTransformation);
 }
 
