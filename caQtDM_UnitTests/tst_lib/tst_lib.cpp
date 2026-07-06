@@ -36,6 +36,8 @@ int main(int argc, char **argv)
     QApplication app(argc, argv);
     QApplication::setOrganizationName("Paul Scherrer Institut");
     QApplication::setApplicationName("caQtDM-UnitTests-Lib");
+    // to avoid failing tests because of a comma
+    setlocale(LC_NUMERIC, "C");
     int status = 0;
 
     {
