@@ -572,6 +572,26 @@ void TestInternalChannel::nordAndNelmWorkLikeEpics()
     QVERIFY(explicitNord.configure(R"({"type":"double","nelm":8,"nord":2,"val":[1,2,3]})", &error));
     QCOMPARE(explicitNord.nord, 2);
 
+    // a counter waveform starts from the val array and every element counts on
+    InternalChannel counting;
+    QVERIFY(counting.configure(R"({"type":"double","mode":"counter","val":[1,2,3],"nelm":8,
+                                   "step":1,"period":100,"drvl":0,"drvh":4,"loop":true})", &error));
+    counting.tick();
+    knobData kCounting = makeKnobData();
+    counting.fillKnobData(&kCounting);
+    QCOMPARE(kCounting.edata.valueCount, 3);
+    values = (double *) kCounting.edata.dataB;
+    QCOMPARE(values[0], 2.0);
+    QCOMPARE(values[1], 3.0);
+    QCOMPARE(values[2], 4.0);
+    counting.tick(); // element 3 exceeds drvh 4 and wraps to drvl 0
+    counting.fillKnobData(&kCounting);
+    values = (double *) kCounting.edata.dataB;
+    QCOMPARE(values[0], 3.0);
+    QCOMPARE(values[1], 4.0);
+    QCOMPARE(values[2], 0.0);
+    freeKnobData(&kCounting);
+
     // a string waveform is initialized with an array of strings
     InternalChannel texts;
     QVERIFY(texts.configure(R"({"type":"string","nelm":4,"val":["one","two"]})", &error));

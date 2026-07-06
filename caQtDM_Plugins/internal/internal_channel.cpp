@@ -351,6 +351,14 @@ void InternalChannel::counterRange(double *rangeLow, double *rangeHigh) const
     }
 }
 
+static double steppedValue(double value, double step, double rangeLow, double rangeHigh, bool loop)
+{
+    double next = value + step;
+    if(next > rangeHigh)     next = loop ? rangeLow : rangeHigh;
+    else if(next < rangeLow) next = loop ? rangeHigh : rangeLow;
+    return next;
+}
+
 void InternalChannel::tick()
 {
     if(mode != Counter) return;
@@ -358,11 +366,13 @@ void InternalChannel::tick()
     double rangeLow, rangeHigh;
     counterRange(&rangeLow, &rangeHigh);
 
-    double next = currentValue() + step;
-    if(next > rangeHigh)     next = loop ? rangeLow : rangeHigh;
-    else if(next < rangeLow) next = loop ? rangeHigh : rangeLow;
     // without drive limits the value wraps at the native type range instead
-    setCurrentValue(next);
+    setCurrentValue(steppedValue(currentValue(), step, rangeLow, rangeHigh, loop));
+
+    for(int i = 0; i < m_waveOverride.size(); i++) {
+        m_waveOverride[i] = steppedValue(m_waveOverride.at(i), step, rangeLow, rangeHigh, loop);
+    }
+
     needsPublish = true;
 }
 
