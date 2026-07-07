@@ -38,6 +38,9 @@ public:
 
 private slots:
     void baseNameAndJsonPartWork();
+    void fieldSyntaxWorks();
+    void fieldWritesAndForcingWork();
+    void fillKnobDataFieldWorks();
     void configureParsesAllFields();
     void configureUsesDefaults();
     void configureRejectsInvalidInput();

@@ -71,11 +71,15 @@ class InternalChannel
 public:
     enum Mode { Constant = 0, Counter };
 
+    // record fields addressable as internal://NAME.FIELD, VAL is the default
+    enum Field { FieldVal = 0, FieldSevr, FieldStat, FieldLow, FieldLolo, FieldHigh, FieldHihi,
+                 FieldDrvl, FieldDrvh, FieldPrec, FieldEgu, FieldNelm, FieldNord };
+
     InternalChannel();
 
-    // splits "NAME.{json}" into the two parts
     static QString baseName(const QString &pv);
     static QString jsonPart(const QString &pv);
+    static QString splitField(const QString &pv, Field *field);
 
     // parses the JSON configuration; on error the previous state stays untouched
     bool configure(const QString &json, QString *errorString = Q_NULLPTR);
@@ -94,12 +98,14 @@ public:
     // write access (pvSetValue / pvSetWave)
     void setValue(double rdata, qint32 idata, const QString &sdata);
     void setWave(const QVector<double> &values);
+    void setFieldValue(Field field, double rdata, qint32 idata, const QString &sdata);
 
-    // fills the edata part of kData according to the configured type and current value
     void fillKnobData(knobData *kData) const;
+    void fillKnobDataField(knobData *kData, Field field) const;
 
-    // current alarm severity/status for the given value, derived from low/lolo/high/hihi
     void alarmState(double checkValue, short *severity, short *status) const;
+    short currentSeverity() const;
+    short currentStatus() const;
 
     // string matching the regex pattern for the given enumeration index (string channels)
     QString generatedString(qint64 index) const;
@@ -132,6 +138,8 @@ public:
     // state
     NativeValue native;
     bool needsPublish;
+    OptionalLimit forcedSeverity;  // NOTCONNECTED = 99
+    OptionalLimit forcedStatus;
 
 private:
     double elementValue(int i) const;

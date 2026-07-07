@@ -269,6 +269,49 @@ void TestInternalPlugin::channelDeletedWhenUnreferenced()
     QCOMPARE(m_plugin->channel("TEMP")->currentValue(), 5.0);
 }
 
+void TestInternalPlugin::fieldMonitorsAndWritesWork()
+{
+    int mainIndex = createMonitor("FRAMP", R"({"type":"double","val":50,"low":20,"lolo":10,"high":80,"hihi":90})");
+    int lowIndex = createMonitor("FRAMP.LOW");
+    int sevrIndex = createMonitor("FRAMP.SEVR");
+    pumpTimerOnce();
+
+    // field monitors show the record fields, all attached to the same channel
+    QCOMPARE(m_mutexKnobData->GetMutexKnobDataPtr(lowIndex)->edata.rvalue, 20.0);
+    QCOMPARE(m_mutexKnobData->GetMutexKnobDataPtr(sevrIndex)->edata.fieldtype, (short) caENUM);
+    QCOMPARE(m_mutexKnobData->GetMutexKnobDataPtr(sevrIndex)->edata.ivalue, 0L);
+    QCOMPARE(m_plugin->channel("FRAMP.LOW") == Q_NULLPTR, true);
+
+    char pv[MAXPVLEN];
+    char errmess[SMALL_STRING_LENGTH];
+    errmess[0] = '\0';
+
+    // moving a threshold through a field write raises the alarm on the main monitor
+    qstrncpy(pv, "FRAMP.high", MAXPVLEN);
+    QCOMPARE(m_plugin->pvSetValue(pv, 40.0, 0, (char *) "", (char *) "tst", errmess, 0), (int) true);
+    QCOMPARE(m_mutexKnobData->GetMutexKnobDataPtr(mainIndex)->edata.severity, (short) 1);
+    QCOMPARE(m_mutexKnobData->GetMutexKnobDataPtr(mainIndex)->edata.upper_warning_limit, 40.0);
+    QCOMPARE(m_mutexKnobData->GetMutexKnobDataPtr(sevrIndex)->edata.ivalue, 1L);
+
+    // forcing the severity by name, NOTCONNECTED marks the channel disconnected
+    qstrncpy(pv, "FRAMP.SEVR", MAXPVLEN);
+    QCOMPARE(m_plugin->pvSetValue(pv, 0.0, 0, (char *) "MAJOR", (char *) "tst", errmess, 0), (int) true);
+    QCOMPARE(m_mutexKnobData->GetMutexKnobDataPtr(mainIndex)->edata.severity, (short) 2);
+    QCOMPARE(m_plugin->pvSetValue(pv, 0.0, 0, (char *) "NOTCONNECTED", (char *) "tst", errmess, 0), (int) true);
+    QCOMPARE(m_mutexKnobData->GetMutexKnobDataPtr(mainIndex)->edata.connected, (int) false);
+    QCOMPARE(m_mutexKnobData->GetMutexKnobDataPtr(sevrIndex)->edata.ivalue, 4L);
+    QCOMPARE(m_plugin->pvSetValue(pv, 0.0, 0, (char *) "AUTO", (char *) "tst", errmess, 0), (int) true);
+    QCOMPARE(m_mutexKnobData->GetMutexKnobDataPtr(mainIndex)->edata.connected, (int) true);
+    QCOMPARE(m_mutexKnobData->GetMutexKnobDataPtr(mainIndex)->edata.severity, (short) 1);
+
+    // a field monitor keeps the channel referenced
+    m_plugin->pvClearMonitor(m_mutexKnobData->GetMutexKnobDataPtr(mainIndex));
+    m_plugin->pvClearMonitor(m_mutexKnobData->GetMutexKnobDataPtr(sevrIndex));
+    QVERIFY(m_plugin->channel("FRAMP") != Q_NULLPTR);
+    m_plugin->pvClearMonitor(m_mutexKnobData->GetMutexKnobDataPtr(lowIndex));
+    QVERIFY(m_plugin->channel("FRAMP") == Q_NULLPTR);
+}
+
 void TestInternalPlugin::persistentChannelKeepsRunning()
 {
     int index = createMonitor("PCOUNT", R"({"type":"long","mode":"counter","val":0,"step":1,"period":100,"persistent":true})");

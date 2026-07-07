@@ -86,6 +86,7 @@ private:
     MessageWindow *messagewindowP;
     QMap<QString, InternalChannel *> channels;
     QMap<QString, QList<int> > monitorIndexes;
+    QMap<int, InternalChannel::Field> monitorFields;
     QTimer *timer;
 };
 

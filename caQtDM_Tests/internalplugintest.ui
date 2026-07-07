@@ -47,6 +47,12 @@
     <layout class="QGridLayout" name="gridLayout">
      <item row="0" column="0">
       <widget class="caLabel" name="calabel_ramp">
+       <property name="minimumSize">
+        <size>
+         <width>400</width>
+         <height>0</height>
+        </size>
+       </property>
        <property name="text">
         <string>double counter 0..100 with EPICS alarms (lolo 10, low 20, high 80, hihi 90):</string>
        </property>
@@ -57,7 +63,7 @@
        <property name="minimumSize">
         <size>
          <width>0</width>
-         <height>20</height>
+         <height>30</height>
         </size>
        </property>
        <property name="channel" stdset="0">
@@ -70,6 +76,12 @@
      </item>
      <item row="1" column="0">
       <widget class="caLabel" name="calabel_ramp_led">
+       <property name="minimumSize">
+        <size>
+         <width>400</width>
+         <height>0</height>
+        </size>
+       </property>
        <property name="text">
         <string>same channel on a LED with alarm colors (shared, no JSON needed):</string>
        </property>
@@ -87,6 +99,12 @@
      </item>
      <item row="2" column="0">
       <widget class="caLabel" name="calabel_count">
+       <property name="minimumSize">
+        <size>
+         <width>400</width>
+         <height>0</height>
+        </size>
+       </property>
        <property name="text">
         <string>persistent long counter, 1 per second (survives display reload):</string>
        </property>
@@ -97,7 +115,7 @@
        <property name="minimumSize">
         <size>
          <width>0</width>
-         <height>20</height>
+         <height>30</height>
         </size>
        </property>
        <property name="channel" stdset="0">
@@ -107,6 +125,12 @@
      </item>
      <item row="3" column="0">
       <widget class="caLabel" name="calabel_int16">
+       <property name="minimumSize">
+        <size>
+         <width>400</width>
+         <height>0</height>
+        </size>
+       </property>
        <property name="text">
         <string>native int16 counter, wraps at 32767 to -32768 (dbr_short_t):</string>
        </property>
@@ -117,7 +141,7 @@
        <property name="minimumSize">
         <size>
          <width>0</width>
-         <height>20</height>
+         <height>30</height>
         </size>
        </property>
        <property name="channel" stdset="0">
@@ -127,6 +151,12 @@
      </item>
      <item row="4" column="0">
       <widget class="caLabel" name="calabel_state">
+       <property name="minimumSize">
+        <size>
+         <width>400</width>
+         <height>0</height>
+        </size>
+       </property>
        <property name="text">
         <string>enum cycling OFF/ON/ERROR (1s):</string>
        </property>
@@ -137,7 +167,7 @@
        <property name="minimumSize">
         <size>
          <width>0</width>
-         <height>20</height>
+         <height>30</height>
         </size>
        </property>
        <property name="channel" stdset="0">
@@ -147,6 +177,12 @@
      </item>
      <item row="5" column="0">
       <widget class="caLabel" name="calabel_message">
+       <property name="minimumSize">
+        <size>
+         <width>400</width>
+         <height>0</height>
+        </size>
+       </property>
        <property name="text">
         <string>constant string:</string>
        </property>
@@ -157,7 +193,7 @@
        <property name="minimumSize">
         <size>
          <width>0</width>
-         <height>20</height>
+         <height>30</height>
         </size>
        </property>
        <property name="channel" stdset="0">
@@ -167,6 +203,12 @@
      </item>
      <item row="6" column="0">
       <widget class="caLabel" name="calabel_serial">
+       <property name="minimumSize">
+        <size>
+         <width>400</width>
+         <height>0</height>
+        </size>
+       </property>
        <property name="text">
         <string>string regex generator STATE-[0-9]{2} (500ms):</string>
        </property>
@@ -177,7 +219,7 @@
        <property name="minimumSize">
         <size>
          <width>0</width>
-         <height>20</height>
+         <height>30</height>
         </size>
        </property>
        <property name="channel" stdset="0">
@@ -187,6 +229,12 @@
      </item>
      <item row="7" column="0">
       <widget class="caLabel" name="calabel_setpoint">
+       <property name="minimumSize">
+        <size>
+         <width>400</width>
+         <height>0</height>
+        </size>
+       </property>
        <property name="text">
         <string>writable double (entry left, readback right):</string>
        </property>
@@ -199,7 +247,7 @@
          <property name="minimumSize">
           <size>
            <width>0</width>
-           <height>20</height>
+           <height>30</height>
           </size>
          </property>
          <property name="channel" stdset="0">
@@ -212,13 +260,99 @@
          <property name="minimumSize">
           <size>
            <width>0</width>
-           <height>20</height>
+           <height>30</height>
           </size>
          </property>
          <property name="channel" stdset="0">
           <string>internal://SETPOINT</string>
          </property>
         </widget>
+       </item>
+      </layout>
+     </item>
+     <item row="8" column="0">
+      <widget class="caLabel" name="calabel_fields">
+       <property name="minimumSize">
+        <size>
+         <width>400</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>EPICS fields on RAMP: force severity (menu), move HIHI (entry + readback):</string>
+       </property>
+      </widget>
+     </item>
+     <item row="8" column="1">
+      <layout class="QHBoxLayout" name="horizontalLayout_fields">
+       <item>
+        <layout class="QGridLayout" name="gridLayout_2">
+         <item row="1" column="1">
+          <widget class="caLineEdit" name="calineedit_ramp_hihi">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>31</height>
+            </size>
+           </property>
+           <property name="channel" stdset="0">
+            <string>internal://RAMP.HIHI</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="caTextEntry" name="catextentry_ramp_hihi">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>31</height>
+            </size>
+           </property>
+           <property name="channel" stdset="0">
+            <string>internal://RAMP.HIHI</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="0">
+          <widget class="caTextEntry" name="catextentry_ramp_high">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>31</height>
+            </size>
+           </property>
+           <property name="channel" stdset="0">
+            <string notr="true">internal://RAMP.HIGH</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="caLineEdit" name="calineedit_ramp_high">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>31</height>
+            </size>
+           </property>
+           <property name="channel" stdset="0">
+            <string notr="true">internal://RAMP.HIGH</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0">
+          <widget class="caMenu" name="camenu_ramp_sevr">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>31</height>
+            </size>
+           </property>
+           <property name="channel" stdset="0">
+            <string>internal://RAMP.SEVR</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </item>
       </layout>
      </item>
@@ -1651,10 +1785,10 @@
      <string>RAMP</string>
     </property>
     <property name="mode">
-     <enum>genSoftPV::Counter</enum>
+     <enum>genSoftPV::Mode::Counter</enum>
     </property>
     <property name="step">
-     <double>0.5</double>
+     <double>0.500000000000000</double>
     </property>
     <property name="period">
      <number>200</number>
@@ -1697,10 +1831,10 @@
      <string>COUNT</string>
     </property>
     <property name="dataType">
-     <enum>genSoftPV::Long</enum>
+     <enum>genSoftPV::DataType::Long</enum>
     </property>
     <property name="mode">
-     <enum>genSoftPV::Counter</enum>
+     <enum>genSoftPV::Mode::Counter</enum>
     </property>
     <property name="persistent">
      <bool>true</bool>
@@ -1719,16 +1853,16 @@
      <string>INT16</string>
     </property>
     <property name="dataType">
-     <enum>genSoftPV::Int</enum>
+     <enum>genSoftPV::DataType::Int</enum>
     </property>
     <property name="mode">
-     <enum>genSoftPV::Counter</enum>
+     <enum>genSoftPV::Mode::Counter</enum>
     </property>
     <property name="value">
      <string>32700</string>
     </property>
     <property name="step">
-     <double>10</double>
+     <double>10.000000000000000</double>
     </property>
     <property name="period">
      <number>500</number>
@@ -1747,10 +1881,10 @@
      <string>STATE</string>
     </property>
     <property name="dataType">
-     <enum>genSoftPV::Enum</enum>
+     <enum>genSoftPV::DataType::Enum</enum>
     </property>
     <property name="mode">
-     <enum>genSoftPV::Counter</enum>
+     <enum>genSoftPV::Mode::Counter</enum>
     </property>
     <property name="enumStrings">
      <stringlist>
@@ -1773,7 +1907,7 @@
      <string>MESSAGE</string>
     </property>
     <property name="dataType">
-     <enum>genSoftPV::String</enum>
+     <enum>genSoftPV::DataType::String</enum>
     </property>
     <property name="value">
      <string>hello from the internal plugin</string>
@@ -1792,10 +1926,10 @@
      <string>SERIAL</string>
     </property>
     <property name="dataType">
-     <enum>genSoftPV::String</enum>
+     <enum>genSoftPV::DataType::String</enum>
     </property>
     <property name="mode">
-     <enum>genSoftPV::Counter</enum>
+     <enum>genSoftPV::Mode::Counter</enum>
     </property>
     <property name="period">
      <number>500</number>
@@ -1839,7 +1973,7 @@
      <string>WAVE</string>
     </property>
     <property name="mode">
-     <enum>genSoftPV::Counter</enum>
+     <enum>genSoftPV::Mode::Counter</enum>
     </property>
     <property name="value">
      <string>0;1;2;3;4;5</string>
@@ -1877,9 +2011,9 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>genSoftPV</class>
-   <extends>QLabel</extends>
-   <header>gensoftpv.h</header>
+   <class>caMenu</class>
+   <extends>QComboBox</extends>
+   <header>caMenu</header>
   </customwidget>
   <customwidget>
    <class>caTextEntry</class>
@@ -1905,6 +2039,11 @@
    <class>caWaveTable</class>
    <extends>QTableWidget</extends>
    <header>caWaveTable</header>
+  </customwidget>
+  <customwidget>
+   <class>genSoftPV</class>
+   <extends>QLabel</extends>
+   <header>genSoftPV</header>
   </customwidget>
  </customwidgets>
  <resources/>

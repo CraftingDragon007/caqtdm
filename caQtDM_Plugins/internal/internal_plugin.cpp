@@ -106,7 +106,7 @@ void InternalPlugin::publishIndex(InternalChannel *channel, int index)
 
     bool lockable = (kData->mutex != (void *) Q_NULLPTR);
     if(lockable) mutexknobdataP->DataLock(kData);
-    channel->fillKnobData(kData);
+    channel->fillKnobDataField(kData, monitorFields.value(index, InternalChannel::FieldVal));
     kData->edata.monitorCount++;
     kData->edata.actTimeMs = QDateTime::currentMSecsSinceEpoch();
     mutexknobdataP->SetMutexKnobData(kData->index, *kData);
@@ -122,7 +122,8 @@ int InternalPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
     QMutexLocker locker(&mutex);
 
     QString pv = QString::fromLatin1(kData->pv);
-    QString key = InternalChannel::baseName(pv);
+    InternalChannel::Field field;
+    QString key = InternalChannel::splitField(pv, &field);
 
     qCDebug(internalLog) << "pvAddMonitor" << pv << kData->index;
 
@@ -157,6 +158,7 @@ int InternalPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
     }
 
     monitorIndexes[key].append(kData->index);
+    monitorFields.insert(kData->index, field);
     channel->needsPublish = true;
 
     return true;
@@ -169,6 +171,7 @@ int InternalPlugin::pvClearMonitor(knobData *kData)
 
     qCDebug(internalLog) << "pvClearMonitor" << kData->pv << kData->index;
 
+    monitorFields.remove(kData->index);
     QMap<QString, QList<int> >::iterator i = monitorIndexes.find(key);
     if(i != monitorIndexes.end()) {
         i.value().removeAll(kData->index);
@@ -204,11 +207,13 @@ int InternalPlugin::pvFreeAllocatedData(knobData *kData)
 int InternalPlugin::setValueForPv(const QString &pv, double rdata, int32_t idata, char *sdata)
 {
     QMutexLocker locker(&mutex);
-    QString key = InternalChannel::baseName(pv);
+    InternalChannel::Field field;
+    QString key = InternalChannel::splitField(pv, &field);
     InternalChannel *channel = channels.value(key, Q_NULLPTR);
     if(channel == Q_NULLPTR) return false;
 
-    channel->setValue(rdata, idata, (sdata != (char *) Q_NULLPTR) ? QString::fromLatin1(sdata) : QString());
+    channel->setFieldValue(field, rdata, idata,
+                           (sdata != (char *) Q_NULLPTR) ? QString::fromLatin1(sdata) : QString());
     publishChannel(key, channel);
     return true;
 }

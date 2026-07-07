@@ -51,8 +51,164 @@ void TestInternalChannel::baseNameAndJsonPartWork()
     QCOMPARE(InternalChannel::baseName(R"(RAMP.{"type":"double"})"), QString("RAMP"));
     QCOMPARE(InternalChannel::jsonPart(R"(RAMP.{"type":"double"})"), QString(R"({"type":"double"})"));
 
-    // a record-like dot without JSON brace stays part of the name
-    QCOMPARE(InternalChannel::baseName("DEVICE.VAL"), QString("DEVICE.VAL"));
+    // known record fields are stripped, unknown suffixes stay part of the name
+    QCOMPARE(InternalChannel::baseName("DEVICE.VAL"), QString("DEVICE"));
+    QCOMPARE(InternalChannel::baseName("DEVICE.SUBNAME"), QString("DEVICE.SUBNAME"));
+}
+
+void TestInternalChannel::fieldSyntaxWorks()
+{
+    InternalChannel::Field field;
+
+    QCOMPARE(InternalChannel::splitField("RAMP", &field), QString("RAMP"));
+    QCOMPARE(field, InternalChannel::FieldVal);
+
+    QCOMPARE(InternalChannel::splitField("RAMP.VAL", &field), QString("RAMP"));
+    QCOMPARE(field, InternalChannel::FieldVal);
+
+    // only the real EPICS field names, case insensitive
+    QCOMPARE(InternalChannel::splitField("RAMP.SEVR", &field), QString("RAMP"));
+    QCOMPARE(field, InternalChannel::FieldSevr);
+    QCOMPARE(InternalChannel::splitField("RAMP.sevr", &field), QString("RAMP"));
+    QCOMPARE(field, InternalChannel::FieldSevr);
+    QCOMPARE(InternalChannel::splitField("RAMP.stat", &field), QString("RAMP"));
+    QCOMPARE(field, InternalChannel::FieldStat);
+    QCOMPARE(InternalChannel::splitField("RAMP.hihi", &field), QString("RAMP"));
+    QCOMPARE(field, InternalChannel::FieldHihi);
+    QCOMPARE(InternalChannel::splitField("RAMP.low", &field), QString("RAMP"));
+    QCOMPARE(field, InternalChannel::FieldLow);
+    QCOMPARE(InternalChannel::splitField("RAMP.drvh", &field), QString("RAMP"));
+    QCOMPARE(field, InternalChannel::FieldDrvh);
+    QCOMPARE(InternalChannel::splitField("RAMP.egu", &field), QString("RAMP"));
+    QCOMPARE(field, InternalChannel::FieldEgu);
+    QCOMPARE(InternalChannel::splitField("RAMP.NORD", &field), QString("RAMP"));
+    QCOMPARE(field, InternalChannel::FieldNord);
+
+    // unknown suffixes (also the long forms) stay part of the name
+    QCOMPARE(InternalChannel::splitField("RAMP.SUB", &field), QString("RAMP.SUB"));
+    QCOMPARE(field, InternalChannel::FieldVal);
+    QCOMPARE(InternalChannel::splitField("RAMP.severity", &field), QString("RAMP.severity"));
+    QCOMPARE(field, InternalChannel::FieldVal);
+    QCOMPARE(InternalChannel::splitField("RAMP.units", &field), QString("RAMP.units"));
+    QCOMPARE(field, InternalChannel::FieldVal);
+
+    // a json suffix is stripped before the field detection
+    QCOMPARE(InternalChannel::splitField(R"(RAMP.LOW.{"dbnd":{"abs":1}})", &field), QString("RAMP"));
+    QCOMPARE(field, InternalChannel::FieldLow);
+}
+
+void TestInternalChannel::fieldWritesAndForcingWork()
+{
+    QString error;
+    InternalChannel channel;
+    QVERIFY2(channel.configure(R"({"type":"double","val":50,"low":20,"lolo":10,"high":80,"hihi":90})", &error),
+             qPrintable(error));
+    QCOMPARE(channel.currentSeverity(), (short) 0);
+
+    // moving a threshold below the value raises the alarm immediately
+    channel.setFieldValue(InternalChannel::FieldHigh, 40.0, 0, QString());
+    QCOMPARE(channel.high.value, 40.0);
+    QCOMPARE(channel.currentSeverity(), (short) 1);
+    channel.setFieldValue(InternalChannel::FieldHihi, 45.0, 0, QString());
+    QCOMPARE(channel.currentSeverity(), (short) 2);
+
+    // forcing the severity wins over the computed state
+    channel.setFieldValue(InternalChannel::FieldSevr, 0.0, 0, "NO_ALARM");
+    QCOMPARE(channel.currentSeverity(), (short) 0);
+    channel.setFieldValue(InternalChannel::FieldSevr, 0.0, 3, QString());
+    QCOMPARE(channel.currentSeverity(), (short) 3);
+
+    // NOTCONNECTED (by name, enum index 4 or code 99) marks the channel disconnected
+    channel.setFieldValue(InternalChannel::FieldSevr, 0.0, 0, "NOTCONNECTED");
+    QCOMPARE(channel.currentSeverity(), (short) 99);
+    knobData kData = makeKnobData();
+    channel.fillKnobData(&kData);
+    QCOMPARE(kData.edata.connected, (int) false);
+    freeKnobData(&kData);
+
+    // AUTO releases the forcing, the computed severity comes back
+    channel.setFieldValue(InternalChannel::FieldSevr, 0.0, 0, "AUTO");
+    QCOMPARE(channel.currentSeverity(), (short) 2);
+
+    // forcing the status
+    channel.setFieldValue(InternalChannel::FieldStat, 0.0, 0, "COMM");
+    QCOMPARE(channel.currentStatus(), (short) 9);
+    channel.setFieldValue(InternalChannel::FieldStat, 0.0, -1, QString());
+    QCOMPARE(channel.currentStatus(), (short) 3); // computed again: HIHI
+
+    // the other writable fields
+    channel.setFieldValue(InternalChannel::FieldEgu, 0.0, 0, "mA");
+    QCOMPARE(channel.units, QString("mA"));
+    channel.setFieldValue(InternalChannel::FieldPrec, 4.0, 0, QString());
+    QCOMPARE(channel.precision, (short) 4);
+    channel.setFieldValue(InternalChannel::FieldDrvl, -5.0, 0, QString());
+    QCOMPARE(channel.drvl.value, -5.0);
+    QCOMPARE(channel.drvl.defined, true);
+
+    // NORD stays limited by NELM, NELM is read only
+    InternalChannel wave;
+    QVERIFY(wave.configure(R"({"type":"double","nelm":8})", &error));
+    wave.setFieldValue(InternalChannel::FieldNord, 0.0, 3, QString());
+    QCOMPARE(wave.nord, 3);
+    wave.setFieldValue(InternalChannel::FieldNord, 0.0, 99, QString());
+    QCOMPARE(wave.nord, 8);
+    wave.setFieldValue(InternalChannel::FieldNelm, 0.0, 99, QString());
+    QCOMPARE(wave.nelm, 8);
+}
+
+void TestInternalChannel::fillKnobDataFieldWorks()
+{
+    QString error;
+    InternalChannel channel;
+    QVERIFY2(channel.configure(R"({"type":"double","val":50,"low":20,"lolo":10,"high":80,"hihi":90,
+                                   "units":"V","prec":2})", &error),
+             qPrintable(error));
+
+    // limit fields as plain doubles
+    knobData kData = makeKnobData();
+    channel.fillKnobDataField(&kData, InternalChannel::FieldLow);
+    QCOMPARE(kData.edata.fieldtype, (short) caDOUBLE);
+    QCOMPARE(kData.edata.rvalue, 20.0);
+    channel.fillKnobDataField(&kData, InternalChannel::FieldHihi);
+    QCOMPARE(kData.edata.rvalue, 90.0);
+    channel.fillKnobDataField(&kData, InternalChannel::FieldPrec);
+    QCOMPARE(kData.edata.rvalue, 2.0);
+
+    // SEVR as enum with the severity states
+    channel.fillKnobDataField(&kData, InternalChannel::FieldSevr);
+    QCOMPARE(kData.edata.fieldtype, (short) caENUM);
+    QCOMPARE(kData.edata.enumCount, 5);
+    QCOMPARE(kData.edata.ivalue, 0L);
+    QCOMPARE(QString((char *) kData.edata.dataB),
+             QString("NO_ALARM\033MINOR\033MAJOR\033INVALID\033NOTCONNECTED"));
+
+    // a forced NOTCONNECTED maps to the last enum state
+    channel.setFieldValue(InternalChannel::FieldSevr, 0.0, 0, "NOTCONNECTED");
+    channel.fillKnobDataField(&kData, InternalChannel::FieldSevr);
+    QCOMPARE(kData.edata.ivalue, 4L);
+    channel.setFieldValue(InternalChannel::FieldSevr, 0.0, 0, "AUTO");
+
+    // STAT as enum with the epicsAlarm status names
+    channel.fillKnobDataField(&kData, InternalChannel::FieldStat);
+    QCOMPARE(kData.edata.fieldtype, (short) caENUM);
+    QCOMPARE(kData.edata.enumCount, 22);
+    QCOMPARE(kData.edata.ivalue, 0L);
+
+    // EGU as string, NELM/NORD as long
+    channel.fillKnobDataField(&kData, InternalChannel::FieldEgu);
+    QCOMPARE(kData.edata.fieldtype, (short) caSTRING);
+    QCOMPARE(QString((char *) kData.edata.dataB), QString("V"));
+    channel.fillKnobDataField(&kData, InternalChannel::FieldNelm);
+    QCOMPARE(kData.edata.fieldtype, (short) caLONG);
+    QCOMPARE(kData.edata.ivalue, 1L);
+    freeKnobData(&kData);
+
+    // VAL falls through to the normal channel data
+    knobData kVal = makeKnobData();
+    channel.fillKnobDataField(&kVal, InternalChannel::FieldVal);
+    QCOMPARE(kVal.edata.fieldtype, (short) caDOUBLE);
+    QCOMPARE(kVal.edata.rvalue, 50.0);
+    freeKnobData(&kVal);
 }
 
 void TestInternalChannel::configureParsesAllFields()

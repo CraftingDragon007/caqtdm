@@ -54,6 +54,7 @@ private slots:
     void writeThroughPluginWorks();
     void channelDeletedWhenUnreferenced();
     void persistentChannelKeepsRunning();
+    void fieldMonitorsAndWritesWork();
 
 private:
     // registers a monitor; the configuration travels like in the real

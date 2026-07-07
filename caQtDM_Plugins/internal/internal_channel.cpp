@@ -64,18 +64,56 @@ InternalChannel::InternalChannel()
 {
 }
 
-QString InternalChannel::baseName(const QString &pv)
-{
-    int pos = pv.indexOf(".{");
-    if(pos == -1) return pv.trimmed();
-    return pv.left(pos).trimmed();
-}
-
 QString InternalChannel::jsonPart(const QString &pv)
 {
     int pos = pv.indexOf(".{");
     if(pos == -1) return QString();
     return pv.mid(pos + 1).trimmed();
+}
+
+static bool parseFieldName(const QString &name, InternalChannel::Field *field)
+{
+    QString upper = name.toUpper();
+    if(upper == "VAL")       *field = InternalChannel::FieldVal;
+    else if(upper == "SEVR") *field = InternalChannel::FieldSevr;
+    else if(upper == "STAT") *field = InternalChannel::FieldStat;
+    else if(upper == "LOW")  *field = InternalChannel::FieldLow;
+    else if(upper == "LOLO") *field = InternalChannel::FieldLolo;
+    else if(upper == "HIGH") *field = InternalChannel::FieldHigh;
+    else if(upper == "HIHI") *field = InternalChannel::FieldHihi;
+    else if(upper == "DRVL") *field = InternalChannel::FieldDrvl;
+    else if(upper == "DRVH") *field = InternalChannel::FieldDrvh;
+    else if(upper == "PREC") *field = InternalChannel::FieldPrec;
+    else if(upper == "EGU")  *field = InternalChannel::FieldEgu;
+    else if(upper == "NELM") *field = InternalChannel::FieldNelm;
+    else if(upper == "NORD") *field = InternalChannel::FieldNord;
+    else return false;
+    return true;
+}
+
+QString InternalChannel::splitField(const QString &pv, Field *field)
+{
+    *field = FieldVal;
+    QString name = pv;
+    int jsonPos = name.indexOf(".{");
+    if(jsonPos != -1) name = name.left(jsonPos);
+    name = name.trimmed();
+
+    int dotPos = name.lastIndexOf('.');
+    if(dotPos > 0) {
+        Field parsed;
+        if(parseFieldName(name.mid(dotPos + 1), &parsed)) {
+            *field = parsed;
+            name = name.left(dotPos);
+        }
+    }
+    return name;
+}
+
+QString InternalChannel::baseName(const QString &pv)
+{
+    Field field;
+    return splitField(pv, &field);
 }
 
 // breaks a regex subset (literals, [a-z0-9]{n} classes, flat (A|B) groups)
@@ -394,6 +432,176 @@ void InternalChannel::alarmState(double checkValue, short *severity, short *stat
     else                                              { *severity = 0; *status = 0; }
 }
 
+#define SEVERITY_NOTCONNECTED 99
+
+// severities as in alarmdefs.h
+static QStringList severityStrings()
+{
+    return QStringList() << "NO_ALARM" << "MINOR" << "MAJOR" << "INVALID" << "NOTCONNECTED";
+}
+
+// alarm status names in the order of epicsAlarm.h
+static QStringList statusStrings()
+{
+    return QStringList() << "NO_ALARM" << "READ" << "WRITE" << "HIHI" << "HIGH" << "LOLO"
+                         << "LOW" << "STATE" << "COS" << "COMM" << "TIMEOUT" << "HWLIMIT"
+                         << "CALC" << "SCAN" << "LINK" << "SOFT" << "BAD_SUB" << "UDF"
+                         << "DISABLE" << "SIMM" << "READ_ACCESS" << "WRITE_ACCESS";
+}
+
+// "AUTO" or -1 releases the forcing (returns false)
+static bool severityFromWrite(qint32 idata, const QString &sdata, short *code)
+{
+    QString upper = sdata.trimmed().toUpper();
+    if(upper == "AUTO") return false;
+    int index = severityStrings().indexOf(upper);
+    if(index == -1) {
+        if(idata < 0) return false;
+        index = idata;
+    }
+    if(index == 4 || index == SEVERITY_NOTCONNECTED) *code = SEVERITY_NOTCONNECTED;
+    else                                             *code = (short) qBound(0, index, 3);
+    return true;
+}
+
+static bool statusFromWrite(qint32 idata, const QString &sdata, short *code)
+{
+    QString upper = sdata.trimmed().toUpper();
+    if(upper == "AUTO") return false;
+    int index = statusStrings().indexOf(upper);
+    if(index == -1) {
+        if(idata < 0) return false;
+        index = idata;
+    }
+    *code = (short) qBound(0, index, statusStrings().size() - 1);
+    return true;
+}
+
+static void writeStringsToDataB(knobData *kData, const QStringList &items);
+
+short InternalChannel::currentSeverity() const
+{
+    if(forcedSeverity.defined) return (short) forcedSeverity.value;
+    short severity, status;
+    alarmState(currentValue(), &severity, &status);
+    return severity;
+}
+
+short InternalChannel::currentStatus() const
+{
+    if(forcedStatus.defined) return (short) forcedStatus.value;
+    short severity, status;
+    alarmState(currentValue(), &severity, &status);
+    return status;
+}
+
+void InternalChannel::setFieldValue(Field field, double rdata, qint32 idata, const QString &sdata)
+{
+    short code;
+    switch(field) {
+    case FieldVal:
+        setValue(rdata, idata, sdata);
+        return;
+    case FieldSevr:
+        if(severityFromWrite(idata, sdata, &code)) forcedSeverity.set(code);
+        else                                       forcedSeverity = OptionalLimit();
+        break;
+    case FieldStat:
+        if(statusFromWrite(idata, sdata, &code)) forcedStatus.set(code);
+        else                                     forcedStatus = OptionalLimit();
+        break;
+    case FieldLow:  low.set(rdata); break;
+    case FieldLolo: lolo.set(rdata); break;
+    case FieldHigh: high.set(rdata); break;
+    case FieldHihi: hihi.set(rdata); break;
+    case FieldDrvl: drvl.set(rdata); break;
+    case FieldDrvh: drvh.set(rdata); break;
+    case FieldPrec: precision = (short) ((rdata != 0.0) ? rdata : idata); break;
+    case FieldEgu:  units = sdata; break;
+    case FieldNord: nord = qBound(0, (idata != 0) ? (int) idata : (int) rdata, nelm); break;
+    case FieldNelm: // read only
+        return;
+    }
+    needsPublish = true;
+}
+
+void InternalChannel::fillKnobDataField(knobData *kData, Field field) const
+{
+    if(field == FieldVal) {
+        fillKnobData(kData);
+        return;
+    }
+
+    kData->edata.connected = true;
+    kData->edata.accessR = true;
+    kData->edata.accessW = (field != FieldNelm);
+    kData->edata.severity = 0;
+    kData->edata.status = 0;
+    kData->edata.nelm = 1;
+    kData->edata.valueCount = 1;
+    kData->edata.precision = precision;
+    qstrncpy(kData->edata.units, units.toLatin1().constData(), caqtdm_string_t_length);
+
+    switch(field) {
+
+    case FieldSevr: {
+        short severity = currentSeverity();
+        long index = (severity == SEVERITY_NOTCONNECTED) ? 4 : qBound(0, (int) severity, 3);
+        kData->edata.fieldtype = caENUM;
+        kData->edata.rvalue = (double) index;
+        kData->edata.ivalue = index;
+        kData->edata.enumCount = severityStrings().size();
+        writeStringsToDataB(kData, severityStrings());
+        break;
+    }
+
+    case FieldStat: {
+        long index = qBound(0, (int) currentStatus(), statusStrings().size() - 1);
+        kData->edata.fieldtype = caENUM;
+        kData->edata.rvalue = (double) index;
+        kData->edata.ivalue = index;
+        kData->edata.enumCount = statusStrings().size();
+        writeStringsToDataB(kData, statusStrings());
+        break;
+    }
+
+    case FieldEgu:
+        kData->edata.fieldtype = caSTRING;
+        kData->edata.rvalue = 0.0;
+        kData->edata.ivalue = 0;
+        writeStringsToDataB(kData, QStringList() << units);
+        break;
+
+    case FieldNelm:
+    case FieldNord: {
+        long count = (field == FieldNelm) ? nelm : nord;
+        kData->edata.fieldtype = caLONG;
+        kData->edata.rvalue = (double) count;
+        kData->edata.ivalue = count;
+        kData->edata.precision = 0;
+        break;
+    }
+
+    default: {
+        double fieldValue = 0.0;
+        switch(field) {
+        case FieldLow:  fieldValue = low.value; break;
+        case FieldLolo: fieldValue = lolo.value; break;
+        case FieldHigh: fieldValue = high.value; break;
+        case FieldHihi: fieldValue = hihi.value; break;
+        case FieldDrvl: fieldValue = drvl.value; break;
+        case FieldDrvh: fieldValue = drvh.value; break;
+        case FieldPrec: fieldValue = (double) precision; break;
+        default: break;
+        }
+        kData->edata.fieldtype = caDOUBLE;
+        kData->edata.rvalue = fieldValue;
+        kData->edata.ivalue = (long) fieldValue;
+        break;
+    }
+    }
+}
+
 void InternalChannel::setValue(double rdata, qint32 idata, const QString &sdata)
 {
     switch(fieldtype) {
@@ -461,7 +669,8 @@ static void writeStringsToDataB(knobData *kData, const QStringList &items)
 void InternalChannel::fillKnobData(knobData *kData) const
 {
     kData->edata.fieldtype = fieldtype;
-    kData->edata.connected = true;
+    kData->edata.connected = !(forcedSeverity.defined
+                               && ((short) forcedSeverity.value == SEVERITY_NOTCONNECTED));
     kData->edata.accessR = true;
     kData->edata.accessW = true;
     kData->edata.precision = precision;
@@ -483,7 +692,8 @@ void InternalChannel::fillKnobData(knobData *kData) const
     if(lolo.defined) kData->edata.lower_alarm_limit = lolo.value;
     if(high.defined) kData->edata.upper_warning_limit = high.value;
     if(hihi.defined) kData->edata.upper_alarm_limit = hihi.value;
-    alarmState(currentValue(), &kData->edata.severity, &kData->edata.status);
+    kData->edata.severity = currentSeverity();
+    kData->edata.status = currentStatus();
 
     switch(fieldtype) {
 
