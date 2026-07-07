@@ -40,9 +40,21 @@
 #include <QTimer>
 #include <QtDebug>
 #include <QApplication>
+#include <cmath>
+#include <limits>
 
 #define MIN_FONT_SIZE 3
 #define PREC_LIMIT_NUMERIC 15
+/* long long storage limit: 10^19 - 1 does not fit any more */
+#define MAX_NUMERIC_DIGITS 18
+
+/* exact integer power of ten, n in [0, MAX_NUMERIC_DIGITS] */
+static long long pow10ll(int n)
+{
+    long long r = 1;
+    for (int i = 0; i < n; i++) r *= 10;
+    return r;
+}
 
 #if (_MSC_VER == 1600)
 extern int round (double x);
@@ -53,20 +65,16 @@ Q_LOGGING_CATEGORY(sNumericLog, "caqtdm.widgets.snumeric")
 SNumeric::SNumeric(QWidget *parent, int id, int dd) : QFrame(parent), FloatDelegate()
 {
     lastLabelOnTab = lastLabel = -1;
-    intDig = id;
-    decDig = dd;
-    digits = id + dd;
+    intDig = qBound(1, id, MAX_NUMERIC_DIGITS);
+    decDig = qBound(0, dd, MAX_NUMERIC_DIGITS - intDig);
+    digits = intDig + decDig;
     data = 0;
     csValue = 0.0;
-    minVal = (int) -pow(10.0, digits) + 1;
-    maxVal = (int) pow(10.0, digits) - 1;
-#ifdef _MSC_VER
-    d_minAsDouble = (double) round(minVal);
-    d_maxAsDouble = (double) round(maxVal);
-#else
-    d_minAsDouble = (double) roundl(minVal);
-    d_maxAsDouble = (double) roundl(maxVal);
-#endif
+    thisFixedFormat = false;
+    maxVal = pow10ll(digits) - 1;
+    minVal = -maxVal;
+    d_minAsDouble = (double) minVal;
+    d_maxAsDouble = (double) maxVal;
 
     QColor cText = this->palette().color(QPalette::Text);
     roundingColor = QColor(180 - cText.red(), 180 - cText.green(), 180 - cText.blue(), 255);
@@ -131,6 +139,9 @@ void SNumeric::setDigitsFontScaleEnabled(bool en)
 
 void SNumeric::clearContainers()
 {
+    /* both are deleted below, avoid dangling pointers */
+    signLabel = Q_NULLPTR;
+    pointLabel = Q_NULLPTR;
     if (box) {
         labels.clear();
         QString pattern="layoutmember*";
@@ -250,8 +261,11 @@ void SNumeric::setValue(double v)
 }
 
 bool SNumeric::canEdit(){
-    QString dataString = QString().number(data);
-    if(((dataString.contains("922337")) && dataString.length() >= 19)){
+    /* the channel value must fit the available digit positions */
+    if (!std::isfinite(csValue)) return false;
+    const int intCapacity = thisFixedFormat ? intDig : digits;
+    if (fabs(csValue) >= (double) pow10ll(intCapacity)) {
+        qCDebug(sNumericLog) << "canEdit=false:" << csValue << "does not fit" << intCapacity << "integer digits";
         return false;
     }
     return true;
@@ -259,67 +273,79 @@ bool SNumeric::canEdit(){
 
 void SNumeric::suppressUserInput(){
     suppressInput = true;
-    for(int i = 0; i < digits; i++){
-        labels[i]->setText("§");
-            labels[i]->setStyleSheet("QLabel {color:red;}");
+    if (backupStylesheet.isEmpty()) backupStylesheet=this->styleSheet();
+    for(int i = 0; i < digits && i < labels.length(); i++){
+        labels[i]->setText("*");
+        labels[i]->setStyleSheet("QLabel {color:red;}");
     }
-    signLabel->setText("");
-    // Crashes:  pointLabel->setText("");
+    if (signLabel) signLabel->setText("");
+
     this->setStyleSheet("* {color: red;}");
     this->setToolTip("input broke widget: awaiting processable input");
     update();
 }
 
-// written from CS
-void SNumeric::silentSetValue(double v)
-{
-    int intDigits = QString().number((long long) v).length();
-    if(orig_decDig == -1) orig_decDig = decDig;
-    if(orig_intDig == -1) orig_intDig = intDig;
+bool SNumeric::managedigits(double newvalue){
+    /* automatic digit shift: trade decimal digits for integer digits when the
+     * value needs them, shift back towards the original configuration otherwise */
+    if (thisFixedFormat) return false;
+    if (!std::isfinite(newvalue)) return false;
 
-    // Only do after initialized (or above threshold) to avoid shortening digits when not needed
-    if((!valueChangedByButton && (digits > PREC_LIMIT_NUMERIC)) || !isInitialized){
-        // Shift digits towards integers if the integer digits over EPICS is bigger than those displayed currently
-        while (intDigits > intDig) {
-            intDig++;
-        }
-        // Shift back if the opposite is the case
-        while(intDigits < intDig){
-            intDig--;
-            if(orig_decDig > decDig) decDig++;
-            if(orig_decDig < decDig) decDig--;
-        }
-        digits = intDig + decDig;
+    /* baseline configuration, captured once */
+    if (orig_intDig == -1) orig_intDig = intDig;
+    if (orig_decDig == -1) orig_decDig = decDig;
+
+    /* integer digits needed by the magnitude */
+    double mag = fabs(newvalue);
+    int needed = 1;
+    while (mag >= 10.0 && needed < MAX_NUMERIC_DIGITS) {
+        mag /= 10.0;
+        needed++;
     }
 
-    setValuesFromChannel(v);
-    valueChangedByButton = false;
+    const int total = orig_intDig + orig_decDig;
+    const int newIntDig = qBound(orig_intDig, needed, total);
+    const int newDecDig = total - newIntDig;
+    if (newIntDig == intDig && newDecDig == decDig) return false;
 
-    // Remove Suppression if values are working fine
-    if(suppressInput && canEdit()){
-            suppressInput = false;
-            isInitialized = false;
-
-            for(int i = 0; i < digits; i++){
-            labels[i]->setStyleSheet("");
-            }
-            this->setStyleSheet("");
-            clearContainers();
-            init();
-            showData();
-    }else if(!canEdit() && !suppressInput){
-            suppressUserInput();
-    }
+    qCDebug(sNumericLog) << "managedigits:" << objectName() << "intDig" << intDig << "->" << newIntDig
+                         << "decDig" << decDig << "->" << newDecDig;
+    clearContainers();
+    intDig = newIntDig;
+    decDig = newDecDig;
+    digits = intDig + decDig;
+    /* re-clamp the limits to the new scale */
+    setMinimum(d_minAsDouble);
+    setMaximum(d_maxAsDouble);
+    init();
+    return true;
 }
 
-void SNumeric::setValuesFromChannel(double v)
+void SNumeric::silentSetValue(double v)
 {
     csValue = v;
-    // Adjust min/max if set by channel
-    setDecDigits(decDig);
-    long long temp = transformNumberSpace(v, decDig);
-    if(!isInitialized) isInitialized = true;
-    data = temp;
+
+    if (!canEdit()) {
+        if (!suppressInput) suppressUserInput();
+        return;
+    }
+
+    /* value is processable (again): restore the normal display */
+    if (suppressInput) {
+        suppressInput = false;
+        if (!backupStylesheet.isEmpty()) setStyleSheet(backupStylesheet);
+        backupStylesheet = "";
+        setToolTip("");
+        for (int i = 0; i < digits && i < labels.length(); i++) {
+            labels[i]->setStyleSheet("");
+        }
+    }
+
+    managedigits(v); /* may rebuild the digit layout */
+
+    /* channel values bypass the limits but not the display capacity */
+    const long long capacity = pow10ll(digits) - 1;
+    data = qBound(-capacity, transformNumberSpace(v, decDig), capacity);
     showData();
 }
 
@@ -327,88 +353,92 @@ void SNumeric::setMaximum(double v)
 {
     if (v >= d_minAsDouble) {
         d_maxAsDouble = v;
-        maxVal = transformNumberSpace(v, decDig);
+        /* clamped to the display capacity */
+        maxVal = qMin(transformNumberSpace(v, decDig), pow10ll(digits) - 1);
     }
-    long long temp = (long long) round(csValue * pow(10.0, decDig));
-    data = temp;
 }
 
 long long SNumeric::transformNumberSpace(double value, int dig){
-    double f1;
-    double f = std::modf(value, &f1);
-    long long pw = f *pow(10.0, dig);
-    long long pw1 = f1 *pow(10.0, dig);
-
-    return pw+pw1;
+    /* correctly rounded double -> fixed point conversion via the decimal text
+     * representation; unrepresentable values saturate to the long long range */
+    if (dig < 0) dig = 0;
+    if (!std::isfinite(value)) {
+        return (value < 0.0) ? std::numeric_limits<long long>::min()
+                             : std::numeric_limits<long long>::max();
+    }
+    QByteArray s = QByteArray::number(value, 'f', dig);
+    const bool neg = s.startsWith('-');
+    if (neg) s.remove(0, 1);
+    const int dot = s.indexOf('.');
+    const QByteArray intPart = (dot < 0) ? s : s.left(dot);
+    const QByteArray fracPart = (dot < 0) ? QByteArray() : s.mid(dot + 1);
+    if (intPart.size() + fracPart.size() > MAX_NUMERIC_DIGITS) {
+        return neg ? std::numeric_limits<long long>::min()
+                   : std::numeric_limits<long long>::max();
+    }
+    long long mag = intPart.toLongLong() * pow10ll(fracPart.size());
+    if (!fracPart.isEmpty()) mag += fracPart.toLongLong();
+    return neg ? -mag : mag;
 }
 
 double SNumeric::transformNumberSpace(long long value, int dig){
-    double pw = value;
-    while (dig > 10) {
-        dig -= 10;
-        pw *= pow(10.0, 10);
-    }
-
-    pw *= pow(10.0, dig);
-    return pw;
+    return (double) value * pow(10.0, (double) dig);
 }
-
 
 void SNumeric::setMinimum(double v)
 {
-    if (v <= d_maxAsDouble)
-    {
+    if (v <= d_maxAsDouble) {
         d_minAsDouble = v;
-        minVal = transformNumberSpace(v, decDig);
+        /* clamped to the display capacity */
+        minVal = qMax(transformNumberSpace(v, decDig), -(pow10ll(digits) - 1));
     }
-    long long temp = (long long) round(csValue * pow(10.0, decDig));
-    data = temp;
 }
 
 void SNumeric::setIntDigits(int i)
 {
-    if (i < 1) return;
+    i = qBound(1, i, MAX_NUMERIC_DIGITS - decDig);
+    if (i == intDig) return;
+    qCDebug(sNumericLog) << "setIntDigits" << objectName() << i;
+    /* reset the automatic digit shift baseline */
+    orig_intDig = orig_decDig = -1;
     clearContainers();
     intDig = i;
     digits = intDig + decDig;
+    /* re-clamp the limits to the new capacity */
+    setMinimum(d_minAsDouble);
+    setMaximum(d_maxAsDouble);
     init();
 }
 
 void SNumeric::setDecDigits(int d)
 {
-    if (d < 0) return;
-    data = (long long) (data * pow(10.0, d - decDig));
-    maxVal = (long long) (maxVal * pow(10.0, d - decDig));
-    minVal = (long long) (minVal * pow(10.0, d - decDig));
+    d = qBound(0, d, MAX_NUMERIC_DIGITS - intDig);
+    if (d == decDig) return;
+    qCDebug(sNumericLog) << "setDecDigits" << objectName() << d;
+    /* reset the automatic digit shift baseline */
+    orig_intDig = orig_decDig = -1;
+
+    /* rescale the stored value to the new scale, rounding half away from zero */
+    if (d > decDig) {
+        data = data * pow10ll(d - decDig);
+    } else {
+        const long long divisor = pow10ll(decDig - d);
+        const long long half = divisor / 2;
+        data = (data >= 0) ? (data + half) / divisor : (data - half) / divisor;
+    }
     decDig = d;
+    digits = intDig + decDig;
 
-    // shift digits around if max/minvalue get too big.
-    int ddig = decDig + intDig;
-    int digShifted = 0;
-    while (ddig > 17) {
-        decDig--;
-        ddig--;
-        digShifted++;
-    }
-    digits = decDig + intDig;
-
-    if(((decDig != orig_decDig || intDig != orig_intDig) && digShifted > 0) || !isInitialized){
-        clearContainers();
-        /* when changing decimal digits, minimum and maximum need to be recalculated, to avoid
-         * round issues. So, recalculating maximum and minimum is required  to obtain precision
-         */
-        setMinimum(d_minAsDouble);
-        setMaximum(d_maxAsDouble);
-        init();
-    }
-    if(!canEdit()){
-        suppressUserInput();
-    }
+    clearContainers();
+    /* recalculate the limits for the new scale */
+    setMinimum(d_minAsDouble);
+    setMaximum(d_maxAsDouble);
+    init();
+    if (!canEdit()) suppressUserInput();
 }
 
 void SNumeric::upData(QAbstractButton* b)
 {
-    valueChangedByButton = true;
     Q_UNUSED(b);
     if(!suppressInput){
         if(lastLabel > -1) upDataIndex(lastLabel);
@@ -418,28 +448,20 @@ void SNumeric::upData(QAbstractButton* b)
 void SNumeric::upDataIndex(int id)
 {
     if(!_AccessW) return;
-    if(id == -1) return;
-    long long datad = data;
-    long long const currentData = data;
-    long long power =  qPow(10.0, digits-id-1);
-    datad = datad + power;
-    // (long long) power overflows between 10^18 and 10^19
-    if (datad <= ((double)maxVal) && digits-id-1 < 19) {
+    if(id < 0 || id >= digits) return;
+    /* pure long long arithmetic, exact also for |data| > 2^53 */
+    const long long power = pow10ll(digits - id - 1);
+    const long long datad = data + power;
+    if (datad <= maxVal) {
         data = datad;
-        double dataDouble = (double) datad;
-        dataDouble *= pow(10.0, -decDig);
-
-        if (currentData <= datad) {
-            emit valueChanged(dataDouble);
-            showData();
-        }
+        emit valueChanged(transformNumberSpace(data, -decDig));
+        showData();
     }
     if (text != NULL) text->hide();
 }
 
 void SNumeric::downData(QAbstractButton* b)
 {
-    valueChangedByButton = true;
     Q_UNUSED(b);
     if(!suppressInput){
         if(lastLabel > -1) downDataIndex(lastLabel);
@@ -449,60 +471,38 @@ void SNumeric::downData(QAbstractButton* b)
 void SNumeric::downDataIndex(int id)
 {
     if(!_AccessW) return;
-    if(id == -1) return;
-    long long datad = data;
-    long long const currentData = data;
-    long long power =  pow(10.0, digits-id-1);
-    datad = datad - power;
+    if(id < 0 || id >= digits) return;
+    /* pure long long arithmetic, exact also for |data| > 2^53 */
+    const long long power = pow10ll(digits - id - 1);
+    const long long datad = data - power;
     if (datad >= minVal) {
         data = datad;
-        double dataDouble = (double) datad;
-        dataDouble *= pow(10.0, -decDig);
-
-        if(currentData >= datad){
-            emit valueChanged(dataDouble);
-            showData();
-        }
+        emit valueChanged(transformNumberSpace(data, -decDig));
+        showData();
     }
     if (text != NULL) text->hide();
 }
 
 void SNumeric::showData()
 {
-    int thisDigit, prvDigit;
-    bool suppress = true;
-    long long temp = data;
-    double num = 0;
+    if (suppressInput) return;
 
-    if(!suppressInput){
-        if (data < 0)
-            signLabel->setText(QString("-"));
-        else
-            signLabel->setText(QString("+"));
+    if (signLabel) signLabel->setText(data < 0 ? QString("-") : QString("+"));
 
-        for (int i = 0; i < digits; i++) {
-            double power = pow(10.0, digits - i - 1);
-            double numd = (double)temp / power;
-            if (numd >= 0)
-              num = floor(numd);
-            else
-              num = ceil(numd);
-            numd = num * power;
-            temp = temp - (long long)numd;
-
-            thisDigit = abs((int)num);
-            if (i > 0 && prvDigit == 0 && suppress && labels.length() >= 2)
-              labels[i - 1]->setText(" ");
-            labels[i]->setText(QString().setNum(abs((int)num)));
-            prvDigit = thisDigit;
-            if (thisDigit != 0)
-              suppress = false;
-            if (i >= intDig - 1)
-              suppress = false;
-        }
-        QTimer::singleShot(1000, this, SLOT(valueUpdated()));
-        triggerRoundColorUpdate();
+    /* integer digit decomposition, exact also for |data| > 2^53 */
+    long long mag = (data < 0) ? -data : data;
+    for (int i = digits - 1; i >= 0; i--) {
+        if (i < labels.length()) labels[i]->setText(QString::number((int) (mag % 10)));
+        mag /= 10;
     }
+    /* blank leading zeros, the last integer digit always stays */
+    for (int i = 0; i < intDig - 1 && i < labels.length(); i++) {
+        if (labels[i]->text() != " " && labels[i]->text() != "0") break;
+        labels[i]->setText(" ");
+    }
+
+    QTimer::singleShot(1000, this, SLOT(valueUpdated()));
+    triggerRoundColorUpdate();
 }
 
 void SNumeric::triggerRoundColorUpdate(){
@@ -512,25 +512,20 @@ void SNumeric::triggerRoundColorUpdate(){
 }
 
 void SNumeric::updateRoundColors(int i) {
-    if(!suppressInput){
-        QColor currColor = labels[i]->palette().color(QPalette::Text);
+    if (suppressInput) return;
+    if (i < 0 || i >= labels.length()) return;
 
-        QString valueString = "";
-        if(signLabel->text() == "-") valueString += signLabel->text();
-        for(int i = 0; i < digits; i++){
-            if(i == intDig) valueString += ".";
-            QString txt = labels[i]->text();
-            if(txt != " ") valueString += txt;
+    /* count the shown digits (sign, point and blanks do not count) */
+    int shownDigits = 0;
+    for (int k = 0; k < digits && k < labels.length(); k++) {
+        if (labels[k]->text() != " ") shownDigits++;
+    }
 
-        }
-        int digitsToColorFromEnd = (valueString.length() - PREC_LIMIT_NUMERIC);
-        if (i > PREC_LIMIT_NUMERIC ||  (i > (digits-digitsToColorFromEnd) && valueString.length() > (PREC_LIMIT_NUMERIC +1))) {
-            if(currColor != roundingColor){
-                labels[i]->setStyleSheet("QLabel {color:" + roundingColor.name() + ";}");
-            }else{
-                labels[i]->setStyleSheet("QLabel {color:" + currColor.name() + ";}");
-            }
-        }
+    const int digitsToColorFromEnd = shownDigits - PREC_LIMIT_NUMERIC;
+    if (digitsToColorFromEnd > 0 && i >= digits - digitsToColorFromEnd) {
+        labels[i]->setStyleSheet("QLabel {color:" + roundingColor.name() + ";}");
+    } else if (!labels[i]->styleSheet().isEmpty()) {
+        labels[i]->setStyleSheet("");
     }
 }
 
@@ -552,8 +547,9 @@ bool SNumeric::eventFilter(QObject *obj, QEvent *event)
     } else if(event->type() == QEvent::Leave && !suppressInput) {
         lastLabelOnTab = lastLabel;
         lastLabel = -1;
-        long long temp = (long long) round(csValue * pow(10.0, decDig));
-        data = temp;
+        /* fall back to the last channel value */
+        const long long capacity = pow10ll(digits) - 1;
+        data = qBound(-capacity, transformNumberSpace(csValue, decDig), capacity);
         showData();
         QApplication::restoreOverrideCursor();
         valueUpdated();

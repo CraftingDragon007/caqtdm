@@ -121,7 +121,7 @@ private:
     void triggerRoundColorUpdate();
     double transformNumberSpace(long long value, int dig);
     long long transformNumberSpace(double value, int dig);
-    void setValuesFromChannel(double v);
+    bool managedigits(double newvalue);
     bool canEdit();
     void suppressUserInput();
 
@@ -146,10 +146,11 @@ private:
     double csValue;
 
     QColor roundingColor;
-    bool valueChangedByButton = false;
-    bool isInitialized = false;
     int orig_decDig = -1;
     int orig_intDig = -1;
     bool suppressInput = false;
+    QString backupStylesheet = "";
+public:
+    bool thisFixedFormat = false;
 };
 #endif // EDIGIT_H

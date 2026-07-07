@@ -125,7 +125,6 @@ private:
     double thisMaximum, thisMinimum;
     SourceMode thisPrecMode;
     SourceMode thisLimitsMode;
-    bool thisFixedFormat;
     QColor thisForeColor, oldForeColor;
     QColor thisBackColor, oldBackColor;
 
