@@ -25,8 +25,10 @@
 
 #include <QCoreApplication>
 #include <QTest>
+#include <clocale>
 
 #include "tst_gensoftpv.h"
+#include "tst_canumeric.h"
 #include "tst_pvdialog.h"
 
 int main(int argc, char **argv)
@@ -37,6 +39,8 @@ int main(int argc, char **argv)
     QApplication app(argc, argv);
     QApplication::setOrganizationName("Paul Scherrer Institut");
     QApplication::setApplicationName("caQtDM-UnitTests-QtControls");
+    // to avoid failing tests because of a comma as decimal separator
+    setlocale(LC_NUMERIC, "C");
     int status = 0;
 
     {
@@ -46,6 +50,11 @@ int main(int argc, char **argv)
 
     {
         TestGenSoftPV tc;
+        status |= QTest::qExec(&tc, argc, argv);
+    }
+
+    {
+        TestCaNumeric tc;
         status |= QTest::qExec(&tc, argc, argv);
     }
 

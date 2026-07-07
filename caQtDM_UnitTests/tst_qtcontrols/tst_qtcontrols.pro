@@ -5,10 +5,12 @@ QT += network gui widgets designer
 
 SOURCES += tst_qtcontrols.cpp \
     tst_pvdialog.cpp \
-    tst_gensoftpv.cpp
+    tst_gensoftpv.cpp \
+    tst_canumeric.cpp
 
 HEADERS += tst_pvdialog.h \
     tst_gensoftpv.h \
+    tst_canumeric.h \
     fakeformwindow.h
 
 # --- Tested classes below ---
