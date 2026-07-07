@@ -155,6 +155,55 @@ demo_plugin {
 }
 
 #==========================================================================================================
+internal_plugin {
+        CONFIG += caQtDM_Plugin
+        CONFIG += Define_ControlsysTargetDir Define_Build_objDirs
+
+        unix:!macx:!ios:!android {
+                message("internal_plugin configuration unix:!macx:!ios:!android")
+                INCLUDEPATH   += $(EPICSINCLUDE)/os/Linux
+                LIBS += -L$(CAQTDM_COLLECT) -lcaQtDM_Lib
+                caqtdm_rpath {
+                    LIBS += -Wl,-rpath,$(QTDM_RPATH)
+                }
+                CONFIG += release
+        }
+
+        macx {
+                message("internal_plugin configuration macx")
+                INCLUDEPATH   += $(EPICSINCLUDE)/os/Linux
+                LIBS += $$(CAQTDM_COLLECT)/libcaQtDM_Lib.dylib
+                CONFIG += release
+        }
+
+        ios | android {
+                message("internal_plugin configuration : ios or android")
+                message( $$OUT_PWD )
+                CONFIG += staticlib
+                android {
+                    LIBS += $$OUT_PWD/../../libcaQtDM_Lib_$${QT_ARCH}.a
+                }
+                ios {
+                    LIBS += $$OUT_PWD/../../libcaQtDM_Lib.a
+                }
+        }
+
+        win32 {
+                message("internal_plugin configuration win32")
+                INCLUDEPATH  += $$(EPICS_BASE)/include/os/win32
+
+                win32-msvc* || msvc{
+                        CONFIG += Define_Build_caQtDM_Lib Define_Symbols
+                }
+
+                win32-g++ {
+                        EPICS_LIBS=$$(EPICS_BASE)/lib/win32-x86-mingw
+                        LIBS += ../caQtDM_Lib/release/libcaQtDM_Lib.a
+                }
+        }
+}
+
+#==========================================================================================================
 gps_plugin {
         CONFIG += caQtDM_Plugin
         CONFIG += Define_ControlsysTargetDir Define_Build_objDirs
@@ -806,6 +855,9 @@ caQtDM_Viewer {
                 plugins_environment.path = Contents/PlugIns/controlsystems
                 plugins_environment.files += $$(CAQTDM_COLLECT)/controlsystems/libenvironment_plugin.dylib
                 QMAKE_BUNDLE_DATA += plugins_environment
+                plugins_internal.path = Contents/PlugIns/controlsystems
+                plugins_internal.files += $$(CAQTDM_COLLECT)/controlsystems/libinternal_plugin.dylib
+                QMAKE_BUNDLE_DATA += plugins_internal
 
                 epics4: {
                                     plugins_epics4.path = Contents/PlugIns/controlsystems

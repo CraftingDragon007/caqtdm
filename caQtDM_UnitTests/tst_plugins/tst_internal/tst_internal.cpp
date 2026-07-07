@@ -18,16 +18,16 @@
  *  Copyright (c) 2010 - 2026
  *
  *  Author:
- *    Erik Schwarz
+ *    Helge Brands
  *  Contact details:
- *    erik.schwarz@psi.ch
+ *    helge.brands@psi.ch
  */
 
-#include <QCoreApplication>
+#include <QApplication>
 #include <QTest>
 
-#include "tst_gensoftpv.h"
-#include "tst_pvdialog.h"
+#include "tst_internal_channel.h"
+#include "tst_internal_plugin.h"
 
 int main(int argc, char **argv)
 {
@@ -36,16 +36,16 @@ int main(int argc, char **argv)
 
     QApplication app(argc, argv);
     QApplication::setOrganizationName("Paul Scherrer Institut");
-    QApplication::setApplicationName("caQtDM-UnitTests-QtControls");
+    QApplication::setApplicationName("caQtDM-UnitTests-internal");
     int status = 0;
 
     {
-        TestPVDialog tc;
+        TestInternalChannel tc;
         status |= QTest::qExec(&tc, argc, argv);
     }
 
     {
-        TestGenSoftPV tc;
+        TestInternalPlugin tc;
         status |= QTest::qExec(&tc, argc, argv);
     }
 

@@ -18,36 +18,29 @@
  *  Copyright (c) 2010 - 2026
  *
  *  Author:
- *    Erik Schwarz
+ *    Helge Brands
  *  Contact details:
- *    erik.schwarz@psi.ch
+ *    helge.brands@psi.ch
  */
+#ifndef TST_GENSOFTPV_H
+#define TST_GENSOFTPV_H
 
-#include <QCoreApplication>
+#include <QObject>
 #include <QTest>
 
-#include "tst_gensoftpv.h"
-#include "tst_pvdialog.h"
+#include "gensoftpv.h"
 
-int main(int argc, char **argv)
+class TestGenSoftPV : public QObject
 {
-    qputenv("QT_QPA_PLATFORM", QByteArrayLiteral("offscreen"));
-    qputenv("QT_QPA_FONTDIR", QByteArrayLiteral("."));
+    Q_OBJECT
+public:
+    TestGenSoftPV() = default;
 
-    QApplication app(argc, argv);
-    QApplication::setOrganizationName("Paul Scherrer Institut");
-    QApplication::setApplicationName("caQtDM-UnitTests-QtControls");
-    int status = 0;
+private slots:
+    void defaultConfigIsMinimal();
+    void allFieldsAppearInConfig();
+    void valueListsAndTextsWork();
+    void configIsReadableThroughGenericProperty();
+};
 
-    {
-        TestPVDialog tc;
-        status |= QTest::qExec(&tc, argc, argv);
-    }
-
-    {
-        TestGenSoftPV tc;
-        status |= QTest::qExec(&tc, argc, argv);
-    }
-
-    return status;
-}
+#endif // TST_GENSOFTPV_H
