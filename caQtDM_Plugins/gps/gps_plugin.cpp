@@ -172,10 +172,13 @@ int gpsPlugin::initCommunicationLayer(MutexKnobData *data, MessageWindow *messag
           connect(pos_data_source, SIGNAL(positionUpdated(QGeoPositionInfo)),
                   this, SLOT(positionUpdated(QGeoPositionInfo)));
 
+         pos_data_source->setUpdateInterval(500);
+         pos_data_source->setPreferredPositioningMethods(QGeoPositionInfoSource::AllPositioningMethods);
+         return true;
+      }else {
+         qCWarning(gpsLog) << "GPS could not been initialized, no default source";
+         return false;
       }
-    pos_data_source->setUpdateInterval(500);
-    pos_data_source->setPreferredPositioningMethods(QGeoPositionInfoSource::AllPositioningMethods);
-    return true;
 }
 
 // caQtDM_Lib will call this routine for defining a monitor
