@@ -30,6 +30,7 @@
 #include <QMutex>
 #include <QObject>
 #include <QTimer>
+#include <QVariant>
 
 #include "controlsinterface.h"
 #include "internal_channel.h"
@@ -87,6 +88,7 @@ private:
     QMap<QString, InternalChannel *> channels;
     QMap<QString, QList<int> > monitorIndexes;
     QMap<int, InternalChannel::Field> monitorFields;
+    QMap<int, QVariant> lastPublishedField;
     QTimer *timer;
 };
 

@@ -55,6 +55,8 @@ private slots:
     void channelDeletedWhenUnreferenced();
     void persistentChannelKeepsRunning();
     void fieldMonitorsAndWritesWork();
+    void unknownExtensionIsRejected();
+    void fieldMonitorsTriggerOnlyOnChange();
 
 private:
     // registers a monitor; the configuration travels like in the real

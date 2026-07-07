@@ -27,6 +27,7 @@
 
 #include <QString>
 #include <QStringList>
+#include <QVariant>
 #include <QVector>
 
 #include <stdint.h>
@@ -77,9 +78,10 @@ public:
 
     InternalChannel();
 
+    // false for unknown extensions: such channels are not handled at all
+    static bool splitField(const QString &pv, QString *base, Field *field);
     static QString baseName(const QString &pv);
     static QString jsonPart(const QString &pv);
-    static QString splitField(const QString &pv, Field *field);
 
     // parses the JSON configuration; on error the previous state stays untouched
     bool configure(const QString &json, QString *errorString = Q_NULLPTR);
@@ -102,10 +104,9 @@ public:
 
     void fillKnobData(knobData *kData) const;
     void fillKnobDataField(knobData *kData, Field field) const;
+    QVariant fieldVariant(Field field) const;
 
     void alarmState(double checkValue, short *severity, short *status) const;
-    short currentSeverity() const;
-    short currentStatus() const;
 
     // string matching the regex pattern for the given enumeration index (string channels)
     QString generatedString(qint64 index) const;
@@ -135,15 +136,17 @@ public:
     QStringList textArray;      // string waveform content given as "val" array
     QString regexPattern;
 
-    // state
+    // state; severity/status are re-evaluated from the limits on every value change,
+    // a SEVR/STAT write sets them directly until then (NOTCONNECTED = 99)
     NativeValue native;
     bool needsPublish;
-    OptionalLimit forcedSeverity;  // NOTCONNECTED = 99
-    OptionalLimit forcedStatus;
+    short severity;
+    short status;
 
 private:
     double elementValue(int i) const;
     void counterRange(double *rangeLow, double *rangeHigh) const;
+    void updateAlarmState();
     static bool parseRegexPattern(const QString &pattern, QList<QStringList> *segments,
                                   qint64 *combinations, QString *errorString);
 

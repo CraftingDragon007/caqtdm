@@ -23,6 +23,7 @@
  *    helge.brands@psi.ch
  */
 #include "internal_channel.h"
+#include "alarmdefs.h"
 
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -56,6 +57,8 @@ InternalChannel::InternalChannel()
     , regexPattern("")
     , native()
     , needsPublish(true)
+    , severity(NO_ALARM)
+    , status(0)
     , m_segments()
     , m_combinations(0)
     , m_waveOverride()
@@ -91,29 +94,31 @@ static bool parseFieldName(const QString &name, InternalChannel::Field *field)
     return true;
 }
 
-QString InternalChannel::splitField(const QString &pv, Field *field)
+bool InternalChannel::splitField(const QString &pv, QString *base, Field *field)
 {
     *field = FieldVal;
+    base->clear();
+
     QString name = pv;
     int jsonPos = name.indexOf(".{");
     if(jsonPos != -1) name = name.left(jsonPos);
     name = name.trimmed();
 
-    int dotPos = name.lastIndexOf('.');
+    int dotPos = name.indexOf('.');
     if(dotPos > 0) {
-        Field parsed;
-        if(parseFieldName(name.mid(dotPos + 1), &parsed)) {
-            *field = parsed;
-            name = name.left(dotPos);
-        }
+        if(!parseFieldName(name.mid(dotPos + 1), field)) return false;
+        name = name.left(dotPos);
     }
-    return name;
+    *base = name;
+    return true;
 }
 
 QString InternalChannel::baseName(const QString &pv)
 {
+    QString base;
     Field field;
-    return splitField(pv, &field);
+    if(!splitField(pv, &base, &field)) return QString();
+    return base;
 }
 
 // breaks a regex subset (literals, [a-z0-9]{n} classes, flat (A|B) groups)
@@ -335,6 +340,7 @@ bool InternalChannel::configure(const QString &json, QString *errorString)
     }
 
     setCurrentValue(val);
+    updateAlarmState();
     m_elapsedMs = 0;
     needsPublish = true;
     m_configured = true;
@@ -395,6 +401,9 @@ void InternalChannel::tick()
 {
     if(mode != Counter) return;
 
+    // a disconnected or invalid channel does not deliver new values
+    if(severity == INVALID_ALARM || severity == NOTCONNECTED) return;
+
     double rangeLow, rangeHigh;
     counterRange(&rangeLow, &rangeHigh);
 
@@ -406,6 +415,7 @@ void InternalChannel::tick()
         m_waveOverride[i] = steppedValue(m_waveOverride.at(i), step, rangeLow, rangeHigh, loop);
     }
 
+    updateAlarmState();
     needsPublish = true;
 }
 
@@ -425,14 +435,12 @@ bool InternalChannel::advance(int elapsedMs)
 // alarm evaluation like an EPICS record, status codes follow epicsAlarm.h
 void InternalChannel::alarmState(double checkValue, short *severity, short *status) const
 {
-    if(hihi.defined && checkValue >= hihi.value)      { *severity = 2; *status = 3; }
-    else if(lolo.defined && checkValue <= lolo.value) { *severity = 2; *status = 5; }
-    else if(high.defined && checkValue >= high.value) { *severity = 1; *status = 4; }
-    else if(low.defined && checkValue <= low.value)   { *severity = 1; *status = 6; }
-    else                                              { *severity = 0; *status = 0; }
+    if(hihi.defined && checkValue >= hihi.value)      { *severity = MAJOR_ALARM; *status = 3; }
+    else if(lolo.defined && checkValue <= lolo.value) { *severity = MAJOR_ALARM; *status = 5; }
+    else if(high.defined && checkValue >= high.value) { *severity = MINOR_ALARM; *status = 4; }
+    else if(low.defined && checkValue <= low.value)   { *severity = MINOR_ALARM; *status = 6; }
+    else                                              { *severity = NO_ALARM; *status = 0; }
 }
-
-#define SEVERITY_NOTCONNECTED 99
 
 // severities as in alarmdefs.h
 static QStringList severityStrings()
@@ -449,26 +457,21 @@ static QStringList statusStrings()
                          << "DISABLE" << "SIMM" << "READ_ACCESS" << "WRITE_ACCESS";
 }
 
-// "AUTO" or -1 releases the forcing (returns false)
 static bool severityFromWrite(qint32 idata, const QString &sdata, short *code)
 {
-    QString upper = sdata.trimmed().toUpper();
-    if(upper == "AUTO") return false;
-    int index = severityStrings().indexOf(upper);
+    int index = severityStrings().indexOf(sdata.trimmed().toUpper());
     if(index == -1) {
         if(idata < 0) return false;
         index = idata;
     }
-    if(index == 4 || index == SEVERITY_NOTCONNECTED) *code = SEVERITY_NOTCONNECTED;
-    else                                             *code = (short) qBound(0, index, 3);
+    if(index == 4 || index == NOTCONNECTED) *code = NOTCONNECTED;
+    else                                    *code = (short) qBound((int) NO_ALARM, index, (int) INVALID_ALARM);
     return true;
 }
 
 static bool statusFromWrite(qint32 idata, const QString &sdata, short *code)
 {
-    QString upper = sdata.trimmed().toUpper();
-    if(upper == "AUTO") return false;
-    int index = statusStrings().indexOf(upper);
+    int index = statusStrings().indexOf(sdata.trimmed().toUpper());
     if(index == -1) {
         if(idata < 0) return false;
         index = idata;
@@ -479,20 +482,9 @@ static bool statusFromWrite(qint32 idata, const QString &sdata, short *code)
 
 static void writeStringsToDataB(knobData *kData, const QStringList &items);
 
-short InternalChannel::currentSeverity() const
+void InternalChannel::updateAlarmState()
 {
-    if(forcedSeverity.defined) return (short) forcedSeverity.value;
-    short severity, status;
     alarmState(currentValue(), &severity, &status);
-    return severity;
-}
-
-short InternalChannel::currentStatus() const
-{
-    if(forcedStatus.defined) return (short) forcedStatus.value;
-    short severity, status;
-    alarmState(currentValue(), &severity, &status);
-    return status;
 }
 
 void InternalChannel::setFieldValue(Field field, double rdata, qint32 idata, const QString &sdata)
@@ -502,18 +494,18 @@ void InternalChannel::setFieldValue(Field field, double rdata, qint32 idata, con
     case FieldVal:
         setValue(rdata, idata, sdata);
         return;
+    // a written severity/status stays until the next value change re-evaluates the alarms
     case FieldSevr:
-        if(severityFromWrite(idata, sdata, &code)) forcedSeverity.set(code);
-        else                                       forcedSeverity = OptionalLimit();
+        if(severityFromWrite(idata, sdata, &code)) severity = code;
         break;
     case FieldStat:
-        if(statusFromWrite(idata, sdata, &code)) forcedStatus.set(code);
-        else                                     forcedStatus = OptionalLimit();
+        if(statusFromWrite(idata, sdata, &code)) status = code;
         break;
-    case FieldLow:  low.set(rdata); break;
-    case FieldLolo: lolo.set(rdata); break;
-    case FieldHigh: high.set(rdata); break;
-    case FieldHihi: hihi.set(rdata); break;
+    // alarm limits re-evaluate the alarm state immediately
+    case FieldLow:  low.set(rdata); updateAlarmState(); break;
+    case FieldLolo: lolo.set(rdata); updateAlarmState(); break;
+    case FieldHigh: high.set(rdata); updateAlarmState(); break;
+    case FieldHihi: hihi.set(rdata); updateAlarmState(); break;
     case FieldDrvl: drvl.set(rdata); break;
     case FieldDrvh: drvh.set(rdata); break;
     case FieldPrec: precision = (short) ((rdata != 0.0) ? rdata : idata); break;
@@ -523,6 +515,25 @@ void InternalChannel::setFieldValue(Field field, double rdata, qint32 idata, con
         return;
     }
     needsPublish = true;
+}
+
+QVariant InternalChannel::fieldVariant(Field field) const
+{
+    switch(field) {
+    case FieldSevr: return (int) severity;
+    case FieldStat: return (int) status;
+    case FieldLow:  return low.value;
+    case FieldLolo: return lolo.value;
+    case FieldHigh: return high.value;
+    case FieldHihi: return hihi.value;
+    case FieldDrvl: return drvl.value;
+    case FieldDrvh: return drvh.value;
+    case FieldPrec: return (int) precision;
+    case FieldEgu:  return units;
+    case FieldNelm: return nelm;
+    case FieldNord: return nord;
+    default:        return QVariant();
+    }
 }
 
 void InternalChannel::fillKnobDataField(knobData *kData, Field field) const
@@ -545,8 +556,8 @@ void InternalChannel::fillKnobDataField(knobData *kData, Field field) const
     switch(field) {
 
     case FieldSevr: {
-        short severity = currentSeverity();
-        long index = (severity == SEVERITY_NOTCONNECTED) ? 4 : qBound(0, (int) severity, 3);
+        long index = (severity == NOTCONNECTED)
+                         ? 4 : qBound((int) NO_ALARM, (int) severity, (int) INVALID_ALARM);
         kData->edata.fieldtype = caENUM;
         kData->edata.rvalue = (double) index;
         kData->edata.ivalue = index;
@@ -556,7 +567,7 @@ void InternalChannel::fillKnobDataField(knobData *kData, Field field) const
     }
 
     case FieldStat: {
-        long index = qBound(0, (int) currentStatus(), statusStrings().size() - 1);
+        long index = qBound(0, (int) status, statusStrings().size() - 1);
         kData->edata.fieldtype = caENUM;
         kData->edata.rvalue = (double) index;
         kData->edata.ivalue = index;
@@ -627,6 +638,7 @@ void InternalChannel::setValue(double rdata, qint32 idata, const QString &sdata)
     m_waveOverride.clear();
     textArray.clear();
     m_elapsedMs = 0;
+    updateAlarmState();
     needsPublish = true;
 }
 
@@ -636,6 +648,7 @@ void InternalChannel::setWave(const QVector<double> &values)
     // like an EPICS waveform record a write updates NORD, capped at NELM
     nord = qMin(values.size(), nelm);
     if(!values.isEmpty()) setCurrentValue(values.at(0));
+    updateAlarmState();
     needsPublish = true;
 }
 
@@ -669,8 +682,7 @@ static void writeStringsToDataB(knobData *kData, const QStringList &items)
 void InternalChannel::fillKnobData(knobData *kData) const
 {
     kData->edata.fieldtype = fieldtype;
-    kData->edata.connected = !(forcedSeverity.defined
-                               && ((short) forcedSeverity.value == SEVERITY_NOTCONNECTED));
+    kData->edata.connected = (severity != NOTCONNECTED);
     kData->edata.accessR = true;
     kData->edata.accessW = true;
     kData->edata.precision = precision;
@@ -692,8 +704,8 @@ void InternalChannel::fillKnobData(knobData *kData) const
     if(lolo.defined) kData->edata.lower_alarm_limit = lolo.value;
     if(high.defined) kData->edata.upper_warning_limit = high.value;
     if(hihi.defined) kData->edata.upper_alarm_limit = hihi.value;
-    kData->edata.severity = currentSeverity();
-    kData->edata.status = currentStatus();
+    kData->edata.severity = severity;
+    kData->edata.status = status;
 
     switch(fieldtype) {
 

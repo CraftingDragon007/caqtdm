@@ -89,11 +89,18 @@ void InternalPlugin::updateChannels()
     }
 }
 
-// publish the current value of a channel to all its monitors
+// publish the current value of a channel; field monitors are only triggered
+// when their field value really changed
 void InternalPlugin::publishChannel(const QString &key, InternalChannel *channel)
 {
     channel->needsPublish = false;
     foreach(int index, monitorIndexes.value(key)) {
+        InternalChannel::Field field = monitorFields.value(index, InternalChannel::FieldVal);
+        if(field != InternalChannel::FieldVal) {
+            QVariant current = channel->fieldVariant(field);
+            if(lastPublishedField.contains(index) && (lastPublishedField.value(index) == current)) continue;
+            lastPublishedField.insert(index, current);
+        }
         publishIndex(channel, index);
     }
 }
@@ -122,10 +129,19 @@ int InternalPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
     QMutexLocker locker(&mutex);
 
     QString pv = QString::fromLatin1(kData->pv);
+    QString key;
     InternalChannel::Field field;
-    QString key = InternalChannel::splitField(pv, &field);
 
     qCDebug(internalLog) << "pvAddMonitor" << pv << kData->index;
+
+    // unknown extensions are not handled at all
+    if(!InternalChannel::splitField(pv, &key, &field)) {
+        char asc[MAX_STRING_LENGTH];
+        snprintf(asc, MAX_STRING_LENGTH, "internal plugin: unknown field in %s, channel not handled", qasc(pv));
+        if(messagewindowP != (MessageWindow *) Q_NULLPTR) messagewindowP->postMsgEvent(QtWarningMsg, asc);
+        qCWarning(internalLog) << asc;
+        return false;
+    }
 
     // a JSON suffix in the channel name (epics filters, caqtdm_monitor) is no configuration here
     if(!InternalChannel::jsonPart(pv).isEmpty()) {
@@ -139,8 +155,9 @@ int InternalPlugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
         channels.insert(key, channel);
     }
 
-    // the configuration comes from the channelConfigJSON property of the defining widget (genSoftPV)
-    if(!channel->isConfigured()) {
+    // the configuration comes from the channelConfigJSON property of the defining
+    // widget (genSoftPV); field monitors never configure the channel
+    if((field == InternalChannel::FieldVal) && !channel->isConfigured()) {
         QObject *object = (QObject *) kData->dispW;
         if(object != (QObject *) Q_NULLPTR) {
             QString config = object->property("channelConfigJSON").toString();
@@ -168,10 +185,12 @@ int InternalPlugin::pvClearMonitor(knobData *kData)
 {
     QMutexLocker locker(&mutex);
     QString key = InternalChannel::baseName(QString::fromLatin1(kData->pv));
+    if(key.isEmpty()) return true;
 
     qCDebug(internalLog) << "pvClearMonitor" << kData->pv << kData->index;
 
     monitorFields.remove(kData->index);
+    lastPublishedField.remove(kData->index);
     QMap<QString, QList<int> >::iterator i = monitorIndexes.find(key);
     if(i != monitorIndexes.end()) {
         i.value().removeAll(kData->index);
@@ -207,8 +226,9 @@ int InternalPlugin::pvFreeAllocatedData(knobData *kData)
 int InternalPlugin::setValueForPv(const QString &pv, double rdata, int32_t idata, char *sdata)
 {
     QMutexLocker locker(&mutex);
+    QString key;
     InternalChannel::Field field;
-    QString key = InternalChannel::splitField(pv, &field);
+    if(!InternalChannel::splitField(pv, &key, &field)) return false;
     InternalChannel *channel = channels.value(key, Q_NULLPTR);
     if(channel == Q_NULLPTR) return false;
 
@@ -238,7 +258,10 @@ bool InternalPlugin::pvSetValue(knobData *kData, double rdata, int32_t idata, ch
 int InternalPlugin::setWaveForPv(const QString &pv, float *fdata, double *ddata, int16_t *data16, int32_t *data32, int nelm)
 {
     QMutexLocker locker(&mutex);
-    QString key = InternalChannel::baseName(pv);
+    QString key;
+    InternalChannel::Field field;
+    if(!InternalChannel::splitField(pv, &key, &field)) return false;
+    if(field != InternalChannel::FieldVal) return false;
     InternalChannel *channel = channels.value(key, Q_NULLPTR);
     if(channel == Q_NULLPTR) return false;
 

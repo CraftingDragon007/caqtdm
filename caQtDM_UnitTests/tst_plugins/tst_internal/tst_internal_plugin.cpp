@@ -293,16 +293,20 @@ void TestInternalPlugin::fieldMonitorsAndWritesWork()
     QCOMPARE(m_mutexKnobData->GetMutexKnobDataPtr(mainIndex)->edata.upper_warning_limit, 40.0);
     QCOMPARE(m_mutexKnobData->GetMutexKnobDataPtr(sevrIndex)->edata.ivalue, 1L);
 
-    // forcing the severity by name, NOTCONNECTED marks the channel disconnected
+    // writing the severity by name, NOTCONNECTED marks the channel disconnected
     qstrncpy(pv, "FRAMP.SEVR", MAXPVLEN);
     QCOMPARE(m_plugin->pvSetValue(pv, 0.0, 0, (char *) "MAJOR", (char *) "tst", errmess, 0), (int) true);
     QCOMPARE(m_mutexKnobData->GetMutexKnobDataPtr(mainIndex)->edata.severity, (short) 2);
     QCOMPARE(m_plugin->pvSetValue(pv, 0.0, 0, (char *) "NOTCONNECTED", (char *) "tst", errmess, 0), (int) true);
     QCOMPARE(m_mutexKnobData->GetMutexKnobDataPtr(mainIndex)->edata.connected, (int) false);
     QCOMPARE(m_mutexKnobData->GetMutexKnobDataPtr(sevrIndex)->edata.ivalue, 4L);
-    QCOMPARE(m_plugin->pvSetValue(pv, 0.0, 0, (char *) "AUTO", (char *) "tst", errmess, 0), (int) true);
+
+    // a value write re-evaluates the alarms and reconnects the channel
+    qstrncpy(pv, "FRAMP", MAXPVLEN);
+    QCOMPARE(m_plugin->pvSetValue(pv, 50.0, 0, (char *) "", (char *) "tst", errmess, 0), (int) true);
     QCOMPARE(m_mutexKnobData->GetMutexKnobDataPtr(mainIndex)->edata.connected, (int) true);
     QCOMPARE(m_mutexKnobData->GetMutexKnobDataPtr(mainIndex)->edata.severity, (short) 1);
+    QCOMPARE(m_mutexKnobData->GetMutexKnobDataPtr(sevrIndex)->edata.ivalue, 1L);
 
     // a field monitor keeps the channel referenced
     m_plugin->pvClearMonitor(m_mutexKnobData->GetMutexKnobDataPtr(mainIndex));
@@ -310,6 +314,60 @@ void TestInternalPlugin::fieldMonitorsAndWritesWork()
     QVERIFY(m_plugin->channel("FRAMP") != Q_NULLPTR);
     m_plugin->pvClearMonitor(m_mutexKnobData->GetMutexKnobDataPtr(lowIndex));
     QVERIFY(m_plugin->channel("FRAMP") == Q_NULLPTR);
+}
+
+void TestInternalPlugin::unknownExtensionIsRejected()
+{
+    // unknown extensions create no channel and stay unconnected
+    int index = createMonitor("BAD.SUB", R"({"type":"long","val":1})");
+    pumpTimerOnce();
+    QVERIFY(m_plugin->channel("BAD") == Q_NULLPTR);
+    QVERIFY(m_plugin->channel("BAD.SUB") == Q_NULLPTR);
+    QCOMPARE(m_mutexKnobData->GetMutexKnobDataPtr(index)->edata.connected, (int) false);
+
+    char pv[MAXPVLEN];
+    char errmess[SMALL_STRING_LENGTH];
+    errmess[0] = '\0';
+    qstrncpy(pv, "BAD.SUB", MAXPVLEN);
+    QCOMPARE(m_plugin->pvSetValue(pv, 1.0, 0, (char *) "", (char *) "tst", errmess, 0), (int) false);
+
+    // a configuration on a field monitor does not configure the channel
+    createMonitor("FCFG.SEVR", R"({"type":"long","val":7})");
+    pumpTimerOnce();
+    QVERIFY(m_plugin->channel("FCFG") != Q_NULLPTR);
+    QCOMPARE(m_plugin->channel("FCFG")->isConfigured(), false);
+}
+
+void TestInternalPlugin::fieldMonitorsTriggerOnlyOnChange()
+{
+    int mainIndex = createMonitor("TICKY", R"({"type":"long","mode":"counter","val":0,"step":1,"period":100,"low":-5})");
+    int lowIndex = createMonitor("TICKY.LOW");
+    int sevrIndex = createMonitor("TICKY.SEVR");
+    pumpTimerOnce();
+
+    int lowCount = m_mutexKnobData->GetMutexKnobDataPtr(lowIndex)->edata.monitorCount;
+    int sevrCount = m_mutexKnobData->GetMutexKnobDataPtr(sevrIndex)->edata.monitorCount;
+    int mainCount = m_mutexKnobData->GetMutexKnobDataPtr(mainIndex)->edata.monitorCount;
+
+    // the counter ticks, but the unchanged field monitors are not triggered
+    pumpTimerOnce();
+    pumpTimerOnce();
+    QCOMPARE(m_mutexKnobData->GetMutexKnobDataPtr(lowIndex)->edata.monitorCount, lowCount);
+    QCOMPARE(m_mutexKnobData->GetMutexKnobDataPtr(sevrIndex)->edata.monitorCount, sevrCount);
+    QVERIFY(m_mutexKnobData->GetMutexKnobDataPtr(mainIndex)->edata.monitorCount > mainCount);
+
+    // a threshold write triggers the LOW monitor exactly once
+    char pv[MAXPVLEN];
+    char errmess[SMALL_STRING_LENGTH];
+    errmess[0] = '\0';
+    qstrncpy(pv, "TICKY.low", MAXPVLEN);
+    QCOMPARE(m_plugin->pvSetValue(pv, -2.0, 0, (char *) "", (char *) "tst", errmess, 0), (int) true);
+    QCOMPARE(m_mutexKnobData->GetMutexKnobDataPtr(lowIndex)->edata.monitorCount, lowCount + 1);
+    QCOMPARE(m_mutexKnobData->GetMutexKnobDataPtr(lowIndex)->edata.rvalue, -2.0);
+    QCOMPARE(m_mutexKnobData->GetMutexKnobDataPtr(sevrIndex)->edata.monitorCount, sevrCount);
+
+    pumpTimerOnce();
+    QCOMPARE(m_mutexKnobData->GetMutexKnobDataPtr(lowIndex)->edata.monitorCount, lowCount + 1);
 }
 
 void TestInternalPlugin::persistentChannelKeepsRunning()

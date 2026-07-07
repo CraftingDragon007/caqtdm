@@ -41,7 +41,7 @@
       <x>10</x>
       <y>48</y>
       <width>760</width>
-      <height>384</height>
+      <height>392</height>
      </rect>
     </property>
     <layout class="QGridLayout" name="gridLayout">
@@ -79,7 +79,7 @@
        <property name="minimumSize">
         <size>
          <width>400</width>
-         <height>0</height>
+         <height>21</height>
         </size>
        </property>
        <property name="text">
@@ -275,11 +275,11 @@
        <property name="minimumSize">
         <size>
          <width>400</width>
-         <height>0</height>
+         <height>21</height>
         </size>
        </property>
        <property name="text">
-        <string>EPICS fields on RAMP: force severity (menu), move HIHI (entry + readback):</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;EPICS fields on RAMP: force severity (menu),&lt;/p&gt;&lt;p&gt;move HIHI (entry + readback):&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
       </widget>
      </item>
@@ -1788,10 +1788,10 @@
      <enum>genSoftPV::Mode::Counter</enum>
     </property>
     <property name="step">
-     <double>0.500000000000000</double>
+     <double>0.100000000000000</double>
     </property>
     <property name="period">
-     <number>200</number>
+     <number>20</number>
     </property>
     <property name="drvl">
      <string>0</string>
@@ -1810,6 +1810,9 @@
     </property>
     <property name="hihi">
      <string>90</string>
+    </property>
+    <property name="persistent">
+     <bool>true</bool>
     </property>
     <property name="units">
      <string>V</string>
@@ -1912,6 +1915,9 @@
     <property name="value">
      <string>hello from the internal plugin</string>
     </property>
+    <property name="loop">
+     <bool>false</bool>
+    </property>
    </widget>
    <widget class="genSoftPV" name="gensoftpv_serial">
     <property name="geometry">
@@ -1934,6 +1940,9 @@
     <property name="period">
      <number>500</number>
     </property>
+    <property name="loop">
+     <bool>false</bool>
+    </property>
     <property name="regex">
      <string>STATE-[0-9]{2}</string>
     </property>
@@ -1950,6 +1959,9 @@
     <property name="variable">
      <string>SETPOINT</string>
     </property>
+    <property name="mode">
+     <enum>genSoftPV::Mode::Constant</enum>
+    </property>
     <property name="value">
      <string>50</string>
     </property>
@@ -1958,6 +1970,9 @@
     </property>
     <property name="drvh">
      <string>100</string>
+    </property>
+    <property name="loop">
+     <bool>false</bool>
     </property>
    </widget>
    <widget class="genSoftPV" name="gensoftpv_wave">
