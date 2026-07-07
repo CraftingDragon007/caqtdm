@@ -23,6 +23,7 @@
  *    helge.brands@psi.ch
  */
 #include "tst_internal_channel.h"
+#include "QtTest/qtestcase.h"
 
 #include <string.h>
 
@@ -484,7 +485,7 @@ void TestInternalChannel::regexGeneratorWorks()
 
     // alternation group and character ranges, last segment changes fastest
     InternalChannel combined;
-    QVERIFY(combined.configure(R"({"type":"string","regex":"(ON|OFF)-[a-c]"})", &error));
+    QVERIFY(combined.configure(R"({"type":"string","mode":"counter","regex":"(ON|OFF)-[a-c]"})", &error));
     QCOMPARE(combined.combinations(), Q_INT64_C(6));
     QCOMPARE(combined.generatedString(0), QString("ON-a"));
     QCOMPARE(combined.generatedString(2), QString("ON-c"));
@@ -493,22 +494,69 @@ void TestInternalChannel::regexGeneratorWorks()
 
     // escaped characters stay literal
     InternalChannel escaped;
-    QVERIFY(escaped.configure(R"({"type":"string","regex":"V\\[[0-1]\\]"})", &error));
+    QVERIFY(escaped.configure(R"({"type":"string","mode":"counter","regex":"V\\[[0-1]\\]"})", &error));
     QCOMPARE(escaped.combinations(), Q_INT64_C(2));
     QCOMPARE(escaped.generatedString(1), QString("V[1]"));
 
     // writing positions a regex channel by index
     InternalChannel writable;
-    QVERIFY(writable.configure(R"({"type":"string","regex":"MSG-[0-9]"})", &error));
+    QVERIFY(writable.configure(R"({"type":"string","mode":"counter","regex":"MSG-[0-9]"})", &error));
     writable.setValue(0.0, 7, QString());
     QCOMPARE(writable.generatedString((qint64) writable.currentValue()), QString("MSG-7"));
 
     // invalid patterns are rejected
     InternalChannel broken;
-    QCOMPARE(broken.configure(R"({"type":"string","regex":"[0-9"})", &error), false);
+    QCOMPARE(broken.configure(R"({"type":"string","mode":"counter","regex":"[0-9"})", &error), false);
     QVERIFY(!error.isEmpty());
-    QCOMPARE(broken.configure(R"({"type":"string","regex":"[9-0]"})", &error), false);
-    QCOMPARE(broken.configure(R"({"type":"string","regex":"A{x}"})", &error), true); // quantifier only after class/group -> literal
+    QCOMPARE(broken.configure(R"({"type":"string","mode":"counter","regex":"[9-0]"})", &error), false);
+    QCOMPARE(broken.configure(R"({"type":"string","mode":"counter","regex":"A{x}"})", &error), true); // quantifier only after class/group -> literal
+}
+
+void TestInternalChannel::regexProcessesWrittenStrings()
+{
+    QString error;
+
+    // like the macro modification: the written string is matched by the regex
+    // and replaced by val (capture groups allowed), the result becomes VAL
+    InternalChannel channel;
+    QVERIFY2(channel.configure(R"lim({"type":"string","val":"A\\1","regex":"([1,2]+)([3])"})lim", &error),
+             qPrintable(error));
+    channel.setValue(0.0, 0, "12345");
+    QCOMPARE(channel.text, QString("A1245"));
+
+    // full replacement
+    InternalChannel full;
+    QVERIFY(full.configure(R"({"type":"string","val":"HUI","regex":"\\S+"})", &error));
+    full.setValue(0.0, 0, "abc");
+    QCOMPARE(full.text, QString("HUI"));
+
+    // no match keeps the written string
+    InternalChannel numbers;
+    QVERIFY(numbers.configure(R"({"type":"string","val":"N","regex":"^[0-9]+$"})", &error));
+    numbers.setValue(0.0, 0, "xyz");
+    QCOMPARE(numbers.text, QString("xyz"));
+
+    // macro constant syntax as input (parser stress with the treatMacro examples)
+    InternalChannel stress;
+    QVERIFY2(stress.configure(R"lim({"type":"string","val":"<\\1>","regex":"\\$\\(([A-Z0-9]+)=[^)]*\\)"})lim", &error),
+             qPrintable(error));
+    stress.setValue(0.0, 0, "$(TEST5=This)");
+    QCOMPARE(stress.text, QString("<TEST5>"));
+
+    // nested constants, json-like macros and $$ pass through untouched when the pattern does not match
+    InternalChannel untouched;
+    QVERIFY(untouched.configure(R"({"type":"string","val":"X","regex":"NEVERMATCHES"})", &error));
+    untouched.setValue(0.0, 0, R"lim($(TESTLEER=1$(TEST=2$(TEST3=3$(TEST4)3)2)1))lim");
+    QCOMPARE(untouched.text, QString(R"lim($(TESTLEER=1$(TEST=2$(TEST3=3$(TEST4)3)2)1))lim"));
+    untouched.setValue(0.0, 0, R"lim($(TEST{"regex":"\S+","value":"X"}))lim");
+    QCOMPARE(untouched.text, QString(R"lim($(TEST{"regex":"\S+","value":"X"}))lim"));
+    untouched.setValue(0.0, 0, "xyz$$876_A1245______");
+    QCOMPARE(untouched.text, QString("xyz$$876_A1245______"));
+
+    // invalid full-syntax pattern is rejected in constant mode
+    InternalChannel broken;
+    QCOMPARE(broken.configure(R"({"type":"string","val":"X","regex":"([1,2]+"})", &error), false);
+    QVERIFY(!error.isEmpty());
 }
 
 void TestInternalChannel::alarmLimitsWork()

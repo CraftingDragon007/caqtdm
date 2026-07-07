@@ -248,6 +248,14 @@ void TestInternalPlugin::writeThroughPluginWorks()
     QVERIFY(values != (double *) Q_NULLPTR);
     QCOMPARE(values[0], 5.0);
     QCOMPARE(values[2], 7.0);
+
+    // a written string is processed by the channel regex (macro-like modification)
+    int procIndex = createMonitor("PROC", R"({"type":"string","val":"num=\\1","regex":"[a-z]*([0-9]+).*"})");
+    pumpTimerOnce();
+    qstrncpy(pv, "PROC", MAXPVLEN);
+    QCOMPARE(m_plugin->pvSetValue(pv, 0.0, 0, (char *) "abc123xy", (char *) "tst", errmess, 0), (int) true);
+    knobData *kProc = m_mutexKnobData->GetMutexKnobDataPtr(procIndex);
+    QCOMPARE(QString((char *) kProc->edata.dataB), QString("num=123"));
 }
 
 void TestInternalPlugin::channelDeletedWhenUnreferenced()

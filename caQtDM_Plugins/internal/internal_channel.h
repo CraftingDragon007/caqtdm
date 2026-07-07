@@ -152,6 +152,7 @@ private:
 
     QList<QStringList> m_segments;  // regex pattern broken into enumerable segments
     qint64 m_combinations;
+    QString m_regexReplace;         // replacement template for written strings (the configured val)
     QVector<double> m_waveOverride;
     int m_elapsedMs;
     bool m_configured;

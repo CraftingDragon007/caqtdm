@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>780</width>
-    <height>700</height>
+    <height>724</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -353,6 +353,49 @@
           </widget>
          </item>
         </layout>
+       </item>
+      </layout>
+     </item>
+     <item row="9" column="0">
+      <widget class="caLabel" name="calabel_proc">
+       <property name="minimumSize">
+        <size>
+         <width>400</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>string processed by regex [a-z]*([0-9]+).* -&gt; num=\1 (entry left, result right):</string>
+       </property>
+      </widget>
+     </item>
+     <item row="9" column="1">
+      <layout class="QHBoxLayout" name="horizontalLayout_proc">
+       <item>
+        <widget class="caTextEntry" name="catextentry_proc">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>30</height>
+          </size>
+         </property>
+         <property name="channel" stdset="0">
+          <string>internal://PROC</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="caLineEdit" name="calineedit_proc">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>30</height>
+          </size>
+         </property>
+         <property name="channel" stdset="0">
+          <string>internal://PROC</string>
+         </property>
+        </widget>
        </item>
       </layout>
      </item>
@@ -2020,6 +2063,28 @@
     </property>
     <property name="nelm">
      <number>8</number>
+    </property>
+   </widget>
+   <widget class="genSoftPV" name="gensoftpv_proc">
+    <property name="geometry">
+     <rect>
+      <x>100</x>
+      <y>698</y>
+      <width>72</width>
+      <height>18</height>
+     </rect>
+    </property>
+    <property name="variable">
+     <string>PROC</string>
+    </property>
+    <property name="dataType">
+     <enum>genSoftPV::DataType::String</enum>
+    </property>
+    <property name="value">
+     <string>num=\1</string>
+    </property>
+    <property name="regex">
+     <string>[a-z]*([0-9]+).*</string>
     </property>
    </widget>
   </widget>

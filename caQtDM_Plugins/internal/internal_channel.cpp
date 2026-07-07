@@ -28,6 +28,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QRegularExpression>
 #include <QtGlobal>
 #include <QtMath>
 
@@ -61,6 +62,7 @@ InternalChannel::InternalChannel()
     , status(0)
     , m_segments()
     , m_combinations(0)
+    , m_regexReplace("")
     , m_waveOverride()
     , m_elapsedMs(0)
     , m_configured(false)
@@ -330,13 +332,24 @@ bool InternalChannel::configure(const QString &json, QString *errorString)
     if(fieldtype != caDOUBLE && fieldtype != caFLOAT && !object.contains("prec")) precision = 0;
 
     if(object.contains("regex")) {
-        QList<QStringList> segments;
-        qint64 count = 0;
         QString pattern = object["regex"].toString();
-        if(!parseRegexPattern(pattern, &segments, &count, errorString)) return false;
+        if(mode == Counter) {
+            // counter: enumerable subset drives the generator
+            QList<QStringList> segments;
+            qint64 count = 0;
+            if(!parseRegexPattern(pattern, &segments, &count, errorString)) return false;
+            m_segments = segments;
+            m_combinations = count;
+        } else {
+            // constant: written strings are processed with the full regex syntax,
+            // the configured val is the replacement template (like the macro modification)
+            if(!QRegularExpression(pattern).isValid()) {
+                if(errorString != Q_NULLPTR) *errorString = QString("invalid regex '%1'").arg(pattern);
+                return false;
+            }
+            m_regexReplace = text;
+        }
         regexPattern = pattern;
-        m_segments = segments;
-        m_combinations = count;
     }
 
     setCurrentValue(val);
@@ -617,9 +630,18 @@ void InternalChannel::setValue(double rdata, qint32 idata, const QString &sdata)
 {
     switch(fieldtype) {
     case caSTRING:
-        // a regex channel is positioned by index (idata), a plain one takes the text
-        if(m_combinations > 0) setCurrentValue((double) idata);
-        else                   text = sdata;
+        // a generator channel is positioned by index (idata); with a regex the
+        // written string is processed like the macro modification; otherwise
+        // the text is taken as written
+        if(m_combinations > 0) {
+            setCurrentValue((double) idata);
+        } else if(!regexPattern.isEmpty()) {
+            QString processed = sdata;
+            processed.replace(QRegularExpression(regexPattern), m_regexReplace);
+            text = processed;
+        } else {
+            text = sdata;
+        }
         break;
     case caENUM: {
         int index = enums.indexOf(sdata);

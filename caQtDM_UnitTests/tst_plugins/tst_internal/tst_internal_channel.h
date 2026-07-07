@@ -49,6 +49,7 @@ private slots:
     void nativeTypesWrapLikeEpics();
     void advanceRespectsPeriod();
     void regexGeneratorWorks();
+    void regexProcessesWrittenStrings();
     void alarmLimitsWork();
     void fillKnobDataScalarTypesWork();
     void fillKnobDataArraysWork();
