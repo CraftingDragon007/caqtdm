@@ -28,6 +28,8 @@
 #include <QMouseEvent>
 #include <QMimeData>
 
+Q_LOGGING_CATEGORY(caTextEntryLog, "caqtdm.widgets.catextentry")
+
 caTextEntry::caTextEntry(QWidget *parent) : caLineEdit(parent)
 {
   // this dis not really worked on ios, while the events had another order
@@ -59,7 +61,7 @@ void caTextEntry::setValue(QString string)
 // routine not used any more
 void caTextEntry::dataInput()
 {
-    //printf("dataInput %s\n", qasc(text()));
+    qCDebug(caTextEntryLog) << "dataInput" << text();
     emit TextEntryChanged(text());
 }
 
@@ -70,7 +72,7 @@ void caTextEntry::setAccessW(bool access)
 
 void caTextEntry::updateText(const QString &txt)
 {
-    //printf("text written by CS %s\n", qasc(txt));
+    qCDebug(caTextEntryLog) << "text written by CS" << txt;
     startText = txt;
 }
 
@@ -82,12 +84,12 @@ bool caTextEntry::eventFilter(QObject *obj, QEvent *event)
 		if (ev != (QKeyEvent *)0) {
 			if (ev->key() == Qt::Key_Return || ev->key() == Qt::Key_Enter) {
 				if (ev->isAutoRepeat()) {
-                    //printf("keyPressEvent ignore\n");
+                    qCDebug(caTextEntryLog) << "keyPressEvent ignore";
                     event->ignore();
 				}
 				else {
 					event->accept();
-                    //printf("keyPressEvent accept, set text to %s entered=%s ?\n", qasc(startText), qasc(text()));
+                    qCDebug(caTextEntryLog) << "keyPressEvent accept, set text to" << startText << "entered=" << text();
                     emit TextEntryChanged(qasc(text()));
 				}
 			}
@@ -125,10 +127,10 @@ bool caTextEntry::eventFilter(QObject *obj, QEvent *event)
         setReadOnly(false);
         if(!keepFocusOnLeave) clearFocus();
     } else if(event->type() == QEvent::FocusOut) {
-        //printf("lost focus, set text to %s\n", qasc(startText));
+        qCDebug(caTextEntryLog) << "lost focus, set text to" << startText;
         forceText(startText);
     } else if (event->type() == QEvent::FocusIn) {
-        //printf("focus in\n");
+        qCDebug(caTextEntryLog) << "focus in";
     }
     return QObject::eventFilter(obj, event);
 }

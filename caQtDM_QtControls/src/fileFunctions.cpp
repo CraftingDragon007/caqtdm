@@ -28,6 +28,8 @@
 #include "searchfile.h"
 #include "specialFunctions.h"
 
+Q_LOGGING_CATEGORY(fileFunctionsLog, "caqtdm.widgets.filefunctions")
+
 fileFunctions::fileFunctions()
 {
 }
@@ -47,21 +49,21 @@ const QString fileFunctions::lastInfo()
 int fileFunctions::checkFileAndDownload(const QString &fileName, const QString &url)
 {
     QString displayPath;
+    bool succeeded = false;
     errorString = "";
     infoString = "";
 
-    //QString Path = (QString)  qgetenv("CAQTDM_DISPLAY_PATH");
-    //printf("<%s>\n", qasc(Path));
-    //printf("checkFileAndDownload <%s>\n", qasc(fileName));
+    qCDebug(fileFunctionsLog) << qgetenv("CAQTDM_DISPLAY_PATH");
+    qCDebug(fileFunctionsLog) << "checkFileAndDownload: " << fileName;
 
     searchFile *s = new searchFile(fileName);
     QString fileNameFound = s->findFile();
     if(!fileNameFound.isNull()) {
-        //printf("checkFileAndDownload file <%s> locally found\n", qasc(fileName));
+        qCDebug(fileFunctionsLog) << "checkFileAndDownload file <" << fileName << ">locally found";
         s->deleteLater();
         return true;
     } else {
-        //printf("checkFileAndDownload file <%s> not locally found\n", qasc(fileName));
+        qCDebug(fileFunctionsLog) << "checkFileAndDownload file <" << fileName << "> not locally found";
     }
     s->deleteLater();
 
@@ -73,23 +75,39 @@ int fileFunctions::checkFileAndDownload(const QString &fileName, const QString &
        displayPath = (QString)  qgetenv("CAQTDM_URL_DISPLAY_PATH");
     }
 
-    if(displayPath.length() < 1) return false;
+    if(displayPath.length() < 1) return succeeded;
 
-    //printf("filename to download %s\n", qasc(fileName));
+    qCDebug(fileFunctionsLog) << "filename to download" << fileName;
 
     displayPath.append("/");
+    QString displayPathWithoutFile = displayPath;
     displayPath.append(fileName);
     QUrl displayUrl(displayPath);
     infoString = "download file " + displayPath;
 
     NetworkAccess *displayGet = new NetworkAccess();
-    if(!displayGet->requestUrl(displayUrl, fileName)) {
-        errorString = displayGet->lastError();
+    succeeded |= displayGet->requestUrl(displayUrl, fileName);
+    if (!succeeded && !fileName.endsWith(".ui")) {
+        QString secondTryFileName = fileName;
+        if (secondTryFileName.endsWith(".adl") || secondTryFileName.endsWith(".edl")) {
+            secondTryFileName.replace(".adl", ".ui").replace(".edl", ".ui");
+        } else {
+            secondTryFileName += ".ui";
+        }
+        displayUrl = QUrl(displayPathWithoutFile + secondTryFileName);
+
+        qCDebug(fileFunctionsLog) << "checkFileAndDownload second try with different extension: " << secondTryFileName;
         displayGet->deleteLater();
-        return false;
+        displayGet = new NetworkAccess();
+        succeeded |= displayGet->requestUrl(displayUrl, secondTryFileName);
     }
+
+    if(!succeeded) {
+        errorString = displayGet->lastError();
+    }
+
     displayGet->deleteLater();
-    return true;
+    return succeeded;
 }
 
 bool fileFunctions::removeFilesInTree(const QString &dirName)
@@ -107,7 +125,7 @@ bool fileFunctions::removeFilesInTree(const QString &dirName)
                 else {
                     QString suffix = info.suffix();
                     if(fileFilter.contains(suffix)) {
-                        //printf("remove %s\n", qasc(info.absoluteFilePath()));
+                        qCDebug(fileFunctionsLog) << "remove" << info.absoluteFilePath();
                         QFile::remove(info.absoluteFilePath());
                     }
                 }

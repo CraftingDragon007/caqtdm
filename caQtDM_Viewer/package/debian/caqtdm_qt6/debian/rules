@@ -6,7 +6,7 @@ export PYTHONVERSION=$(shell python3 --version 2>&1 | cut -d ' ' -f 2 | cut -d '
 export ZMQ=/usr/
 export ZMQINC=${ZMQ}/include
 export ZMQLIB=${ZMQ}/lib
-export QTDM_RPATH=/opt/caqtdm/lib/qt6
+export CAQTDM_NORPATH=1
 export GCC_BUILD_ARCH=$(shell gcc -dumpmachine)
 export EPICS_HOST_ARCH=linux-$(shell uname -m)
 export QTHOME=/usr
@@ -74,6 +74,13 @@ override_dh_auto_install:
 	
 	install -Dm755 binaries/caqtdm_designer debian/caqtdm/opt/caqtdm/lib/qt6/caqtdm_designer
 
+	# Create ld config
+	mkdir -p debian/caqtdm/etc/ld.so.conf.d
+	echo "/opt/caqtdm/lib" > debian/caqtdm/etc/ld.so.conf.d/caqtdm.conf
+	echo "/opt/caqtdm/lib/qt6" >> debian/caqtdm/etc/ld.so.conf.d/caqtdm.conf
+	echo "/opt/caqtdm/lib/qt6/designer" >> debian/caqtdm/etc/ld.so.conf.d/caqtdm.conf
+	echo "/opt/caqtdm/lib/qt6/controlsystems" >> debian/caqtdm/etc/ld.so.conf.d/caqtdm.conf
+
 	# Create symlinks
 	ln -sfv /opt/caqtdm/lib/qt6/caqtdm debian/caqtdm/usr/bin/caqtdm
 	ln -sfv /opt/caqtdm/lib/qt6/caQtDM debian/caqtdm/usr/bin/caQtDM
@@ -127,7 +134,7 @@ override_dh_auto_install:
 	
 	install -Dm644 caQtDM_QtControls/plugins/*.h debian/caqtdm/usr/include/caqtdm/plugins/
 	install -Dm644 caQtDM_Lib/src/*.h debian/caqtdm/usr/include/caqtdm/
-	install -Dm644 caQtDM_Lib/caQtDM_Plugins/*.h debian/caqtdm/usr/include/caqtdm/caQtDM_Plugins/
+	install -Dm644 caQtDM_Plugins/*.h debian/caqtdm/usr/include/caqtdm/caQtDM_Plugins/
 	install -Dm644 caQtDM_Viewer/src/*.h debian/caqtdm/usr/include/caqtdm/
 	
 	install -Dm644 caQtDM_QtControls/doc/*.qch debian/caqtdm/opt/caqtdm/doc/

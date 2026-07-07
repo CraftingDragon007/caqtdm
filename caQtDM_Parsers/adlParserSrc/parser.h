@@ -37,7 +37,6 @@ extern "C" {
 #include <string.h>
 #include <limits.h>
 #include <sys/types.h>
-#include <time.h>
 
 #ifndef MAX
 #define MAX(a,b)  ((a)>(b)?(a):(b))

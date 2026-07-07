@@ -3,10 +3,11 @@
 
 #############################################################################
 # special EPICS things
-%define EPICS_TARGET_VERSION -7.0.9
+%define EPICS_TARGET_VERSION -7.0.10
 #############################################################################
 
 %global no_rpath %{getenv:CAQTDM_NORPATH}
+%global caqtdm_opcua %{getenv:CAQTDM_OPCUA}
 
 # build qt4 support (or not)
 %if (0%{?rhel} && 0%{?rhel} < 8) || (0%{?fedora} && 0%{?fedora} < 24)
@@ -30,16 +31,16 @@
 #############################################################################
 Name:    caqtdm 
 Summary: Qt Widgets for Technical Applications
-Version: 4.6.0
-Release: 0.1%{?dist}
+Version: 4.6.1
+Release: 1.0%{?dist}
 #############################################################################
 License: GPLv3
 URL:     https://github.com/caqtdm/caqtdm
 Source:  https://github.com/caqtdm/caqtdm/%{name}/%{name}-%{version}.tar.gz
 
-#%if 0%{?qt6}
-#Patch0: no_rpath.patch
-#%endif
+# %%if 0%%{?qt6}
+# Patch0: no_rpath.patch
+# %%endif
 
 %if 0%{?qt5}
 # Requires: caqtdm_archiver
@@ -58,6 +59,9 @@ BuildRequires: qt6-qtsvg-devel
 BuildRequires: qt6-qtserialbus-devel
 BuildRequires: qt6-qt5compat-devel
 BuildRequires: qt6-qtlocation-devel
+%if "%{caqtdm_opcua}" == "1"
+BuildRequires: qt6-qtopcua-devel
+%endif
 BuildRequires: qwt-qt6-devel
 BuildRequires: libXext-devel cppzmq-devel
 BuildRequires: python3-devel
@@ -182,6 +186,9 @@ Requires: epics-base%{EPICS_TARGET_VERSION}
 Requires: qt6-qt5compat
 Requires: qt6-qtlocation
 Requires: qt6-qtimageformats
+%if "%{caqtdm_opcua}" == "1"
+Requires: qt6-qtopcua
+%endif
 Requires: python3
 %endif
 
@@ -190,17 +197,22 @@ Requires: python3
 
 %setup -q
 
-#%patch50 -p1 -b .pkgconfig
-#%patch51 -p1 -b .qt_install_paths
-#%patch52 -p1 -b .qt5
-#%patch53 -p1 -b .no_rpath
+# %%patch50 -p1 -b .pkgconfig
+# %%patch51 -p1 -b .qt_install_paths
+# %%patch52 -p1 -b .qt5
+# %%patch53 -p1 -b .no_rpath
 
-#%if 0%{?qt6}
-#%patch 0 -p1
-#%endif
+# %%if 0%%{?qt6}
+# %%patch 0 -p1
+# %%endif
 
 %build
 mkdir -p %{buildroot}/opt/caqtdm/lib
+%if "%{caqtdm_opcua}" == "1"
+export CAQTDM_OPCUA=1
+%else
+unset CAQTDM_OPCUA
+%endif
 %if 0%{?qt5}
 mkdir -p %{_target_platform}-qt5
 pushd %{_target_platform}-qt5
@@ -208,7 +220,9 @@ mkdir -p %{_builddir}/%{name}-%{version}/build/opt/caqtdm/lib/qt5
 export CAQTDM_MODBUS=1
 export CAQTDM_GPS=1
 export CAQTDM_COLLECT=%{_builddir}/%{name}-%{version}/build/opt/caqtdm/lib/qt5
+%if %{no_rpath} != 1
 export QTDM_RPATH=/opt/caqtdm/lib/qt5
+%endif
 export QTCONTROLS_LIBS=%{_builddir}/%{name}-%{version}/build/opt/caqtdm/lib/qt5
 export QTBASE=%{_builddir}/%{name}-%{version}/build/opt/caqtdm/lib/qt5
 export QTHOME=/usr
@@ -293,7 +307,9 @@ mkdir -p %{_builddir}/%{name}-%{version}/build/opt/caqtdm/lib/qt6
 export CAQTDM_MODBUS=1
 export CAQTDM_GPS=1
 export CAQTDM_COLLECT=%{_builddir}/%{name}-%{version}/build/opt/caqtdm/lib/qt6
+%if %{no_rpath} != 1
 export QTDM_RPATH=/opt/caqtdm/lib/qt6
+%endif
 export QTCONTROLS_LIBS=%{_builddir}/%{name}-%{version}/build/opt/caqtdm/lib/qt6
 export QTBASE=%{_builddir}/%{name}-%{version}/build/opt/caqtdm/lib/qt6
 export QTHOME=/usr
@@ -330,6 +346,37 @@ export CAQTDM_LOGGING_ARCHIVELIBS=/opt/caqtdm-archiver/lib
 
 %make_build
 #%make_install
+popd
+%endif
+
+%check
+EPICS_BASE="/usr/local/epics/base%{EPICS_TARGET_VERSION}"
+EPICS_HOST_ARCH="$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)"
+EPICSLIB="${EPICS_BASE}/lib/${EPICS_HOST_ARCH}"
+ZMQLIB="/usr/lib64"
+
+%if 0%{?qt5}
+pushd %{_target_platform}-qt5
+export LD_LIBRARY_PATH="%{_builddir}/%{name}-%{version}/build/opt/caqtdm/lib/qt5:${EPICSLIB}:${ZMQLIB}:${LD_LIBRARY_PATH}"
+make -C caQtDM_UnitTests check
+popd
+%endif
+
+%if 0%{?qt4}
+pushd %{_target_platform}-qt4
+export LD_LIBRARY_PATH="%{_builddir}/%{name}-%{version}/build/opt/caqtdm/lib/qt4:${EPICSLIB}:${ZMQLIB}:${LD_LIBRARY_PATH}"
+make -C caQtDM_UnitTests check
+popd
+%endif
+
+%if 0%{?qt6}
+pushd %{_target_platform}-qt6
+%ifarch aarch64
+EPICS_HOST_ARCH="linux-aarch64"
+EPICSLIB="${EPICS_BASE}/lib/${EPICS_HOST_ARCH}"
+%endif
+export LD_LIBRARY_PATH="%{_builddir}/%{name}-%{version}/build/opt/caqtdm/lib/qt6:${EPICSLIB}:${ZMQLIB}:${LD_LIBRARY_PATH}"
+make -C caQtDM_UnitTests check
 popd
 %endif
 
@@ -398,7 +445,7 @@ popd
 
         cp %{_builddir}/%{name}-%{version}/caQtDM_Lib/src/*.h     %{buildroot}/usr/local/include/caqtdm
         
-	cp %{_builddir}/%{name}-%{version}/caQtDM_Lib/caQtDM_Plugins/*.h     %{buildroot}/usr/local/include/caqtdm/caQtDM_Plugins
+    cp %{_builddir}/%{name}-%{version}/caQtDM_Plugins/*.h     %{buildroot}/usr/local/include/caqtdm/caQtDM_Plugins
 	
         cp %{_builddir}/%{name}-%{version}/caQtDM_Viewer/src/*.h     %{buildroot}/usr/local/include/caqtdm
         
@@ -732,4 +779,3 @@ fi
 %endif
 
 %changelog
-

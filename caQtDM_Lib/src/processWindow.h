@@ -48,7 +48,7 @@ class CAQTDM_LIBSHARED_EXPORT processWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    processWindow(QWidget * = 0, bool display=true, QWidget * = 0);
+    processWindow(QWidget * = 0, bool display=true, bool CloseExit0=false, QWidget * = Q_NULLPTR);
     ~processWindow();
 
     bool isRunning();
@@ -82,6 +82,7 @@ private:
     QProcess *termProcess;
     QSplitter* splitter;
     bool displayWindow;
+    bool m_CloseExit0;
     QWidget *thisCaller;
     Q_PID thisPID;
     QString arguments;

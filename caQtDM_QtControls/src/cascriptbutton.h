@@ -82,6 +82,7 @@ public:
     void setScriptParam(QString const &m) {thisScriptParam = m;}
 
     bool getDisplayShowExecution() const { return thisShowExecution;}
+    bool getCloseExit0() const { return thisDefaultDisplay==CloseOnExit0;}
 
     void setFontScaleModeL(EPushButton::ScaleMode m);
     EPushButton::ScaleMode fontScaleMode();

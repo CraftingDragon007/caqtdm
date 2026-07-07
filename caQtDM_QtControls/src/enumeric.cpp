@@ -54,7 +54,9 @@ int round (double x) {
     }
 }
 #endif
-#pragma optimize( "", off )
+
+Q_LOGGING_CATEGORY(eNumericLog, "caqtdm.widgets.enumeric")
+
 ENumeric::ENumeric(QWidget *parent, int id, int dd) : QFrame(parent), FloatDelegate()
 {
     lastLabelOnTab = lastLabel = -1;
@@ -130,7 +132,7 @@ void ENumeric::setDigitsFontScaleEnabled(bool en)
             l->setFont(int1Label->font());
         }
     } else {
-        printf("did not find an ESimpleLabel\n");
+        qCWarning(eNumericLog) << "did not find an ESimpleLabel";
     }
     d_fontScaleEnabled = en;
     valueUpdated();
@@ -721,7 +723,7 @@ bool ENumeric::eventFilter(QObject *obj, QEvent *event)
     } else if(event->type() == QEvent::Leave && !suppressInput) {
         QString ParentClassName = parent()->metaObject()->className();
         if(ParentClassName.contains("caApplyNumeric")) {
-            //printf("do nothing\n");
+            qCDebug(eNumericLog) << "do nothing";
         } else {
             lastLabelOnTab = lastLabel;
             lastLabel = -1;
@@ -906,20 +908,20 @@ void ENumeric::resizeEvent(QResizeEvent *e)
         //double fontSize = l1->calculateFontPointSizeF(l1->text(), l1->size());
         double fontSize = 80;
         fontSize = qMin((int) fontSize, size().height() / 4 - 2);
-        //printf("h %f digits=%d %d %d\n", fontSize, digits, intDig, decDig);
+        qCDebug(eNumericLog) << "h" << fontSize << "digits=" << digits << intDig << decDig;
         if(decDig > 0) {
            fontSize = qMin((int) fontSize, size().width() / (digits+2));
         } else {
            fontSize = qMin((int) fontSize, size().width() / (digits+1));
         }
-        //printf("w %f\n", fontSize);
+        qCDebug(eNumericLog) << "w" << fontSize;
         if(fontSize < MIN_FONT_SIZE) fontSize = MIN_FONT_SIZE;
         labelFont.setPointSizeF(fontSize);
         signFont.setPointSizeF(fontSize);
 
          CorrectFontIfAndroid(labelFont);
          CorrectFontIfAndroid(signFont);
-        //printf("digits=%d %s font size=%f\n", digits, qasc(l1->text()), fontSize);
+         qCDebug(eNumericLog) << "digits=" << digits << l1->text() << "font size=" << fontSize;
     }
     /* all fonts equal */
     if(d_fontScaleEnabled){

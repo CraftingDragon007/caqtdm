@@ -172,8 +172,9 @@ protected:
       virtual QSize sizeHint() const override;
       virtual QSize minimumSizeHint() const override;
       QSize calculateTextSpace() override;
+      int toEngineeringNotation(char *buffer, size_t bufferLen, double value, int eng_precision = 3);
 
-private:
+  private:
     QString thisPV;
 
     QColor thisForeColor, oldForeColor;
@@ -184,11 +185,12 @@ private:
     colMode oldColorMode;
 
     int thisPrecision;
+    int engr_notationPrecision;
     SourceMode thisPrecMode;
     SourceMode thisLimitsMode;
 
     bool thisUnitMode;
-
+    QString keepText; // Don't touch this! caTextEntry is using caLineEdit as a Base class without this caTextEntry is not working
     char thisFormat[MAX_STRING_LENGTH];
     char thisFormatC[20];
     bool d_rescaleFontOnTextChanged;

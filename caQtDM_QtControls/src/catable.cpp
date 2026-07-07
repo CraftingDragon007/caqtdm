@@ -36,8 +36,9 @@
     #endif
 #endif
 
-caTable::caTable(QWidget *parent) : QTableWidget(parent)
+Q_LOGGING_CATEGORY(caTableLog, "caqtdm.widgets.catable")
 
+caTable::caTable(QWidget *parent) : QTableWidget(parent)
 {
     setPrecisionMode(Channel);
     setLimitsMode(Channel);
@@ -65,15 +66,17 @@ caTable::caTable(QWidget *parent) : QTableWidget(parent)
 
     //Iterate over every parent QWidget and check if any styles have been applied to it in designer --> If at any point any styles have been applied, do not overwrite them, else set the style so it looks like before the update.
     bool canSetStyle = true;
+    const QWidget *parentWidgetPtr = this->parentWidget();
+    const QString parentName = parentWidgetPtr ? parentWidgetPtr->objectName() : QStringLiteral("<no-parent>");
     for(QWidget *checkWidget = this;checkWidget->parentWidget();checkWidget = checkWidget->parentWidget()){
         if (!(checkWidget->styleSheet().isEmpty())){
-            //qDebug().noquote()<<QString("Style for a child widget of %1 is NOT set by object, preferring Style from designer").arg(this->parentWidget()->objectName());
+            qCDebug(caTableLog).noquote() << QString("Style for a child widget of %1 is NOT set by object, preferring Style from designer").arg(parentName);
             canSetStyle = false;
             break;
         }
     }
     if (canSetStyle){
-        //qDebug().noquote()<<QString("Style for a child widget of %1 is set by object").arg(this->parentWidget()->objectName());
+        qCDebug(caTableLog).noquote() << QString("Style for a child widget of %1 is set by object").arg(parentName);
         QPalette p = QPalette();
         p.setColor(QPalette::AlternateBase, QColor(233, 231, 227));
         setPalette(p);
@@ -161,7 +164,7 @@ void caTable::copy()
         }
 
         if(i==0) {
-            //printf("no rows were selected\n");
+            qCDebug(caTableLog) << "no rows were selected";
             QModelIndexList cols = select->selectedColumns();
             foreach (QModelIndex Col, cols) {
                 if (i > 0) str += "\n";
@@ -269,5 +272,3 @@ void caTable::setValue(int row, int col, short status, double value, QString con
     displayText(row, col, Alarm, text);
     displayText(row, col+1, Alarm, unit);
 }
-
-

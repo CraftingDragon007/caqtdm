@@ -5,5 +5,17 @@
         <file>caQtDM-BGL-2048.png</file>
         <file>caQtDM-logos.png</file>
         <file>caQtDM-logospsi.png</file>
+        <file>splashScreenMapping.json</file>
+        <file alias="armless_caqtdm.png">splashScreenImages/armless_caqtdm.png</file>
+        <file alias="easter_caqtdm.png">splashScreenImages/easter_caqtdm.png</file>
+        <file alias="halloween_caqtdm.png">splashScreenImages/halloween_caqtdm.png</file>
+        <file alias="santa_caqtdm.png">splashScreenImages/santa_caqtdm.png</file>
+        <file alias="waving_caqtdm.png">splashScreenImages/waving_caqtdm.png</file>
+        <file alias="coffee_caqtdm.png">splashScreenImages/coffee_caqtdm.png</file>
+        <file alias="spaghetti_caqtdm.png">splashScreenImages/spaghetti_caqtdm.png</file>
+        <file alias="willhelmtell_caqtdm.png">splashScreenImages/willhelmtell_caqtdm.png</file>
+        <file alias="pi_caqtdm.png">splashScreenImages/pi_caqtdm.png</file>
+        <file alias="christmas_caqtdm.png">splashScreenImages/christmas_caqtdm.png</file>
+        <file alias="logo_caqtdm.png">splashScreenImages/logo_caqtdm.png</file>
     </qresource>
 </RCC>

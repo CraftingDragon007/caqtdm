@@ -75,11 +75,12 @@ void myParser::openFile(char *outFile)
         printf("adl2ui -- could be a problem!\n");
     } else {
         QFile file(fileNameFound);
-        file.open(QFile::ReadOnly);
-        StyleSheet = QLatin1String(file.readAll());
-        printf("adl2ui -- file <stylesheet.qss> found and will be integrated in the resulting ui file\n");
-        printf("adl2ui -- if you do not want any styles, redefine CAQTDM_DISPLAY_PATH\n");
-        file.close();
+        if (file.open(QFile::ReadOnly)) {
+            StyleSheet = QLatin1String(file.readAll());
+            printf("adl2ui -- file <stylesheet.qss> found and will be integrated in the resulting ui file\n");
+            printf("adl2ui -- if you do not want any styles, redefine CAQTDM_DISPLAY_PATH\n");
+            file.close();
+        }
     }
 
     //printf("write to file %s\n", outFile);
@@ -277,7 +278,7 @@ bool myParser::adl2ui(QString inputFile)
 
     // get path for composite file parsing
     //qDebug() << fi.absolutePath();
-    strcpy(filePrefix, fi.absolutePath().toLatin1().data());
+    qstrncpy(filePrefix, fi.absolutePath().toLatin1().data(), sizeof(filePrefix));
     zindex = 0; // ZW
     // init adlParser
     Init(this);
@@ -392,7 +393,7 @@ int myParser::myMain(int argc, char *argv[])
             exit(-1);
         } else {
             printf("adl2ui -- file = <%s>\n", argv[in]);
-            strcpy(inFile, argv[in]);
+            qstrncpy(inFile, argv[in], sizeof(inFile));
         }
     }
 
@@ -432,7 +433,7 @@ int myParser::myMain(int argc, char *argv[])
 
     // get path for composite file parsing
     //qDebug() << fi.absolutePath();
-    strcpy(filePrefix, fi.absolutePath().toLatin1().data());
+    qstrncpy(filePrefix, fi.absolutePath().toLatin1().data(), sizeof(filePrefix));
 
     // init adlParser
     myParser *adlParser = new myParser;

@@ -26,6 +26,7 @@
 #include "wmsignalpropagator.h"
 #include "cainclude.h"
 
+Q_LOGGING_CATEGORY(wmSignalPropagatorLog, "caqtdm.widgets.wmsignalpropagator")
 
 wmSignalPropagator::wmSignalPropagator( QWidget *parent ) : ESimpleLabel(parent)
 {
@@ -52,9 +53,7 @@ void wmSignalPropagator::resizeMainWindow(QRect p){emit wmResizeMainWindow(p);}
 void wmSignalPropagator::propagateToParent(QRect p) {
 
     // move parent to the p.x and p.y
-    qDebug() << "propagateToParent";
-    printf("propagateToParent\n");
-    fflush(stdout);
+    qCDebug(wmSignalPropagatorLog) << "propagateToParent";
     QWidget *w = Parent;
     caInclude *includeWidget = (caInclude *) Q_NULLPTR;
     while(w != (QWidget*) Q_NULLPTR) {
@@ -63,7 +62,7 @@ void wmSignalPropagator::propagateToParent(QRect p) {
                 includeWidget = widget;
                 if((widget->x() != p.x()) || (widget->y() != p.y())) {
                     widget->move(p.x(), p.y());
-                    //printf("propagate:: move parent include to %d %d\n", p.x(), p.y());
+                    qCDebug(wmSignalPropagatorLog) << "propagate:: move parent include to" << p.x() << p.y();
                     break;
                 } else {
 
@@ -87,7 +86,7 @@ void wmSignalPropagator::propagateToParent(QRect p) {
             if(contents != (QWidget *) Q_NULLPTR) {
                QSize sizew = contents->minimumSize();
                if(maxX > sizew.width() || maxY > sizew.height()) {
-                   //printf("propagate:: resize print area\n");
+                   qCDebug(wmSignalPropagatorLog) << "propagate:: resize print area";
                    contents->setMinimumSize(maxX, maxY);
                }
             }

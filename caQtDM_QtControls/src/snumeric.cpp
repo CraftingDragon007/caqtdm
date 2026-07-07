@@ -48,6 +48,8 @@
 extern int round (double x);
 #endif
 
+Q_LOGGING_CATEGORY(sNumericLog, "caqtdm.widgets.snumeric")
+
 SNumeric::SNumeric(QWidget *parent, int id, int dd) : QFrame(parent), FloatDelegate()
 {
     lastLabelOnTab = lastLabel = -1;
@@ -121,7 +123,7 @@ void SNumeric::setDigitsFontScaleEnabled(bool en)
             l->setFont(int1Label->font());
         }
     } else {
-        printf("did not find an ESimpleLabel\n");
+        qCWarning(sNumericLog) << "did not find an ESimpleLabel";
     }
     d_fontScaleEnabled = en;
     valueUpdated();
@@ -717,7 +719,7 @@ void SNumeric::resizeEvent(QResizeEvent *e)
 
         CorrectFontIfAndroid(labelFont);
         CorrectFontIfAndroid(signFont);
-        //printf("digits=%d %s font size=%f\n", digits, qasc(l1->text()), fontSize);
+        qCDebug(sNumericLog) << "digits=" << digits << l1->text() << "font size=" << fontSize;
     }
     /* all fonts equal */
     if(d_fontScaleEnabled){

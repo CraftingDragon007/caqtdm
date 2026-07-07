@@ -117,7 +117,6 @@
 
 
      QString getStatusBarContents();
-     QString getLogFilePath();
 
 
      void MSQ_getPtrs(int &front, int &rear) {
@@ -255,15 +254,15 @@ public slots:
      void Callback_ReloadAllWindows();
 
 protected:
-#ifdef MOBILE
      virtual bool event(QEvent *);
-#endif
+
      virtual void timerEvent(QTimerEvent *e);
      Qt::GestureType fingerSwipeGestureType;
      bool eventFilter(QObject *obj, QEvent *event);
 
 signals:
    void messageAvailable(QString message);
+   void themeChanged();
 
 private:
    void setDirectUpdateTypeOnRestart(const QDateTime);

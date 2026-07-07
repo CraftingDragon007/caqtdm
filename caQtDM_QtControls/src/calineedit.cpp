@@ -31,6 +31,7 @@
 #include <QMouseEvent>
 #include <qnumeric.h>
 #include "knobDefines.h"
+#include <QtMath>
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     #include <QRegExp>
 #else
@@ -42,6 +43,7 @@
     #endif
 #endif
 
+Q_LOGGING_CATEGORY(caLineEditLog, "caqtdm.widgets.calineedit")
 
 caLineEdit::caLineEdit(QWidget *parent) : QLineEdit(parent), FontScalingWidget(this)
 {
@@ -55,7 +57,7 @@ caLineEdit::caLineEdit(QWidget *parent) : QLineEdit(parent), FontScalingWidget(t
     QFontInfo info(font);
     //font.setStyleStrategy(QFont::NoAntialias);
     QString family = info.family();
-    //printf("got font %s\n", qasc(family));
+    qCDebug(caLineEditLog) << "got font" << family;
     if(!family.contains("Lucida Sans Typewriter")) {
         QFont  newfont("Monospace");   // not very nice, while a a dot inside the zero to distinguish from o
         newfont.setStyleHint(QFont::TypeWriter);
@@ -108,14 +110,17 @@ caLineEdit::caLineEdit(QWidget *parent) : QLineEdit(parent), FontScalingWidget(t
     setMaxValue(0.0);
     setFrame(false);
 
+    keepText = " ";
     unitsLast = "";
-    setTextLine(" ");
+    setTextLine(keepText);
     setValueType(false);
     //thisDatatype = caDOUBLE;
 
     setFontScaleModeL(WidthAndHeight);
     newFocusPolicy(Qt::NoFocus);
-
+#ifdef MOBILE
+    setCompleter(Q_NULLPTR);
+#endif
     d_rescaleFontOnTextChanged = true;
 
     installEventFilter(this);
@@ -342,10 +347,10 @@ bool caLineEdit::event(QEvent *e)
           setStyleSheet("");
           QString c=  palette().color(QPalette::Base).name();
           defBackColor = QColor(c);
-          //printf("default back color %s %s\n", qasc(c), qasc(this->objectName()));
+          qCDebug(caLineEditLog) << "default back color" << c << this->objectName();
           c=  palette().color(QPalette::Text).name();
           defForeColor = QColor(c);
-          //printf("default fore color %s %s\n", qasc(c), qasc(this->objectName()));
+          qCDebug(caLineEditLog) << "default fore color" << c << this->objectName();
 
           if(!defBackColor.isValid()) defBackColor = QColor(255, 248, 220, 255);
           if(!defForeColor.isValid()) defForeColor = Qt::black;
@@ -382,6 +387,7 @@ void caLineEdit::setFormat(int prec)
     if(thisPrecMode == User) {
         precision = getPrecision();
     }
+
     switch (thisFormatType) {
     case string:
     case decimal:
@@ -396,8 +402,11 @@ void caLineEdit::setFormat(int prec)
         sprintf(thisFormatC, "%s.%dlf", "%", qAbs(precision));
         break;
     case exponential:
-    case engr_notation:
         sprintf(thisFormat, "%s.%dle", "%", qAbs(precision));
+        break;
+    case engr_notation:
+        // this format is handled by a function
+        engr_notationPrecision = precision;
         break;
     case truncated:
     case enumeric:
@@ -426,6 +435,99 @@ void caLineEdit::setFormat(int prec)
         }
     }
 }
+/**
+ * Converts a double to engineering notation and writes to a char array
+ *
+ * @param buffer    Destination char array
+ * @param bufferLen Size of the buffer (including space for null terminator)
+ * @param value     The double value to convert
+ * @param precision Number of digits after the decimal point
+ * @return          Number of characters written (excluding null), or -1 on error
+ */
+int caLineEdit::toEngineeringNotation(char* buffer, size_t bufferLen, double value, int eng_precision) {
+    // Validate inputs
+    if (buffer == nullptr || bufferLen == 0) {
+        return -1;
+    }
+
+    // Clamp precision to reasonable bounds
+    if (eng_precision < 0) eng_precision = 0;
+    if (eng_precision > 15) eng_precision = 15;
+
+    // Handle special cases
+    if (qIsNaN(value)) {
+        if (bufferLen < 4) { buffer[0] = '\0'; return -1; }
+        strncpy(buffer, "nan",bufferLen);
+        return 3;
+    }
+
+    if (qIsInf(value)) {
+        const char* result = (value > 0) ? "inf" : "-inf";
+        size_t len = strlen(result);
+        if (bufferLen <= len) { buffer[0] = '\0'; return -1; }
+        strncpy(buffer, result,bufferLen);
+        return static_cast<int>(len);
+    }
+
+    if (value == 0.0) {
+        int written = snprintf(buffer, bufferLen, " %.*fe+00", eng_precision, 0.0);
+        if (written < 0 || static_cast<size_t>(written) >= bufferLen) {
+            buffer[0] = '\0';
+            return -1;
+        }
+        return written;
+    }
+
+    // Handle negative numbers
+    bool negative = value < 0;
+    double absValue = qAbs(value);
+
+    // Calculate the exponent (power of 10)
+    int exponent = static_cast<int>(qFloor(log10(absValue)));
+
+    // Adjust exponent to be a multiple of 3
+    int engExponent;
+    if (exponent >= 0) {
+        engExponent = exponent - (exponent % 3);
+    } else {
+        // Handle negative exponents correctly
+        int mod = exponent % 3;
+        engExponent = (mod == 0) ? exponent : exponent - (3 + mod);
+    }
+
+    // Calculate the mantissa
+    double mantissa = absValue / qPow(10.0, engExponent);
+
+    // Handle floating point precision issues
+    // Mantissa should be in range [1, 1000)
+    if (mantissa >= 999.9999999999) {
+        mantissa /= 1000.0;
+        engExponent += 3;
+    } else if (mantissa < 1.0) {
+        mantissa *= 1000.0;
+        engExponent -= 3;
+    }
+    int written;
+
+    // Apply sign
+    // Format the output
+    // Format: [-]d.ddde±ee (sign + digits + decimal + precision + 'e' + sign + 2-3 digits)
+    if (negative) {
+        written = snprintf(buffer, bufferLen, "-%3.*fe%+03d",
+                           eng_precision - (exponent - engExponent), mantissa, engExponent);
+    }else{
+        written = snprintf(buffer, bufferLen, " %3.*fe%+03d",
+                           eng_precision - (exponent - engExponent), mantissa, engExponent);
+    }
+
+
+    if (written < 0 || static_cast<size_t>(written) >= bufferLen) {
+        buffer[0] = '\0';
+        return -1;
+    }
+
+    return written;
+}
 
 void caLineEdit::setValue(double value, const QString& units)
 {
@@ -438,6 +540,9 @@ void caLineEdit::setValue(double value, const QString& units)
       } else {
         snprintf(asc, MAX_STRING_LENGTH, thisFormat, value);
       }
+    } else if(thisFormatType == engr_notation and thisDatatype == caDOUBLE)  {
+        // proper handling of engineering notation!
+        toEngineeringNotation(asc, MAX_STRING_LENGTH, value, engr_notationPrecision);
     } else if (thisFormatType == user_defined_format) {
         QString pattern = QString("%[+\\- 0#]*[0-9]*([.][0-9]+)?[aefgAEFG]");
         bool isDouble=false;
@@ -523,7 +628,7 @@ void caLineEdit::setAlarmColors(short status, double value, QColor bgAtInit, QCo
     switch (Alarm) {
 
     case NO_ALARM:
-        //qDebug() << "no alarm" << kPtr->pv;
+        qCDebug(caLineEditLog) << "no alarm";
         if(thisColorMode == Alarm_Static || thisColorMode == Alarm_Default) {
             c = AL_GREEN;
             if(thisAlarmHandling == onForeground) setForeAndBackground(c, bgAtInit, thisFrameColor);
@@ -534,7 +639,7 @@ void caLineEdit::setAlarmColors(short status, double value, QColor bgAtInit, QCo
         break;
 
     case MINOR_ALARM:
-        //qDebug() << "minor alarm";
+        qCDebug(caLineEditLog) << "minor alarm";
         if(thisColorMode == Alarm_Static || thisColorMode == Alarm_Default) {
             c = AL_YELLOW;
             if(thisAlarmHandling == onForeground) setForeAndBackground(c, bgAtInit, thisFrameColor);
@@ -545,7 +650,7 @@ void caLineEdit::setAlarmColors(short status, double value, QColor bgAtInit, QCo
         break;
 
     case MAJOR_ALARM:
-        //qDebug() << "serious alarm" << kPtr->pv;
+        qCDebug(caLineEditLog) << "serious alarm";
         if(thisColorMode == Alarm_Static || thisColorMode == Alarm_Default) {
             c = AL_RED;
             if(thisAlarmHandling == onForeground) setForeAndBackground(c, bgAtInit, thisFrameColor);
@@ -556,7 +661,7 @@ void caLineEdit::setAlarmColors(short status, double value, QColor bgAtInit, QCo
         break;
 
     case INVALID_ALARM:
-        //qDebug() << "invalid alarm";
+        qCDebug(caLineEditLog) << "invalid alarm";
         if(thisColorMode == Alarm_Static) {
             c =AL_WHITE;
             if(thisAlarmHandling == onForeground) setForeAndBackground(c, bgAtInit, thisFrameColor);
@@ -567,12 +672,12 @@ void caLineEdit::setAlarmColors(short status, double value, QColor bgAtInit, QCo
         break;
 
     case NOTCONNECTED:
-        //qDebug() << "no connection";
+        qCDebug(caLineEditLog) << "no connection";
         forceForeAndBackground(AL_WHITE, AL_WHITE, thisFrameColor);
         break;
 
     default:
-        //qDebug() << "Alarm default" << status;
+        qCDebug(caLineEditLog) << "Alarm default" << status;
         if(thisColorMode == Alarm_Static) {
             c = AL_DEFAULT;
             if(thisAlarmHandling == onForeground) setForeAndBackground(c, bgAtInit, thisFrameColor);
@@ -598,21 +703,36 @@ void caLineEdit::updateAlarmColors()
 void caLineEdit::setTextLine(const QString &txt)
 {
     int pos;
-    if(QLineEdit::text() == txt) {  // accelerate things
+    if(keepText == txt) {  // accelerate things
         return;
     }
     pos = cursorPosition();
-    QLineEdit::setText(txt);
-    setCursorPosition(pos);
-    //printf("settext: %s <%s> <%s> cursor@%d\n", qasc(thisPV),  qasc(txt), pos);
 
-    if(QLineEdit::text().size() != txt.size()) {
-       FontScalingWidget::rescaleFont(text(), d_savedTextSpace);
+    qCDebug(caLineEditLog) << "settext:" << thisPV << "<" << txt << ">" << "<" << keepText << ">" << "cursor@" << pos;
+
+    if(keepText.size() != txt.size()) {
+       FontScalingWidget::rescaleFont(txt, d_savedTextSpace);
+       QLineEdit::setText(txt);
+       repaint();
+    }else{
+       QLineEdit::setText(txt);
     }
 
+    keepText = txt;
+    qCDebug(caLineEditLog) << "settext:" << thisPV << "<" << txt << ">" << "<" << keepText << ">" << "cursor@" << pos;
 }
 
-
+/* attempt to improve performance
+void caLineEdit::setTextLine(const QString &txt)
+{
+    if(keepText == txt) return;
+    if(keepText.size() != txt.size()) {
+        FontScalingWidget::rescaleFont(txt, d_savedTextSpace);
+    }
+    keepText = txt;
+    repaint();
+}
+*/
 
 void caLineEdit::forceText(const QString &txt)
 {
@@ -647,7 +767,7 @@ QSize caLineEdit::sizeHint() const
     int w = QMETRIC_QT456_FONT_WIDTH(fm,text());
     int h = QMETRIC_QT456_FONT_HEIGHT(fm,text());
     QSize size(w, h);
-    //printf("ESimpleLabel \e[1;33msizeHint\e[0m \"%s\" returning size w %d h %d\n", objectName(), size.width(), size.height());
+    qCDebug(caLineEditLog) << "ESimpleLabel sizeHint \"" << objectName() << "\" returning size w" << size.width() << "h" << size.height();
     return size;
 }
 
@@ -658,7 +778,8 @@ QSize caLineEdit::minimumSizeHint() const
         size = QLineEdit::minimumSizeHint();
     else
         size = sizeHint();
-    //printf("ESimpleLabel \e[0;33mminimumSizeHint\e[0m \"%s\" returning size w %d h %d\n", objectName(), size.width(), size.height());
+    qCDebug(caLineEditLog) << "ESimpleLabel minimumsizeHint \"" << objectName() << "\" returning size w" << size.width() << "h" << size.height();
+
     return size;
 }
 

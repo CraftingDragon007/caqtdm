@@ -31,6 +31,8 @@
 #include <math.h>
 #include "cagraphics.h"
 
+Q_LOGGING_CATEGORY(caGraphicsLog, "caqtdm.widgets.cagraphics")
+
 caGraphics::caGraphics( QWidget *parent) :  QWidget(parent)
 {
     QSizePolicy policy( QSizePolicy::Preferred, QSizePolicy::Preferred );
@@ -273,8 +275,8 @@ QPolygonF caGraphics::rotateObject(int degrees, int w, int h, int linesize, cons
     double resizeWidth=999.0, resizeHeight=999.0;
     QTransform transform = QTransform().rotate(degrees);
     QPolygonF rotated = transform.map(object);
-    //printf("w,h of object  %f %f\n",object.boundingRect().width(), object.boundingRect().height());
-    //printf("w,h of rotated %f %f\n",rotated.boundingRect().width(), rotated.boundingRect().height());
+    qCDebug(caGraphicsLog) << "w,h of object" << object.boundingRect().width() << object.boundingRect().height();
+    qCDebug(caGraphicsLog) << "w,h of rotated" << rotated.boundingRect().width() << rotated.boundingRect().height();
 
     // calculate resize factor so that polygon will fit into the designer rectangle
     if(rotated.boundingRect().width() > 0) {
@@ -284,24 +286,24 @@ QPolygonF caGraphics::rotateObject(int degrees, int w, int h, int linesize, cons
       resizeHeight = (double)(h) / rotated.boundingRect().height();
     }
     double resize = qMin(resizeWidth, resizeHeight);
-    //printf("resize %f %f final=%f\n",resizeWidth, resizeHeight, resize);
+    qCDebug(caGraphicsLog) << "resize" << resizeWidth << resizeHeight << "final=" << resize;
     transform = QTransform().scale(resize, resize);
     rotated = transform.map(rotated);
 
     // get center of rotated polygon
     double centerX = rotated.boundingRect().x() + rotated.boundingRect().width()/2.0;
     double centerY = rotated.boundingRect().y() + rotated.boundingRect().height()/2.0;
-    //printf("center of rotated polygon %f %f\n", centerX, centerY);
+    qCDebug(caGraphicsLog) << "center of rotated polygon" << centerX <<centerY;
 
     // get center of canvas
     double centerXorg = w/2.0;
     double centerYorg = h/2.0;
-    //printf("center of canvas %f %f\n", centerXorg, centerYorg);
+    qCDebug(caGraphicsLog) << "center of canvas" << centerXorg << centerYorg;
 
     // calculate translation
     double translateX = centerX - centerXorg - linesize/2;
     double translateY = centerY - centerYorg - linesize/2;
-    //printf("translate %f %f\n", translateX, translateY);
+    qCDebug(caGraphicsLog) << "translate %f %f" << translateX << translateY;
 
     transform = QTransform().translate(-translateX, -translateY);
     rotated = transform.map(rotated);

@@ -26,7 +26,7 @@
 #ifndef QTCONTROLS_UTILITIES_PLUGIN_H
 #define QTCONTROLS_UTILITIES_PLUGIN_H
 
-#include <qglobal.h>
+#include <QtGlobal>
 #if QT_VERSION > 0x050400
     #include <QtUiPlugin/QDesignerCustomWidgetInterface>
 #else

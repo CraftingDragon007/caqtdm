@@ -1,0 +1,403 @@
+name: caQtDM Android Build
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths-ignore:
+      - 'caQtDM_docs/**'
+      - 'caQtDM_Tests/**'
+  schedule: # Daily at 2am
+    - cron: '0 2 * * *'
+
+env:
+  QT_VERSION: 6.11.1
+  OPENSSL_VERSION: 3.5.5
+  QWT_VERSION: 6.3
+  EPICS_VERSION: R7.0.10
+  ANDROID_API: "36"
+  ANDROID_SSL_API: "28"
+  ANDROID_NDK_VERSION: "27.2.12479018"
+  BUILD_TYPE: debug
+  ANDROID_ABI: arm64-v8a
+
+  DEPS_ROOT: ${{ github.workspace }}/.ci-cache/deps
+  OPENSSL_ANDROID_PREFIX: ${{ github.workspace }}/.ci-cache/deps/openssl-android
+  QWT_INSTALL: ${{ github.workspace }}/.ci-cache/deps/qwt-android
+  EPICS_BASE: ${{ github.workspace }}/.ci-cache/deps/epics-base
+  QT_ROOT: ${{ github.workspace }}/.ci-cache/Qt
+  QT_HOST_ROOT: ${{ github.workspace }}/.ci-cache/Qt/6.11.1/gcc_64
+  QT_ANDROID_ROOT: ${{ github.workspace }}/.ci-cache/Qt/6.11.1/android_arm64_v8a
+  QT_SRC_ROOT: ${{ github.workspace }}/.ci-cache/qt-src
+
+  CAQTDM_NORPATH: "1"
+  CAQTDM_GPS: "1"
+  CAQTDM_MODBUS: "1"
+  CAQTDM_OPCUA: "1"
+
+jobs:
+  build-qt:
+    name: Build Qt Cache
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - name: Restore Qt source cache
+        id: cache-qt
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.QT_ROOT }}
+          key: qt-src-build-${{ runner.os }}-qt${{ env.QT_VERSION }}-ndk${{ env.ANDROID_NDK_VERSION }}-abi${{ env.ANDROID_ABI }}-openssl${{ env.OPENSSL_VERSION }}-sslapi${{ env.ANDROID_SSL_API }}
+
+      - name: Restore OpenSSL Android cache
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.OPENSSL_ANDROID_PREFIX }}
+          key: android-openssl-${{ runner.os }}-${{ env.OPENSSL_VERSION }}-ndk${{ env.ANDROID_NDK_VERSION }}-api${{ env.ANDROID_SSL_API }}
+
+      - name: Checkout repository
+        if: steps.cache-qt.outputs.cache-hit != 'true'
+        uses: actions/checkout@v6
+
+      - name: Install Linux build tools
+        if: steps.cache-qt.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            ninja-build \
+            perl \
+            python3 \
+            unzip \
+            rsync
+
+      - name: Set up Java
+        if: steps.cache-qt.outputs.cache-hit != 'true'
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        if: steps.cache-qt.outputs.cache-hit != 'true'
+        uses: android-actions/setup-android@v4
+
+      - name: Install Android packages
+        if: steps.cache-qt.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          set +o pipefail
+          yes | sdkmanager --licenses >/dev/null
+          set -o pipefail
+          sdkmanager \
+            "platform-tools" \
+            "platforms;android-${ANDROID_API}" \
+            "build-tools;36.0.0" \
+            "ndk;${ANDROID_NDK_VERSION}" \
+            "cmdline-tools;latest"
+
+      - name: Pin exact NDK path
+        if: steps.cache-qt.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          test -d "${ANDROID_SDK_ROOT}/ndk/${ANDROID_NDK_VERSION}"
+          echo "ANDROID_NDK_ROOT=${ANDROID_SDK_ROOT}/ndk/${ANDROID_NDK_VERSION}" >> "$GITHUB_ENV"
+
+      - name: Cache OpenSSL Android build
+        if: steps.cache-qt.outputs.cache-hit != 'true'
+        id: cache-openssl
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.OPENSSL_ANDROID_PREFIX }}
+          key: android-openssl-${{ runner.os }}-${{ env.OPENSSL_VERSION }}-ndk${{ env.ANDROID_NDK_VERSION }}-api${{ env.ANDROID_SSL_API }}
+
+      - name: Build OpenSSL for Android
+        if: steps.cache-qt.outputs.cache-hit != 'true' && steps.cache-openssl.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          curl -fsSL "https://github.com/openssl/openssl/releases/download/openssl-${OPENSSL_VERSION}/openssl-${OPENSSL_VERSION}.tar.gz" -o "${RUNNER_TEMP}/openssl-${OPENSSL_VERSION}.tar.gz"
+          tar -xf "${RUNNER_TEMP}/openssl-${OPENSSL_VERSION}.tar.gz" -C "${RUNNER_TEMP}"
+          cd "${RUNNER_TEMP}/openssl-${OPENSSL_VERSION}"
+          export PATH="${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin:${PATH}"
+          ./Configure android-arm64 -D__ANDROID_API__=${ANDROID_SSL_API} shared --prefix="${OPENSSL_ANDROID_PREFIX}"
+          make -j"$(nproc)"
+          make install_sw
+
+      - name: Verify OpenSSL Android artifacts
+        if: steps.cache-qt.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          test -f "${OPENSSL_ANDROID_PREFIX}/lib/libssl.so"
+          test -f "${OPENSSL_ANDROID_PREFIX}/lib/libcrypto.so"
+          test -d "${OPENSSL_ANDROID_PREFIX}/include"
+
+      - name: Build Qt host + Android from source
+        if: steps.cache-qt.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          sudo apt-get install -y \
+            bison flex gperf \
+            libfontconfig1-dev libfreetype6-dev \
+            libx11-dev libx11-xcb-dev libxext-dev libxfixes-dev libxi-dev libxrender-dev \
+            libxcb1-dev libxcb-glx0-dev libxcb-keysyms1-dev libxcb-image0-dev libxcb-shm0-dev \
+            libxcb-icccm4-dev libxcb-sync-dev libxcb-xfixes0-dev libxcb-shape0-dev libxcb-randr0-dev \
+            libxcb-render-util0-dev libxcb-util-dev libxcb-xinerama0-dev libxcb-xkb-dev \
+            libxkbcommon-dev libxkbcommon-x11-dev libdbus-1-dev libgl1-mesa-dev
+
+          mkdir -p "${QT_SRC_ROOT}" "${QT_ROOT}"
+          QT_TARBALL="qt-everywhere-src-${QT_VERSION}.tar.xz"
+          QT_MAJOR_MINOR="$(echo "${QT_VERSION}" | cut -d. -f1,2)"
+          QT_URL="https://download.qt.io/official_releases/qt/${QT_MAJOR_MINOR}/${QT_VERSION}/single/${QT_TARBALL}"
+          curl -fsSL "${QT_URL}" -o "${RUNNER_TEMP}/${QT_TARBALL}"
+          tar -xf "${RUNNER_TEMP}/${QT_TARBALL}" -C "${QT_SRC_ROOT}"
+
+          QT_SRC_DIR="${QT_SRC_ROOT}/qt-everywhere-src-${QT_VERSION}"
+
+          mkdir -p "${RUNNER_TEMP}/qt-build-host"
+          cd "${RUNNER_TEMP}/qt-build-host"
+          "${QT_SRC_DIR}/configure" -prefix "${QT_HOST_ROOT}" -release -opensource -confirm-license -nomake tests -nomake examples -skip qtwebengine
+          cmake --build . --parallel
+          cmake --install .
+
+          mkdir -p "${RUNNER_TEMP}/qt-build-android"
+          cd "${RUNNER_TEMP}/qt-build-android"
+          "${QT_SRC_DIR}/configure" \
+            -prefix "${QT_ANDROID_ROOT}" \
+            -qt-host-path "${QT_HOST_ROOT}" \
+            -xplatform android-clang \
+            -android-sdk "${ANDROID_SDK_ROOT}" \
+            -android-ndk "${ANDROID_NDK_ROOT}" \
+            -android-abis "${ANDROID_ABI}" \
+            -openssl-linked \
+            -release -opensource -confirm-license \
+            -nomake tests -nomake examples -skip qtwebengine \
+            -- \
+            -DOPENSSL_ROOT="${OPENSSL_ANDROID_PREFIX}" \
+            -DOPENSSL_INCLUDE_DIR="${OPENSSL_ANDROID_PREFIX}/include" \
+            -DOPENSSL_CRYPTO_LIBRARY="${OPENSSL_ANDROID_PREFIX}/lib/libcrypto.so" \
+            -DOPENSSL_SSL_LIBRARY="${OPENSSL_ANDROID_PREFIX}/lib/libssl.so"
+          cmake --build . --parallel
+          cmake --install .
+
+  build-android:
+    name: Build Android APK
+    runs-on: ubuntu-24.04
+    needs: build-qt
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install Linux build tools
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build perl python3 unzip rsync
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle cache
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Install Android packages
+        run: |
+          set -euo pipefail
+          set +o pipefail
+          yes | sdkmanager --licenses >/dev/null
+          set -o pipefail
+          sdkmanager "platform-tools" "platforms;android-${ANDROID_API}" "build-tools;36.0.0" "ndk;${ANDROID_NDK_VERSION}" "cmdline-tools;latest"
+
+      - name: Pin exact NDK path
+        run: |
+          set -euo pipefail
+          test -d "${ANDROID_SDK_ROOT}/ndk/${ANDROID_NDK_VERSION}"
+          echo "ANDROID_NDK_ROOT=${ANDROID_SDK_ROOT}/ndk/${ANDROID_NDK_VERSION}" >> "$GITHUB_ENV"
+
+      - name: Restore Qt source cache
+        id: cache-qt
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.QT_ROOT }}
+          key: qt-src-build-${{ runner.os }}-qt${{ env.QT_VERSION }}-ndk${{ env.ANDROID_NDK_VERSION }}-abi${{ env.ANDROID_ABI }}-openssl${{ env.OPENSSL_VERSION }}-sslapi${{ env.ANDROID_SSL_API }}
+
+      - name: Restore OpenSSL Android cache
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.OPENSSL_ANDROID_PREFIX }}
+          key: android-openssl-${{ runner.os }}-${{ env.OPENSSL_VERSION }}-ndk${{ env.ANDROID_NDK_VERSION }}-api${{ env.ANDROID_SSL_API }}
+
+      - name: Verify Qt cache restored
+        run: |
+          set -euo pipefail
+          test -x "${QT_ANDROID_ROOT}/bin/qmake"
+          test -x "${QT_HOST_ROOT}/bin/qmake6"
+
+      - name: Verify OpenSSL Android artifacts restored
+        run: |
+          set -euo pipefail
+          test -f "${OPENSSL_ANDROID_PREFIX}/lib/libssl.so"
+          test -f "${OPENSSL_ANDROID_PREFIX}/lib/libcrypto.so"
+
+      - name: Cache Qwt Android deps
+        id: cache-qwt
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.QWT_INSTALL }}
+          key: android-qwt-${{ runner.os }}-qt${{ env.QT_VERSION }}-qwt${{ env.QWT_VERSION }}-abi${{ env.ANDROID_ABI }}
+
+      - name: Cache EPICS Android deps
+        id: cache-epics
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.EPICS_BASE }}
+          key: android-epics-${{ runner.os }}-epics${{ env.EPICS_VERSION }}-ndk${{ env.ANDROID_NDK_VERSION }}-abi${{ env.ANDROID_ABI }}-${{ hashFiles('ci/epics-android/**') }}
+
+      - name: Build Qwt for Android
+        if: steps.cache-qwt.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          git clone https://git.code.sf.net/p/qwt/git --single-branch --branch qwt-${QWT_VERSION} "${RUNNER_TEMP}/qwt-src"
+          cd "${RUNNER_TEMP}/qwt-src"
+          sed -e '/^\s*QWT_INSTALL_PREFIX/ s|=.*|= /usr|' \
+              -e '/^QWT_INSTALL_DOCS/ s|/doc|/share/doc/qwt|' \
+              -e '/^QWT_INSTALL_HEADERS/ s|include|&/qwt|' \
+              -e '/^QWT_INSTALL_PLUGINS/ s|plugins/designer|lib/qt6/&|' \
+              -e '/^QWT_INSTALL_FEATURES/ s|features|lib/qt6/mkspecs/&|' \
+              -i qwtconfig.pri
+          grep '^QWT_INSTALL_' qwtconfig.pri
+          sed -i 's/^QWT_CONFIG\s*+=\s*QwtExamples/# &/' qwtconfig.pri || true
+          sed -i 's/^QWT_CONFIG\s*+=\s*QwtPlayground/# &/' qwtconfig.pri || true
+          sed -i 's/^QWT_CONFIG\s*+=\s*QwtTests/# &/' qwtconfig.pri || true
+          sed -i 's/^QWT_CONFIG\s*+=\s*QwtDesigner/# &/' qwtconfig.pri || true
+          sed -i 's/^QWT_CONFIG\s*+=\s*QwtDll/# &/' qwtconfig.pri || true
+          grep -q '^QWT_CONFIG\s*+=\s*QwtStatic' qwtconfig.pri || echo 'QWT_CONFIG += QwtStatic' >> qwtconfig.pri
+          "${QT_ANDROID_ROOT}/bin/qmake" qwt.pro
+          make -j"$(nproc)"
+          QWT_STAGE="${RUNNER_TEMP}/qwt-stage"
+          rm -rf "${QWT_STAGE}"
+          make INSTALL_ROOT="${QWT_STAGE}" install
+
+          rm -rf "${QWT_INSTALL}"
+          mkdir -p "${QWT_INSTALL}/lib"
+
+          if [ -d "${QWT_STAGE}/libs/${ANDROID_ABI}" ]; then
+            cp -a "${QWT_STAGE}/libs/${ANDROID_ABI}/." "${QWT_INSTALL}/lib/"
+          fi
+
+          if [ -d "${QWT_STAGE}/usr/lib" ]; then
+            cp -a "${QWT_STAGE}/usr/lib/." "${QWT_INSTALL}/lib/"
+          fi
+
+          cp -a "${QWT_STAGE}/usr/include/qwt" "${QWT_INSTALL}/include"
+          mkdir -p "${QWT_INSTALL}/features"
+          cp -a "${QWT_STAGE}/usr/lib/qt6/mkspecs/features"/*.prf "${QWT_INSTALL}/features/" || true
+
+          test -f "${QWT_INSTALL}/lib/libqwt_${ANDROID_ABI}.a"
+
+          ls -lah "${QWT_INSTALL}/lib"
+
+      - name: Build EPICS for Android
+        if: steps.cache-epics.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --recurse-submodules --branch "${EPICS_VERSION}" https://github.com/epics-base/epics-base.git "${RUNNER_TEMP}/epics-src"
+          cd "${RUNNER_TEMP}/epics-src"
+          cp "${GITHUB_WORKSPACE}/ci/epics-android/configure/CONFIG_SITE.local" configure/CONFIG_SITE.local
+          cp "${GITHUB_WORKSPACE}/ci/epics-android/configure/os/CONFIG.Common.android-arm64-v8a" configure/os/CONFIG.Common.android-arm64-v8a
+          cp "${GITHUB_WORKSPACE}/ci/epics-android/configure/os/CONFIG.Common.androidCommon" configure/os/CONFIG.Common.androidCommon
+          cp "${GITHUB_WORKSPACE}/ci/epics-android/configure/os/CONFIG_SITE.linux-x86_64.android-arm64-v8a" configure/os/CONFIG_SITE.linux-x86_64.android-arm64-v8a
+          rm -rf modules/libcom/src/osi/os/android
+          cp -R "${GITHUB_WORKSPACE}/ci/epics-android/modules/libcom/src/osi/os/android" modules/libcom/src/osi/os/android
+
+          CLANG_VER="$(ls -1 "${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/lib/clang" | sort -V | tail -n 1)"
+          sed -i "s#^CLANG_INTERNAL\s*=.*#CLANG_INTERNAL = \$(GNU_DIR)/lib/clang/${CLANG_VER}#" configure/os/CONFIG_SITE.linux-x86_64.android-arm64-v8a
+
+          grep -E '^(NDK|ABI|GNU|CLANG_INTERNAL|TARGET_OPTS)' configure/os/CONFIG_SITE.linux-x86_64.android-arm64-v8a
+          make -j1
+          mkdir -p "${EPICS_BASE}/include"
+          rsync -a include/ "${EPICS_BASE}/include/"
+          mkdir -p "${EPICS_BASE}/lib/android-arm64-v8a"
+          rsync -a lib/android-arm64-v8a/ "${EPICS_BASE}/lib/android-arm64-v8a/"
+
+      - name: Export caQtDM build environment
+        run: |
+          set -euo pipefail
+          {
+            echo "QTHOME=${QT_ANDROID_ROOT}"
+            echo "QMAKESPECS=${QT_ANDROID_ROOT}/mkspecs/android-clang"
+            echo "QWTHOME=${QWT_INSTALL}"
+            echo "QWTINCLUDE=${QWT_INSTALL}/include"
+            echo "QWTLIB=${QWT_INSTALL}/lib"
+            echo "QWTVERSION=6.1"
+            echo "QWTLIBNAME=qwt"
+            echo "EPICS_BASE=${EPICS_BASE}"
+            echo "EPICS_HOST_ARCH=android-arm64-v8a"
+            echo "EPICSINCLUDE=${EPICS_BASE}/include"
+            echo "EPICSLIB=${EPICS_BASE}/lib/android-arm64-v8a"
+            echo "EPICSEXTENSIONS=/usr/lib/epics/extensions"
+            echo "QTCONTROLS_LIBS=${GITHUB_WORKSPACE}/caQtDM_Binaries"
+            echo "CAQTDM_COLLECT=${GITHUB_WORKSPACE}/caQtDM_Binaries"
+            echo "QTBASE=${GITHUB_WORKSPACE}/caQtDM_Binaries"
+            echo "CAQTDM_CA_ARCHIVELIBS=${GITHUB_WORKSPACE}/caQtDM_Binaries"
+            echo "CAQTDM_LOGGING_ARCHIVELIBS=${GITHUB_WORKSPACE}/caQtDM_Binaries"
+            echo "QTDM_LIBINSTALL=/usr/lib/epics/extensions/lib/linux-x86_64"
+            echo "QTDM_BININSTALL=/usr/lib/epics/extensions/lib/linux-x86_64"
+            echo "PYTHONVERSION=3"
+            echo "PYTHONINCLUDE=/usr/include/python3"
+            echo "PYTHONLIB=/usr/lib"
+            echo "ZMQ=/usr"
+            echo "ZMQINC=/usr/include"
+            echo "ZMQLIB=/usr/lib"
+            echo "SSLLIB=${OPENSSL_ANDROID_PREFIX}/lib"
+          } >> "$GITHUB_ENV"
+
+      - name: Build caQtDM
+        run: |
+          set -euo pipefail
+          "${QTHOME}/bin/qmake" all.pro CONFIG+=${BUILD_TYPE}
+          make -j"$(nproc)"
+
+      - name: Build APK with androiddeployqt
+        run: |
+          set -euo pipefail
+          test -f caQtDM_Viewer/android-caQtDM-deployment-settings.json
+          test -x "${QT_HOST_ROOT}/bin/androiddeployqt"
+          mkdir -p "${GITHUB_WORKSPACE}/caQtDM_Viewer/src/Android/assets"
+          cp -f "${GITHUB_WORKSPACE}/caQtDM_Viewer/caQtDM_IOS_Config.xml" \
+                "${GITHUB_WORKSPACE}/caQtDM_Viewer/src/Android/assets/caQtDM_IOS_Config.xml"
+          mkdir -p "${GITHUB_WORKSPACE}/build/android"
+          mkdir -p "${GITHUB_WORKSPACE}/build/android/libs/${ANDROID_ABI}"
+          cp -f "${GITHUB_WORKSPACE}/caQtDM_Binaries/libcaQtDM_${ANDROID_ABI}.so" \
+                "${GITHUB_WORKSPACE}/build/android/libs/${ANDROID_ABI}/libcaQtDM_${ANDROID_ABI}.so"
+          "${QT_HOST_ROOT}/bin/androiddeployqt" \
+            --input caQtDM_Viewer/android-caQtDM-deployment-settings.json \
+            --output "${GITHUB_WORKSPACE}/build/android" \
+            --android-platform "android-${ANDROID_API}" \
+            --debug \
+            --gradle
+
+      - name: Collect artifacts
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          find "${GITHUB_WORKSPACE}/build/android" -type f -name "*.apk" -exec cp -v {} artifacts/ \;
+          ls -lah artifacts
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: caqtdm-android-apk-${{ github.sha }}
+          path: artifacts/*.apk

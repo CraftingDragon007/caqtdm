@@ -204,6 +204,7 @@ protected:
     int getDirectionOfMouseMove(QPoint startPosition, QPoint endPosition);
     QColor invertColor(QColor color);
     CaQtDM_Lib_Interface* caDataInterface;
+    int toEngineeringNotation(char* buffer, size_t bufferLen, double value, int eng_precision);
 
 private:
     QString thisPV, thisText;
@@ -218,6 +219,7 @@ private:
     bool m_UnitMode;
     double m_Maximum, m_Minimum;
     int m_Precision;
+    int engr_notationPrecision;
     SourceMode m_PrecMode;
     SourceMode m_LimitsMode;
     FormatType m_FormatType;

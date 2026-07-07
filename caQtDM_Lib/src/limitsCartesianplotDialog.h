@@ -60,7 +60,7 @@
  class QTextEdit;
  class QWidget;
 
- class limitsCartesianplotDialog : public QWidget
+class CAQTDM_LIBSHARED_EXPORT limitsCartesianplotDialog : public QWidget
 {
      Q_OBJECT
 

@@ -47,13 +47,6 @@
 #if QWT_VERSION >= 0x060100
 #include <qwt_scale_div.h>
 #endif
-#include <time.h>
-
-#ifndef MOBILE_ANDROID
-#include <sys/timeb.h>
-#else
-#include <androidtimeb.h>
-#endif
 
 #include "mdaReader.h"
 
@@ -292,7 +285,6 @@ private:
     bool m_heightDefined;
     int m_width, m_height;
 
-    struct timeb timeRef;
     int savedSize;
     int savedWidth;
     int savedHeight;

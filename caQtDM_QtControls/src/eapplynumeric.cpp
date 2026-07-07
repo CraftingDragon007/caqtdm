@@ -29,6 +29,8 @@
 #include <ESimpleLabel>
 #include <QResizeEvent>
 
+Q_LOGGING_CATEGORY(eApplyNumericLog, "caqtdm.widgets.eapplynumeric")
+
 EApplyNumeric::EApplyNumeric(QWidget *parent, int i, int d, Qt::Orientation pos) : QWidget(parent), FloatDelegate()
 {
 	box = NULL;
@@ -56,7 +58,7 @@ void EApplyNumeric::setDigitsFontScaleEnabled(bool en)
 	data->setDigitsFontScaleEnabled(d_fontScaleEnabled ? ESimpleLabel::Height : ESimpleLabel::None);
   }
   else
-        printf("EApplyNumeric ENumeric not initialized");
+        qCWarning(eApplyNumericLog) << "EApplyNumeric ENumeric not initialized";
 }
 
 void EApplyNumeric::silentSetValue(double v)
