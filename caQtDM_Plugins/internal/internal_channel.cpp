@@ -43,6 +43,8 @@ InternalChannel::InternalChannel()
     , periodMs(1000)
     , drvl()
     , drvh()
+    , hopr()
+    , lopr()
     , low()
     , lolo()
     , high()
@@ -88,6 +90,8 @@ static bool parseFieldName(const QString &name, InternalChannel::Field *field)
     else if(upper == "HIHI") *field = InternalChannel::FieldHihi;
     else if(upper == "DRVL") *field = InternalChannel::FieldDrvl;
     else if(upper == "DRVH") *field = InternalChannel::FieldDrvh;
+    else if(upper == "HOPR") *field = InternalChannel::FieldHopr;
+    else if(upper == "LOPR") *field = InternalChannel::FieldLopr;
     else if(upper == "PREC") *field = InternalChannel::FieldPrec;
     else if(upper == "EGU")  *field = InternalChannel::FieldEgu;
     else if(upper == "NELM") *field = InternalChannel::FieldNelm;
@@ -306,6 +310,8 @@ bool InternalChannel::configure(const QString &json, QString *errorString)
     if(object.contains("period")) periodMs = qMax(10, (int) object["period"].toDouble());
     if(object.contains("drvl"))   drvl.set(object["drvl"].toDouble());
     if(object.contains("drvh"))   drvh.set(object["drvh"].toDouble());
+    if(object.contains("hopr"))   hopr.set(object["hopr"].toDouble());
+    if(object.contains("lopr"))   lopr.set(object["lopr"].toDouble());
     if(object.contains("low"))    low.set(object["low"].toDouble());
     if(object.contains("lolo"))   lolo.set(object["lolo"].toDouble());
     if(object.contains("high"))   high.set(object["high"].toDouble());
@@ -521,6 +527,8 @@ void InternalChannel::setFieldValue(Field field, double rdata, qint32 idata, con
     case FieldHihi: hihi.set(rdata); updateAlarmState(); break;
     case FieldDrvl: drvl.set(rdata); break;
     case FieldDrvh: drvh.set(rdata); break;
+    case FieldHopr: hopr.set(rdata); break;
+    case FieldLopr: lopr.set(rdata); break;
     case FieldPrec: precision = (short) ((rdata != 0.0) ? rdata : idata); break;
     case FieldEgu:  units = sdata; break;
     case FieldNord: nord = qBound(0, (idata != 0) ? (int) idata : (int) rdata, nelm); break;
@@ -541,6 +549,8 @@ QVariant InternalChannel::fieldVariant(Field field) const
     case FieldHihi: return hihi.value;
     case FieldDrvl: return drvl.value;
     case FieldDrvh: return drvh.value;
+    case FieldHopr: return hopr.value;
+    case FieldLopr: return lopr.value;
     case FieldPrec: return (int) precision;
     case FieldEgu:  return units;
     case FieldNelm: return nelm;
@@ -615,6 +625,8 @@ void InternalChannel::fillKnobDataField(knobData *kData, Field field) const
         case FieldHihi: fieldValue = hihi.value; break;
         case FieldDrvl: fieldValue = drvl.value; break;
         case FieldDrvh: fieldValue = drvh.value; break;
+        case FieldHopr: fieldValue = hopr.value; break;
+        case FieldLopr: fieldValue = lopr.value; break;
         case FieldPrec: fieldValue = (double) precision; break;
         default: break;
         }
@@ -711,14 +723,21 @@ void InternalChannel::fillKnobData(knobData *kData) const
     kData->edata.nelm = nelm;
     qstrncpy(kData->edata.units, units.toLatin1().constData(), caqtdm_string_t_length);
 
-    // drive limits become display and control limits
-    if(drvl.defined) {
-        kData->edata.lower_disp_limit = drvl.value;
-        kData->edata.lower_ctrl_limit = drvl.value;
+    // drive limits become control limits
+    if(drvl.defined) kData->edata.lower_ctrl_limit = drvl.value;
+    if(drvh.defined) kData->edata.upper_ctrl_limit = drvh.value;
+
+    // operating range becomes the display/input limits; falls back to the drive
+    // limits when not configured, and is clamped into the drive range otherwise
+    if(lopr.defined || drvl.defined) {
+        double value = lopr.defined ? lopr.value : drvl.value;
+        if(drvl.defined) value = qMax(value, drvl.value);
+        kData->edata.lower_disp_limit = value;
     }
-    if(drvh.defined) {
-        kData->edata.upper_disp_limit = drvh.value;
-        kData->edata.upper_ctrl_limit = drvh.value;
+    if(hopr.defined || drvh.defined) {
+        double value = hopr.defined ? hopr.value : drvh.value;
+        if(drvh.defined) value = qMin(value, drvh.value);
+        kData->edata.upper_disp_limit = value;
     }
 
     // alarm limits and the resulting severity/status for the current value

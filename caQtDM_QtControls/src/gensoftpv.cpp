@@ -114,6 +114,8 @@ QString genSoftPV::buildConfigJSON() const
 
     addLimit(object, "drvl", thisDrvl);
     addLimit(object, "drvh", thisDrvh);
+    addLimit(object, "hopr", thisHopr);
+    addLimit(object, "lopr", thisLopr);
     addLimit(object, "low", thisLow);
     addLimit(object, "lolo", thisLolo);
     addLimit(object, "high", thisHigh);

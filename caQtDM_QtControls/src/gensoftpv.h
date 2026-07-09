@@ -49,6 +49,8 @@ class QTCON_EXPORT genSoftPV : public ESimpleLabel
     // EPICS limits; empty string = not defined
     Q_PROPERTY(QString drvl READ getDrvl WRITE setDrvl)
     Q_PROPERTY(QString drvh READ getDrvh WRITE setDrvh)
+    Q_PROPERTY(QString hopr READ getHopr WRITE setHopr)
+    Q_PROPERTY(QString lopr READ getLopr WRITE setLopr)
     Q_PROPERTY(QString low READ getLow WRITE setLow)
     Q_PROPERTY(QString lolo READ getLolo WRITE setLolo)
     Q_PROPERTY(QString high READ getHigh WRITE setHigh)
@@ -105,6 +107,10 @@ public:
     void setDrvl(QString const &limit) {thisDrvl = limit;}
     QString getDrvh() const {return thisDrvh;}
     void setDrvh(QString const &limit) {thisDrvh = limit;}
+    QString getHopr() const {return thisHopr;}
+    void setHopr(QString const &limit) {thisHopr = limit;}
+    QString getLopr() const {return thisLopr;}
+    void setLopr(QString const &limit) {thisLopr = limit;}
     QString getLow() const {return thisLow;}
     void setLow(QString const &limit) {thisLow = limit;}
     QString getLolo() const {return thisLolo;}
@@ -146,7 +152,7 @@ private:
     QString thisValue;
     double thisStep;
     int thisPeriod;
-    QString thisDrvl, thisDrvh, thisLow, thisLolo, thisHigh, thisHihi;
+    QString thisDrvl, thisDrvh, thisHopr, thisLopr, thisLow, thisLolo, thisHigh, thisHihi;
     bool thisoverflow;
     bool thisPersistent;
     int thisNelm;

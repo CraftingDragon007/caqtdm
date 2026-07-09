@@ -90,23 +90,33 @@ GenSoftPVDialog::GenSoftPVDialog(QWidget *widget, QWidget *parent) : QDialog(par
 
     drvlLine = new QLineEdit(this);
     drvhLine = new QLineEdit(this);
+    loprLine = new QLineEdit(this);
+    hoprLine = new QLineEdit(this);
     lowLine = new QLineEdit(this);
     loloLine = new QLineEdit(this);
     highLine = new QLineEdit(this);
     hihiLine = new QLineEdit(this);
 
+    QString oprTip = tr("operating range, clamped into the DRVL/DRVH range; limits widget input");
+    loprLine->setToolTip(oprTip);
+    hoprLine->setToolTip(oprTip);
+
     limitsGrid->addWidget(new QLabel(tr("DRVL:"), this), 0, 0);
     limitsGrid->addWidget(drvlLine, 0, 1);
     limitsGrid->addWidget(new QLabel(tr("DRVH:"), this), 0, 2);
     limitsGrid->addWidget(drvhLine, 0, 3);
-    limitsGrid->addWidget(new QLabel(tr("LOW:"), this), 1, 0);
-    limitsGrid->addWidget(lowLine, 1, 1);
-    limitsGrid->addWidget(new QLabel(tr("HIGH:"), this), 1, 2);
-    limitsGrid->addWidget(highLine, 1, 3);
-    limitsGrid->addWidget(new QLabel(tr("LOLO:"), this), 2, 0);
-    limitsGrid->addWidget(loloLine, 2, 1);
-    limitsGrid->addWidget(new QLabel(tr("HIHI:"), this), 2, 2);
-    limitsGrid->addWidget(hihiLine, 2, 3);
+    limitsGrid->addWidget(new QLabel(tr("LOPR:"), this), 1, 0);
+    limitsGrid->addWidget(loprLine, 1, 1);
+    limitsGrid->addWidget(new QLabel(tr("HOPR:"), this), 1, 2);
+    limitsGrid->addWidget(hoprLine, 1, 3);
+    limitsGrid->addWidget(new QLabel(tr("LOW:"), this), 2, 0);
+    limitsGrid->addWidget(lowLine, 2, 1);
+    limitsGrid->addWidget(new QLabel(tr("HIGH:"), this), 2, 2);
+    limitsGrid->addWidget(highLine, 2, 3);
+    limitsGrid->addWidget(new QLabel(tr("LOLO:"), this), 3, 0);
+    limitsGrid->addWidget(loloLine, 3, 1);
+    limitsGrid->addWidget(new QLabel(tr("HIHI:"), this), 3, 2);
+    limitsGrid->addWidget(hihiLine, 3, 3);
 
     mainLayout->addWidget(limitsGroup);
 
@@ -160,6 +170,8 @@ GenSoftPVDialog::GenSoftPVDialog(QWidget *widget, QWidget *parent) : QDialog(par
         periodValue->setValue(softpv->getPeriod());
         drvlLine->setText(softpv->getDrvl());
         drvhLine->setText(softpv->getDrvh());
+        loprLine->setText(softpv->getLopr());
+        hoprLine->setText(softpv->getHopr());
         lowLine->setText(softpv->getLow());
         loloLine->setText(softpv->getLolo());
         highLine->setText(softpv->getHigh());
@@ -188,6 +200,8 @@ void GenSoftPVDialog::saveState()
         cursor->setProperty("period", periodValue->value());
         cursor->setProperty("drvl", drvlLine->text().trimmed());
         cursor->setProperty("drvh", drvhLine->text().trimmed());
+        cursor->setProperty("lopr", loprLine->text().trimmed());
+        cursor->setProperty("hopr", hoprLine->text().trimmed());
         cursor->setProperty("low", lowLine->text().trimmed());
         cursor->setProperty("lolo", loloLine->text().trimmed());
         cursor->setProperty("high", highLine->text().trimmed());

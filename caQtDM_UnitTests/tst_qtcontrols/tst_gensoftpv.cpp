@@ -49,6 +49,8 @@ void TestGenSoftPV::defaultConfigIsMinimal()
     QCOMPARE(object.contains("period"), false);
     QCOMPARE(object.contains("drvl"), false);
     QCOMPARE(object.contains("drvh"), false);
+    QCOMPARE(object.contains("hopr"), false);
+    QCOMPARE(object.contains("lopr"), false);
     QCOMPARE(object.contains("low"), false);
     QCOMPARE(object.contains("lolo"), false);
     QCOMPARE(object.contains("high"), false);
@@ -74,6 +76,8 @@ void TestGenSoftPV::allFieldsAppearInConfig()
     widget.setPeriod(200);
     widget.setDrvl("0");
     widget.setDrvh("100");
+    widget.setLopr("10");
+    widget.setHopr("90");
     widget.setLow("20");
     widget.setLolo("10");
     widget.setHigh("80");
@@ -93,6 +97,8 @@ void TestGenSoftPV::allFieldsAppearInConfig()
     QCOMPARE(object.value("period").toInt(), 200);
     QCOMPARE(object.value("drvl").toDouble(), 0.0);
     QCOMPARE(object.value("drvh").toDouble(), 100.0);
+    QCOMPARE(object.value("lopr").toDouble(), 10.0);
+    QCOMPARE(object.value("hopr").toDouble(), 90.0);
     QCOMPARE(object.value("low").toDouble(), 20.0);
     QCOMPARE(object.value("lolo").toDouble(), 10.0);
     QCOMPARE(object.value("high").toDouble(), 80.0);

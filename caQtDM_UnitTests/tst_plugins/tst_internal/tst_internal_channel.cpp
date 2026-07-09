@@ -83,6 +83,10 @@ void TestInternalChannel::fieldSyntaxWorks()
     QCOMPARE(field, InternalChannel::FieldLow);
     QCOMPARE(InternalChannel::splitField("RAMP.drvh", &base, &field), true);
     QCOMPARE(field, InternalChannel::FieldDrvh);
+    QCOMPARE(InternalChannel::splitField("RAMP.hopr", &base, &field), true);
+    QCOMPARE(field, InternalChannel::FieldHopr);
+    QCOMPARE(InternalChannel::splitField("RAMP.lopr", &base, &field), true);
+    QCOMPARE(field, InternalChannel::FieldLopr);
     QCOMPARE(InternalChannel::splitField("RAMP.egu", &base, &field), true);
     QCOMPARE(field, InternalChannel::FieldEgu);
     QCOMPARE(InternalChannel::splitField("RAMP.NORD", &base, &field), true);
@@ -180,6 +184,12 @@ void TestInternalChannel::fieldWritesAndForcingWork()
     channel.setFieldValue(InternalChannel::FieldDrvl, -5.0, 0, QString());
     QCOMPARE(channel.drvl.value, -5.0);
     QCOMPARE(channel.drvl.defined, true);
+    channel.setFieldValue(InternalChannel::FieldHopr, 40.0, 0, QString());
+    QCOMPARE(channel.hopr.value, 40.0);
+    QCOMPARE(channel.hopr.defined, true);
+    channel.setFieldValue(InternalChannel::FieldLopr, -1.0, 0, QString());
+    QCOMPARE(channel.lopr.value, -1.0);
+    QCOMPARE(channel.lopr.defined, true);
 
     // NORD stays limited by NELM, NELM is read only
     InternalChannel wave;
@@ -197,7 +207,7 @@ void TestInternalChannel::fillKnobDataFieldWorks()
     QString error;
     InternalChannel channel;
     QVERIFY2(channel.configure(R"({"type":"double","val":50,"low":20,"lolo":10,"high":80,"hihi":90,
-                                   "units":"V","prec":2})", &error),
+                                   "hopr":95,"lopr":5,"units":"V","prec":2})", &error),
              qPrintable(error));
 
     // limit fields as plain doubles
@@ -207,6 +217,10 @@ void TestInternalChannel::fillKnobDataFieldWorks()
     QCOMPARE(kData.edata.rvalue, 20.0);
     channel.fillKnobDataField(&kData, InternalChannel::FieldHihi);
     QCOMPARE(kData.edata.rvalue, 90.0);
+    channel.fillKnobDataField(&kData, InternalChannel::FieldHopr);
+    QCOMPARE(kData.edata.rvalue, 95.0);
+    channel.fillKnobDataField(&kData, InternalChannel::FieldLopr);
+    QCOMPARE(kData.edata.rvalue, 5.0);
     channel.fillKnobDataField(&kData, InternalChannel::FieldPrec);
     QCOMPARE(kData.edata.rvalue, 2.0);
 
@@ -255,7 +269,7 @@ void TestInternalChannel::configureParsesAllFields()
     InternalChannel channel;
     QString error;
     bool ok = channel.configure(R"({"type":"float","mode":"counter","val":5,"step":2.5,
-                                    "period":200,"drvl":1,"drvh":9,"overflow":false,"nelm":4,
+                                    "period":200,"drvl":1,"drvh":9,"hopr":8,"lopr":2,"overflow":false,"nelm":4,
                                     "low":2,"lolo":1.5,"high":7,"hihi":8.5,
                                     "units":"mA","prec":3})", &error);
     QVERIFY2(ok, qPrintable(error));
@@ -269,6 +283,10 @@ void TestInternalChannel::configureParsesAllFields()
     QCOMPARE(channel.drvh.value, 9.0);
     QCOMPARE(channel.drvl.defined, true);
     QCOMPARE(channel.drvh.defined, true);
+    QCOMPARE(channel.hopr.value, 8.0);
+    QCOMPARE(channel.lopr.value, 2.0);
+    QCOMPARE(channel.hopr.defined, true);
+    QCOMPARE(channel.lopr.defined, true);
     QCOMPARE(channel.low.value, 2.0);
     QCOMPARE(channel.lolo.value, 1.5);
     QCOMPARE(channel.high.value, 7.0);
@@ -308,6 +326,8 @@ void TestInternalChannel::configureUsesDefaults()
     QCOMPARE(channel.periodMs, 1000);
     QCOMPARE(channel.drvl.defined, false);
     QCOMPARE(channel.drvh.defined, false);
+    QCOMPARE(channel.hopr.defined, false);
+    QCOMPARE(channel.lopr.defined, false);
     QCOMPARE(channel.low.defined, false);
     QCOMPARE(channel.lolo.defined, false);
     QCOMPARE(channel.high.defined, false);
@@ -751,6 +771,63 @@ void TestInternalChannel::fillKnobDataArraysWork()
         QCOMPARE(values[0], 'A');
         QCOMPARE(values[1], 'B');
         QCOMPARE(values[2], 'C');
+        freeKnobData(&kData);
+    }
+}
+
+void TestInternalChannel::hoprLoprWork()
+{
+    QString error;
+
+    // HOPR/LOPR within the drive range become the display/input limits,
+    // decoupled from the drive (control) limits
+    {
+        InternalChannel channel;
+        QVERIFY(channel.configure(R"({"type":"double","val":50,"drvl":0,"drvh":100,"hopr":80,"lopr":20})", &error));
+        knobData kData = makeKnobData();
+        channel.fillKnobData(&kData);
+        QCOMPARE(kData.edata.lower_disp_limit, 20.0);
+        QCOMPARE(kData.edata.upper_disp_limit, 80.0);
+        QCOMPARE(kData.edata.lower_ctrl_limit, 0.0);
+        QCOMPARE(kData.edata.upper_ctrl_limit, 100.0);
+        freeKnobData(&kData);
+    }
+
+    // HOPR/LOPR outside the drive range are clamped into it
+    {
+        InternalChannel channel;
+        QVERIFY(channel.configure(R"({"type":"double","val":50,"drvl":0,"drvh":100,"hopr":150,"lopr":-50})", &error));
+        knobData kData = makeKnobData();
+        channel.fillKnobData(&kData);
+        QCOMPARE(kData.edata.lower_disp_limit, 0.0);
+        QCOMPARE(kData.edata.upper_disp_limit, 100.0);
+        QCOMPARE(kData.edata.lower_ctrl_limit, 0.0);
+        QCOMPARE(kData.edata.upper_ctrl_limit, 100.0);
+        freeKnobData(&kData);
+    }
+
+    // without HOPR/LOPR the display limits fall back to the drive limits
+    // (regression check: identical to the pre-HOPR/LOPR behaviour)
+    {
+        InternalChannel channel;
+        QVERIFY(channel.configure(R"({"type":"double","val":50,"drvl":0,"drvh":100})", &error));
+        knobData kData = makeKnobData();
+        channel.fillKnobData(&kData);
+        QCOMPARE(kData.edata.lower_disp_limit, 0.0);
+        QCOMPARE(kData.edata.upper_disp_limit, 100.0);
+        freeKnobData(&kData);
+    }
+
+    // HOPR/LOPR without any drive limits are used as given, unclamped
+    {
+        InternalChannel channel;
+        QVERIFY(channel.configure(R"({"type":"double","val":50,"hopr":80,"lopr":20})", &error));
+        knobData kData = makeKnobData();
+        channel.fillKnobData(&kData);
+        QCOMPARE(kData.edata.lower_disp_limit, 20.0);
+        QCOMPARE(kData.edata.upper_disp_limit, 80.0);
+        QCOMPARE(kData.edata.lower_ctrl_limit, 0.0);
+        QCOMPARE(kData.edata.upper_ctrl_limit, 0.0);
         freeKnobData(&kData);
     }
 }

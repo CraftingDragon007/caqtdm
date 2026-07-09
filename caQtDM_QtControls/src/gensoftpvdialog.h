@@ -57,7 +57,7 @@ private:
     QLineEdit *valueLine;
     QDoubleSpinBox *stepValue;
     QSpinBox *periodValue;
-    QLineEdit *drvlLine, *drvhLine, *lowLine, *loloLine, *highLine, *hihiLine;
+    QLineEdit *drvlLine, *drvhLine, *hoprLine, *loprLine, *lowLine, *loloLine, *highLine, *hihiLine;
     QCheckBox *overflowCheckBox, *persistentCheckBox;
     QSpinBox *nelmValue, *nordValue;
     QLineEdit *unitsLine;

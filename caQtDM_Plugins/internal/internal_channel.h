@@ -63,7 +63,7 @@ struct NativeValue
 
 /*
  * One simulated channel of the "internal" plugin. The JSON configuration uses
- * the EPICS field names (val, step, period, drvl/drvh, low/lolo/high/hihi,
+ * the EPICS field names (val, step, period, drvl/drvh, hopr/lopr, low/lolo/high/hihi,
  * nelm/nord, units, prec, enums, regex, overflow, persistent, mode, type) and is
  * assembled by the genSoftPV widget.
  */
@@ -74,7 +74,7 @@ public:
 
     // record fields addressable as internal://NAME.FIELD, VAL is the default
     enum Field { FieldVal = 0, FieldSevr, FieldStat, FieldLow, FieldLolo, FieldHigh, FieldHihi,
-                 FieldDrvl, FieldDrvh, FieldPrec, FieldEgu, FieldNelm, FieldNord };
+                 FieldDrvl, FieldDrvh, FieldHopr, FieldLopr, FieldPrec, FieldEgu, FieldNelm, FieldNord };
 
     InternalChannel();
 
@@ -119,8 +119,10 @@ public:
     double val;                 // VAL: initial value
     double step;
     int periodMs;
-    OptionalLimit drvl;         // DRVL/DRVH: drive limits (counter range, display/control limits)
+    OptionalLimit drvl;         // DRVL/DRVH: drive limits (counter range, control limits)
     OptionalLimit drvh;
+    OptionalLimit hopr;         // HOPR/LOPR: operating range, display/input limits, clamped to DRVL/DRVH
+    OptionalLimit lopr;
     OptionalLimit low;          // LOW/LOLO/HIGH/HIHI: alarm limits
     OptionalLimit lolo;
     OptionalLimit high;
