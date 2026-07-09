@@ -75,9 +75,9 @@ GenSoftPVDialog::GenSoftPVDialog(QWidget *widget, QWidget *parent) : QDialog(par
     periodValue->setSuffix(" ms");
     channelForm->addRow(tr("period:"), periodValue);
 
-    loopCheckBox = new QCheckBox(tr("loop (wrap at the drive limits)"), this);
-    loopCheckBox->setChecked(true);
-    channelForm->addRow(QString(), loopCheckBox);
+    overflowCheckBox = new QCheckBox(tr("overflow (wrap at the drive limits)"), this);
+    overflowCheckBox->setChecked(true);
+    channelForm->addRow(QString(), overflowCheckBox);
 
     persistentCheckBox = new QCheckBox(tr("persistent (keeps running without any monitor)"), this);
     channelForm->addRow(QString(), persistentCheckBox);
@@ -164,7 +164,7 @@ GenSoftPVDialog::GenSoftPVDialog(QWidget *widget, QWidget *parent) : QDialog(par
         loloLine->setText(softpv->getLolo());
         highLine->setText(softpv->getHigh());
         hihiLine->setText(softpv->getHihi());
-        loopCheckBox->setChecked(softpv->getLoop());
+        overflowCheckBox->setChecked(softpv->getoverflow());
         persistentCheckBox->setChecked(softpv->getPersistent());
         nelmValue->setValue(softpv->getNelm());
         nordValue->setValue(softpv->getNord());
@@ -192,7 +192,7 @@ void GenSoftPVDialog::saveState()
         cursor->setProperty("lolo", loloLine->text().trimmed());
         cursor->setProperty("high", highLine->text().trimmed());
         cursor->setProperty("hihi", hihiLine->text().trimmed());
-        cursor->setProperty("loop", loopCheckBox->isChecked());
+        cursor->setProperty("overflow", overflowCheckBox->isChecked());
         cursor->setProperty("persistent", persistentCheckBox->isChecked());
         cursor->setProperty("nelm", nelmValue->value());
         cursor->setProperty("nord", nordValue->value());

@@ -360,7 +360,7 @@ void TestInternalChannel::counterTicksAndWraps()
     channel.tick(); // beyond drvh -> wraps to drvl
     QCOMPARE(channel.currentValue(), 0.0);
 
-    // without loop the counter saturates at drvh
+    // without overflow the counter saturates at drvh
     InternalChannel saturating;
     QVERIFY(saturating.configure(R"({"mode":"counter","val":9,"step":2,"drvl":0,"drvh":10,"overflow":false})", &error));
     saturating.tick();
@@ -817,7 +817,7 @@ void TestInternalChannel::nordAndNelmWorkLikeEpics()
     // a counter waveform starts from the val array and every element counts on
     InternalChannel counting;
     QVERIFY(counting.configure(R"({"type":"double","mode":"counter","val":[1,2,3],"nelm":8,
-                                   "step":1,"period":100,"drvl":0,"drvh":4,"loop":true})", &error));
+                                   "step":1,"period":100,"drvl":0,"drvh":4,"overflow":true})", &error));
     counting.tick();
     knobData kCounting = makeKnobData();
     counting.fillKnobData(&kCounting);

@@ -54,7 +54,7 @@ class QTCON_EXPORT genSoftPV : public ESimpleLabel
     Q_PROPERTY(QString high READ getHigh WRITE setHigh)
     Q_PROPERTY(QString hihi READ getHihi WRITE setHihi)
 
-    Q_PROPERTY(bool loop READ getLoop WRITE setLoop)
+    Q_PROPERTY(bool overflow READ getoverflow WRITE setoverflow)
     Q_PROPERTY(bool persistent READ getPersistent WRITE setPersistent)
 
     // NELM: maximum array size, NORD: used elements (-1 = automatic)
@@ -114,8 +114,8 @@ public:
     QString getHihi() const {return thisHihi;}
     void setHihi(QString const &limit) {thisHihi = limit;}
 
-    bool getLoop() const {return thisLoop;}
-    void setLoop(bool loop) {thisLoop = loop;}
+    bool getoverflow() const {return thisoverflow;}
+    void setoverflow(bool overflow) {thisoverflow = overflow;}
     bool getPersistent() const {return thisPersistent;}
     void setPersistent(bool persistent) {thisPersistent = persistent;}
 
@@ -147,7 +147,7 @@ private:
     double thisStep;
     int thisPeriod;
     QString thisDrvl, thisDrvh, thisLow, thisLolo, thisHigh, thisHihi;
-    bool thisLoop;
+    bool thisoverflow;
     bool thisPersistent;
     int thisNelm;
     int thisNord;

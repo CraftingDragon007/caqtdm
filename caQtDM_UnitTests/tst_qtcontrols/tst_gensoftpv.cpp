@@ -53,7 +53,7 @@ void TestGenSoftPV::defaultConfigIsMinimal()
     QCOMPARE(object.contains("lolo"), false);
     QCOMPARE(object.contains("high"), false);
     QCOMPARE(object.contains("hihi"), false);
-    QCOMPARE(object.contains("loop"), false);
+    QCOMPARE(object.contains("overflow"), false);
     QCOMPARE(object.contains("persistent"), false);
     QCOMPARE(object.contains("nelm"), false);
     QCOMPARE(object.contains("nord"), false);
@@ -78,7 +78,7 @@ void TestGenSoftPV::allFieldsAppearInConfig()
     widget.setLolo("10");
     widget.setHigh("80");
     widget.setHihi("90");
-    widget.setLoop(false);
+    widget.setoverflow(false);
     widget.setPersistent(true);
     widget.setNelm(8);
     widget.setNord(3);
@@ -97,7 +97,7 @@ void TestGenSoftPV::allFieldsAppearInConfig()
     QCOMPARE(object.value("lolo").toDouble(), 10.0);
     QCOMPARE(object.value("high").toDouble(), 80.0);
     QCOMPARE(object.value("hihi").toDouble(), 90.0);
-    QCOMPARE(object.value("loop").toBool(true), false);
+    QCOMPARE(object.value("overflow").toBool(true), false);
     QCOMPARE(object.value("persistent").toBool(false), true);
     QCOMPARE(object.value("nelm").toInt(), 8);
     QCOMPARE(object.value("nord").toInt(), 3);

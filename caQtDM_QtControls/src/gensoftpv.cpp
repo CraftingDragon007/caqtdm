@@ -40,7 +40,7 @@ genSoftPV::genSoftPV(QWidget *parent) : ESimpleLabel(parent)
     thisValue = "";
     thisStep = 1.0;
     thisPeriod = 1000;
-    thisLoop = true;
+    thisoverflow = true;
     thisPersistent = false;
     thisNelm = 1;
     thisNord = -1;
@@ -119,7 +119,7 @@ QString genSoftPV::buildConfigJSON() const
     addLimit(object, "high", thisHigh);
     addLimit(object, "hihi", thisHihi);
 
-    if(!thisLoop) object["loop"] = false;
+    if(!thisoverflow) object["overflow"] = false;
     if(thisPersistent) object["persistent"] = true;
 
     if(thisNelm > 1) object["nelm"] = thisNelm;

@@ -64,7 +64,7 @@ struct NativeValue
 /*
  * One simulated channel of the "internal" plugin. The JSON configuration uses
  * the EPICS field names (val, step, period, drvl/drvh, low/lolo/high/hihi,
- * nelm/nord, units, prec, enums, regex, loop, persistent, mode, type) and is
+ * nelm/nord, units, prec, enums, regex, overflow, persistent, mode, type) and is
  * assembled by the genSoftPV widget.
  */
 class InternalChannel
