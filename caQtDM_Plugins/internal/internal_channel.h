@@ -125,7 +125,7 @@ public:
     OptionalLimit lolo;
     OptionalLimit high;
     OptionalLimit hihi;
-    bool loop;
+    bool overflow;
     bool persistent;            // keeps the channel alive without any monitor
     int nelm;                   // NELM: maximum array size
     int nord;                   // NORD: number of elements actually used (<= nelm)

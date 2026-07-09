@@ -47,7 +47,7 @@ InternalChannel::InternalChannel()
     , lolo()
     , high()
     , hihi()
-    , loop(true)
+    , overflow(true)
     , persistent(false)
     , nelm(1)
     , nord(1)
@@ -310,7 +310,7 @@ bool InternalChannel::configure(const QString &json, QString *errorString)
     if(object.contains("lolo"))   lolo.set(object["lolo"].toDouble());
     if(object.contains("high"))   high.set(object["high"].toDouble());
     if(object.contains("hihi"))   hihi.set(object["hihi"].toDouble());
-    if(object.contains("loop"))   loop = object["loop"].toBool();
+    if(object.contains("overflow"))   overflow = object["overflow"].toBool();
     if(object.contains("persistent")) persistent = object["persistent"].toBool();
     if(object.contains("nelm"))   nelm = qMax(1, (int) object["nelm"].toDouble());
     // NORD defaults to NELM (full array) and can never exceed it; an array
@@ -402,11 +402,11 @@ void InternalChannel::counterRange(double *rangeLow, double *rangeHigh) const
 }
 
 // advances a value by one step and wraps (or saturates) at the range limits
-static double steppedValue(double value, double step, double rangeLow, double rangeHigh, bool loop)
+static double steppedValue(double value, double step, double rangeLow, double rangeHigh, bool overflow)
 {
     double next = value + step;
-    if(next > rangeHigh)     next = loop ? rangeLow : rangeHigh;
-    else if(next < rangeLow) next = loop ? rangeHigh : rangeLow;
+    if(next > rangeHigh)     next = overflow ? rangeLow : rangeHigh;
+    else if(next < rangeLow) next = overflow ? rangeHigh : rangeLow;
     return next;
 }
 
@@ -421,11 +421,11 @@ void InternalChannel::tick()
     counterRange(&rangeLow, &rangeHigh);
 
     // without drive limits the value wraps at the native type range instead
-    setCurrentValue(steppedValue(currentValue(), step, rangeLow, rangeHigh, loop));
+    setCurrentValue(steppedValue(currentValue(), step, rangeLow, rangeHigh, overflow));
 
     // an explicitly set waveform counts as well, element by element
     for(int i = 0; i < m_waveOverride.size(); i++) {
-        m_waveOverride[i] = steppedValue(m_waveOverride.at(i), step, rangeLow, rangeHigh, loop);
+        m_waveOverride[i] = steppedValue(m_waveOverride.at(i), step, rangeLow, rangeHigh, overflow);
     }
 
     updateAlarmState();

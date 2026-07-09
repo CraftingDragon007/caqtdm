@@ -255,7 +255,7 @@ void TestInternalChannel::configureParsesAllFields()
     InternalChannel channel;
     QString error;
     bool ok = channel.configure(R"({"type":"float","mode":"counter","val":5,"step":2.5,
-                                    "period":200,"drvl":1,"drvh":9,"loop":false,"nelm":4,
+                                    "period":200,"drvl":1,"drvh":9,"overflow":false,"nelm":4,
                                     "low":2,"lolo":1.5,"high":7,"hihi":8.5,
                                     "units":"mA","prec":3})", &error);
     QVERIFY2(ok, qPrintable(error));
@@ -277,7 +277,7 @@ void TestInternalChannel::configureParsesAllFields()
     QCOMPARE(channel.lolo.defined, true);
     QCOMPARE(channel.high.defined, true);
     QCOMPARE(channel.hihi.defined, true);
-    QCOMPARE(channel.loop, false);
+    QCOMPARE(channel.overflow, false);
     QCOMPARE(channel.nelm, 4);
     QCOMPARE(channel.units, QString("mA"));
     QCOMPARE(channel.precision, (short) 3);
@@ -312,7 +312,7 @@ void TestInternalChannel::configureUsesDefaults()
     QCOMPARE(channel.lolo.defined, false);
     QCOMPARE(channel.high.defined, false);
     QCOMPARE(channel.hihi.defined, false);
-    QCOMPARE(channel.loop, true);
+    QCOMPARE(channel.overflow, true);
     QCOMPARE(channel.nelm, 1);
     QCOMPARE(channel.precision, (short) 2);
 
@@ -350,7 +350,7 @@ void TestInternalChannel::counterTicksAndWraps()
 {
     InternalChannel channel;
     QString error;
-    QVERIFY2(channel.configure(R"({"mode":"counter","val":8,"step":1,"drvl":0,"drvh":10,"loop":true})", &error),
+    QVERIFY2(channel.configure(R"({"mode":"counter","val":8,"step":1,"drvl":0,"drvh":10,"overflow":true})", &error),
              qPrintable(error));
 
     channel.tick();
@@ -362,7 +362,7 @@ void TestInternalChannel::counterTicksAndWraps()
 
     // without loop the counter saturates at drvh
     InternalChannel saturating;
-    QVERIFY(saturating.configure(R"({"mode":"counter","val":9,"step":2,"drvl":0,"drvh":10,"loop":false})", &error));
+    QVERIFY(saturating.configure(R"({"mode":"counter","val":9,"step":2,"drvl":0,"drvh":10,"overflow":false})", &error));
     saturating.tick();
     QCOMPARE(saturating.currentValue(), 10.0);
     saturating.tick();
@@ -370,7 +370,7 @@ void TestInternalChannel::counterTicksAndWraps()
 
     // negative step wraps at the lower drive limit
     InternalChannel backwards;
-    QVERIFY(backwards.configure(R"({"mode":"counter","val":1,"step":-1,"drvl":0,"drvh":5,"loop":true})", &error));
+    QVERIFY(backwards.configure(R"({"mode":"counter","val":1,"step":-1,"drvl":0,"drvh":5,"overflow":true})", &error));
     backwards.tick();
     QCOMPARE(backwards.currentValue(), 0.0);
     backwards.tick();

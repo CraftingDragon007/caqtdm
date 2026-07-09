@@ -1958,7 +1958,7 @@
     <property name="value">
      <string>hello from the internal plugin</string>
     </property>
-    <property name="loop">
+    <property name="overflow">
      <bool>false</bool>
     </property>
    </widget>
@@ -1983,7 +1983,7 @@
     <property name="period">
      <number>500</number>
     </property>
-    <property name="loop">
+    <property name="overflow">
      <bool>false</bool>
     </property>
     <property name="regex">
@@ -2014,7 +2014,7 @@
     <property name="drvh">
      <string>100</string>
     </property>
-    <property name="loop">
+    <property name="overflow">
      <bool>false</bool>
     </property>
    </widget>
