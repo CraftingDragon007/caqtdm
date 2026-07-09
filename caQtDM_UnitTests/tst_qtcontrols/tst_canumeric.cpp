@@ -23,6 +23,7 @@
 
 #include "tst_canumeric.h"
 
+#include <QLineEdit>
 #include <clocale>
 
 void TestCaNumeric::initTestCase()
@@ -31,69 +32,33 @@ void TestCaNumeric::initTestCase()
     setlocale(LC_NUMERIC, "C");
 }
 
-void TestCaNumeric::incrementDecrementByButtons_data()
+void TestCaNumeric::lineEditInput()
 {
-    QTest::addColumn<int>("intDig");
-    QTest::addColumn<int>("decDig");
-    QTest::addColumn<int>("index");
-    QTest::addColumn<bool>("up");
-    QTest::addColumn<double>("startValue");
-    QTest::addColumn<long long>("expectedDeltaData");
-    QTest::addColumn<int>("expectSignals"); // -1: do not check
+    configure(3, 2);
+    m_num->setValue(1.0);
 
-    QTest::newRow("LSD up") << 3 << 2 << 4 << true << 0.0 << Q_INT64_C(1) << 1;
-    QTest::newRow("LSD down") << 3 << 2 << 4 << false << 0.0 << Q_INT64_C(-1) << 1;
-    QTest::newRow("MSD up") << 3 << 2 << 0 << true << 0.0 << Q_INT64_C(10000) << 1;
-    QTest::newRow("MSD down") << 3 << 2 << 0 << false << 0.0 << Q_INT64_C(-10000) << 1;
-    QTest::newRow("down below minimum is ignored")
-        << 1 << 0 << 0 << false << -9.0 << Q_INT64_C(0) << 0;
-    /* data beyond 2^53: exact only with pure integer increments */
-    QTest::newRow("LSD up beyond 2^53") << 17 << 1 << 17 << true << 9.0e15 << Q_INT64_C(1) << -1;
-}
+    /* a double click opens the direct input line edit */
+    QTest::mouseDClick(m_num, Qt::LeftButton);
+    QLineEdit *edit = m_num->findChild<QLineEdit *>();
+    QVERIFY2(edit, "double click must create the input line edit");
 
-void TestCaNumeric::incrementDecrementByButtons()
-{
-    QFETCH(int, intDig);
-    QFETCH(int, decDig);
-    QFETCH(int, index);
-    QFETCH(bool, up);
-    QFETCH(double, startValue);
-    QFETCH(long long, expectedDeltaData);
-    QFETCH(int, expectSignals);
+    edit->setText("13.5");
+    QTest::keyClick(edit, Qt::Key_Return);
+    QVERIFY2(fabs(m_num->value() - 13.5) < 1e-9,
+             qPrintable(QString("typed 13.5, value() = %1").arg(m_num->value(), 0, 'g', 17)));
 
-    configure(intDig, decDig);
-    QVERIFY(index >= 0 && index < intDig + decDig);
+    QTest::mouseDClick(m_num, Qt::LeftButton);
+    edit->setText("abc"); /* not a number */
+    QTest::keyClick(edit, Qt::Key_Return);
+    QVERIFY2(fabs(m_num->value() - 13.5) < 1e-9, "invalid text must be ignored");
 
-    QList<QPushButton *> btns =
-        m_num->findChildren<QPushButton *>(QString("layoutmember%1").arg(index));
-    QCOMPARE(btns.size(), 2);
+    QTest::mouseDClick(m_num, Qt::LeftButton);
+    edit->setText("1,5"); /* comma is not accepted, parsing is C locale */
+    QTest::keyClick(edit, Qt::Key_Return);
+    QVERIFY2(fabs(m_num->value() - 13.5) < 1e-9, "comma input must be ignored");
 
-    /* self calibration: the up and the down button share the label's objectName,
-     * so determine which is which by one click at a safe value */
-    m_num->setValue(0.0);
-    btns.at(0)->click();
-    const double calib = m_num->value();
-    QVERIFY2(calib != 0.0, "calibration click had no effect");
-    QPushButton *upBtn = (calib > 0.0) ? btns.at(0) : btns.at(1);
-    QPushButton *downBtn = (calib > 0.0) ? btns.at(1) : btns.at(0);
-
-    m_num->setValue(startValue);
-    const long long startData =
-        numFixedPointFromDecimalString(numOracleDecimalString(startValue, decDig), decDig);
-    QSignalSpy spy(m_num, SIGNAL(valueChanged(double)));
-    QVERIFY(spy.isValid());
-
-    (up ? upBtn : downBtn)->click();
-
-    bool singleOk = true, parseOk = true;
-    const QString disp = numReadDisplayedString(m_num, intDig, decDig, &singleOk);
-    const long long actualData = numParseDisplayedData(disp, &parseOk);
-    QVERIFY2(singleOk && parseOk && (actualData - startData) == expectedDeltaData,
-             qPrintable(QString("digit %1 %2-click starting at %3 (intDig=%4, decDig=%5): "
-                                "expected fixed-point delta %6, got %7 (display \"%8\")")
-                            .arg(index).arg(up ? "up" : "down")
-                            .arg(startValue, 0, 'g', 17).arg(intDig).arg(decDig)
-                            .arg(expectedDeltaData).arg(actualData - startData).arg(disp)));
-    if (expectSignals >= 0)
-        QCOMPARE(spy.count(), expectSignals);
+    QTest::mouseDClick(m_num, Qt::LeftButton);
+    edit->setText("5000"); /* beyond the limits */
+    QTest::keyClick(edit, Qt::Key_Return);
+    QVERIFY2(fabs(m_num->value() - 13.5) < 1e-9, "out of range input must be ignored");
 }

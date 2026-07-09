@@ -62,9 +62,22 @@ private slots:
     void autoShiftOnChannelValue() { t_autoShiftOnChannelValue(); }
     void suppressUserInputOnUnrepresentableValue() { t_suppressUserInputOnUnrepresentableValue(); }
     void roundingColorsMarkDigitsBeyondPrecision() { t_roundingColorsMarkDigitsBeyondPrecision(); }
+    void nanAndInfHandling() { t_nanAndInfHandling(); }
+    void negativeZeroAndTinyValues() { t_negativeZeroAndTinyValues(); }
+    void asymmetricLimits() { t_asymmetricLimits(); }
+    void keyboardIncrementDecrement() { t_keyboardIncrementDecrement(); }
+    void writeAccessBlocksInput() { t_writeAccessBlocksInput(); }
+    void suppressBlocksInteraction() { t_suppressBlocksInteraction(); }
+    void mouseLeaveRevertsToChannelValue() { t_mouseLeaveRevertsToChannelValue(true); }
+    void signalArgumentOnIncrement() { t_signalArgumentOnIncrement(); }
+    void decimalPointPosition() { t_decimalPointPosition(); }
+    void libDigitPattern() { t_libDigitPattern(); }
+    void autoShiftKeepsConfiguredLimits() { t_autoShiftKeepsConfiguredLimits(); }
+    void autoShiftNegativeValues() { t_autoShiftNegativeValues(); }
+    void fixedFormatDisablesAutoShift() { t_fixedFormatDisablesAutoShift(); }
 
     /* caSpinbox has a single up/down button pair acting on the digit that was
-     * selected by clicking its label — widget specific test */
+     * selected with the arrow keys — widget specific test */
     void incrementDecrementByButtons_data();
     void incrementDecrementByButtons();
 };

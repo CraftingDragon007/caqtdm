@@ -47,7 +47,7 @@ caApplyNumeric::caApplyNumeric(QWidget *parent) : EApplyNumeric(parent)
 
     renewStyleSheet = true;
     setBackground(QColor(230,230,230));
-    thisFixedFormat = false;
+    setFixedFormat(false);
     installEventFilter(this);
 
     setElevation(on_top);

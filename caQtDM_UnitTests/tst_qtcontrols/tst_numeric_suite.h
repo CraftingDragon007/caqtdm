@@ -24,11 +24,15 @@
 #ifndef TST_NUMERIC_SUITE_H
 #define TST_NUMERIC_SUITE_H
 
+#include "QtWidgets/qlayout.h"
+#include <QApplication>
+#include <QEvent>
 #include <QLabel>
 #include <QPushButton>
 #include <QSignalSpy>
 #include <QTest>
 #include <QWidget>
+#include <qnumeric.h>
 #include <cfloat>
 #include <cmath>
 #include <cstdlib>
@@ -232,6 +236,11 @@ class NumericSuiteBase
 {
 protected:
     NumericSuiteBase() : m_host(Q_NULLPTR), m_num(Q_NULLPTR) {}
+    virtual ~NumericSuiteBase() {}
+
+    /* the widget that receives synthetic key/mouse events; composite widgets
+     * (caApplyNumeric) override this with their embedded numeric child */
+    virtual QWidget *inputTarget() { return m_num; }
 
     void t_init()
     {
@@ -789,6 +798,403 @@ protected:
                      qPrintable(QString("label %1 colored by index instead of significance: "
                                         "\"%2\"").arg(i).arg(l->styleSheet())));
         }
+    }
+
+    /* per digit up/down buttons (caNumeric, caApplyNumeric) */
+    void t_incrementDecrementByButtonsPerDigit_data()
+    {
+        QTest::addColumn<int>("intDig");
+        QTest::addColumn<int>("decDig");
+        QTest::addColumn<int>("index");
+        QTest::addColumn<bool>("up");
+        QTest::addColumn<double>("startValue");
+        QTest::addColumn<long long>("expectedDeltaData");
+        QTest::addColumn<int>("expectSignals"); // -1: do not check
+
+        QTest::newRow("LSD up") << 3 << 2 << 4 << true << 0.0 << Q_INT64_C(1) << 1;
+        QTest::newRow("LSD down") << 3 << 2 << 4 << false << 0.0 << Q_INT64_C(-1) << 1;
+        QTest::newRow("MSD up") << 3 << 2 << 0 << true << 0.0 << Q_INT64_C(10000) << 1;
+        QTest::newRow("MSD down") << 3 << 2 << 0 << false << 0.0 << Q_INT64_C(-10000) << 1;
+        QTest::newRow("down below minimum is ignored")
+            << 1 << 0 << 0 << false << -9.0 << Q_INT64_C(0) << 0;
+        /* data beyond 2^53: exact only with pure integer increments */
+        QTest::newRow("LSD up beyond 2^53")
+            << 17 << 1 << 17 << true << 9.0e15 << Q_INT64_C(1) << -1;
+    }
+
+    void t_incrementDecrementByButtonsPerDigit()
+    {
+        QFETCH(int, intDig);
+        QFETCH(int, decDig);
+        QFETCH(int, index);
+        QFETCH(bool, up);
+        QFETCH(double, startValue);
+        QFETCH(long long, expectedDeltaData);
+        QFETCH(int, expectSignals);
+
+        configure(intDig, decDig);
+        QVERIFY(index >= 0 && index < intDig + decDig);
+
+        QList<QPushButton *> btns =
+            m_num->template findChildren<QPushButton *>(QString("layoutmember%1").arg(index));
+        QCOMPARE(btns.size(), 2);
+
+        /* self calibration: the up and the down button share the label's
+         * objectName, so determine which is which by one click at a safe value */
+        m_num->setValue(0.0);
+        btns.at(0)->click();
+        const double calib = m_num->value();
+        QVERIFY2(calib != 0.0, "calibration click had no effect");
+        QPushButton *upBtn = (calib > 0.0) ? btns.at(0) : btns.at(1);
+        QPushButton *downBtn = (calib > 0.0) ? btns.at(1) : btns.at(0);
+
+        m_num->setValue(startValue);
+        const long long startData =
+            numFixedPointFromDecimalString(numOracleDecimalString(startValue, decDig), decDig);
+        QSignalSpy spy(m_num, SIGNAL(valueChanged(double)));
+        QVERIFY(spy.isValid());
+
+        (up ? upBtn : downBtn)->click();
+
+        bool singleOk = true, parseOk = true;
+        const QString disp = numReadDisplayedString(m_num, intDig, decDig, &singleOk);
+        const long long actualData = numParseDisplayedData(disp, &parseOk);
+        QVERIFY2(singleOk && parseOk && (actualData - startData) == expectedDeltaData,
+                 qPrintable(QString("digit %1 %2-click starting at %3 (intDig=%4, decDig=%5): "
+                                    "expected fixed-point delta %6, got %7 (display \"%8\")")
+                                .arg(index).arg(up ? "up" : "down")
+                                .arg(startValue, 0, 'g', 17).arg(intDig).arg(decDig)
+                                .arg(expectedDeltaData).arg(actualData - startData).arg(disp)));
+        if (expectSignals >= 0)
+            QCOMPARE(spy.count(), expectSignals);
+    }
+
+    void t_nanAndInfHandling()
+    {
+        configure(3, 2);
+        m_num->setValue(12.5);
+        bool singleOk = true;
+        const QString before = numReadDisplayedString(m_num, 3, 2, &singleOk);
+        QSignalSpy spy(m_num, SIGNAL(valueChanged(double)));
+        QVERIFY(spy.isValid());
+
+        /* user values that are not finite are ignored */
+        m_num->setValue(qQNaN());
+        m_num->setValue(qInf());
+        m_num->setValue(-qInf());
+        QVERIFY2(fabs(m_num->value() - 12.5) < 1e-9,
+                 qPrintable(QString("NaN/Inf changed the value to %1")
+                                .arg(m_num->value(), 0, 'g', 17)));
+        QCOMPARE(numReadDisplayedString(m_num, 3, 2, &singleOk), before);
+        QCOMPARE(spy.count(), 0);
+
+        /* channel values that are not finite suppress the input */
+        m_num->silentSetValue(qQNaN());
+        QLabel *first = m_num->template findChild<QLabel *>("layoutmember0");
+        QVERIFY(first);
+        QCOMPARE(first->text(), QString("*"));
+
+        m_num->silentSetValue(3.5); /* recovery */
+        QCOMPARE(numReadDisplayedString(m_num, 3, 2, &singleOk),
+                 numExpectedDisplayString(350, 3, 2));
+
+        m_num->silentSetValue(qInf());
+        first = m_num->template findChild<QLabel *>("layoutmember0");
+        QVERIFY(first);
+        QCOMPARE(first->text(), QString("*"));
+        m_num->silentSetValue(1.5);
+        QCOMPARE(numReadDisplayedString(m_num, 3, 2, &singleOk),
+                 numExpectedDisplayString(150, 3, 2));
+    }
+
+    void t_negativeZeroAndTinyValues()
+    {
+        configure(3, 2);
+        bool singleOk = true;
+        m_num->setValue(-0.0);
+        QCOMPARE(numReadDisplayedString(m_num, 3, 2, &singleOk),
+                 numExpectedDisplayString(0, 3, 2));
+        QVERIFY(fabs(m_num->value()) < 1e-12);
+
+        m_num->setValue(1e-310); /* subnormal: rounds to zero */
+        QCOMPARE(numReadDisplayedString(m_num, 3, 2, &singleOk),
+                 numExpectedDisplayString(0, 3, 2));
+
+        m_num->setValue(0.006); /* just above half of the last digit */
+        QCOMPARE(numReadDisplayedString(m_num, 3, 2, &singleOk),
+                 numExpectedDisplayString(1, 3, 2));
+        m_num->setValue(0.004); /* just below: rounds to zero */
+        QCOMPARE(numReadDisplayedString(m_num, 3, 2, &singleOk),
+                 numExpectedDisplayString(0, 3, 2));
+    }
+
+    void t_asymmetricLimits()
+    {
+        configure(3, 2);
+        m_num->setMinimum(-5.0);
+        m_num->setMaximum(99.0);
+
+        m_num->setValue(98.5);
+        QVERIFY(fabs(m_num->value() - 98.5) < 1e-9);
+        m_num->setValue(99.01); /* above maximum: ignored */
+        QVERIFY2(fabs(m_num->value() - 98.5) < 1e-9,
+                 qPrintable(QString("99.01 accepted despite maximum 99: value() = %1")
+                                .arg(m_num->value(), 0, 'g', 17)));
+        m_num->setValue(99.0); /* the maximum itself is allowed */
+        QVERIFY(fabs(m_num->value() - 99.0) < 1e-9);
+
+        m_num->setValue(-4.5);
+        QVERIFY(fabs(m_num->value() + 4.5) < 1e-9);
+        m_num->setValue(-5.5); /* below minimum: ignored */
+        QVERIFY2(fabs(m_num->value() + 4.5) < 1e-9,
+                 qPrintable(QString("-5.5 accepted despite minimum -5: value() = %1")
+                                .arg(m_num->value(), 0, 'g', 17)));
+        m_num->setValue(-5.0); /* the minimum itself is allowed */
+        QVERIFY(fabs(m_num->value() + 5.0) < 1e-9);
+    }
+
+    void t_keyboardIncrementDecrement()
+    {
+        configure(3, 2);
+        QWidget *tgt = inputTarget();
+        QVERIFY(tgt);
+        m_num->setValue(0.0);
+
+        /* select the least significant digit (index 4) with arrow keys */
+        for (int k = 0; k <= 4; k++) QTest::keyClick(tgt, Qt::Key_Right);
+        QSignalSpy spy(m_num, SIGNAL(valueChanged(double)));
+        QVERIFY(spy.isValid());
+        QTest::keyClick(tgt, Qt::Key_Up);
+        QVERIFY2(fabs(m_num->value() - 0.01) < 1e-9,
+                 qPrintable(QString("Key_Up on the LSD gave value() = %1")
+                                .arg(m_num->value(), 0, 'g', 17)));
+        QCOMPARE(spy.count(), 1);
+        QCOMPARE(spy.takeFirst().at(0).toDouble(), m_num->value());
+        QTest::keyClick(tgt, Qt::Key_Down);
+        QVERIFY(fabs(m_num->value()) < 1e-9);
+
+        /* Key_Right clamps at the last digit */
+        for (int k = 0; k < 10; k++) QTest::keyClick(tgt, Qt::Key_Right);
+        QTest::keyClick(tgt, Qt::Key_Up);
+        QVERIFY2(fabs(m_num->value() - 0.01) < 1e-9,
+                 "Key_Right beyond the last digit must clamp the selection");
+
+        /* Key_Left clamps at the first digit */
+        for (int k = 0; k < 20; k++) QTest::keyClick(tgt, Qt::Key_Left);
+        QTest::keyClick(tgt, Qt::Key_Up);
+        QVERIFY2(fabs(m_num->value() - 100.01) < 1e-9,
+                 "Key_Left beyond the first digit must clamp the selection");
+    }
+
+    void t_writeAccessBlocksInput()
+    {
+        configure(3, 2);
+        m_num->setValue(1.0);
+        QWidget *tgt = inputTarget();
+        QVERIFY(tgt);
+        for (int k = 0; k <= 4; k++) QTest::keyClick(tgt, Qt::Key_Right);
+
+        m_num->setAccessW(false);
+        QSignalSpy spy(m_num, SIGNAL(valueChanged(double)));
+        QVERIFY(spy.isValid());
+        QTest::keyClick(tgt, Qt::Key_Up);
+        QCOMPARE(spy.count(), 0);
+        QVERIFY2(fabs(m_num->value() - 1.0) < 1e-9,
+                 "write access disabled but the value changed");
+
+        m_num->setAccessW(true);
+        QTest::keyClick(tgt, Qt::Key_Up);
+        QCOMPARE(spy.count(), 1);
+        QVERIFY(fabs(m_num->value() - 1.01) < 1e-9);
+    }
+
+    void t_suppressBlocksInteraction()
+    {
+        configure(3, 2);
+        m_num->silentSetValue(1.0e19); /* suppression */
+        QWidget *tgt = inputTarget();
+        QVERIFY(tgt);
+
+        QSignalSpy spy(m_num, SIGNAL(valueChanged(double)));
+        QVERIFY(spy.isValid());
+        for (int k = 0; k <= 4; k++) QTest::keyClick(tgt, Qt::Key_Right);
+        QTest::keyClick(tgt, Qt::Key_Up);
+        QCOMPARE(spy.count(), 0);
+        QLabel *first = m_num->template findChild<QLabel *>("layoutmember0");
+        QVERIFY(first);
+        QCOMPARE(first->text(), QString("*"));
+
+        m_num->silentSetValue(5.0); /* recovery */
+        bool singleOk = true;
+        QCOMPARE(numReadDisplayedString(m_num, 3, 2, &singleOk),
+                 numExpectedDisplayString(500, 3, 2));
+    }
+
+    void t_mouseLeaveRevertsToChannelValue(bool expectRevert)
+    {
+        configure(3, 2);
+        m_num->silentSetValue(5.0);
+        m_num->setValue(7.5); /* unconfirmed user value */
+        QVERIFY(fabs(m_num->value() - 7.5) < 1e-9);
+
+        QEvent leave(QEvent::Leave);
+        QApplication::sendEvent(inputTarget(), &leave);
+
+        const double expected = expectRevert ? 5.0 : 7.5;
+        QVERIFY2(fabs(m_num->value() - expected) < 1e-9,
+                 qPrintable(QString("after Leave the value is %1, expected %2")
+                                .arg(m_num->value(), 0, 'g', 17).arg(expected, 0, 'g', 17)));
+        bool singleOk = true;
+        QCOMPARE(numReadDisplayedString(m_num, 3, 2, &singleOk),
+                 numExpectedDisplayString(expectRevert ? 500 : 750, 3, 2));
+    }
+
+    void t_signalArgumentOnIncrement()
+    {
+        configure(3, 2);
+        m_num->setValue(1.0);
+        QWidget *tgt = inputTarget();
+        QVERIFY(tgt);
+        for (int k = 0; k <= 4; k++) QTest::keyClick(tgt, Qt::Key_Right);
+
+        QSignalSpy spy(m_num, SIGNAL(valueChanged(double)));
+        QVERIFY(spy.isValid());
+        QTest::keyClick(tgt, Qt::Key_Up);
+        QCOMPARE(spy.count(), 1);
+        QCOMPARE(spy.takeFirst().at(0).toDouble(), m_num->value());
+        QVERIFY(fabs(m_num->value() - 1.01) < 1e-9);
+    }
+
+    void verifyPointBetween(int leftIdx, int rightIdx)
+    {
+        QLabel *point = m_num->template findChild<QLabel *>("layoutmember.");
+        QLabel *left =
+            m_num->template findChild<QLabel *>(QString("layoutmember%1").arg(leftIdx));
+        QLabel *right =
+            m_num->template findChild<QLabel *>(QString("layoutmember%1").arg(rightIdx));
+        QVERIFY(point && left && right);
+        const int px = point->geometry().center().x();
+        QVERIFY2(left->geometry().center().x() < px && px < right->geometry().center().x(),
+                 qPrintable(QString("decimal point label at x=%1 is not between digit %2 "
+                                    "(x=%3) and digit %4 (x=%5)")
+                                .arg(px).arg(leftIdx).arg(left->geometry().center().x())
+                                .arg(rightIdx).arg(right->geometry().center().x())));
+    }
+
+    void t_decimalPointPosition()
+    {
+        /* the display string tests synthesize the decimal point themselves;
+         * here the point label position is verified geometrically */
+        configure(3, 2);
+        m_num->setValue(12.34);
+        /* the host has no layout: give the widget a real size explicitly,
+         * otherwise the digit labels squeeze into overlapping positions */
+        m_host->resize(420, 100);
+        m_num->setGeometry(5, 5, 400, 80);
+        m_host->show();
+        QVERIFY(QTest::qWaitForWindowExposed(m_host));
+        QApplication::processEvents();
+        verifyPointBetween(2, 3);
+
+        /* the point must move together with an automatic digit shift */
+        m_num->silentSetValue(1234.5); /* (3,2) -> (4,1) */
+        QCOMPARE(m_num->intDigits(), 4);
+        QApplication::processEvents();
+        QWidget *w = inputTarget();
+        if (w && w->layout()) w->layout()->activate();
+        QApplication::processEvents();
+        QTest::qWait(20);
+        verifyPointBetween(3, 4);
+    }
+
+    void t_libDigitPattern()
+    {
+        /* the sequence caQtDM_Lib uses: setIntDigits(width-prec-1); setDecDigits(prec) */
+        struct Row { int width; int prec; int expI; int expD; double v; };
+        const Row rows[] = {
+            {10, 3, 6, 3, 12.345},
+            {8, 7, 1, 7, 0.1234567},   /* width-prec-1 = 0: clamped to 1 */
+            {25, 17, 7, 11, 12.5},     /* prec clamped by the 18 digit invariant */
+        };
+        for (size_t r = 0; r < sizeof(rows) / sizeof(rows[0]); r++) {
+            t_cleanup();
+            t_init();
+            m_num->setIntDigits(rows[r].width - rows[r].prec - 1);
+            m_num->setDecDigits(rows[r].prec);
+            QCOMPARE(m_num->intDigits(), rows[r].expI);
+            QCOMPARE(m_num->decDigits(), rows[r].expD);
+            m_num->silentSetValue(rows[r].v);
+            QVERIFY2(fabs(m_num->value() - rows[r].v) < 1e-6 * qMax(1.0, fabs(rows[r].v)),
+                     qPrintable(QString("width=%1 prec=%2: value() = %3 after channel value %4")
+                                    .arg(rows[r].width).arg(rows[r].prec)
+                                    .arg(m_num->value(), 0, 'g', 17)
+                                    .arg(rows[r].v, 0, 'g', 17)));
+        }
+    }
+
+    void t_autoShiftKeepsConfiguredLimits()
+    {
+        /* documented behaviour: after an automatic shift the configured limits
+         * stay in effect — increments beyond them are rejected, decrements
+         * towards them are allowed */
+        configure(2, 4); /* d_max = 99.9999 */
+        m_num->silentSetValue(12345.6); /* shifts to (5,1) */
+        QCOMPARE(m_num->intDigits(), 5);
+        QWidget *tgt = inputTarget();
+        QVERIFY(tgt);
+        for (int k = 0; k <= 5; k++) QTest::keyClick(tgt, Qt::Key_Right); /* LSD */
+
+        QSignalSpy spy(m_num, SIGNAL(valueChanged(double)));
+        QVERIFY(spy.isValid());
+        QTest::keyClick(tgt, Qt::Key_Up); /* beyond the configured limits */
+        QVERIFY2(fabs(m_num->value() - 12345.6) < 1e-9,
+                 qPrintable(QString("increment beyond the limits was accepted: %1")
+                                .arg(m_num->value(), 0, 'g', 17)));
+        QCOMPARE(spy.count(), 0);
+
+        QTest::keyClick(tgt, Qt::Key_Down); /* towards the limits */
+        QVERIFY2(fabs(m_num->value() - 12345.5) < 1e-9,
+                 qPrintable(QString("decrement towards the limits failed: %1")
+                                .arg(m_num->value(), 0, 'g', 17)));
+        QCOMPARE(spy.count(), 1);
+    }
+
+    void t_autoShiftNegativeValues()
+    {
+        configure(2, 4);
+        m_num->silentSetValue(-12345.6); /* the sign does not count as a digit */
+        QCOMPARE(m_num->intDigits(), 5);
+        QCOMPARE(m_num->decDigits(), 1);
+        QVERIFY(fabs(m_num->value() + 12345.6) < 1e-9);
+        bool singleOk = true;
+        QCOMPARE(numReadDisplayedString(m_num, 5, 1, &singleOk),
+                 numExpectedDisplayString(-123456, 5, 1));
+
+        m_num->silentSetValue(-1.25); /* back to the original configuration */
+        QCOMPARE(m_num->intDigits(), 2);
+        QCOMPARE(m_num->decDigits(), 4);
+        QCOMPARE(numReadDisplayedString(m_num, 2, 4, &singleOk),
+                 numExpectedDisplayString(-12500, 2, 4));
+    }
+
+    void t_fixedFormatDisablesAutoShift()
+    {
+        configure(2, 4);
+        m_num->setFixedFormat(true);
+        m_num->silentSetValue(12345.6); /* does not fit 2 integer digits: suppression */
+        QCOMPARE(m_num->intDigits(), 2);
+        QCOMPARE(m_num->decDigits(), 4);
+        QLabel *first = m_num->template findChild<QLabel *>("layoutmember0");
+        QVERIFY(first);
+        QCOMPARE(first->text(), QString("*"));
+
+        m_num->setFixedFormat(false);
+        m_num->silentSetValue(12345.6); /* now the shift is allowed again */
+        QCOMPARE(m_num->intDigits(), 5);
+        QCOMPARE(m_num->decDigits(), 1);
+        bool singleOk = true;
+        QCOMPARE(numReadDisplayedString(m_num, 5, 1, &singleOk),
+                 numExpectedDisplayString(123456, 5, 1));
     }
 
     QWidget *m_host;

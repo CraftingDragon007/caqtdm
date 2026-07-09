@@ -137,6 +137,12 @@ public:
         double minimum() const { return data->minimum(); }
 
 	/**
+	 * fixed format: disables the automatic digit shifting of the numeric widget
+	 */
+        void setFixedFormat(bool f){ data->thisFixedFormat = f; }
+        bool getFixedFormat() const { return data->thisFixedFormat; }
+
+	/**
 	 * sets number of integer digits to be displayed
 	 * @param i	number of digits
 	 */

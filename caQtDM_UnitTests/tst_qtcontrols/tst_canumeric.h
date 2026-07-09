@@ -62,10 +62,24 @@ private slots:
     void autoShiftOnChannelValue() { t_autoShiftOnChannelValue(); }
     void suppressUserInputOnUnrepresentableValue() { t_suppressUserInputOnUnrepresentableValue(); }
     void roundingColorsMarkDigitsBeyondPrecision() { t_roundingColorsMarkDigitsBeyondPrecision(); }
+    void incrementDecrementByButtons_data() { t_incrementDecrementByButtonsPerDigit_data(); }
+    void incrementDecrementByButtons() { t_incrementDecrementByButtonsPerDigit(); }
+    void nanAndInfHandling() { t_nanAndInfHandling(); }
+    void negativeZeroAndTinyValues() { t_negativeZeroAndTinyValues(); }
+    void asymmetricLimits() { t_asymmetricLimits(); }
+    void keyboardIncrementDecrement() { t_keyboardIncrementDecrement(); }
+    void writeAccessBlocksInput() { t_writeAccessBlocksInput(); }
+    void suppressBlocksInteraction() { t_suppressBlocksInteraction(); }
+    void mouseLeaveRevertsToChannelValue() { t_mouseLeaveRevertsToChannelValue(true); }
+    void signalArgumentOnIncrement() { t_signalArgumentOnIncrement(); }
+    void decimalPointPosition() { t_decimalPointPosition(); }
+    void libDigitPattern() { t_libDigitPattern(); }
+    void autoShiftKeepsConfiguredLimits() { t_autoShiftKeepsConfiguredLimits(); }
+    void autoShiftNegativeValues() { t_autoShiftNegativeValues(); }
+    void fixedFormatDisablesAutoShift() { t_fixedFormatDisablesAutoShift(); }
 
-    /* caNumeric has one up/down button pair per digit — widget specific test */
-    void incrementDecrementByButtons_data();
-    void incrementDecrementByButtons();
+    /* only ENumeric has the double click line edit input path */
+    void lineEditInput();
 };
 
 #endif // TST_CANUMERIC_H

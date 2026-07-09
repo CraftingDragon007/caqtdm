@@ -81,8 +81,9 @@ enum SourceMode {Channel = 0, User};
 SourceMode getPrecisionMode() const { return thisPrecMode; }
 void setPrecisionMode(SourceMode precmode) {thisPrecMode = precmode;}
 
-bool getFixedFormat()  const {return thisFixedFormat;}
-void setFixedFormat(bool const &fixed) {thisFixedFormat=fixed;}
+/* delegated to the embedded ENumeric, a local copy would never reach it */
+bool getFixedFormat()  const {return EApplyNumeric::getFixedFormat();}
+void setFixedFormat(bool const &fixed) {EApplyNumeric::setFixedFormat(fixed);}
 
 SourceMode getLimitsMode() const { return thisLimitsMode; }
 void setLimitsMode(SourceMode limitsmode) { thisLimitsMode = limitsmode;}
@@ -120,7 +121,6 @@ int thisAccessW;
 double thisMaximum, thisMinimum;
 SourceMode thisPrecMode;
 SourceMode thisLimitsMode;
-bool thisFixedFormat;
 
 QColor thisForeColor, oldForeColor;
 QColor thisBackColor, oldBackColor;

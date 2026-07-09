@@ -30,6 +30,7 @@
 #include "tst_gensoftpv.h"
 #include "tst_canumeric.h"
 #include "tst_caspinbox.h"
+#include "tst_caapplynumeric.h"
 #include "tst_pvdialog.h"
 
 int main(int argc, char **argv)
@@ -61,6 +62,11 @@ int main(int argc, char **argv)
 
     {
         TestCaSpinbox tc;
+        status |= QTest::qExec(&tc, argc, argv);
+    }
+
+    {
+        TestCaApplyNumeric tc;
         status |= QTest::qExec(&tc, argc, argv);
     }
 
