@@ -7,6 +7,7 @@
 #define LIST_SEMAPHORE_KEY "caQtDM_HmiSharedConfigList_Semaphore_%1"
 #define MAX_SHARED_MEMORY_SIZE 1024 * 1024 // 1 MB
 #define PREFIX "HmiSharedConfigList"
+#define MIN_SERIALIZED_ITEM_SIZE 32
 
 HmiSharedConfigListManager::HmiSharedConfigListManager(QObject *parent)
     : QObject{parent},
@@ -105,9 +106,21 @@ QList<QSharedPointer<caHMIConfigTransferItem>> HmiSharedConfigListManager::readL
         quint32 count = 0;
         stream >> count;
 
+        if (count > static_cast<quint32>(rawDataFromSharedMemory.size()) / MIN_SERIALIZED_ITEM_SIZE) {
+            qWarning() << "Implausible item count" << count << "in shared memory list ("
+                                << rawDataFromSharedMemory.size() << "bytes), discarding list.";
+            return list;
+        }
+
         for (quint32 i = 0; i < count; ++i) {
             QSharedPointer<caHMIConfigTransferItem> config = QSharedPointer<caHMIConfigTransferItem>::create();
             stream >> *config.data();
+            if (stream.status() != QDataStream::Ok) {
+                qWarning() << "Corrupted list data in shared memory (item" << i + 1 << "of"
+                                    << count << "), discarding list.";
+                list.clear();
+                return list;
+            }
             list.append(config);
         }
     }
@@ -127,9 +140,9 @@ bool HmiSharedConfigListManager::writeList(const QList<QSharedPointer<caHMIConfi
     quint32 dataSize = static_cast<quint32>(serializedData.size());
     quint32 totalRequiredSize = sizeof(quint32) + dataSize;
 
-    if (totalRequiredSize > MAX_SHARED_MEMORY_SIZE) {
-        qCritical() << PREFIX << "New list is too large to fit in shared memory."
-                    << "Required:" << totalRequiredSize << "Available:" << MAX_SHARED_MEMORY_SIZE;
+    if (totalRequiredSize > static_cast<quint32>(this_sharedMemory.size())) {
+        qCritical() << "New list is too large to fit in shared memory."
+                    << "Required:" << totalRequiredSize << "Available:" << this_sharedMemory.size();
         return false;
     }
 
@@ -139,8 +152,11 @@ bool HmiSharedConfigListManager::writeList(const QList<QSharedPointer<caHMIConfi
     }
 
     if (this_sharedMemory.lock()) {
-        memcpy(this_sharedMemory.data(), &dataSize, sizeof(quint32));
-        memcpy(static_cast<char*>(this_sharedMemory.data()) + sizeof(quint32), serializedData.constData(), dataSize);
+        char* memPtr = static_cast<char*>(this_sharedMemory.data());
+        quint32 invalidSize = 0;
+        memcpy(memPtr, &invalidSize, sizeof(quint32));
+        memcpy(memPtr + sizeof(quint32), serializedData.constData(), dataSize);
+        memcpy(memPtr, &dataSize, sizeof(quint32));
         this_sharedMemory.unlock();
         //qDebug() << PREFIX << "List successfully written to shared memory. Size:" << dataSize << "bytes.";
         emit dataChanged();

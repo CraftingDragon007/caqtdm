@@ -23,6 +23,7 @@ QSharedPointer<caHMIConfigTransferItem> caHMIConfigTransferItem::clone() const
     clone->setCalculationType(calculationType());
     clone->setCaptureType(captureType());
     clone->setCaptureRange(captureRange());
+    clone->setTimestamp(timestamp());
 
     return clone;
 }

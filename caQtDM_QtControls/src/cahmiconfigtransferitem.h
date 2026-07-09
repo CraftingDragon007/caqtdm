@@ -127,7 +127,7 @@ public:
 
 
 private:
-    bool thisEnabled;
+    bool thisEnabled = false;
     QString thisObjectName;
     QString thisFileName;
     QString thisOutputA;
@@ -138,14 +138,14 @@ private:
     QString thisChannelD;
     QKeySequence thisShortcut;
     QVariant thisValue;
-    caHMIConfig::calcType thisCalculationType;
-    caHMIConfig::capType thisCaptureType;
-    caHMIConfig::capRange thisCaptureRange;
-    int thisPID;
+    caHMIConfig::calcType thisCalculationType = caHMIConfig::calcType::SetValue;
+    caHMIConfig::capType thisCaptureType = caHMIConfig::capType::KeyboardValue;
+    caHMIConfig::capRange thisCaptureRange = caHMIConfig::capRange::Local;
+    int thisPID = 0;
     QString thisUUID;
-    qint64 thisTimestamp;
-    caHMIConfig* thisWidgetCallback;
-    QWidget* parent;
+    qint64 thisTimestamp = 0;
+    caHMIConfig* thisWidgetCallback = Q_NULLPTR;
+    QWidget* parent = Q_NULLPTR;
 
 signals:
 };
