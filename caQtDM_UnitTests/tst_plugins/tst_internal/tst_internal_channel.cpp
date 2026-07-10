@@ -105,6 +105,42 @@ void TestInternalChannel::fieldSyntaxWorks()
     QCOMPARE(field, InternalChannel::FieldLow);
 }
 
+void TestInternalChannel::splitFieldStripsSchemePrefix()
+{
+    QString base;
+    InternalChannel::Field field;
+
+    // CaQtDM_Lib::addMonitor() normally strips the scheme prefix before it
+    // ever reaches the plugin, but splitField() must handle it too when the
+    // plugin is called directly (e.g. pvSetValue from a test or future code)
+    QCOMPARE(InternalChannel::splitField("internal://RAMP", &base, &field), true);
+    QCOMPARE(base, QString("RAMP"));
+    QCOMPARE(field, InternalChannel::FieldVal);
+
+    QCOMPARE(InternalChannel::splitField("internal://RAMP.LOW", &base, &field), true);
+    QCOMPARE(base, QString("RAMP"));
+    QCOMPARE(field, InternalChannel::FieldLow);
+
+    // any scheme is stripped, not just "internal" -- future aliases like
+    // softPV:// or intern:// that get redirected here work the same way
+    QCOMPARE(InternalChannel::splitField("softPV://RAMP", &base, &field), true);
+    QCOMPARE(base, QString("RAMP"));
+    QCOMPARE(InternalChannel::splitField("intern://RAMP.HOPR", &base, &field), true);
+    QCOMPARE(base, QString("RAMP"));
+    QCOMPARE(field, InternalChannel::FieldHopr);
+
+    // baseName()/jsonPart() go through the same path (jsonPart() already
+    // works regardless of a prefix, kept here as a regression check)
+    QCOMPARE(InternalChannel::baseName("internal://RAMP"), QString("RAMP"));
+    QCOMPARE(InternalChannel::baseName(R"(internal://RAMP.{"type":"double"})"), QString("RAMP"));
+    QCOMPARE(InternalChannel::jsonPart(R"(internal://RAMP.{"type":"double"})"), QString(R"({"type":"double"})"));
+
+    // unprefixed still works exactly as before
+    QCOMPARE(InternalChannel::splitField("RAMP.LOW", &base, &field), true);
+    QCOMPARE(base, QString("RAMP"));
+    QCOMPARE(field, InternalChannel::FieldLow);
+}
+
 void TestInternalChannel::counterStopsWhenInvalidOrDisconnected()
 {
     QString error;
@@ -848,6 +884,57 @@ void TestInternalChannel::hoprLoprWork()
         QCOMPARE(kData.edata.lower_disp_limit, 0.0);
         QCOMPARE(kData.edata.upper_disp_limit, 100.0);
         freeKnobData(&kData);
+    }
+}
+
+void TestInternalChannel::drvlDrvhClampTheValue()
+{
+    QString error;
+
+    // configure(): an out-of-range VAL is clamped to the nearest drive limit
+    {
+        InternalChannel channel;
+        QVERIFY(channel.configure(R"({"type":"double","val":150,"drvl":0,"drvh":100})", &error));
+        QCOMPARE(channel.currentValue(), 100.0);
+
+        InternalChannel below;
+        QVERIFY(below.configure(R"({"type":"double","val":-50,"drvl":0,"drvh":100})", &error));
+        QCOMPARE(below.currentValue(), 0.0);
+    }
+
+    // setValue(): a write outside the drive range is clamped the same way
+    {
+        InternalChannel channel;
+        QVERIFY(channel.configure(R"({"type":"double","val":50,"drvl":0,"drvh":100})", &error));
+        channel.setValue(500.0, 0, QString());
+        QCOMPARE(channel.currentValue(), 100.0);
+        channel.setValue(-500.0, 0, QString());
+        QCOMPARE(channel.currentValue(), 0.0);
+        channel.setValue(42.0, 0, QString());
+        QCOMPARE(channel.currentValue(), 42.0);
+    }
+
+    // DRVL==DRVH==0 (or both unset) is "no drive limits configured": no clamping
+    {
+        InternalChannel channel;
+        QVERIFY(channel.configure(R"({"type":"double","val":12345,"drvl":0,"drvh":0})", &error));
+        QCOMPARE(channel.currentValue(), 12345.0);
+
+        InternalChannel unset;
+        QVERIFY(unset.configure(R"({"type":"double","val":12345})", &error));
+        QCOMPARE(unset.currentValue(), 12345.0);
+        unset.setValue(-98765.0, 0, QString());
+        QCOMPARE(unset.currentValue(), -98765.0);
+    }
+
+    // only one side configured: only that side clamps
+    {
+        InternalChannel channel;
+        QVERIFY(channel.configure(R"({"type":"double","val":50,"drvh":100})", &error));
+        channel.setValue(500.0, 0, QString());
+        QCOMPARE(channel.currentValue(), 100.0);
+        channel.setValue(-500.0, 0, QString());
+        QCOMPARE(channel.currentValue(), -500.0);
     }
 }
 

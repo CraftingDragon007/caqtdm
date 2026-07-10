@@ -107,6 +107,10 @@ bool InternalChannel::splitField(const QString &pv, QString *base, Field *field)
     base->clear();
 
     QString name = pv;
+
+    int schemePos = name.indexOf("://");
+    if(schemePos != -1) name = name.mid(schemePos + 3);
+
     int jsonPos = name.indexOf(".{");
     if(jsonPos != -1) name = name.left(jsonPos);
     name = name.trimmed();
@@ -359,7 +363,7 @@ bool InternalChannel::configure(const QString &json, QString *errorString)
         regexPattern = pattern;
     }
 
-    setCurrentValue(val);
+    setCurrentValue(clampToDriveLimits(val));
     updateAlarmState();
     m_elapsedMs = 0;
     needsPublish = true;
@@ -390,6 +394,16 @@ void InternalChannel::setCurrentValue(double newValue)
     case caCHAR:  native.charValue = (quint8) (qint64) newValue; break;
     default:      native.doubleValue = newValue; break;
     }
+}
+
+// DRVL/DRVH are enforced as hard write limits, like a real EPICS output
+// record; DRVL==DRVH==0 is the EPICS convention for "not configured"
+double InternalChannel::clampToDriveLimits(double value) const
+{
+    if(drvl.value == 0.0 && drvh.value == 0.0) return value;
+    double lo = drvl.defined ? drvl.value : -qInf();
+    double hi = drvh.defined ? drvh.value : qInf();
+    return qBound(lo, value, hi);
 }
 
 void InternalChannel::counterRange(double *rangeLow, double *rangeHigh) const
@@ -666,10 +680,10 @@ void InternalChannel::setValue(double rdata, qint32 idata, const QString &sdata)
     case caINT:
     case caLONG:
     case caCHAR:
-        setCurrentValue((double) idata);
+        setCurrentValue(clampToDriveLimits((double) idata));
         break;
     default:
-        setCurrentValue(rdata);
+        setCurrentValue(clampToDriveLimits(rdata));
         break;
     }
     m_waveOverride.clear();

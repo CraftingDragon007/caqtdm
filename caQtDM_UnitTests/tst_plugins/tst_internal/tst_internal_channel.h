@@ -39,6 +39,7 @@ public:
 private slots:
     void baseNameAndJsonPartWork();
     void fieldSyntaxWorks();
+    void splitFieldStripsSchemePrefix();
     void counterStopsWhenInvalidOrDisconnected();
     void fieldWritesAndForcingWork();
     void fillKnobDataFieldWorks();
@@ -54,6 +55,7 @@ private slots:
     void fillKnobDataScalarTypesWork();
     void fillKnobDataArraysWork();
     void hoprLoprWork();
+    void drvlDrvhClampTheValue();
     void nordAndNelmWorkLikeEpics();
     void setValueWorks();
     void setWaveWorks();

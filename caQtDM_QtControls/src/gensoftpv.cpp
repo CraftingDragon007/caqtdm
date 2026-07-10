@@ -54,7 +54,7 @@ genSoftPV::genSoftPV(QWidget *parent) : ESimpleLabel(parent)
 
 void genSoftPV::updateLabel()
 {
-    setText(QString("softPV:%1").arg(thisVariable.isEmpty() ? "?" : thisVariable));
+    setText(QString("internal://%1").arg(thisVariable.isEmpty() ? "?" : thisVariable));
 }
 
 QString genSoftPV::dataTypeString(DataType datatype)

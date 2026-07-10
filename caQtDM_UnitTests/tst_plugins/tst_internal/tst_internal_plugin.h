@@ -58,6 +58,8 @@ private slots:
     void unknownExtensionIsRejected();
     void fieldMonitorsTriggerOnlyOnChange();
     void controlInfoWriteForcesReinitialize();
+    void drvlDrvhClampThroughPlugin();
+    void schemePrefixInDirectCallsIsStripped();
 
 private:
     // registers a monitor; the configuration travels like in the real

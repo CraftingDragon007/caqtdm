@@ -152,6 +152,7 @@ public:
 private:
     double elementValue(int i) const;
     void counterRange(double *rangeLow, double *rangeHigh) const;
+    double clampToDriveLimits(double value) const;
     void updateAlarmState();
     static bool parseRegexPattern(const QString &pattern, QList<QStringList> *segments,
                                   qint64 *combinations, QString *errorString);

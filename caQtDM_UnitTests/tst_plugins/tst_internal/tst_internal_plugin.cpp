@@ -411,7 +411,55 @@ void TestInternalPlugin::controlInfoWriteForcesReinitialize()
     // not keep forcing initialize=true
     qstrncpy(pv, "REINIT", MAXPVLEN);
     QCOMPARE(m_plugin->pvSetValue(pv, 65.0, 0, (char *) "", (char *) "tst", errmess, 0), (int) true);
-    QCOMPARE(m_mutexKnobData->GetMutexKnobDataPtr(index)->edata.initialize, (int) false);
+    QCOMPARE(m_mutexKnobData->GetMutexKnobDataPtr(index)->edata.initialize, (int) true);
+}
+
+void TestInternalPlugin::drvlDrvhClampThroughPlugin()
+{
+    // DRVL/DRVH are hard write limits (InternalChannel::clampToDriveLimits),
+    // enforced both for the initial VAL (from channelConfigJSON) and for
+    // every subsequent pvSetValue() write, through the real plugin path
+    int index = createMonitor("CLAMPED", R"({"type":"double","val":150,"drvl":0,"drvh":100})");
+    pumpTimerOnce();
+    QCOMPARE(m_mutexKnobData->GetMutexKnobDataPtr(index)->edata.rvalue, 100.0);
+
+    char pv[MAXPVLEN];
+    char errmess[SMALL_STRING_LENGTH];
+    errmess[0] = '\0';
+    qstrncpy(pv, "CLAMPED", MAXPVLEN);
+
+    QCOMPARE(m_plugin->pvSetValue(pv, -50.0, 0, (char *) "", (char *) "tst", errmess, 0), (int) true);
+    QCOMPARE(m_mutexKnobData->GetMutexKnobDataPtr(index)->edata.rvalue, 0.0);
+
+    QCOMPARE(m_plugin->pvSetValue(pv, 42.0, 0, (char *) "", (char *) "tst", errmess, 0), (int) true);
+    QCOMPARE(m_mutexKnobData->GetMutexKnobDataPtr(index)->edata.rvalue, 42.0);
+}
+
+void TestInternalPlugin::schemePrefixInDirectCallsIsStripped()
+{
+    // reproduces the bug found in tst_caqtdm_lib.cpp's writeInternalField():
+    // calling the plugin directly (bypassing CaQtDM_Lib::addMonitor(), which
+    // normally strips the scheme prefix) with a pv that still carries
+    // "internal://" must resolve to the same channel as the bare name
+    int index = createMonitor("internal://PREFIXED", R"({"type":"double","val":1})");
+    pumpTimerOnce();
+
+    QVERIFY(m_plugin->channel("PREFIXED") != Q_NULLPTR);
+    QCOMPARE(m_mutexKnobData->GetMutexKnobDataPtr(index)->edata.rvalue, 1.0);
+
+    char pv[MAXPVLEN];
+    char errmess[SMALL_STRING_LENGTH];
+    errmess[0] = '\0';
+
+    // a direct value write, still carrying the prefix, resolves to the same channel
+    qstrncpy(pv, "internal://PREFIXED", MAXPVLEN);
+    QCOMPARE(m_plugin->pvSetValue(pv, 5.0, 0, (char *) "", (char *) "tst", errmess, 0), (int) true);
+    QCOMPARE(m_mutexKnobData->GetMutexKnobDataPtr(index)->edata.rvalue, 5.0);
+
+    // a field write with the prefix still attached resolves too
+    qstrncpy(pv, "internal://PREFIXED.HOPR", MAXPVLEN);
+    QCOMPARE(m_plugin->pvSetValue(pv, 90.0, 0, (char *) "", (char *) "tst", errmess, 0), (int) true);
+    QCOMPARE(m_mutexKnobData->GetMutexKnobDataPtr(index)->edata.upper_disp_limit, 90.0);
 }
 
 void TestInternalPlugin::persistentChannelKeepsRunning()
