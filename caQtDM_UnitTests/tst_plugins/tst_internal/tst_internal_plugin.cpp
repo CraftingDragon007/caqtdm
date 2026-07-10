@@ -378,6 +378,42 @@ void TestInternalPlugin::fieldMonitorsTriggerOnlyOnChange()
     QCOMPARE(m_mutexKnobData->GetMutexKnobDataPtr(lowIndex)->edata.monitorCount, lowCount + 1);
 }
 
+void TestInternalPlugin::controlInfoWriteForcesReinitialize()
+{
+    // guards the mechanism that makes a live HOPR/LOPR/DRVL/DRVH/PREC/EGU
+    // change reach already-connected widgets: InternalChannel::setFieldValue()
+    // marks controlInfoChanged, and InternalPlugin::publishIndex() turns that
+    // into edata.initialize=true on the next publish, exactly like an EPICS
+    // DBE_PROPERTY event does for the epics3 plugin (see displayCallback in
+    // epicsSubs.c). Without this, ComputeNumericMaxMinPrec() and the other
+    // "channel limits" widget logic silently ignore the new values.
+    int index = createMonitor("REINIT", R"({"type":"double","val":50,"drvl":0,"drvh":100})");
+    pumpTimerOnce();
+
+    char pv[MAXPVLEN];
+    char errmess[SMALL_STRING_LENGTH];
+    errmess[0] = '\0';
+
+    // an ordinary value write leaves initialize untouched
+    qstrncpy(pv, "REINIT", MAXPVLEN);
+    QCOMPARE(m_plugin->pvSetValue(pv, 60.0, 0, (char *) "", (char *) "tst", errmess, 0), (int) true);
+    QCOMPARE(m_mutexKnobData->GetMutexKnobDataPtr(index)->edata.initialize, (int) false);
+
+    // writing HOPR is a control-info change: the resulting publish must
+    // carry initialize=true
+    qstrncpy(pv, "REINIT.HOPR", MAXPVLEN);
+    QCOMPARE(m_plugin->pvSetValue(pv, 90.0, 0, (char *) "", (char *) "tst", errmess, 0), (int) true);
+    knobData *kData = m_mutexKnobData->GetMutexKnobDataPtr(index);
+    QCOMPARE(kData->edata.initialize, (int) true);
+    QCOMPARE(kData->edata.upper_disp_limit, 90.0);
+
+    // the flag is consumed by that publish: a further ordinary write does
+    // not keep forcing initialize=true
+    qstrncpy(pv, "REINIT", MAXPVLEN);
+    QCOMPARE(m_plugin->pvSetValue(pv, 65.0, 0, (char *) "", (char *) "tst", errmess, 0), (int) true);
+    QCOMPARE(m_mutexKnobData->GetMutexKnobDataPtr(index)->edata.initialize, (int) false);
+}
+
 void TestInternalPlugin::persistentChannelKeepsRunning()
 {
     int index = createMonitor("PCOUNT", R"({"type":"long","mode":"counter","val":0,"step":1,"period":100,"persistent":true})");

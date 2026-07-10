@@ -830,6 +830,25 @@ void TestInternalChannel::hoprLoprWork()
         QCOMPARE(kData.edata.upper_ctrl_limit, 0.0);
         freeKnobData(&kData);
     }
+
+    // resetting HOPR/LOPR to the same value (0) at runtime, as a caput to
+    // NAME.HOPR/NAME.LOPR would, is recognized as "not configured" again and
+    // falls back to DRVL/DRVH, exactly like they were never set
+    {
+        InternalChannel channel;
+        QVERIFY(channel.configure(R"({"type":"double","val":50,"drvl":0,"drvh":100,"hopr":80,"lopr":20})", &error));
+        knobData kData = makeKnobData();
+        channel.fillKnobData(&kData);
+        QCOMPARE(kData.edata.lower_disp_limit, 20.0);
+        QCOMPARE(kData.edata.upper_disp_limit, 80.0);
+
+        channel.setFieldValue(InternalChannel::FieldHopr, 0.0, 0, QString());
+        channel.setFieldValue(InternalChannel::FieldLopr, 0.0, 0, QString());
+        channel.fillKnobData(&kData);
+        QCOMPARE(kData.edata.lower_disp_limit, 0.0);
+        QCOMPARE(kData.edata.upper_disp_limit, 100.0);
+        freeKnobData(&kData);
+    }
 }
 
 void TestInternalChannel::nordAndNelmWorkLikeEpics()

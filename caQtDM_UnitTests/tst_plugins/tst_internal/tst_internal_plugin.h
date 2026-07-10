@@ -57,6 +57,7 @@ private slots:
     void fieldMonitorsAndWritesWork();
     void unknownExtensionIsRejected();
     void fieldMonitorsTriggerOnlyOnChange();
+    void controlInfoWriteForcesReinitialize();
 
 private:
     // registers a monitor; the configuration travels like in the real

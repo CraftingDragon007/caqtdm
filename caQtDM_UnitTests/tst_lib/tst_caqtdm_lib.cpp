@@ -25,15 +25,153 @@
 
 #include "tst_caqtdm_lib.h"
 
+#include <caapplynumeric.h>
+#include <cainclude.h>
+#include <canumeric.h>
+#include <caspinbox.h>
+#include <gensoftpv.h>
+
 #include <cfloat>
 #include <climits>
+
+// registers a genSoftPV-defined internal channel and pumps one publish cycle
+static genSoftPV *registerInternalGenSoftPV(CaQtDM_Lib *lib, InternalPlugin *plugin, QWidget *host,
+                                            const QString &variable, const QString &hopr,
+                                            const QString &lopr, const QString &drvl = QString(),
+                                            const QString &drvh = QString())
+{
+    genSoftPV *softpv = new genSoftPV(host);
+    softpv->setVariable(variable);
+    softpv->setDataType(genSoftPV::Double);
+    if(!hopr.isEmpty()) softpv->setHopr(hopr);
+    if(!lopr.isEmpty()) softpv->setLopr(lopr);
+    if(!drvl.isEmpty()) softpv->setDrvl(drvl);
+    if(!drvh.isEmpty()) softpv->setDrvh(drvh);
+    lib->HandleWidget(softpv, "", true, true);
+
+    QMetaObject::invokeMethod(plugin, "updateChannels", Qt::DirectConnection);
+    return softpv;
+}
+
+// writes a field of a running internal channel through the real plugin API
+// (the caput equivalent) and lets it publish the resulting change
+static void writeInternalField(InternalPlugin *plugin, const QString &variable, const QString &field,
+                               double value)
+{
+    // no "internal://" scheme prefix: CaQtDM_Lib::addMonitor() strips that
+    // before ever reaching the plugin interface, and InternalChannel::splitField()
+    // expects the already-stripped form
+    QByteArray pv = (variable + "." + field).toLatin1();
+    plugin->pvSetValue(pv.data(), value, 0, Q_NULLPTR, Q_NULLPTR, Q_NULLPTR, 0);
+}
+
+// shared across caApplyNumeric/caNumeric/caSpinbox; each caller needs a unique
+// variable name since InternalPlugin caches channels by base name
+template<class WidgetT>
+static void checkChannelDispLimits(CaQtDM_Lib *lib, InternalPlugin *plugin, QWidget *host,
+                                    const QString &variable)
+{
+    registerInternalGenSoftPV(lib, plugin, host, variable, "90", "10");
+
+    WidgetT *w = new WidgetT(host);
+    w->setLimitsMode(WidgetT::Channel);
+    w->setPV("internal://" + variable);
+    lib->HandleWidget(w, "", false, false);
+
+    QMetaObject::invokeMethod(plugin, "updateChannels", Qt::DirectConnection);
+
+    QCOMPARE(w->getMinValue(), 10.0);
+    QCOMPARE(w->getMaxValue(), 90.0);
+
+    // the actual purpose of HOPR/LOPR: values outside the range are rejected
+    w->setValue(50.0);
+    QCOMPARE(w->value(), 50.0);
+    w->setValue(500.0);   // above HOPR
+    QCOMPARE(w->value(), 50.0);
+    w->setValue(-500.0);  // below LOPR
+    QCOMPARE(w->value(), 50.0);
+
+    delete w;
+}
+
+template<class WidgetT>
+static void checkFallbackWithoutLimits(CaQtDM_Lib *lib, InternalPlugin *plugin, QWidget *host,
+                                        const QString &variable)
+{
+    // neither HOPR/LOPR nor DRVL/DRVH configured
+    registerInternalGenSoftPV(lib, plugin, host, variable, "", "");
+
+    WidgetT *w = new WidgetT(host);
+    w->setLimitsMode(WidgetT::Channel);
+    w->setPV("internal://" + variable);
+    lib->HandleWidget(w, "", false, false);
+
+    QMetaObject::invokeMethod(plugin, "updateChannels", Qt::DirectConnection);
+
+    QCOMPARE(w->getMinValue(), -100000.0);
+    QCOMPARE(w->getMaxValue(), 100000.0);
+
+    delete w;
+}
+
+template<class WidgetT>
+static void checkUserModeIgnoresChannel(CaQtDM_Lib *lib, InternalPlugin *plugin, QWidget *host,
+                                        const QString &variable)
+{
+    registerInternalGenSoftPV(lib, plugin, host, variable, "90", "10");
+
+    WidgetT *w = new WidgetT(host);
+    w->setLimitsMode(WidgetT::User);
+    w->setMinValue(1.0);
+    w->setMaxValue(2.0);
+    w->setPV("internal://" + variable);
+    lib->HandleWidget(w, "", false, false);
+
+    QMetaObject::invokeMethod(plugin, "updateChannels", Qt::DirectConnection);
+
+    QCOMPARE(w->getMinValue(), 1.0);
+    QCOMPARE(w->getMaxValue(), 2.0);
+
+    delete w;
+}
+
+template<class WidgetT>
+static void checkWidgetPicksUpFieldWrite(CaQtDM_Lib *lib, InternalPlugin *plugin, QWidget *host,
+                                         const QString &variable)
+{
+    // HOPR/LOPR inside DRVL/DRVH: the widget follows HOPR/LOPR first
+    registerInternalGenSoftPV(lib, plugin, host, variable, "90", "10", "0", "100");
+
+    WidgetT *w = new WidgetT(host);
+    w->setLimitsMode(WidgetT::Channel);
+    w->setPV("internal://" + variable);
+    lib->HandleWidget(w, "", false, false);
+
+    QMetaObject::invokeMethod(plugin, "updateChannels", Qt::DirectConnection);
+
+    QCOMPARE(w->getMinValue(), 10.0);
+    QCOMPARE(w->getMaxValue(), 90.0);
+
+    // reset HOPR/LOPR to 0 through the real plugin write path (like a caput
+    // to NAME.HOPR/NAME.LOPR); the widget must recognize the change and fall
+    // back to DRVL/DRVH
+    writeInternalField(plugin, variable, "HOPR", 0.0);
+    writeInternalField(plugin, variable, "LOPR", 0.0);
+
+    QCOMPARE(w->getMinValue(), 0.0);
+    QCOMPARE(w->getMaxValue(), 100.0);
+
+    delete w;
+}
 
 void TestCaQtDM_Lib::initTestCase()
 {
     // code to be executed before the first test function
 
     m_fakeFileOpenWindow = Q_NULLPTR;
+    m_parentAS = Q_NULLPTR;
     m_mutexKnobData = Q_NULLPTR;
+    m_internalPlugin = Q_NULLPTR;
     m_caQtDM_Lib = Q_NULLPTR;
 }
 
@@ -42,16 +180,24 @@ void TestCaQtDM_Lib::init()
     // code to be executed before each test function
 
     m_fakeFileOpenWindow = new FakeFileOpenWindow(Q_NULLPTR);
-    caLed *parentAS = new caLed(m_fakeFileOpenWindow);
+    m_parentAS = new caInclude(m_fakeFileOpenWindow);
     m_mutexKnobData = new MutexKnobData();
+    m_mutexKnobData->UpdateMechanism(MutexKnobData::UpdateDirect); // synchronous widget updates
+
+    m_internalPlugin = new InternalPlugin();
+    m_internalPlugin->initCommunicationLayer(m_mutexKnobData, Q_NULLPTR, QMap<QString, QString>());
+
+    QMap<QString, ControlsInterface *> interfaces;
+    interfaces.insert("internal", qobject_cast<ControlsInterface *>(m_internalPlugin));
+
     m_caQtDM_Lib = new CaQtDM_Lib(m_fakeFileOpenWindow,
                                   "",
                                   "",
                                   m_mutexKnobData,
-                                  {},
+                                  interfaces,
                                   Q_NULLPTR,
                                   false,
-                                  parentAS,
+                                  m_parentAS,
                                   {});
 }
 
@@ -65,6 +211,7 @@ void TestCaQtDM_Lib::cleanup()
     // code to be executed after each test function
 
     delete m_caQtDM_Lib;
+    delete m_internalPlugin;
     delete m_mutexKnobData;
     delete m_fakeFileOpenWindow;
 }
@@ -488,4 +635,44 @@ void TestCaQtDM_Lib::getDoubleValueFromStringWorks()
     QCOMPARE(m_caQtDM_Lib->getDoubleValueFromString(buffer, CaQtDM_Lib_Interface::decimal, &end),
              0.0);
     QCOMPARE(*end, '\0');
+}
+
+void TestCaQtDM_Lib::computeNumericMaxMinPrecUsesChannelDispLimits()
+{
+    checkChannelDispLimits<caApplyNumeric>(m_caQtDM_Lib, m_internalPlugin, m_parentAS,
+                                            "T_ApplyNumeric_Channel");
+    checkChannelDispLimits<caNumeric>(m_caQtDM_Lib, m_internalPlugin, m_parentAS,
+                                       "T_Numeric_Channel");
+    checkChannelDispLimits<caSpinbox>(m_caQtDM_Lib, m_internalPlugin, m_parentAS,
+                                       "T_Spinbox_Channel");
+}
+
+void TestCaQtDM_Lib::computeNumericMaxMinPrecFallsBackWithoutLimits()
+{
+    checkFallbackWithoutLimits<caApplyNumeric>(m_caQtDM_Lib, m_internalPlugin, m_parentAS,
+                                                "T_ApplyNumeric_Fallback");
+    checkFallbackWithoutLimits<caNumeric>(m_caQtDM_Lib, m_internalPlugin, m_parentAS,
+                                           "T_Numeric_Fallback");
+    checkFallbackWithoutLimits<caSpinbox>(m_caQtDM_Lib, m_internalPlugin, m_parentAS,
+                                           "T_Spinbox_Fallback");
+}
+
+void TestCaQtDM_Lib::computeNumericMaxMinPrecIgnoresChannelInUserMode()
+{
+    checkUserModeIgnoresChannel<caApplyNumeric>(m_caQtDM_Lib, m_internalPlugin, m_parentAS,
+                                                 "T_ApplyNumeric_User");
+    checkUserModeIgnoresChannel<caNumeric>(m_caQtDM_Lib, m_internalPlugin, m_parentAS,
+                                            "T_Numeric_User");
+    checkUserModeIgnoresChannel<caSpinbox>(m_caQtDM_Lib, m_internalPlugin, m_parentAS,
+                                            "T_Spinbox_User");
+}
+
+void TestCaQtDM_Lib::computeNumericMaxMinPrecUpdatesWhenChannelChanges()
+{
+    checkWidgetPicksUpFieldWrite<caApplyNumeric>(m_caQtDM_Lib, m_internalPlugin, m_parentAS,
+                                                  "T_ApplyNumeric_Live");
+    checkWidgetPicksUpFieldWrite<caNumeric>(m_caQtDM_Lib, m_internalPlugin, m_parentAS,
+                                             "T_Numeric_Live");
+    checkWidgetPicksUpFieldWrite<caSpinbox>(m_caQtDM_Lib, m_internalPlugin, m_parentAS,
+                                             "T_Spinbox_Live");
 }

@@ -60,6 +60,7 @@ InternalChannel::InternalChannel()
     , regexPattern("")
     , native()
     , needsPublish(true)
+    , controlInfoChanged(false)
     , severity(NO_ALARM)
     , status(0)
     , m_segments()
@@ -520,17 +521,19 @@ void InternalChannel::setFieldValue(Field field, double rdata, qint32 idata, con
     case FieldStat:
         if(statusFromWrite(idata, sdata, &code)) status = code;
         break;
-    // alarm limits re-evaluate the alarm state immediately
-    case FieldLow:  low.set(rdata); updateAlarmState(); break;
-    case FieldLolo: lolo.set(rdata); updateAlarmState(); break;
-    case FieldHigh: high.set(rdata); updateAlarmState(); break;
-    case FieldHihi: hihi.set(rdata); updateAlarmState(); break;
-    case FieldDrvl: drvl.set(rdata); break;
-    case FieldDrvh: drvh.set(rdata); break;
-    case FieldHopr: hopr.set(rdata); break;
-    case FieldLopr: lopr.set(rdata); break;
-    case FieldPrec: precision = (short) ((rdata != 0.0) ? rdata : idata); break;
-    case FieldEgu:  units = sdata; break;
+    // alarm limits re-evaluate the alarm state immediately; these and the
+    // other control-info fields force initialize=true on the next publish
+    // (InternalPlugin::publishIndex), mirroring an EPICS DBE_PROPERTY event
+    case FieldLow:  low.set(rdata); updateAlarmState(); controlInfoChanged = true; break;
+    case FieldLolo: lolo.set(rdata); updateAlarmState(); controlInfoChanged = true; break;
+    case FieldHigh: high.set(rdata); updateAlarmState(); controlInfoChanged = true; break;
+    case FieldHihi: hihi.set(rdata); updateAlarmState(); controlInfoChanged = true; break;
+    case FieldDrvl: drvl.set(rdata); controlInfoChanged = true; break;
+    case FieldDrvh: drvh.set(rdata); controlInfoChanged = true; break;
+    case FieldHopr: hopr.set(rdata); controlInfoChanged = true; break;
+    case FieldLopr: lopr.set(rdata); controlInfoChanged = true; break;
+    case FieldPrec: precision = (short) ((rdata != 0.0) ? rdata : idata); controlInfoChanged = true; break;
+    case FieldEgu:  units = sdata; controlInfoChanged = true; break;
     case FieldNord: nord = qBound(0, (idata != 0) ? (int) idata : (int) rdata, nelm); break;
     case FieldNelm: // read only
         return;
@@ -727,15 +730,21 @@ void InternalChannel::fillKnobData(knobData *kData) const
     if(drvl.defined) kData->edata.lower_ctrl_limit = drvl.value;
     if(drvh.defined) kData->edata.upper_ctrl_limit = drvh.value;
 
-    // operating range becomes the display/input limits; falls back to the drive
-    // limits when not configured, and is clamped into the drive range otherwise
-    if(lopr.defined || drvl.defined) {
-        double value = lopr.defined ? lopr.value : drvl.value;
+    // operating range becomes the display/input limits, clamped into the drive
+    // range; HOPR==LOPR (e.g. both reset to 0) is the EPICS convention for
+    // "not really configured" and falls back to the drive range, same as an
+    // unset HOPR/LOPR would
+    bool oprCollapsed = hopr.defined && lopr.defined && (hopr.value == lopr.value);
+    bool loprUsable = lopr.defined && !oprCollapsed;
+    bool hoprUsable = hopr.defined && !oprCollapsed;
+
+    if(loprUsable || drvl.defined) {
+        double value = loprUsable ? lopr.value : drvl.value;
         if(drvl.defined) value = qMax(value, drvl.value);
         kData->edata.lower_disp_limit = value;
     }
-    if(hopr.defined || drvh.defined) {
-        double value = hopr.defined ? hopr.value : drvh.value;
+    if(hoprUsable || drvh.defined) {
+        double value = hoprUsable ? hopr.value : drvh.value;
         if(drvh.defined) value = qMin(value, drvh.value);
         kData->edata.upper_disp_limit = value;
     }

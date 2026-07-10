@@ -142,6 +142,10 @@ public:
     // a SEVR/STAT write sets them directly until then (NOTCONNECTED = 99)
     NativeValue native;
     bool needsPublish;
+    // a control-info field (limits, precision, units) changed since the last
+    // publish; the plugin uses this to force initialize=true on the next
+    // update, mirroring an EPICS DBE_PROPERTY event
+    bool controlInfoChanged;
     short severity;
     short status;
 

@@ -11,9 +11,13 @@ HEADERS += tst_caqtdm_lib.h \
 
 # --- Tested classes below ---
 
-HEADERS += ../../caQtDM_Lib/src/caqtdm_lib.h
+HEADERS += ../../caQtDM_Lib/src/caqtdm_lib.h \
+    ../../caQtDM_Plugins/internal/internal_channel.h \
+    ../../caQtDM_Plugins/internal/internal_plugin.h
 
-SOURCES += ../../caQtDM_Lib/src/caqtdm_lib.cpp
+SOURCES += ../../caQtDM_Lib/src/caqtdm_lib.cpp \
+    ../../caQtDM_Plugins/internal/internal_channel.cpp \
+    ../../caQtDM_Plugins/internal/internal_plugin.cpp
 
 FORMS += ../../caQtDM_Viewer/src/main.ui
 
@@ -21,6 +25,7 @@ INCLUDEPATH += ../../caQtDM_QtControls/src \
     ../../caQtDM_Lib \
     ../../caQtDM_Lib/src \
     ../../caQtDM_Plugins \
+    ../../caQtDM_Plugins/internal \
     ../../caQtDM_Parsers/adlParserSrc \
     ../../caQtDM_Parsers/edlParserSrc \
     $$(QWTINCLUDE) \
