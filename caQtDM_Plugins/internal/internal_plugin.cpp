@@ -117,7 +117,10 @@ void InternalPlugin::publishIndex(InternalChannel *channel, int index)
     // a changed limit/precision/units re-arms initialize so caqtdm_lib
     // re-evaluates channel-derived widget limits, like a real EPICS
     // DBE_PROPERTY update does (see epics3's displayCallback)
-    if(channel->controlInfoChanged) kData->edata.initialize = true;
+    if(channel->controlInfoChanged) {
+        kData->edata.initialize = true;
+        qCDebug(internalLog) << "control info changed, forcing initialize=true for index" << index;
+    }
     channel->fillKnobDataField(kData, monitorFields.value(index, InternalChannel::FieldVal));
     kData->edata.monitorCount++;
     kData->edata.actTimeMs = QDateTime::currentMSecsSinceEpoch();

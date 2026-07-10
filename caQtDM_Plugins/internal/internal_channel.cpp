@@ -28,12 +28,15 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QLoggingCategory>
 #include <QRegularExpression>
 #include <QtGlobal>
 #include <QtMath>
 
 #include <stdlib.h>
 #include <string.h>
+
+Q_LOGGING_CATEGORY(internalChannelLog, "caqtdm.plugins.internal.channel")
 
 InternalChannel::InternalChannel()
     : fieldtype(caDOUBLE)
@@ -109,7 +112,10 @@ bool InternalChannel::splitField(const QString &pv, QString *base, Field *field)
     QString name = pv;
 
     int schemePos = name.indexOf("://");
-    if(schemePos != -1) name = name.mid(schemePos + 3);
+    if(schemePos != -1) {
+        qCDebug(internalChannelLog) << "stripping scheme prefix from" << name;
+        name = name.mid(schemePos + 3);
+    }
 
     int jsonPos = name.indexOf(".{");
     if(jsonPos != -1) name = name.left(jsonPos);
@@ -368,6 +374,12 @@ bool InternalChannel::configure(const QString &json, QString *errorString)
     m_elapsedMs = 0;
     needsPublish = true;
     m_configured = true;
+
+    qCDebug(internalChannelLog) << "configured type" << fieldtype << "mode" << mode
+                                << "drvl" << drvl.defined << drvl.value
+                                << "drvh" << drvh.defined << drvh.value
+                                << "hopr" << hopr.defined << hopr.value
+                                << "lopr" << lopr.defined << lopr.value;
     return true;
 }
 
@@ -403,7 +415,12 @@ double InternalChannel::clampToDriveLimits(double value) const
     if(drvl.value == 0.0 && drvh.value == 0.0) return value;
     double lo = drvl.defined ? drvl.value : -qInf();
     double hi = drvh.defined ? drvh.value : qInf();
-    return qBound(lo, value, hi);
+    double clamped = qBound(lo, value, hi);
+    if(clamped != value) {
+        qCDebug(internalChannelLog) << "value" << value << "clamped to drive range [" << lo
+                                    << "," << hi << "] ->" << clamped;
+    }
+    return clamped;
 }
 
 void InternalChannel::counterRange(double *rangeLow, double *rangeHigh) const
@@ -524,6 +541,7 @@ void InternalChannel::updateAlarmState()
 void InternalChannel::setFieldValue(Field field, double rdata, qint32 idata, const QString &sdata)
 {
     short code;
+    bool wasControlInfoChanged = controlInfoChanged;
     switch(field) {
     case FieldVal:
         setValue(rdata, idata, sdata);
@@ -551,6 +569,10 @@ void InternalChannel::setFieldValue(Field field, double rdata, qint32 idata, con
     case FieldNord: nord = qBound(0, (idata != 0) ? (int) idata : (int) rdata, nelm); break;
     case FieldNelm: // read only
         return;
+    }
+    if(controlInfoChanged && !wasControlInfoChanged) {
+        qCDebug(internalChannelLog) << "field" << field << "changed control info,"
+                                    << "forcing reinitialize on next publish";
     }
     needsPublish = true;
 }

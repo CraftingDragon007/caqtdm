@@ -28,6 +28,8 @@
 
 #include "tst_internal_channel.h"
 #include "tst_internal_plugin.h"
+#include <QLoggingCategory>
+
 
 int main(int argc, char **argv)
 {
@@ -37,6 +39,10 @@ int main(int argc, char **argv)
     QApplication app(argc, argv);
     QApplication::setOrganizationName("Paul Scherrer Institut");
     QApplication::setApplicationName("caQtDM-UnitTests-internal");
+    // to avoid a lot of unneeded messages
+    QLoggingCategory::setFilterRules("caqtdm.widgets.*.debug=false");
+
+
     int status = 0;
 
     {
