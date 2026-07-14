@@ -76,7 +76,7 @@ RUN mkdir -p /opt/caqtdm/lib/qt6 && \
     make -j$(nproc)
 
 WORKDIR /build
-RUN git clone --depth 1 https://github.com/CraftingDragon007/qnovnc-platform-plugin.git
+RUN git clone --depth 1 https://github.com/caqtdm/qnovnc-platform-plugin.git
 
 WORKDIR /build/qnovnc-platform-plugin
 RUN cmake -B build -S . -DCMAKE_INSTALL_PREFIX=/usr && \
