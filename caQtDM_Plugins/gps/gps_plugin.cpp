@@ -171,10 +171,11 @@ int gpsPlugin::initCommunicationLayer(MutexKnobData *data, MessageWindow *messag
       if (pos_data_source) {
           connect(pos_data_source, SIGNAL(positionUpdated(QGeoPositionInfo)),
                   this, SLOT(positionUpdated(QGeoPositionInfo)));
-
+      pos_data_source->setUpdateInterval(500);
+      pos_data_source->setPreferredPositioningMethods(QGeoPositionInfoSource::AllPositioningMethods);
+      }else{
+        return false;
       }
-    pos_data_source->setUpdateInterval(500);
-    pos_data_source->setPreferredPositioningMethods(QGeoPositionInfoSource::AllPositioningMethods);
     return true;
 }
 
