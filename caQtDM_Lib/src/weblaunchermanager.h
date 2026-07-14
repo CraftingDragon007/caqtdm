@@ -78,6 +78,8 @@ private:
     QJsonArray expandArray(const QJsonArray &arr);
     void normalizePanelPaths(QJsonObject& obj);
     void normalizePanelPath(QJsonObject& obj, const QString& key);
+    void mergeParamMacros(QJsonObject& obj);
+    static QString extractMacroFromParam(const QString& param);
 
     QString getLastElementFromAnywhere(QString input);
 

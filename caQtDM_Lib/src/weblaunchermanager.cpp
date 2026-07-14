@@ -29,6 +29,7 @@
 #include <QFileInfo>
 #include <QJsonObject>
 #include <QJsonParseError>
+#include <QRegularExpression>
 #include <QUrl>
 #include <fileFunctions.h>
 #include <searchfile.h>
@@ -238,6 +239,31 @@ void WebLauncherManager::normalizePanelPaths(QJsonObject& obj) {
     normalizePanelPath(obj, "file");
 }
 
+QString WebLauncherManager::extractMacroFromParam(const QString& param) {
+    if (param.isEmpty()) return QString();
+    QRegularExpression re("-macros?\\s+(?:\"([^\"]*)\"|'([^']*)'|(\\S+))");
+    QRegularExpressionMatch m = re.match(param);
+    if (!m.hasMatch()) return QString();
+    for (int g = 1; g <= 3; ++g) {
+        if (!m.captured(g).isNull()) return m.captured(g).trimmed();
+    }
+    return QString();
+}
+
+void WebLauncherManager::mergeParamMacros(QJsonObject& obj) {
+    const QString type = obj["type"].toString();
+    if (type != "caqtdm" && type != "medm" && type != "pep") return;
+    if (!obj.contains("param")) return;
+
+    const QString paramMacro = extractMacroFromParam(obj["param"].toString());
+    if (paramMacro.isEmpty()) return;
+
+    QString existing = obj["macros"].toString().trimmed();
+    while (existing.endsWith(',') || existing.endsWith(';')) existing.chop(1);
+
+    obj["macros"] = existing.isEmpty() ? paramMacro : (paramMacro + "," + existing);
+}
+
 QJsonValue WebLauncherManager::expandObject(QJsonObject obj) {
     // If this object has a menu array, expand the items within that array
     if (obj.contains("menu") && obj["menu"].isArray()) {
@@ -282,6 +308,7 @@ QJsonArray WebLauncherManager::expandArray(const QJsonArray &arr) {
         }
 
         normalizePanelPaths(item);
+        mergeParamMacros(item);
         result.append(item);
     }
     return result;
