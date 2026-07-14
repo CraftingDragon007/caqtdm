@@ -238,16 +238,7 @@
 #endif
 
 public slots:
-     void doSomething() {
-         printf("About to quit!\n");
-#if defined linux || defined TARGET_OS_MAC
-         // remove temporary file created by caQtDM for pipe reading
-         if(lastFile.contains("qt-tempFile")) {
-             QFile::remove(lastFile);
-         }
-#endif
-         sharedMemory.detach();
-     }
+     void doSomething();
      void nextWindow();
      void Callback_IosExit();
      void Callback_ReloadWindow(QWidget*);
@@ -314,6 +305,7 @@ private:
      _blop empty;
 
      QDateTime lastReloadTime;
+
  };
 
  #endif

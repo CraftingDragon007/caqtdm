@@ -54,6 +54,13 @@ public:
 
     caMimeDisplay(QWidget *parent);
 
+#ifdef WEB
+    void setVNCEnabled(bool isVNC);
+
+signals:
+    void triggerURLWeb(QString url);
+#endif
+
 public slots:
     void animation(QRect p) {
 #include "animationcode.h"
@@ -68,6 +75,9 @@ public slots:
 
 private:
     bool eventFilter(QObject *obj, QEvent *event);
+#ifdef WEB
+    bool m_isVNC;
+#endif
 
 private slots:
     void Callback_Clicked(int);

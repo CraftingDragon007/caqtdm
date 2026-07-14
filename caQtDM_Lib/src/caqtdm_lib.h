@@ -72,6 +72,9 @@
    #include "myQProcess.h"
    #include "processWindow.h"
 #endif
+#ifdef WEB
+#include "vncwebchildprocess.h"
+#endif
 #include "mutexKnobData.h"
 #include "mutexKnobDataWrapper.h"
 #include "MessageWindow.h"
@@ -144,6 +147,33 @@ public:
 
     static QList<caHMIConfigTransferItem*> hmiConfigList;
     static QReadWriteLock hmiConfigListLock;
+
+#ifdef WEB
+    static QHash<QString, VncWebChildProcess*> webChildProcesses;
+    static QReadWriteLock webChildProcessesLock;
+
+    static quint16 vncPortIndex;
+    static quint16 vncPort;
+    static quint16 webPort;
+    static QString webHost;
+    static bool slaveServer;
+    static bool vncServer;
+    static bool noVncPlugin;
+    static bool noVncReadonly;
+    static bool interactionBasedTimeout;
+    static uint webTimeout;
+    static quint16 webInstanceLimit;
+
+    static bool webAllowInsecureCaShellCommands;
+
+    static void addWebChildProcess(QString absoluteFilePath, QString macros, VncWebChildProcess* childProcess);
+    static VncWebChildProcess* getWebChildProcess(QString absoluteFilePath, QString macros);
+    static QString getChildProcessKey(QString absoluteFilePath, QString macros);
+
+    static VncWebChildProcess* startVncChildProcess(quint16 vncPort, quint16 webPort, QString file, QString macros, QWidget* parent = nullptr);
+#else
+#define vncServer false
+#endif
 
     // interface implementation
     int addMonitor(QWidget *thisW, knobData *data, QString pv, QWidget *w, int *specData, QMap<QString, QString> map, QString *pvRep);
@@ -305,6 +335,7 @@ signals:
     void Signal_ReloadWindow(QWidget*);
     void Signal_ReloadWindowL();
     void Signal_ReloadAllWindows();
+    void Signal_Closing();
     void fileChanged(const QString&);
 
 #ifndef UNIT_TESTING
@@ -595,6 +626,11 @@ public slots:
     }
 
     void Callback_printWindow() {
+        if (vncServer) {
+            QMessageBox::critical(this, "Error", "Printing disabled in web version");
+            return;
+        }
+
         print();
     }
 

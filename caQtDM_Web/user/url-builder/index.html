@@ -1,0 +1,86 @@
+<!--
+  This file is part of the caQtDM Framework, developed at the Paul Scherrer Institut,
+  Villigen, Switzerland
+
+  The caQtDM Framework is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  The caQtDM Framework is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with the caQtDM Framework.  If not, see <http://www.gnu.org/licenses/>.
+
+  Copyright (c) 2026
+
+  Author:
+    Julian Houba
+  Contact details:
+    julian.houba@psi.ch
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>caQtDM Web URL Builder</title>
+		<link rel="stylesheet" href="index.css">
+	</head>
+	<body>
+		<main class="page">
+			<header class="header">
+				<h1 class="title">caQtDM WebURL Builder</h1>
+			</header>
+
+			<section class="card" aria-label="URL inputs">
+				<label class="field">
+					<span class="label">File path (relative)</span>
+					<input
+						id="filePath"
+						class="input"
+						type="text"
+						inputmode="text"
+						autocomplete="off"
+						spellcheck="false"
+						placeholder="relative/path/to/file.ui"
+					>
+					<span class="hint">Allowed extensions: .ui, .prc, .adl, .edl</span>
+				</label>
+
+				<label class="field">
+					<span class="label">Macros</span>
+					<textarea
+						id="macros"
+						class="textarea"
+						rows="4"
+						autocomplete="off"
+						spellcheck="false"
+						placeholder="NAME1=VALUE1;NAME2=VALUE2;NAME3=VALUE3"
+					></textarea>
+					<span class="hint">Format: key=value;key=value;... (semicolon or newline separated)</span>
+				</label>
+			</section>
+
+			<section class="card" aria-label="Generated URL">
+				<label class="field">
+					<span class="label">Generated URL</span>
+					<input id="generatedUrl" class="input" type="text" readonly>
+				</label>
+
+				<div class="actions">
+					<button type="button" id="copyBtn" class="button" disabled>Copy</button>
+					<button type="button" id="openBtn" class="button primary" disabled>Open</button>
+				</div>
+
+				<p id="status" class="status" aria-live="polite"></p>
+			</section>
+		</main>
+
+		<script src="index.js"></script>
+	</body>
+</html>

@@ -37,7 +37,8 @@
 #include "QDebug"
 #include <QFileDialog>
 #include <QLocale>
-#include <signal.h>
+#include <QHostAddress>
+#include "signalhandler.h"
 #include <iostream>
 #include <stdlib.h>
 #include "pipereader.h"
@@ -78,19 +79,7 @@
 #endif
 
 Q_LOGGING_CATEGORY(caQtDMLog, "caqtdm.viewer.caqtdm")
-
-static void unixSignalHandler(int signum) {
-
-    Q_UNUSED(signum);
-
-    /*
-     * Make sure your Qt application gracefully quits.
-     * NOTE - purpose for calling qApp->exit(0):
-     *      1. Forces the Qt framework's "main event loop `qApp->exec()`" to quit looping.
-     *      2. Also emits the QCoreApplication::aboutToQuit() signal. This signal is used for cleanup code.
-     */
-    QCoreApplication::exit(0);
-}
+Q_LOGGING_CATEGORY(webLog, "caqtdm.viewer.web")
 
 extern bool HTTPCONFIGURATOR;
 
@@ -114,6 +103,92 @@ static void createMap(QMap<QString, QString> &map, const QString& option)
     qCDebug(caQtDMLog) << "inserted int map from option:" << option;
     qCDebug(caQtDMLog) << "resulting map=" << map;
 }
+
+#ifdef WEB
+struct WidgetDimensions {
+    bool found = false;
+    int width = -1;
+    int height = -1;
+};
+
+
+
+WidgetDimensions getWidgetDimensionsFromUi(QString& uiFilePath) {
+    fileFunctions filefunction;
+    filefunction.checkFileAndDownload(uiFilePath);
+    searchFile *filecheck = new searchFile(uiFilePath);
+    uiFilePath = filecheck->findFile();
+    filecheck->deleteLater();
+
+    if (uiFilePath.isNull()) {
+        qWarning() << "Error: File does not exist" << uiFilePath;
+        return {};
+    }
+
+    QFile file(uiFilePath);
+    if (!file.open(QFile::ReadOnly)) {
+        qWarning() << "Error: Cannot open UI file" << uiFilePath;
+        return {};
+    }
+
+    QXmlStreamReader xml(&file);
+    WidgetDimensions priorityDims;
+    WidgetDimensions firstWidgetDims;
+
+    bool inGeometry = false;
+    bool inRect = false;
+    QString currentClass;
+
+    while (!xml.atEnd() && !xml.hasError()) {
+        QXmlStreamReader::TokenType token = xml.readNext();
+
+        if (token == QXmlStreamReader::StartElement) {
+            QString tagName = xml.name().toString();
+
+            if (tagName == "widget") {
+                currentClass = xml.attributes().value("class").toString();
+            }
+            else if (tagName == "property" && xml.attributes().value("name") == "geometry") {
+                inGeometry = true;
+            }
+            else if (inGeometry && tagName == "rect") {
+                inRect = true;
+            }
+            else if (inRect && tagName == "width") {
+                int w = xml.readElementText().toInt();
+                if (currentClass == "QMainWindow" || currentClass == "QDialog") {
+                    priorityDims.width = w;
+                } else if (!firstWidgetDims.found) {
+                    firstWidgetDims.width = w;
+                }
+            }
+            else if (inRect && tagName == "height") {
+                int h = xml.readElementText().toInt();
+                if (currentClass == "QMainWindow" || currentClass == "QDialog") {
+                    priorityDims.height = h;
+                    priorityDims.found = true;
+                    break;
+                } else if (!firstWidgetDims.found) {
+                    firstWidgetDims.height = h;
+                    firstWidgetDims.found = true;
+                }
+            }
+        }
+        else if (token == QXmlStreamReader::EndElement) {
+            QString tagName = xml.name().toString();
+            if (tagName == "rect") inRect = false;
+            if (tagName == "property") inGeometry = false;
+        }
+    }
+
+    if (xml.hasError()) {
+        qWarning() << "Error parsing UI file:" << xml.errorString();
+    }
+    file.close();
+
+    return priorityDims.found ? priorityDims : firstWidgetDims;
+}
+#endif
 
 int main(int argc, char *argv[])
 {
@@ -152,6 +227,22 @@ int main(int argc, char *argv[])
     bool printscreen = false;
     bool savetoimage = false;
     bool resizing = true;
+#ifdef WEB
+    bool server = false;
+    bool use_novnc_plugin = false;
+    bool novnc_readonly = false;
+    bool slave_server = false;
+    bool web_interaction_based_timeout = false;
+    bool web_allow_insecure_cashell_commands = false;
+    QString host = "127.0.0.1";
+    quint16 port = 30001;
+    quint16 web_port = 30000;
+    quint16 web_instance_limit = 1000;
+    uint web_timeout = 0;
+    QString web_launcher_file;
+#else
+#define server false
+#endif
 
     // Here follow some printfs, they should not be replaced by qInfo() because the custom logger is not initialized yet and printf is more consistent across plattforms than regular qInfo() with default logger.
     QStringList arguments;
@@ -253,6 +344,81 @@ int main(int argc, char *argv[])
             in++;
             printf("caQtDM -- option <%s>\n", argv[in]);
             createMap(options, QString(argv[in]));
+#ifdef WEB
+        } else if (strcmp (argv[in], "-server") == 0) {
+            server = true;
+            minimize = false;
+            theme = "Fusion";
+        } else if (strcmp (argv[in], "-novnc") == 0) {
+            use_novnc_plugin = true;
+        } else if (strcmp (argv[in], "-novnc_readonly") == 0) {
+            if (!use_novnc_plugin) {
+                printf("caQtDM -- the option novnc-readonly can only be used together with the qnovnc plugin (-novnc)");
+                exit(1);
+            } else novnc_readonly = true;
+        } else if (strcmp (argv[in], "-slave_server") == 0) {
+            slave_server = true;
+        } else if (strcmp (argv[in], "-server_port") == 0) {
+            in++;
+            bool valid;
+            port = QString(argv[in]).toUShort(&valid);
+            if (!valid) {
+                printf("caQtDM -- Invalid server port %s specified, not enabling server mode\n", argv[in]);
+                exit(1);
+            } else {
+                if (port > std::numeric_limits<quint16>::max() - 1) {
+                    web_port = port - 1;
+                } else web_port = port + 1;
+            }
+        } else if (strcmp (argv[in], "-web_server_port") == 0) {
+            in++;
+            bool valid;
+            web_port = QString(argv[in]).toUShort(&valid);
+            if (!valid) {
+                printf("caQtDM -- Invalid web server port %s specified, not enabling server mode\n", argv[in]);
+                exit(1);
+            }
+        } else if (strcmp (argv[in], "-web_timeout") == 0) {
+            in++;
+            bool valid;
+            web_timeout = QString(argv[in]).toUInt(&valid);
+            if (!valid) {
+                printf("caQtDM -- Invalid timeout %s seconds specified, not enabling timeout for web child processes\n", argv[in]);
+                web_timeout = 0;
+            } else if (((double)web_timeout / 60 / 60) <= 0.021) {
+                printf("caQtDM -- Invalid web timeout %s seconds specified (min. 76s), disabling. This Switch is not meant for jokes!!!\n", argv[in]);
+                web_timeout = 0;
+            }
+        } else if (strcmp (argv[in], "-web_instance_limit") == 0) {
+            in++;
+            bool valid;
+            web_instance_limit = QString(argv[in]).toUInt(&valid);
+            if (!valid) {
+                printf("caQtDM -- Invalid instance limit %s specified, defaulting back to 1000\n", argv[in]);
+                web_instance_limit = 1000;
+            } else if (web_instance_limit == 0) {
+                printf("caQtDM -- Invalid instance limit 0 specified, number should be between 1 and 5000\n");
+                exit(1);
+            } else if (web_instance_limit > 5000) {
+                printf("caQtDM -- Too big instance limit %s specified, falling back to maximum of 5000\n", argv[in]);
+                web_instance_limit = 5000;
+            }
+        } else if (strcmp (argv[in], "-web_interaction_timeout") == 0) {
+            web_interaction_based_timeout = true;
+        } else if (strcmp (argv[in], "-host") == 0) {
+            in++;
+            QHostAddress tempAddr;
+            if (tempAddr.setAddress(argv[in]))
+            {
+                host = QString(argv[in]);
+            } else printf("caQtDM -- Invalid host address %s provided, please use a proper address like 127.0.0.1 or 0.0.0.0 !\n", argv[in]);
+        } else if (strcmp (argv[in], "-web_launcher_root_file") == 0) {
+            in++;
+            web_launcher_file = argv[in];
+        } else if (strcmp (argv[in], "-web_allow_insecure_cashell_commands") == 0) {
+            web_allow_insecure_cashell_commands = true;
+            printf("caQtDM - Allowing executing of caShellCommands in web mode, please be careful!");
+#endif
         } else if (strncmp (argv[in], "-" , 1) == 0) {
             /* unknown application argument */
             printf("caQtDM -- Argument %d = [%s] is unknown!, possible -attach -macro -noMsg -stylefile -dg -x -print -httpconfig -noResize -option\n",in,argv[in]);
@@ -262,6 +428,56 @@ int main(int argc, char *argv[])
             break;
         }
     }
+
+#ifdef WEB
+    if (server && fileName.length() > 0) {
+        WidgetDimensions dimensions;
+
+        QByteArray envWidth = qgetenv("CAQTDM_VIRTUAL_WIDTH");
+        QByteArray envHeight = qgetenv("CAQTDM_VIRTUAL_HEIGHT");
+        if (!envWidth.isEmpty() && !envHeight.isEmpty()) {
+            dimensions = WidgetDimensions();
+            bool wOk, hOk;
+
+            dimensions.width = envWidth.toInt(&wOk);
+            dimensions.height = envHeight.toInt(&hOk);
+
+            dimensions.found = wOk && hOk;
+        } else {
+            dimensions.found = false;
+        }
+        if (!dimensions.found)
+            dimensions = getWidgetDimensionsFromUi(fileName);
+        if (dimensions.found) {
+            if (dimensions.height <= 0 || dimensions.width <= 0) {
+                printf("caQtDM -- Negative or zero ui width / height found (%sx%s), not enabling server mode!", QString::number(dimensions.width).toUtf8().data(), QString::number(dimensions.height).toUtf8().data());
+                exit(1);
+            } else qputenv("QT_QPA_PLATFORM",
+                        QString("%1:size=%2x%3:depth=16:port=%4%5:%6")
+                            .arg(use_novnc_plugin ? "novnc" : "vnc")
+                            .arg(dimensions.width)
+                            .arg(dimensions.height)
+                            .arg(port)
+                            .arg(use_novnc_plugin ? QString(":host=%1").arg(host) : "")
+                            .arg(novnc_readonly ? "readonly" : "")
+                            .toUtf8());
+        } else {
+            printf("caQtDM was unable to determin the widget dimensions, please specify a valid ui file");
+            exit(1);
+        }
+    } else if (server) {
+        printf("No ui file was specified, not enabling server mode!");
+        exit(1);
+    }
+
+    if (server) {
+#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
+        // fix dpi for (no)VNC with qt5
+        qputenv("QT_FONT_DPI", QString::number(96).toUtf8());
+#endif
+    }
+
+#endif // WEB
 
     // prevents QApplication from handling style on it's own
     if (!theme.isEmpty() && styleIndex > -1) {
@@ -287,6 +503,10 @@ int main(int argc, char *argv[])
     QApplication::setOrganizationName("Paul Scherrer Institut");
     QApplication::setApplicationName("caQtDM");
 
+    if (server) {
+        app.setQuitOnLastWindowClosed(false);
+    }
+
 #ifndef CAQTDM_NO_CUSTOM_LOGHANDLER
     // From hereon, everything logged via qDebug or its siblings will be captured by the custom LogHandler.
     GeneralLogHandler::initialize();
@@ -294,6 +514,37 @@ int main(int argc, char *argv[])
     // Log all arguments the application was started with (before they were processed)
     for (int i = 0; i < arguments.size(); i++) {
         qCDebug(caQtDMLog).nospace() << "Argument: " << i << ": " << arguments[i];
+    }
+#endif
+
+#ifdef WEB
+    if (server) {
+        if (!web_launcher_file.isNull()) {
+            fileFunctions filefunction;
+            filefunction.checkFileAndDownload(web_launcher_file);
+
+            searchFile *filecheck = new searchFile(web_launcher_file);
+            web_launcher_file = filecheck->findFile();
+            filecheck->deleteLater();
+
+            if (web_launcher_file.isNull()) {
+                printf("caQtDM -- Error: Web launcher file not found, exiting...");
+                return 1;
+            }
+        }
+
+        options.insert("vnc_server", QString::number(server));
+        options.insert("novnc_plugin", QString::number(use_novnc_plugin));
+        options.insert("slave_server", QString::number(slave_server));
+        options.insert("vnc_port", QString::number(port));
+        options.insert("web_host", host);
+        options.insert("web_port", QString::number(web_port));
+        options.insert("web_timeout", QString::number(web_timeout));
+        options.insert("web_interaction_based_timeout", QString::number(web_interaction_based_timeout));
+        options.insert("novnc_readonly", QString::number(novnc_readonly));
+        options.insert("web_allow_insecure_cashell_commands", QString::number(web_allow_insecure_cashell_commands));
+        options.insert("web_instance_limit", QString::number(web_instance_limit));
+        options.insert("web_launcher_file", web_launcher_file);
     }
 #endif
 
@@ -306,6 +557,10 @@ int main(int argc, char *argv[])
         QStringList availableThemes = QStyleFactory::keys();
 
         if (availableThemes.contains(theme, Qt::CaseInsensitive)) {
+            if (theme.toLower() == "oxygen" && server) {
+                qCWarning(webLog) << "caQtDM_Web -- Warning: You can expect degraded performance using this theme (Oxygen) in server mode";
+            }
+
             QApplication::setStyle(QStyleFactory::create(theme));
         } else {
             qCWarning(caQtDMLog) << "caQtDM -- Invalid theme" << theme << "specified, falling back to default system theme";
@@ -411,7 +666,7 @@ int main(int argc, char *argv[])
     FileOpenWindow fileOpenWindow (0, fileName, macroString, attach, minimize, geometry, printscreen, resizing, options);
     fileOpenWindow.setWindowIcon (QIcon(":/caQtDM.ico"));
     if (savetoimage) fileOpenWindow.setProperty("savetoimage", true);
-    fileOpenWindow.show();
+    if (!server) fileOpenWindow.show();
 #ifdef CAQTDM_X11
     #if QT_VERSION > QT_VERSION_CHECK(5,0,0)
         if (qApp->platformName()== QLatin1String("xcb")){
@@ -436,23 +691,13 @@ int main(int argc, char *argv[])
     fileOpenWindow.move(0,0);
 #endif
 
-
-    if (signal(SIGINT, unixSignalHandler) == SIG_ERR) {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
-            qCFatal(caQtDMLog) << "An error occurred while setting a signal handler";
-#else
-	    qFatal("An error occurred while setting a signal handler");
-#endif
-    }
-    if (signal(SIGTERM, unixSignalHandler) == SIG_ERR) {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
-        qCFatal(caQtDMLog) << "An error occurred while setting a signal handler";
-#else
-	    qFatal("An error occurred while setting a signal handler");
-#endif
-    }
-
     QObject::connect(&app, SIGNAL(aboutToQuit()), &fileOpenWindow, SLOT(doSomething()));
+
+    if (SignalHandler::setupHandlers() != 0) {
+        qFatal("Failed to initialize system signal handlers");
+    }
+
+    SignalHandler handler;
 
     int exitCode = 0;
 

@@ -1,0 +1,20 @@
+localhost {
+	@webSocket path_regexp dynamic_port_route ^/websockify/(3\d{4})$
+
+	handle @webSocket {
+		uri strip_prefix /websockify/{re.dynamic_port_route.1}
+
+		reverse_proxy localhost:{re.dynamic_port_route.1} {
+			header_up Host {http.request.host}
+			header_up X-Real-IP {remote_host}
+		}
+	}
+
+	handle /admin* {
+		root * ./admin
+		file_server
+	}
+
+	root * ./user
+	file_server
+}
