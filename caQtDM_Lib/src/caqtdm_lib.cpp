@@ -334,7 +334,10 @@ static bool fileListEntryResolves(const QString &fileName)
         fileNameUi.append(".ui");
     }
 
+    qCDebug(caRelatedDisplayLog) << "fileListEntryResolves: name=" << fileName << "len=" << fileName.size() << "uiVariant=" << fileNameUi;
+
     if (QFileInfo::exists(fileName) || QFileInfo::exists(fileNameUi)) {
+        qCDebug(caRelatedDisplayLog) << "fileListEntryResolves: matched directly (cwd)";
         return true;
     }
 
@@ -345,11 +348,14 @@ static bool fileListEntryResolves(const QString &fileName)
 #if defined(_WIN32) || defined(_WIN64)
         paths[i] = paths[i].replace("\"", "");
 #endif
-        if (QFileInfo::exists(paths[i] + "/" + fileName) || QFileInfo::exists(paths[i] + "/" + fileNameUi)) {
+        bool hit = QFileInfo::exists(paths[i] + "/" + fileName) || QFileInfo::exists(paths[i] + "/" + fileNameUi);
+        qCDebug(caRelatedDisplayLog) << "fileListEntryResolves: candidate[" << i << "]=" << QDir::toNativeSeparators(paths[i] + "/" + fileName) << "hit=" << hit;
+        if (hit) {
             return true;
         }
     }
 
+    qCDebug(caRelatedDisplayLog) << "fileListEntryResolves: NOT RESOLVED name=" << fileName;
     return false;
 }
 
@@ -389,12 +395,21 @@ bool fixFileListRelative(const QString &cainclude_path, QString *filelist, bool 
 #ifdef WEB
 static QString webResolveDisplayPath(const QString &file)
 {
+    qCDebug(webRelatedDisplay) << "webResolveDisplayPath: input=" << file << "len=" << file.size()
+                               << "DISPLAY_PATH=" << (QString) qgetenv("CAQTDM_DISPLAY_PATH");
+
     fileFunctions filefunction;
     filefunction.checkFileAndDownload(file);
 
     searchFile filecheck(file);
     QString resolvedPath = filecheck.findFile();
-    if (!resolvedPath.isNull() || !fileListEntryResolves(file)) return resolvedPath;
+    bool entryResolves = fileListEntryResolves(file);
+    qCDebug(webRelatedDisplay) << "webResolveDisplayPath: findFile(input)=" << QDir::toNativeSeparators(resolvedPath)
+                               << "fileListEntryResolves=" << entryResolves;
+    if (!resolvedPath.isNull() || !entryResolves) {
+        qCDebug(webRelatedDisplay) << "webResolveDisplayPath: return(early)=" << QDir::toNativeSeparators(resolvedPath);
+        return resolvedPath;
+    }
 
     QString fallback = file;
     if (fallback.endsWith(".edl") || fallback.endsWith(".adl")) {
@@ -403,11 +418,16 @@ static QString webResolveDisplayPath(const QString &file)
         fallback.append(".ui");
     }
 
-    if (fallback == file) return resolvedPath;
+    if (fallback == file) {
+        qCDebug(webRelatedDisplay) << "webResolveDisplayPath: fallback==input, return=" << QDir::toNativeSeparators(resolvedPath);
+        return resolvedPath;
+    }
 
     filefunction.checkFileAndDownload(fallback);
     searchFile fallbackCheck(fallback);
-    return fallbackCheck.findFile();
+    QString fallbackResolved = fallbackCheck.findFile();
+    qCDebug(webRelatedDisplay) << "webResolveDisplayPath: fallback=" << fallback << "findFile(fallback)=" << QDir::toNativeSeparators(fallbackResolved);
+    return fallbackResolved;
 }
 
 static QString webOpenPathFromDisplayPath(const QString &path)
@@ -1741,8 +1761,11 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         if(reaffectText(map, &text, w1))  relatedWidget->setArgs(text);
 
         text = relatedWidget->getFiles();
+        qCDebug(caRelatedDisplayLog) << "create caRelatedDisplay files: cainclude_path=" << QDir::toNativeSeparators(cainclude_path) << "before=" << text;
         bool affected = reaffectText(map, &text, w1);
+        qCDebug(caRelatedDisplayLog) << "create caRelatedDisplay files: afterReaffect=" << text << "affected=" << affected;
         affected |= fixFileListRelative(cainclude_path, &text);
+        qCDebug(caRelatedDisplayLog) << "create caRelatedDisplay files: afterFixRelative=" << text << "affected=" << affected;
         if (affected) relatedWidget->setFiles(text);
 
         text = relatedWidget->getLabel();
@@ -7507,6 +7530,9 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
     QStringList args = w->getArgs().split(";");
     QStringList removeParents = w->getReplaceModes().split(";");
 
+    qCDebug(caRelatedDisplayLog) << "Callback_RelatedDisplayClicked: indx=" << indx
+                                 << "rawFiles=" << w->getFiles() << "fileCount=" << files.count();
+
 
     // special case where macros are coming from a macro definition file
     // when specified with %(read filename) in the argument list
@@ -7577,7 +7603,10 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
         }
 
         QString file = files[indx].trimmed();
+        qCDebug(webRelatedDisplay) << "RelatedDisplay(master): rawEntry=" << files[indx] << "len=" << files[indx].size()
+                                   << "trimmed=" << file << "len=" << file.size();
         QString absolutePath = webResolveDisplayPath(file);
+        qCDebug(webRelatedDisplay) << "RelatedDisplay(master): resolved=" << QDir::toNativeSeparators(absolutePath);
 
         if (absolutePath.isNull()) {
             qCWarning(webRelatedDisplay) << "caRelatedDisplay ui file not found";
@@ -7634,7 +7663,10 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
         addWebChildProcess(absolutePath, macros, item);
     } else {
         QString file = files[indx].trimmed();
+        qCDebug(webRelatedDisplay) << "RelatedDisplay(slave): rawEntry=" << files[indx] << "len=" << files[indx].size()
+                                   << "trimmed=" << file << "len=" << file.size();
         QString absolutePath = webResolveDisplayPath(file);
+        qCDebug(webRelatedDisplay) << "RelatedDisplay(slave): resolved=" << QDir::toNativeSeparators(absolutePath);
 
         if (absolutePath.isNull()) {
             qCInfo(webRelatedDisplay) << "caRelatedDisplay ui " << file <<" file not found";
