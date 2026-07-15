@@ -1,4 +1,5 @@
 ## Load record instances
+asSetFilename("security.acf")
 dbLoadDatabase ("mySimulation.db", "", "")
 dbLoadDatabase ("numeric_test.db", "", "")
 iocInit()

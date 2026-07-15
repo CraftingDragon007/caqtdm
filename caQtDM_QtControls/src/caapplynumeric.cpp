@@ -66,6 +66,7 @@ void caApplyNumeric::setPV(QString const &newPV)
 void caApplyNumeric::setAccessW(int access)
 {
      thisAccessW = access;
+     writeAccessW(access);
 }
 
 

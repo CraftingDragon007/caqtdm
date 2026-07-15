@@ -142,6 +142,8 @@ public:
         void setFixedFormat(bool f){ data->thisFixedFormat = f; }
         bool getFixedFormat() const { return data->thisFixedFormat; }
 
+        void writeAccessW(bool access){ data->writeAccessW(access); }
+
 	/**
 	 * sets number of integer digits to be displayed
 	 * @param i	number of digits

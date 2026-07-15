@@ -1,0 +1,16 @@
+UAG(uag) {user1,user2}
+ASG(DEFAULT)
+{
+    RULE(1, READ)
+    RULE(1, WRITE)
+}
+
+ASG(READONLY)
+{
+   RULE(1, READ)
+   RULE(1,WRITE) {
+                UAG(uag)
+  }
+
+}
+

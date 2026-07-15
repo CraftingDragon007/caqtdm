@@ -102,3 +102,15 @@ record(ao,"ACM:TEST:TEST_CANUM_HPLL") {
     field(LOPR, "-100")
     field(VAL, "123456789.01234567890123456")
 }
+
+record(ao,"ACM:TEST:TEST_CANUM_NOWR") {
+    field(DESC,"nowrite")
+    field(SCAN,"Passive")
+    field(ASG, "READONLY")
+    field(PINI,"YES")
+    field(DTYP,"Soft Channel")
+    field(PREC,"15")
+    field(HOPR, "100")
+    field(LOPR, "-100")
+    field(VAL, "123456789.01234567890123456")
+}

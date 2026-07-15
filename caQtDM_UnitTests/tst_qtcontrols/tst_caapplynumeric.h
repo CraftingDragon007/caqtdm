@@ -34,9 +34,7 @@
 
 /* Reliability tests for the double-value display of caApplyNumeric /
  * EApplyNumeric (a composite around an embedded ENumeric), exactly the same
- * test bodies as for caNumeric (tst_numeric_suite.h).
- * writeAccessBlocksInput is left out: caApplyNumeric::setAccessW only sets its
- * own flag and blocks through its own event filter, a different mechanism. */
+ * test bodies as for caNumeric (tst_numeric_suite.h). */
 class TestCaApplyNumeric : public QObject, private NumericSuiteBase<caApplyNumeric, EApplyNumeric>
 {
     Q_OBJECT
@@ -72,6 +70,7 @@ private slots:
     void negativeZeroAndTinyValues() { t_negativeZeroAndTinyValues(); }
     void asymmetricLimits() { t_asymmetricLimits(); }
     void keyboardIncrementDecrement() { t_keyboardIncrementDecrement(); }
+    void writeAccessBlocksInput() { t_writeAccessBlocksInput(); }
     void suppressBlocksInteraction() { t_suppressBlocksInteraction(); }
     void mouseLeaveKeepsUserValue() { t_mouseLeaveRevertsToChannelValue(false); }
     void signalArgumentOnIncrement() { t_signalArgumentOnIncrement(); }
