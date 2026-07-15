@@ -580,16 +580,19 @@ void ENumeric::mouseDoubleClickEvent(QMouseEvent*)
 {
     if(!suppressInput){
         if (text == NULL) {
+            qCDebug(eNumericLog) << "generate new QLineEdit";
             text = new QLineEdit(this);
+            /* connect only once, otherwise the connections accumulate */
+            connect(text, SIGNAL(returnPressed()), this, SLOT(dataInput()));
+            connect(text, SIGNAL(editingFinished()), text, SLOT(hide()));
         } else {
-            text->raise();
-            text->show();
+            qCDebug(eNumericLog) << "reuse existing QLineEdit and raise it to front";
         }
+        text->raise();
+        text->show();
+
         QString valueString = generate_valueString();
         text->setText(valueString);
-
-        connect(text, SIGNAL(returnPressed()), this, SLOT(dataInput()));
-        connect(text, SIGNAL(editingFinished()), text, SLOT(hide()));
 
         text->setGeometry(QRect(box->cellRect(1, 0).topLeft(), box->cellRect(1, box->columnCount() - 1).bottomRight()));
         text->setFont(signLabel->font());
