@@ -91,8 +91,12 @@ public:
     void clearText();
     QString getMessageBoxContents();
 
+signals:
+    void newMessageReceivedEvent(QString text);
+
 public slots:
     void themeChanged();
+
 };
 
 class CAQTDM_LIBSHARED_EXPORT MessageEvent: public QEvent

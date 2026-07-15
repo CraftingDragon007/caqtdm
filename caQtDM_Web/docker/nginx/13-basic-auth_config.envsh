@@ -1,0 +1,53 @@
+#!/bin/sh
+
+set -eu
+
+per_route_map="${BASIC_AUTH_PATH_MAP:-}"
+auth_file_map=""
+auth_realm_map=""
+has_per_route_auth=0
+
+if [ -n "$per_route_map" ]; then
+    while IFS= read -r line; do
+        trimmed=$(printf '%s' "$line" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+        [ -z "$trimmed" ] && continue
+        case "$trimmed" in
+            \#*) continue ;;
+        esac
+
+        pattern=$(printf '%s' "$trimmed" | awk '{print $1}')
+        key=$(printf '%s' "$trimmed" | awk '{print $2}' | sed 's/;$//')
+
+        [ -z "$pattern" ] && continue
+        [ -z "$key" ] && continue
+
+        user_var="BASIC_AUTH_USER_${key}"
+        pass_var="BASIC_AUTH_PASSWORD_${key}"
+
+        eval "route_user=\${$user_var:-}"
+        eval "route_pass=\${$pass_var:-}"
+
+        [ -z "$route_user" ] && continue
+        [ -z "$route_pass" ] && continue
+
+        auth_file_map="${auth_file_map}    ${pattern} /etc/nginx/.htpasswd-${key};\n"
+        auth_realm_map="${auth_realm_map}    ${pattern} Restricted_${key};\n"
+        has_per_route_auth=1
+    done <<EOF
+$per_route_map
+EOF
+fi
+
+if [ "$has_per_route_auth" -eq 1 ]; then
+    export CAQTDM_AUTH_FILE_MAP="$(printf '%b' "$auth_file_map")"
+    export CAQTDM_AUTH_REALM_MAP="$(printf '%b' "$auth_realm_map")"
+    export AUTH_CONFIG='auth_basic $caqtdm_auth_realm; auth_basic_user_file $caqtdm_auth_file;'
+elif [ -n "${BASIC_AUTH_USER:-}" ] && [ -n "${BASIC_AUTH_PASSWORD:-}" ]; then
+    export CAQTDM_AUTH_FILE_MAP=""
+    export CAQTDM_AUTH_REALM_MAP=""
+    export AUTH_CONFIG="auth_basic \"Restricted\"; auth_basic_user_file /etc/nginx/.htpasswd;"
+else
+    export CAQTDM_AUTH_FILE_MAP=""
+    export CAQTDM_AUTH_REALM_MAP=""
+    export AUTH_CONFIG=""
+fi

@@ -1,0 +1,122 @@
+<!--
+  This file is part of the caQtDM Framework, developed at the Paul Scherrer Institut,
+  Villigen, Switzerland
+
+  The caQtDM Framework is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  The caQtDM Framework is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with the caQtDM Framework.  If not, see <http://www.gnu.org/licenses/>.
+
+  Copyright (c) 2026
+
+  Author:
+    Julian Houba
+  Contact details:
+    julian.houba@psi.ch
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f8fafc">
+    <title>caQtDM Web</title>
+    <link rel="manifest" href="./manifest.json" crossorigin="use-credentials">
+    <link rel="stylesheet" href="index.css">
+  </head>
+  <body>
+    <div id="menu-bar" role="menubar">
+      <button type="button" id="launcher" aria-haspopup="dialog" aria-expanded="false" aria-controls="launcher-menu" style="display: none">Launcher</button>
+      <button type="button" id="launcher-selection" aria-haspopup="dialog" aria-expanded="false" aria-controls="launcher-selection-menu">Select Launcher</button>
+      <button type="button" id="launcher-reset" title="Reset to default launcher" aria-label="Reset to default launcher" style="display: none">Reset</button>
+      <button type="button" id="menu-url-builder" aria-haspopup="dialog" aria-expanded="false" aria-controls="url-builder-window">URL Builder</button>
+      <span id="menu-title"><span id="menu-title-text">caQtDM Web</span><span id="menu-version" aria-live="polite"></span><span id="menu-interactive" aria-live="polite" title="Server access mode"></span></span>
+      <div style="margin-left: auto; display: flex; align-items: center; gap: 12px;">
+        <div id="menu-progress" style="display: none;">
+          <p>Loading: </p><p id="progress-text"> 1%</p><progress id="progress-bar" value="1" max="100" style="width: 120px;"></progress>
+        </div>
+        <div id="view-menu-wrapper">
+          <button type="button" id="menu-view" aria-haspopup="true" aria-expanded="false" aria-controls="view-menu">View</button>
+          <div id="view-menu" class="popup-menu" role="menu" aria-labelledby="menu-view">
+            <button class="menu-item menu-action" id="view-fullscreen" role="menuitem">Full Screen</button>
+          </div>
+        </div>
+        <button type="button" id="menu-logs" aria-haspopup="dialog" aria-expanded="false" aria-controls="log-window">Logs</button>
+      </div>
+      <div id="menu-users">
+        <span id="users-label">Users:</span>
+        <span id="users-count">0</span>
+      </div>
+    </div>
+    <div id="vnc-container">
+    <div id="reconnect-overlay">
+        <div class="reconnect-content">
+            <div class="spinner"></div>
+            <p>Connection lost. Reconnecting...</p>
+        </div>
+    </div>
+    </div>
+
+    <div id="log-window" role="dialog" aria-modal="false" aria-labelledby="log-title" tabindex="-1">
+      <div id="log-header">
+        <span id="log-title">caQtDM Web Messages</span>
+        <button type="button" id="log-close" aria-label="Close logs">&times;</button>
+      </div>
+      <div id="log-content" data-empty="true">
+        <p class="log-empty">No log messages yet.</p>
+      </div>
+      <div id="log-resize-handle" aria-hidden="true"></div>
+    </div>
+
+    <div id="url-builder-window" role="dialog" aria-modal="false" aria-labelledby="url-builder-title" tabindex="-1">
+      <div id="url-builder-header">
+        <span id="url-builder-title">URL Builder</span>
+        <div id="url-builder-actions">
+          <button type="button" id="url-builder-open-tab" aria-label="Open URL Builder in new tab" title="Open in new tab">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M14 3h7v7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M10 14L21 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M21 14v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <button type="button" id="url-builder-close" aria-label="Close URL Builder">&times;</button>
+        </div>
+      </div>
+      <iframe
+          id="url-builder-frame"
+          src="url-builder/index.html?embed=1"
+          title="URL Builder"
+      ></iframe>
+    </div>
+
+    <div id="dialog-overlay" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+      <div id="dialog-box">
+        <p id="dialog-message"></p>
+        <div id="dialog-actions">
+          <button type="button" id="dialog-cancel">Cancel</button>
+          <button type="button" id="dialog-accept" class="primary">Open</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="error-overlay" role="dialog" aria-modal="true" aria-labelledby="error-title">
+      <div id="error-box">
+        <p id="error-message"></p>
+        <div id="error-actions">
+          <button type="button" id="error-ok" class="primary">OK</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="index.js"></script>
+  </body>
+</html>

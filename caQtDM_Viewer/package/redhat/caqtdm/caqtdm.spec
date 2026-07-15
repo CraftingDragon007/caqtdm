@@ -9,6 +9,12 @@
 %global no_rpath %{getenv:CAQTDM_NORPATH}
 %global caqtdm_opcua %{getenv:CAQTDM_OPCUA}
 
+%global _epics_host_arch_from_env %{getenv:EPICS_HOST_ARCH}
+
+%define _epics_host_arch_derived_uname %( _os="$(uname -s | tr '[:upper:]' '[:lower:]')"; _arch="$(uname -m)"; if [ -n "$_os" ] && [ -n "$_arch" ]; then echo "${_os}-${_arch}"; else echo ""; fi )
+
+%define EPICS_HOST_ARCH %([ -n "%{_epics_host_arch_from_env}" ] && echo "%{_epics_host_arch_from_env}" || echo "%{_epics_host_arch_derived_uname}")
+
 # build qt4 support (or not)
 %if (0%{?rhel} && 0%{?rhel} < 8) || (0%{?fedora} && 0%{?fedora} < 24)
 %global qt4 1
@@ -232,11 +238,9 @@ export QWTINCLUDE=/usr/include/qt5/qwt
 export QWTVERSION=6.1
 export QWTLIBNAME=qwt-qt5
 export EPICS_BASE=/usr/local/epics/base%{EPICS_TARGET_VERSION}
-# Set EPICS_HOST_ARCH if not set
-: "${EPICS_HOST_ARCH:=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)}"
-export EPICS_HOST_ARCH=${EPICS_HOST_ARCH:-linux-x86_64}
+export EPICS_HOST_ARCH=%{EPICS_HOST_ARCH}
 export EPICSINCLUDE=${EPICS_BASE}/include
-export EPICSLIB=${EPICS_BASE}/lib/$EPICS_HOST_ARCH
+export EPICSLIB=${EPICS_BASE}/lib/%{EPICS_HOST_ARCH}
 %if 0%{?rhel} >  7
 %define pythonversion $(python3 --version 2>&1 | cut -d ' ' -f 2 | cut -d '.' -f 1-2)
 export PYTHONVERSION=%{pythonversion}
@@ -276,11 +280,9 @@ export QWTINCLUDE=/usr/include/qwt
 export QWTVERSION=6.1
 export QWTLIBNAME=qwt
 export EPICS_BASE=/usr/local/epics/base%{EPICS_TARGET_VERSION}
-# Set EPICS_HOST_ARCH if not set
-: "${EPICS_HOST_ARCH:=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)}"
-export EPICS_HOST_ARCH=${EPICS_HOST_ARCH:-linux-x86_64}
+export EPICS_HOST_ARCH=%{EPICS_HOST_ARCH}
 export EPICSINCLUDE=${EPICS_BASE}/include
-export EPICSLIB=${EPICS_BASE}/lib/$EPICS_HOST_ARCH
+export EPICSLIB=${EPICS_BASE}/lib/%{EPICS_HOST_ARCH}
 export PYTHONVERSION=2.7
 %define pythonversion 2.7
 export PYTHONINCLUDE=/usr/include/python%{pythonversion}
@@ -319,17 +321,14 @@ export QWTINCLUDE=/usr/include/qt6/qwt
 export QWTVERSION=6.2
 export QWTLIBNAME=qwt-qt6
 export EPICS_BASE=/usr/local/epics/base%{EPICS_TARGET_VERSION}
-# Set EPICS_HOST_ARCH if not set
-: "${EPICS_HOST_ARCH:=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)}"
 
 %ifarch x86_64
 export QMAKESPEC=/usr/lib64/qt6/mkspecs/linux-g++-64
-export EPICS_HOST_ARCH=${EPICS_HOST_ARCH:-linux-x86_64}
 %endif
 %ifarch aarch64
 export QMAKESPEC=/usr/lib64/qt6/mkspecs/linux-g++
-export EPICS_HOST_ARCH=${EPICS_HOST_ARCH:-linux-aarch64}
 %endif
+export EPICS_HOST_ARCH=%{EPICS_HOST_ARCH}
 export EPICSINCLUDE=${EPICS_BASE}/include
 export EPICSLIB=${EPICS_BASE}/lib/$EPICS_HOST_ARCH
 %define pythonversion $(python3 --version 2>&1 | cut -d ' ' -f 2 | cut -d '.' -f 1-2)
@@ -454,6 +453,11 @@ popd
 	cp %{_builddir}/%{name}-%{version}/caQtDM_QtControls/doc/*.css     %{buildroot}/opt/caqtdm/doc
 
 	cp -R %{_builddir}/%{name}-%{version}/build/* %{buildroot}
+
+        # Copy the lucida font to the installation directory
+        mkdir -p %{buildroot}/usr/share/fonts/caqtdm/
+        cp %{_builddir}/%{name}-%{version}/caQtDM_Viewer/lucida-sans-typewriter.ttf  %{buildroot}/usr/share/fonts/caqtdm/
+
                 
         # Create ld.so.conf.d/caqtdm.conf file because there is no rpath in the binaries
         # Only create the file when CAQTDM_NORPATH=1 (build option) is set
@@ -470,6 +474,7 @@ popd
                 echo "/opt/caqtdm/lib/qt5/designer" >> %{buildroot}/etc/ld.so.conf.d/caqtdm.conf
                 echo "/opt/caqtdm/lib/qt5/controlsystems" >> %{buildroot}/etc/ld.so.conf.d/caqtdm.conf
         %endif
+                echo "/usr/local/epics/base%{EPICS_TARGET_VERSION}/lib/${EPICS_HOST_ARCH}" >> %{buildroot}/etc/ld.so.conf.d/caqtdm.conf
 %endif
 
 %if 0%{?qt4}
@@ -575,7 +580,7 @@ popd
 %defattr(755,root,root)
 /opt/caqtdm/lib/qt4/caqtdm_designer
 /opt/caqtdm/lib/qt4/caqtdm
-
+/usr/share/fonts/caqtdm
 
 
 %files qt4
@@ -619,6 +624,7 @@ fi
 %defattr(755,root,root)
 /opt/caqtdm/lib/qt5/caqtdm_designer
 /opt/caqtdm/lib/qt5/caqtdm
+/usr/share/fonts/caqtdm
 %files qt5
 /usr/local/bin
 
@@ -658,6 +664,7 @@ fi
 %defattr(755,root,root)
 /opt/caqtdm/lib/qt6/caqtdm_designer
 /opt/caqtdm/lib/qt6/caqtdm
+/usr/share/fonts/caqtdm
 %files qt6
 /usr/local/bin
 

@@ -31,6 +31,7 @@ qrc_caQtDM.cpp
 *.OBJ
 *.PDB
 *.o
+*.so
 
 #Tools
 .vs

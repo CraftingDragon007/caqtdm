@@ -59,8 +59,8 @@ else
 fi
 fi
 
-if [ ! -d "~/rpmbuild/SOURCES/" ]; then
-   mkdir -p "~/rpmbuild/SOURCES/"
+if [ ! -d "$HOME/rpmbuild/SOURCES/" ]; then
+   mkdir -p "$HOME/rpmbuild/SOURCES/"
 fi
 
 : "${EPICS_BASE_TARGET:=/usr/local/epics/base-7.0.9}"

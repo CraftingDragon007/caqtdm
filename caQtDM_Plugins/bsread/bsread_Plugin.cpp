@@ -322,6 +322,8 @@ int bsreadPlugin::TerminateIO() {
 }
 
 void bsreadPlugin::closeEvent(){
+    if (ranCloseEvent) return;
+    ranCloseEvent = true;
     qCDebug(bsreadLog) << "bsreadPlugin:closeEvent ";
     emit closeSignal();
     if (Dispatcher){
@@ -345,7 +347,7 @@ void bsreadPlugin::closeEvent(){
         }
     }
     if (DispatcherThread){
-        delete(DispatcherThread);
+        DispatcherThread->deleteLater();
     }
     if (Dispatcher){
         Dispatcher->deleteLater();

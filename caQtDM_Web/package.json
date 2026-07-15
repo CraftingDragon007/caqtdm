@@ -1,0 +1,15 @@
+{
+  "name": "caqtdm-web",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Linting setup for caQtDM Web JavaScript",
+  "scripts": {
+    "lint": "eslint \"user/**/*.{js,mjs,cjs}\"",
+    "lint:fix": "eslint --fix \"user/**/*.{js,mjs,cjs}\""
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.1.0",
+    "globals": "^17.4.0"
+  }
+}

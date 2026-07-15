@@ -37,3 +37,14 @@ exclude_patterns = []
 html_theme = "pydata_sphinx_theme"
 html_static_path = ["_static"]
 html_favicon = 'favicon.ico'
+
+html_theme_options = {
+    # This removes the left sidebar entirely
+    "show_nav_level": 0,
+    "navigation_depth": 0,
+    "primary_sidebar_end": [],
+}
+
+html_sidebars = {
+    "**": []
+}

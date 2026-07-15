@@ -54,6 +54,11 @@ bool HTTPCONFIGURATOR = false;
 #include <hmisharedeventbus.h>
 #include <hmisharedconfiglistmanager.h>
 #endif
+#ifdef WEB
+#include <websocketserver.h>
+#include <webportpool.h>
+#include <weblaunchermanager.h>
+#endif
 #endif
 
 #include <QFileDialog>
@@ -61,6 +66,7 @@ bool HTTPCONFIGURATOR = false;
 #include "messagebox.h"
 #include "configDialog.h"
 #include "caQtDM_Lib_global.h"
+#include "loggingcategories.h"
 
 #if defined(linux) || defined(__FreeBSD__)
 #include <sys/resource.h>
@@ -266,11 +272,12 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
 #endif
     // Set Window Title without the whole path
     QString title("caQtDM ");
-    title.append(BUILDVERSION);
-    title.append(" Build=");
-    title.append(__DATE__);
-    title.append(" ");
-    title.append(BUILDTIME);
+    QString version(BUILDVERSION);
+    version.append(" Build=");
+    version.append(__DATE__);
+    version.append(" ");
+    version.append(BUILDTIME);
+    title.append(version);
 
     // set for epics longer waveforms
     QString maxBytes = (QString)  qgetenv("EPICS_CA_MAX_ARRAY_BYTES");
@@ -289,6 +296,57 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
     setGeometry(0,0, 300, 150);
     this->statusBar()->show();
 
+#ifdef WEB
+    // disable buttons that shouldn't be used when in vnc and hide window
+    if (options["vnc_server"].toInt() == 1) {
+        CaQtDM_Lib::vncServer = options["vnc_server"].toInt();
+        CaQtDM_Lib::noVncPlugin = options["novnc_plugin"].toInt();
+        CaQtDM_Lib::noVncReadonly = options["novnc_readonly"].toInt();
+
+        bool ok;
+        quint16 web_port = options["web_port"].toUShort(&ok);
+        quint16 vnc_port = options["vnc_port"].toUShort(&ok);
+
+        if (!ok) {
+            qCritical(webLog) << "Invalid web/vnc ports defined, stuff will break.";
+        } else {
+            CaQtDM_Lib::webPort = web_port;
+            CaQtDM_Lib::vncPort = vnc_port;
+        }
+
+        QString host = options["web_host"];
+        CaQtDM_Lib::webHost = host;
+
+        CaQtDM_Lib::slaveServer = options["slave_server"].toInt();
+
+        CaQtDM_Lib::webTimeout = options["web_timeout"].toUInt();
+        CaQtDM_Lib::interactionBasedTimeout = options["web_interaction_based_timeout"].toInt();
+
+        CaQtDM_Lib::webInstanceLimit = options["web_instance_limit"].toUShort();
+
+        WebSocketServer::instance().setup(version, host, web_port);
+
+        connect(messageWindow, &MessageWindow::newMessageReceivedEvent, [](QString text){
+            WebSocketServer::instance().sendLog(text);
+        });
+
+        connect(qApp, &QCoreApplication::aboutToQuit, &WebSocketServer::instance(), &WebSocketServer::applicationShutdown);
+
+        QString launcherFile = options["web_launcher_file"];
+        if (!launcherFile.isNull()) {
+            WebLauncherManager::instance().setup(launcherFile);
+        }
+
+        ui.fileAction->setEnabled(false);
+        ui.timedAction->setEnabled(false);
+        ui.directAction->setEnabled(false);
+        ui.exitAction->setEnabled(false);
+        ui.fileAction->setEnabled(false);
+        ui.menuMenu->setEnabled(false);
+        ui.menuBar->setEnabled(false);
+    } else {
+#endif
+
     connect(this, &FileOpenWindow::themeChanged, messageWindow, &MessageWindow::themeChanged);
 
     // connect action buttons
@@ -302,6 +360,10 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
     connect( this->ui.helpAction, SIGNAL( triggered() ), this, SLOT(Callback_ActionHelp()) );
     connect( this->ui.emptycacheAction, SIGNAL( triggered() ), this, SLOT(Callback_EmptyCache()) );
     this->ui.timedAction->setChecked(true);
+
+#ifdef WEB
+    }
+#endif
 
     setWindowTitle(title);
 
@@ -871,6 +933,13 @@ void FileOpenWindow::timerEvent(QTimerEvent *event)
     if(caQtDM_TimeOutEnabled) {
         caQtDM_TimeLeft -= 1.0/3600.0;
         if(caQtDM_TimeLeft <= 0) {
+#ifdef WEB
+            if (WebSocketServer::instance().isInitialized() && CaQtDM_Lib::interactionBasedTimeout && CaQtDM_Lib::slaveServer) {
+                qDebug() << "Sending interaction based shutdown msg";
+                WebSocketServer::instance().sendInteractionBasedShutdownMsg();
+            }
+#endif
+
             QList<CaQtDM_Lib *> all = this->findChildren<CaQtDM_Lib *>();
             foreach(QWidget* widget, all) widget->close();
             if (sharedMemory.isAttached()) sharedMemory.detach();
@@ -1186,6 +1255,47 @@ QMainWindow *FileOpenWindow::loadMainWindow(const QPoint &position, const QStrin
     mutexKnobData->setSuppressUpdates(false);
     messageWindow->postMsgEvent(QtDebugMsg, asc);
     free(asc);
+
+#ifdef WEB
+    QPointer<QMainWindow> safeMainWindow = mainWindow;
+
+    if (CaQtDM_Lib::vncServer) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        // qt 6 timing issues, instant resize would destroy caInlcude
+        QTimer::singleShot(1000, [safeMainWindow]{
+#endif
+            if (!safeMainWindow) {
+                qCWarning(webLog) << "caQtDM_Lib destroyed before windows size adjustment";
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+                return;
+#endif
+            } else {
+                QByteArray envWidth = qgetenv("CAQTDM_VIRTUAL_WIDTH");
+                QByteArray envHeight = qgetenv("CAQTDM_VIRTUAL_HEIGHT");
+
+                if (!envWidth.isEmpty() && !envHeight.isEmpty()) {
+                    bool wOk, hOk;
+
+                    int width = envWidth.toInt(&wOk);
+                    int height = envHeight.toInt(&hOk);
+
+                    QSize minSize = safeMainWindow->minimumSize();
+                    QSize maxSize = safeMainWindow->maximumSize();
+
+                    width = qMin(width, maxSize.width());
+                    height = qMin(height, maxSize.height());
+                    width = qMax(width, minSize.width());
+                    height = qMax(height, minSize.height());
+
+                    qCInfo(webLog) << "Setting window size to virtual monitor size" << width << height;
+                    safeMainWindow->setGeometry(safeMainWindow->x(), safeMainWindow->y(), width, height);
+                }
+            }
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        });
+#endif
+    }
+#endif
     return mainWindow;
 }
 
@@ -1252,6 +1362,41 @@ void FileOpenWindow::cycleWindows()
 void FileOpenWindow::nextWindow()
 {
     cycleWindows();
+}
+
+void FileOpenWindow::doSomething()
+{
+#ifdef WEB
+    {
+        QWriteLocker locker(&CaQtDM_Lib::webChildProcessesLock);
+        foreach (auto item, CaQtDM_Lib::webChildProcesses) {
+            if (item == nullptr) continue;
+            QProcess *process = item->process();
+            if (process != nullptr) {
+                if (process->state() == QProcess::Running) {
+                    qCInfo(webLog) << "Stopping child process (pid:" << process->processId() << "vnc port:" << item->vncPort() << ")";
+                    process->terminate();
+
+                    if (!process->waitForFinished(5000)) {
+                        qCWarning(webLog) << "Child process did not terminate gracefully (pid:" << process->processId() << "vnc port:" << item->vncPort() << "), killing it.";
+                        process->kill();
+                        process->waitForFinished(1000);
+                    }
+                }
+                item->deleteLater();
+            }
+        }
+    }
+#endif
+
+    printf("About to quit!\n");
+#if defined linux || defined TARGET_OS_MAC
+    // remove temporary file created by caQtDM for pipe reading
+    if(lastFile.contains("qt-tempFile")) {
+        QFile::remove(lastFile);
+    }
+#endif
+    sharedMemory.detach();
 }
 
 /**
