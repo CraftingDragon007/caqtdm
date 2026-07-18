@@ -869,6 +869,10 @@ caQtDM_Viewer {
                     LIBS += $$OUT_PWD/../caQtDM_Plugins/archive/archiveSF/libarchiveSF_plugin.a
                     LIBS += $$OUT_PWD/../caQtDM_Plugins/environment/libenvironment_plugin.a
 
+                    opcua {
+                        LIBS += $$OUT_PWD/../caQtDM_Plugins/opcua/libopcua_plugin.a
+                    }
+
                     modbus {
 					    LIBS += $$OUT_PWD/../caQtDM_Plugins/modbus/libmodbus_plugin.a
                     }
