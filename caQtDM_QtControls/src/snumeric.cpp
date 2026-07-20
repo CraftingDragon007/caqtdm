@@ -419,7 +419,15 @@ long long SNumeric::transformNumberSpace(double value, int dig){
 }
 
 double SNumeric::transformNumberSpace(long long value, int dig){
-    return (double) value * pow(10.0, (double) dig);
+    /* dividing by the exact power of ten gives the correctly rounded double */
+    if (dig < 0) return (double) value / (double) pow10ll(-dig);
+    return (double) value * (double) pow10ll(dig);
+}
+
+double SNumeric::value() const
+{
+    /* dividing by the exact power of ten gives the correctly rounded double */
+    return (double) data / (double) pow10ll(decDig);
 }
 
 void SNumeric::setMinimum(double v)

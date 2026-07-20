@@ -407,9 +407,10 @@ protected:
             numOracleDecimalString(value, decDig), decDig, &oracleOk);
         QVERIFY(oracleOk);
         const long long T = numIntegerTolerance(value, decDig, 4.0);
-        const double expected = (double) oracleData * pow(10.0, -(double) decDig);
-        const double tol = 4.0 * DBL_EPSILON * qMax(1.0, fabs(expected))
-                           + (double) T * pow(10.0, -(double) decDig);
+        /* correctly rounded reference: one exact integer division */
+        const double expected = (double) oracleData / (double) numPow10ll(decDig);
+        double tol = (double) T / (double) numPow10ll(decDig);
+        if (T > 0) tol += 4.0 * DBL_EPSILON * qMax(1.0, fabs(expected));
         const double actual = m_num->value();
 
         QVERIFY2(fabs(actual - expected) <= tol,
@@ -660,8 +661,9 @@ protected:
                                 .arg(startD).arg(newD).arg(startValue, 0, 'g', 17)
                                 .arg(expectedData).arg(disp).arg(actualData)));
 
-        const double expVal = (double) expectedData * pow(10.0, -(double) newD);
-        QVERIFY2(fabs(m_num->value() - expVal) <= 4.0 * DBL_EPSILON * qMax(1.0, fabs(expVal)),
+        /* data == expectedData was just verified: value() must match exactly */
+        const double expVal = (double) expectedData / (double) numPow10ll(newD);
+        QVERIFY2(m_num->value() == expVal,
                  qPrintable(QString("value() after setDecDigits is %1, expected %2")
                                 .arg(m_num->value(), 0, 'g', 17).arg(expVal, 0, 'g', 17)));
 

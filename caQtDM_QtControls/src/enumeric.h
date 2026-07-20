@@ -70,7 +70,7 @@ public:
     bool readAccessW() const {return _AccessW;}
     void writeAccessW(bool access);
     void silentSetValue(double v);
-    double value() const { return data*pow(10.0, -decDig); }
+    double value() const;
     void setMaximum(double v);
     double maximum() const { return d_maxAsDouble; }
     void setMinimum(double v);

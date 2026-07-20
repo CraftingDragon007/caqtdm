@@ -506,7 +506,15 @@ qint64 ENumeric::transformNumberSpace(double value, int dig){
 }
 
 double ENumeric::transformNumberSpace(qint64 value, int dig){
-    return (double) value * pow(10.0, (double) dig);
+    /* dividing by the exact power of ten gives the correctly rounded double */
+    if (dig < 0) return (double) value / (double) pow10ll(-dig);
+    return (double) value * (double) pow10ll(dig);
+}
+
+double ENumeric::value() const
+{
+    /* dividing by the exact power of ten gives the correctly rounded double */
+    return (double) data / (double) pow10ll(decDig);
 }
 
 void ENumeric::downData(QAbstractButton* b)
