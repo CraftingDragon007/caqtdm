@@ -58,17 +58,6 @@ static qint64 pow10ll(int n)
     return r;
 }
 
-#if (_MSC_VER == 1600)
-int round (double x) {
-    int i = (int) x;
-    if (x >= 0.0) {
-        return ((x-i) >= 0.5) ? (i + 1) : (i);
-    } else {
-        return (-x+i >= 0.5) ? (i - 1) : (i);
-    }
-}
-#endif
-
 Q_LOGGING_CATEGORY(eNumericLog, "caqtdm.widgets.enumeric")
 
 ENumeric::ENumeric(QWidget *parent, int id, int dd) : QFrame(parent), FloatDelegate()
@@ -697,10 +686,9 @@ bool ENumeric::eventFilter(QObject *obj, QEvent *event)
         }
         // move cursor with tab focus
         if(ev->key() == Qt::Key_Tab && !suppressInput) {
-            QCursor *cur = new QCursor;
             QPoint p = QWidget::mapToGlobal(QPoint(this->width()/2, this->height()/2));
             lastLabel = lastLabelOnTab;
-            cur->setPos( p.x(), p.y());
+            QCursor::setPos(p.x(), p.y());
             setFocus();
             valueUpdated();
         }

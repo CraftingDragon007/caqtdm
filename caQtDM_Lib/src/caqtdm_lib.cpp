@@ -7083,10 +7083,11 @@ void CaQtDM_Lib::Callback_CaCalc(double value)
  */
 void CaQtDM_Lib::Callback_EApplyNumeric(double value)
 {
-    int32_t idata = (int32_t) value;
+    int32_t idata = (int32_t) llround(value);
     double rdata = value;
 
     caApplyNumeric *numeric = qobject_cast<caApplyNumeric *>(sender());
+    if(!numeric) return;
     if(!numeric->getAccessW()) return;
     if(numeric->getPV().length() > 0) {
         TreatOrdinaryValue(numeric->getPV(), rdata,  idata, "", (QWidget*) numeric);
@@ -7097,10 +7098,11 @@ void CaQtDM_Lib::Callback_EApplyNumeric(double value)
  */
 void CaQtDM_Lib::Callback_ENumeric(double value)
 {
-    int32_t idata = (int32_t) value;
+    int32_t idata = (int32_t) llround(value);
     double rdata = value;
 
     caNumeric *numeric = qobject_cast<caNumeric *>(sender());
+    if(!numeric) return;
     if(!numeric->getAccessW()) return;
     if(numeric->getPV().length() > 0) {
         TreatOrdinaryValue(numeric->getPV(), rdata,  idata, "", (QWidget*) numeric);
@@ -7112,10 +7114,11 @@ void CaQtDM_Lib::Callback_ENumeric(double value)
  */
 void CaQtDM_Lib::Callback_Spinbox(double value)
 {
-    int32_t idata = (int32_t) value;
+    int32_t idata = (int32_t) llround(value);
     double rdata = value;
 
     caSpinbox *numeric = qobject_cast<caSpinbox *>(sender());
+    if(!numeric) return;
     if(!numeric->getAccessW()) return;
     if(numeric->getPV().length() > 0) {
         TreatOrdinaryValue(numeric->getPV(), rdata,  idata, "", (QWidget*) numeric);

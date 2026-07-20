@@ -56,10 +56,6 @@ static long long pow10ll(int n)
     return r;
 }
 
-#if (_MSC_VER == 1600)
-extern int round (double x);
-#endif
-
 Q_LOGGING_CATEGORY(sNumericLog, "caqtdm.widgets.snumeric")
 
 SNumeric::SNumeric(QWidget *parent, int id, int dd) : QFrame(parent), FloatDelegate()
@@ -632,10 +628,9 @@ bool SNumeric::eventFilter(QObject *obj, QEvent *event)
         }
         // move cursor with tab focus
         if(ev->key() == Qt::Key_Tab && !suppressInput) {
-            QCursor *cur = new QCursor;
             QPoint p = QWidget::mapToGlobal(QPoint(this->width()/2, this->height()/2));
             lastLabel = lastLabelOnTab;
-            cur->setPos( p.x(), p.y());
+            QCursor::setPos(p.x(), p.y());
             setFocus();
             valueUpdated();
         }
