@@ -8,12 +8,25 @@ record(ao,"ACM:TEST:TEST_CANUM_NO") {
 }
 
 record(ao,"ACM:TEST:TEST_CANUM_NO1") {
-    field(DESC,"normal value")
+    field(DESC,"normal value with alarm")
     field(SCAN,"Passive")
     field(PINI,"YES")
-    field(DTYP,"Soft Channel")
+    
     field(PREC,"5")
     field(VAL, "10.12345")
+    field(HIGH, "15.0")
+    field(HIHI, "25.0")
+    field(LOW, "5.0")
+    field(LOLO, "-5.0")
+    field(LOPR, "-6.0")
+    field(HOPR, "30.0")
+    field(DRVL, "-8.0")
+    field(DRVH, "32.0")
+    field(HHSV,"MAJOR")
+    field(LLSV,"MAJOR")
+    field(HSV,"MINOR")
+    field(LSV,"MINOR")
+
 }
 
 record(ao,"ACM:TEST:TEST_CANUM_NO2") {

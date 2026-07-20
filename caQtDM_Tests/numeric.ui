@@ -97,6 +97,12 @@
        <property name="channel" stdset="0">
         <string>ACM:TEST:TEST_CANUM_NO1</string>
        </property>
+       <property name="colorMode">
+        <enum>caLineDraw::colMode::Alarm_Static</enum>
+       </property>
+       <property name="alarmHandling">
+        <enum>caLineDraw::alertHandling::onForeground</enum>
+       </property>
        <property name="formatType">
         <enum>caLineDraw::FormatType::decimal</enum>
        </property>
@@ -535,6 +541,9 @@
        <property name="channel" stdset="0">
         <string>ACM:TEST:TEST_CANUM_NO1</string>
        </property>
+       <property name="colorMode">
+        <enum>caSpinbox::colMode::Alarm</enum>
+       </property>
       </widget>
      </item>
      <item row="0" column="4">
@@ -898,6 +907,9 @@
        </property>
        <property name="channel" stdset="0">
         <string>ACM:TEST:TEST_CANUM_NO1</string>
+       </property>
+       <property name="colorMode">
+        <enum>caApplyNumeric::colMode::Alarm</enum>
        </property>
       </widget>
      </item>
@@ -1329,6 +1341,9 @@
        </property>
        <property name="channel" stdset="0">
         <string>ACM:TEST:TEST_CANUM_NO1</string>
+       </property>
+       <property name="colorMode">
+        <enum>caNumeric::colMode::Alarm</enum>
        </property>
       </widget>
      </item>
