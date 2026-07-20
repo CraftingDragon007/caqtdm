@@ -83,6 +83,7 @@ public:
     void setDecDigits(int d);
     int decDigits() const { return decDig; }
     void setFixedFormat(bool f);
+    bool inputSuppressed() const { return suppressInput; }
     bool digitsFontScaleEnabled() { return d_fontScaleEnabled; }
     void setDigitsFontScaleEnabled(bool en);
 

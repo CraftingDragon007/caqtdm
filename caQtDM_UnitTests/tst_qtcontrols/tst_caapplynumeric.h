@@ -90,8 +90,11 @@ private slots:
 
     /* apply specific: the button emits clicked(double) with the displayed value */
     void applyButtonEmitsClicked();
+    void applyBlockedWhileSuppressed();
 
 private:
+    QPushButton *applyButton();
+
     /* key/mouse events must go to the embedded ENumeric, its event filter
      * handles the interaction */
     QWidget *inputTarget() override { return m_num->findChild<ENumeric *>(); }
