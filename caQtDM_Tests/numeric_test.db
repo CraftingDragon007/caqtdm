@@ -87,9 +87,9 @@ record(ao,"ACM:TEST:TEST_CANUM_HPHL") {
     field(PINI,"YES")
     field(DTYP,"Soft Channel")
     field(PREC,"15")
-    field(HOPR, "1000000")
-    field(LOPR, "-1000000")
-    field(VAL, "123456789.01234567890123456")
+    field(HOPR, "900000000000000")
+    field(LOPR, "-900000000000000")
+    field(VAL, "123456789012345.67890123456")
 }
 
 record(ao,"ACM:TEST:TEST_CANUM_HPLL") {
