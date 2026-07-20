@@ -76,6 +76,8 @@ ENumeric::ENumeric(QWidget *parent, int id, int dd) : QFrame(parent), FloatDeleg
     lastLabelOnTab = lastLabel = -1;
     intDig = qBound(1, id, MAX_NUMERIC_DIGITS);
     decDig = qBound(0, dd, MAX_NUMERIC_DIGITS - intDig);
+    orig_intDig = intDig;
+    orig_decDig = decDig;
     digits = intDig + decDig;
     qCDebug(eNumericLog) << "ENumeric::ENumeric" << digits;
 
@@ -256,6 +258,9 @@ void ENumeric::init()
 
     connect(bup, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(upData(QAbstractButton*)));
     connect(bdown, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(downData(QAbstractButton*)));
+
+    /* delayed resize for the freshly built layout */
+    scheduleValueUpdated();
 }
 
 void ENumeric::setValue(double v)
@@ -312,31 +317,36 @@ void ENumeric::suppressUserInput(){
     update();
 }
 
-bool ENumeric::managedigits(double newvalue){
-    /* automatic digit shift: trade decimal digits for integer digits when the
-     * value needs them, shift back towards the original configuration otherwise */
-    if (thisFixedFormat) return false;
-    if (!std::isfinite(newvalue)) return false;
-
-    /* baseline configuration, captured once */
-    if (orig_intDig == -1) orig_intDig = intDig;
-    if (orig_decDig == -1) orig_decDig = decDig;
-
-    /* integer digits needed by the magnitude */
-    double mag = fabs(newvalue);
-    int needed = 1;
-    while (mag >= 10.0 && needed < MAX_NUMERIC_DIGITS) {
-        mag /= 10.0;
-        needed++;
+/* resolve the displayed digits from the configured baseline and the channel
+ * value: trade decimal digits for integer digits when the magnitude needs them */
+void ENumeric::updateDigitLayout(){
+    int newIntDig = orig_intDig;
+    if (!thisFixedFormat && std::isfinite(csValue)) {
+        /* integer digits needed by the magnitude */
+        double mag = fabs(csValue);
+        int needed = 1;
+        while (mag >= 10.0 && needed < MAX_NUMERIC_DIGITS) {
+            mag /= 10.0;
+            needed++;
+        }
+        newIntDig = qBound(orig_intDig, needed, orig_intDig + orig_decDig);
     }
+    applyDigitLayout(newIntDig, orig_intDig + orig_decDig - newIntDig);
+}
 
-    const int total = orig_intDig + orig_decDig;
-    const int newIntDig = qBound(orig_intDig, needed, total);
-    const int newDecDig = total - newIntDig;
+/* rebuild the digit layout, rescaling the stored value to the new scale */
+bool ENumeric::applyDigitLayout(int newIntDig, int newDecDig){
     if (newIntDig == intDig && newDecDig == decDig) return false;
-
-    qCDebug(eNumericLog) << "managedigits:" << objectName() << "intDig" << intDig << "->" << newIntDig
+    qCDebug(eNumericLog) << "applyDigitLayout:" << objectName() << "intDig" << intDig << "->" << newIntDig
                          << "decDig" << decDig << "->" << newDecDig;
+    /* rescale to the new scale, rounding half away from zero */
+    if (newDecDig > decDig) {
+        data = data * pow10ll(newDecDig - decDig);
+    } else if (newDecDig < decDig) {
+        const qint64 divisor = pow10ll(decDig - newDecDig);
+        const qint64 half = divisor / 2;
+        data = (data >= 0) ? (data + half) / divisor : (data - half) / divisor;
+    }
     clearContainers();
     intDig = newIntDig;
     decDig = newDecDig;
@@ -368,7 +378,7 @@ void ENumeric::silentSetValue(double v)
         }
     }
 
-    managedigits(v); /* may rebuild the digit layout */
+    updateDigitLayout(); /* may rebuild the digit layout */
 
     /* channel values bypass the limits but not the display capacity */
     const qint64 capacity = pow10ll(digits) - 1;
@@ -396,44 +406,23 @@ void ENumeric::setMinimum(double v)
 
 void ENumeric::setIntDigits(int i)
 {
-    i = qBound(1, i, MAX_NUMERIC_DIGITS - decDig);
-    if (i == intDig) return;
+    /* changes the configured baseline, the displayed digits follow via updateDigitLayout */
+    i = qBound(1, i, MAX_NUMERIC_DIGITS - orig_decDig);
+    if (i == orig_intDig) return;
     qCDebug(eNumericLog) << "setIntDigits" << objectName() << i;
-    /* reset the automatic digit shift baseline */
-    orig_intDig = orig_decDig = -1;
-    clearContainers();
-    intDig = i;
-    digits = intDig + decDig;
-    /* re-clamp the limits to the new capacity */
-    setMinimum(d_minAsDouble);
-    setMaximum(d_maxAsDouble);
-    init();
+    orig_intDig = i;
+    updateDigitLayout();
+    if (!canEdit()) suppressUserInput();
 }
 
 void ENumeric::setDecDigits(int d)
 {
-    d = qBound(0, d, MAX_NUMERIC_DIGITS - intDig);
-    if (d == decDig) return;
+    /* changes the configured baseline, the displayed digits follow via updateDigitLayout */
+    d = qBound(0, d, MAX_NUMERIC_DIGITS - orig_intDig);
+    if (d == orig_decDig) return;
     qCDebug(eNumericLog) << "setDecDigits" << objectName() << d;
-    /* reset the automatic digit shift baseline */
-    orig_intDig = orig_decDig = -1;
-
-    /* rescale the stored value to the new scale, rounding half away from zero */
-    if (d > decDig) {
-        data = data * pow10ll(d - decDig);
-    } else {
-        const qint64 divisor = pow10ll(decDig - d);
-        const qint64 half = divisor / 2;
-        data = (data >= 0) ? (data + half) / divisor : (data - half) / divisor;
-    }
-    decDig = d;
-    digits = intDig + decDig;
-
-    clearContainers();
-    /* recalculate the limits for the new scale */
-    setMinimum(d_minAsDouble);
-    setMaximum(d_maxAsDouble);
-    init();
+    orig_decDig = d;
+    updateDigitLayout();
     if (!canEdit()) suppressUserInput();
 }
 
@@ -530,7 +519,6 @@ void ENumeric::showData()
         labels[i]->setText(" ");
     }
 
-    QTimer::singleShot(1000, this, SLOT(valueUpdated()));
     triggerRoundColorUpdate();
 }
 
@@ -558,8 +546,17 @@ void ENumeric::updateRoundColors(int i) {
     }
 }
 
+/* coalesce: at most one delayed resize in flight */
+void ENumeric::scheduleValueUpdated()
+{
+    if (resizePending) return;
+    resizePending = true;
+    QTimer::singleShot(1000, this, SLOT(valueUpdated()));
+}
+
 void ENumeric::valueUpdated()
 {
+    resizePending = false;
     QResizeEvent *re = new QResizeEvent(size(), size());
     resizeEvent(re);
     delete re;
@@ -613,6 +610,7 @@ bool ENumeric::eventFilter(QObject *obj, QEvent *event)
         }
     } else if(event->type() == QEvent::Leave && !suppressInput) {
         QString ParentClassName = parent()->metaObject()->className();
+        QApplication::restoreOverrideCursor();
         if(ParentClassName.contains("caApplyNumeric")) {
             qCDebug(eNumericLog) << "do nothing";
         } else {
@@ -622,7 +620,7 @@ bool ENumeric::eventFilter(QObject *obj, QEvent *event)
             const qint64 capacity = pow10ll(digits) - 1;
             data = qBound(-capacity, transformNumberSpace(csValue, decDig), capacity);
             showData();
-            QApplication::restoreOverrideCursor();
+
             valueUpdated();
             updateGeometry();
         }
@@ -860,6 +858,6 @@ void ENumeric::setDisabled(bool b)
 
 void ENumeric::showEvent(QShowEvent *e)
 {
-    QTimer::singleShot(1000, this, SLOT(valueUpdated()));
+    scheduleValueUpdated();
     QWidget::showEvent(e);
 }

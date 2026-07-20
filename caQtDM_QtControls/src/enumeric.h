@@ -104,8 +104,10 @@ protected:
     virtual QSize sizeHint() const;
     virtual QSize minimumSizeHint() const;
 
-    bool managedigits(double newvalue);
 private:
+    void updateDigitLayout();
+    bool applyDigitLayout(int newIntDig, int newDecDig);
+    void scheduleValueUpdated();
     void mouseDoubleClickEvent(QMouseEvent*);
     bool eventFilter(QObject *obj, QEvent *event);
     void init();
@@ -142,8 +144,10 @@ private:
     double csValue;
 
     QColor roundingColor;
-    int orig_decDig = -1;
-    int orig_intDig = -1;
+    /* configured digit baseline, the auto shift trades within it */
+    int orig_decDig;
+    int orig_intDig;
+    bool resizePending = false;
     bool suppressInput = false;
     QString backupStylesheet = "";
 public:

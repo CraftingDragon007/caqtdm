@@ -28,6 +28,7 @@
 #include <QApplication>
 #include <QEvent>
 #include <QLabel>
+#include <QPointer>
 #include <QPushButton>
 #include <QSignalSpy>
 #include <QTest>
@@ -1195,6 +1196,74 @@ protected:
         bool singleOk = true;
         QCOMPARE(numReadDisplayedString(m_num, 5, 1, &singleOk),
                  numExpectedDisplayString(123456, 5, 1));
+    }
+
+    void t_channelUpdateStormDoesNotRebuild()
+    {
+        /* the caQtDM_Lib per-update sequence setIntDigits/setDecDigits/
+         * silentSetValue must not rebuild the digit widgets once settled */
+        configure(3, 15);
+        m_num->silentSetValue(123456789.5); /* needs 9 integer digits */
+        QCOMPARE(m_num->intDigits(), 9);
+        QCOMPARE(m_num->decDigits(), 9);
+
+        QPointer<QLabel> firstLabel =
+            m_num->template findChild<QLabel *>("layoutmember0");
+        QVERIFY(firstLabel);
+
+        for (int k = 0; k < 20; k++) {
+            m_num->setIntDigits(3);
+            m_num->setDecDigits(15);
+            m_num->silentSetValue(123456789.5 + k);
+        }
+        QVERIFY2(!firstLabel.isNull(),
+                 "digit labels were rebuilt during a plain channel update storm");
+        QCOMPARE(m_num->template findChild<QLabel *>("layoutmember0"),
+                 firstLabel.data());
+        QCOMPARE(m_num->intDigits(), 9);
+        QCOMPARE(m_num->decDigits(), 9);
+        bool singleOk = true;
+        QCOMPARE(numReadDisplayedString(m_num, 9, 9, &singleOk),
+                 numExpectedDisplayString(Q_INT64_C(123456808500000000), 9, 9));
+    }
+
+    void t_baselineChangeWhileShifted()
+    {
+        /* a baseline change while the auto shift is active must resolve against
+         * the new baseline, not against the displayed digits */
+        configure(3, 15);
+        m_num->silentSetValue(123456789.5); /* shifted to (9,9) */
+        QCOMPARE(m_num->intDigits(), 9);
+        QCOMPARE(m_num->decDigits(), 9);
+
+        m_num->setDecDigits(12); /* baseline (3,12), the value still needs 9 */
+        QCOMPARE(m_num->intDigits(), 9);
+        QCOMPARE(m_num->decDigits(), 6);
+
+        m_num->silentSetValue(1.5); /* small again: settle on the new baseline */
+        QCOMPARE(m_num->intDigits(), 3);
+        QCOMPARE(m_num->decDigits(), 12);
+        bool singleOk = true;
+        QCOMPARE(numReadDisplayedString(m_num, 3, 12, &singleOk),
+                 numExpectedDisplayString(Q_INT64_C(1500000000000), 3, 12));
+    }
+
+    void t_noDelayedResizeOnPlainValueUpdate()
+    {
+        /* a plain value update must not schedule the delayed synthetic resize
+         * (it repaints all button pixmaps); only layout rebuilds may */
+        configure(3, 2);
+        m_num->silentSetValue(1.5);
+        QTest::qWait(1200); /* drain the delayed resize of the initial build */
+
+        QPushButton *btn = m_num->template findChild<QPushButton *>("layoutmember0");
+        QVERIFY(btn);
+        QVERIFY2(!btn->icon().isNull(), "delayed resize of the initial build did not run");
+        const qint64 key = btn->icon().cacheKey();
+
+        m_num->silentSetValue(2.5); /* same layout: no resize may be scheduled */
+        QTest::qWait(1200);
+        QCOMPARE(btn->icon().cacheKey(), key);
     }
 
     QWidget *m_host;

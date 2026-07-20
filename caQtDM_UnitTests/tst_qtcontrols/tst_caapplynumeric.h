@@ -79,6 +79,9 @@ private slots:
     void autoShiftKeepsConfiguredLimits() { t_autoShiftKeepsConfiguredLimits(); }
     void autoShiftNegativeValues() { t_autoShiftNegativeValues(); }
     void fixedFormatDisablesAutoShift() { t_fixedFormatDisablesAutoShift(); }
+    void channelUpdateStormDoesNotRebuild() { t_channelUpdateStormDoesNotRebuild(); }
+    void baselineChangeWhileShifted() { t_baselineChangeWhileShifted(); }
+    void noDelayedResizeOnPlainValueUpdate() { t_noDelayedResizeOnPlainValueUpdate(); }
 
     /* apply specific: the button emits clicked(double) with the displayed value */
     void applyButtonEmitsClicked();

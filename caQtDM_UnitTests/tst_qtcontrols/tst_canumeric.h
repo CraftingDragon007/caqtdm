@@ -77,6 +77,9 @@ private slots:
     void autoShiftKeepsConfiguredLimits() { t_autoShiftKeepsConfiguredLimits(); }
     void autoShiftNegativeValues() { t_autoShiftNegativeValues(); }
     void fixedFormatDisablesAutoShift() { t_fixedFormatDisablesAutoShift(); }
+    void channelUpdateStormDoesNotRebuild() { t_channelUpdateStormDoesNotRebuild(); }
+    void baselineChangeWhileShifted() { t_baselineChangeWhileShifted(); }
+    void noDelayedResizeOnPlainValueUpdate() { t_noDelayedResizeOnPlainValueUpdate(); }
 
     /* only ENumeric has the double click line edit input path */
     void lineEditInput();

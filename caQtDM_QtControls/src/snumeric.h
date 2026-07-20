@@ -121,7 +121,9 @@ private:
     void triggerRoundColorUpdate();
     double transformNumberSpace(long long value, int dig);
     long long transformNumberSpace(double value, int dig);
-    bool managedigits(double newvalue);
+    void updateDigitLayout();
+    bool applyDigitLayout(int newIntDig, int newDecDig);
+    void scheduleValueUpdated();
     bool canEdit();
     void suppressUserInput();
 
@@ -146,8 +148,10 @@ private:
     double csValue;
 
     QColor roundingColor;
-    int orig_decDig = -1;
-    int orig_intDig = -1;
+    /* configured digit baseline, the auto shift trades within it */
+    int orig_decDig;
+    int orig_intDig;
+    bool resizePending = false;
     bool suppressInput = false;
     QString backupStylesheet = "";
 public:

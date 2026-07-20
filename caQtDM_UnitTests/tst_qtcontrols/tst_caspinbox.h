@@ -75,6 +75,9 @@ private slots:
     void autoShiftKeepsConfiguredLimits() { t_autoShiftKeepsConfiguredLimits(); }
     void autoShiftNegativeValues() { t_autoShiftNegativeValues(); }
     void fixedFormatDisablesAutoShift() { t_fixedFormatDisablesAutoShift(); }
+    void channelUpdateStormDoesNotRebuild() { t_channelUpdateStormDoesNotRebuild(); }
+    void baselineChangeWhileShifted() { t_baselineChangeWhileShifted(); }
+    void noDelayedResizeOnPlainValueUpdate() { t_noDelayedResizeOnPlainValueUpdate(); }
 
     /* caSpinbox has a single up/down button pair acting on the digit that was
      * selected with the arrow keys — widget specific test */
