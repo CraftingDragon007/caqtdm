@@ -127,6 +127,7 @@ QColor thisBackColor, oldBackColor;
 colMode thisColorMode;
 colMode oldColorMode;
 bool renewStyleSheet;
+bool oldConnected = true;
 
 };
 #endif

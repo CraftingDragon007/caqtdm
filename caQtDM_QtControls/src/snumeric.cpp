@@ -46,7 +46,7 @@
 #define MIN_FONT_SIZE 3
 #define PREC_LIMIT_NUMERIC 15
 /* long long storage limit: 10^19 - 1 does not fit any more */
-#define MAX_NUMERIC_DIGITS 18
+#define MAX_NUMERIC_DIGITS ((int) SNumeric::MaxTotalDigits)
 
 /* exact integer power of ten, n in [0, MAX_NUMERIC_DIGITS] */
 static long long pow10ll(int n)
@@ -221,12 +221,21 @@ void SNumeric::init()
     QPushButton *temp = new QPushButton(this);
     temp->setObjectName(QString("layoutmember") + QString().setNum(0));
     temp->installEventFilter(lCWME);
-
+#ifndef MOBILE
+    temp->setAutoRepeat(true);
+    temp->setAutoRepeatInterval(200);
+    temp->setAutoRepeatDelay(500);
+#endif
     bup->addButton(temp);
 
     QPushButton *temp2 = new QPushButton(this);
     temp2->setObjectName(QString("layoutmember") + QString().setNum(0));
     temp2->installEventFilter(lCWME);
+#ifndef MOBILE
+    temp2->setAutoRepeat(true);
+    temp2->setAutoRepeatInterval(200);
+    temp2->setAutoRepeatDelay(500);
+#endif
     bdown->addButton(temp2);
 
 
@@ -290,11 +299,37 @@ void SNumeric::suppressUserInput(){
     update();
 }
 
+void SNumeric::restoreUserInput(){
+    suppressInput = false;
+    if (!backupStylesheet.isEmpty()) setStyleSheet(backupStylesheet);
+    backupStylesheet = "";
+    setToolTip("");
+    for (int i = 0; i < digits && i < labels.length(); i++) {
+        labels[i]->setStyleSheet("");
+    }
+}
+
+/* after a layout or format change: enter, refresh or leave the suppression state */
+void SNumeric::updateSuppressionState(){
+    if (!canEdit()) {
+        suppressUserInput(); /* also re-stars freshly rebuilt labels */
+        return;
+    }
+    if (suppressInput) {
+        restoreUserInput();
+        /* the last channel value becomes displayable again */
+        const long long capacity = pow10ll(digits) - 1;
+        data = qBound(-capacity, transformNumberSpace(csValue, decDig), capacity);
+        showData();
+    }
+}
+
 /* resolve the displayed digits from the configured baseline and the channel
  * value: trade decimal digits for integer digits when the magnitude needs them */
 void SNumeric::updateDigitLayout(){
+    if (thisFixedFormat) return; /* frozen: keep the displayed layout */
     int newIntDig = orig_intDig;
-    if (!thisFixedFormat && std::isfinite(csValue)) {
+    if (std::isfinite(csValue)) {
         /* integer digits needed by the magnitude */
         double mag = fabs(csValue);
         int needed = 1;
@@ -341,15 +376,7 @@ void SNumeric::silentSetValue(double v)
     }
 
     /* value is processable (again): restore the normal display */
-    if (suppressInput) {
-        suppressInput = false;
-        if (!backupStylesheet.isEmpty()) setStyleSheet(backupStylesheet);
-        backupStylesheet = "";
-        setToolTip("");
-        for (int i = 0; i < digits && i < labels.length(); i++) {
-            labels[i]->setStyleSheet("");
-        }
-    }
+    if (suppressInput) restoreUserInput();
 
     updateDigitLayout(); /* may rebuild the digit layout */
 
@@ -411,8 +438,10 @@ void SNumeric::setIntDigits(int i)
     if (i == orig_intDig) return;
     qCDebug(sNumericLog) << "setIntDigits" << objectName() << i;
     orig_intDig = i;
-    updateDigitLayout();
-    if (!canEdit()) suppressUserInput();
+    /* under fixed format the new baseline is applied directly */
+    if (thisFixedFormat) applyDigitLayout(orig_intDig, orig_decDig);
+    else updateDigitLayout();
+    updateSuppressionState();
 }
 
 void SNumeric::setDecDigits(int d)
@@ -422,8 +451,20 @@ void SNumeric::setDecDigits(int d)
     if (d == orig_decDig) return;
     qCDebug(sNumericLog) << "setDecDigits" << objectName() << d;
     orig_decDig = d;
-    updateDigitLayout();
-    if (!canEdit()) suppressUserInput();
+    /* under fixed format the new baseline is applied directly */
+    if (thisFixedFormat) applyDigitLayout(orig_intDig, orig_decDig);
+    else updateDigitLayout();
+    updateSuppressionState();
+}
+
+void SNumeric::setFixedFormat(bool f)
+{
+    if (thisFixedFormat == f) return;
+    qCDebug(sNumericLog) << "setFixedFormat" << objectName() << f;
+    thisFixedFormat = f;
+    /* true freezes the displayed layout, false resolves it again */
+    if (!f) updateDigitLayout();
+    updateSuppressionState();
 }
 
 void SNumeric::upData(QAbstractButton* b)
@@ -562,16 +603,15 @@ bool SNumeric::eventFilter(QObject *obj, QEvent *event)
             }
         }
 
-    // this prevents a parent scrollbar to react to the up/down keys
+    // step on press: auto-repeats while held, and shields a parent scrollbar
     } else if (event->type() == QEvent::KeyPress && !suppressInput) {
          QKeyEvent *ev = (QKeyEvent*) event;
-         if(ev->key() ==Qt::Key_Down || ev->key() ==Qt::Key_Up) return true;
+         if(ev->key() == Qt::Key_Up)   { upDataIndex(lastLabel);   return true; }
+         if(ev->key() == Qt::Key_Down) { downDataIndex(lastLabel); return true; }
 
     } else if(event->type() == QEvent::KeyRelease && !suppressInput)   {
         QKeyEvent *ev = (QKeyEvent *) event;
         if(ev->key() == Qt::Key_Escape) if (text != NULL) text->hide();
-        if(ev->key() == Qt::Key_Up) upDataIndex(lastLabel);
-        if(ev->key() == Qt::Key_Down) downDataIndex(lastLabel);
         if(ev->key() == Qt::Key_Left) {
             lastLabel--;
             if(lastLabel < 0) lastLabel = 0;

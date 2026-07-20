@@ -219,6 +219,19 @@ static inline QString numFormatDigitComparison(double v, int intDig, int decDig,
     return msg;
 }
 
+/* counts QEvent::StyleChange on the watched widget */
+class NumStyleChangeCounter : public QObject
+{
+public:
+    int count = 0;
+protected:
+    bool eventFilter(QObject *obj, QEvent *ev)
+    {
+        if (ev->type() == QEvent::StyleChange) count++;
+        return QObject::eventFilter(obj, ev);
+    }
+};
+
 static const int s_numDigitConfigs[][2] = {
     {1, 0}, {2, 1}, {3, 2}, {5, 3}, {8, 6}, {9, 8},
     {10, 7}, {1, 16}, {2, 15}, {17, 1}, {9, 9}
@@ -1196,6 +1209,178 @@ protected:
         bool singleOk = true;
         QCOMPARE(numReadDisplayedString(m_num, 5, 1, &singleOk),
                  numExpectedDisplayString(123456, 5, 1));
+    }
+
+    void t_fixedFormatFreezesCurrentLayout()
+    {
+        /* switching fixed format on at runtime freezes the layout as displayed,
+         * switching it off resolves it again from the configured baseline */
+        configure(2, 4);
+        m_num->silentSetValue(12345.6); /* auto shift to (5,1) */
+        QCOMPARE(m_num->intDigits(), 5);
+        QCOMPARE(m_num->decDigits(), 1);
+
+        m_num->setFixedFormat(true);
+        m_num->silentSetValue(1.7); /* small value: the layout must stay frozen */
+        QCOMPARE(m_num->intDigits(), 5);
+        QCOMPARE(m_num->decDigits(), 1);
+        bool singleOk = true;
+        QCOMPARE(numReadDisplayedString(m_num, 5, 1, &singleOk),
+                 numExpectedDisplayString(17, 5, 1));
+
+        m_num->silentSetValue(123456.7); /* does not fit 5 integer digits: suppression */
+        QLabel *first = m_num->template findChild<QLabel *>("layoutmember0");
+        QVERIFY(first);
+        QCOMPARE(first->text(), QString("*"));
+        QCOMPARE(m_num->intDigits(), 5);
+        QCOMPARE(m_num->decDigits(), 1);
+
+        m_num->silentSetValue(42.5); /* recovery, still frozen */
+        QCOMPARE(m_num->intDigits(), 5);
+        QCOMPARE(numReadDisplayedString(m_num, 5, 1, &singleOk),
+                 numExpectedDisplayString(425, 5, 1));
+
+        m_num->setFixedFormat(false); /* resolves back to the (2,4) baseline */
+        QCOMPARE(m_num->intDigits(), 2);
+        QCOMPARE(m_num->decDigits(), 4);
+        m_num->silentSetValue(1.7);
+        QCOMPARE(numReadDisplayedString(m_num, 2, 4, &singleOk),
+                 numExpectedDisplayString(17000, 2, 4));
+    }
+
+    void t_digitChangeRecoversFromSuppression()
+    {
+        /* a digit configuration change must resolve the suppression state in
+         * both directions without waiting for the next channel value */
+        configure(3, 2);
+        m_num->setFixedFormat(true);
+        m_num->silentSetValue(1234.5); /* does not fit 3 integer digits: stars */
+        QLabel *first = m_num->template findChild<QLabel *>("layoutmember0");
+        QVERIFY(first);
+        QCOMPARE(first->text(), QString("*"));
+
+        m_num->setIntDigits(5); /* enough digits: must recover without a new value */
+        QCOMPARE(m_num->intDigits(), 5);
+        QCOMPARE(m_num->decDigits(), 2);
+        bool singleOk = true;
+        QCOMPARE(numReadDisplayedString(m_num, 5, 2, &singleOk),
+                 numExpectedDisplayString(123450, 5, 2));
+
+        m_num->setIntDigits(3); /* too small again: back to stars, no index digits */
+        for (int i = 0; i < 5; i++) {
+            QLabel *l = m_num->template findChild<QLabel *>(QString("layoutmember%1").arg(i));
+            QVERIFY(l);
+            QCOMPARE(l->text(), QString("*"));
+        }
+
+        m_num->setIntDigits(4); /* and recover once more */
+        QCOMPARE(numReadDisplayedString(m_num, 4, 2, &singleOk),
+                 numExpectedDisplayString(123450, 4, 2));
+    }
+
+    void t_suppressionRecoveryEdges_data()
+    {
+        QTest::addColumn<int>("intDig");
+        QTest::addColumn<int>("decDig");
+        QTest::addColumn<bool>("fixedFmt");
+        QTest::addColumn<double>("badValue");
+        QTest::addColumn<int>("recoverIntDig"); /* 0: skip the digit recovery step */
+        QTest::addColumn<bool>("digitRecovers");
+        QTest::addColumn<double>("goodValue");
+
+        QTest::newRow("reported case") << 3 << 2 << true << 1234.5 << 5 << true << 42.5;
+        QTest::newRow("smallest overflow") << 1 << 0 << true << 10.0 << 2 << true << 5.0;
+        QTest::newRow("huge 18 digit value") << 3 << 2 << true << 9.99e17 << 16 << false << 0.05;
+        QTest::newRow("full integer capacity") << 18 << 0 << false << 1.0e18 << 0 << false << 9.98e17;
+        QTest::newRow("tiny decimals, full budget") << 2 << 16 << true << 100.0 << 3 << false << 6.0e-17;
+        QTest::newRow("negative big") << 3 << 2 << true << -99999.9 << 5 << true << -0.5;
+        QTest::newRow("dbl_max saturates") << 5 << 2 << true << DBL_MAX << 6 << false << 12.5;
+        QTest::newRow("negative saturation") << 5 << 2 << true << -1.0e19 << 6 << false << -0.5;
+        QTest::newRow("non-fixed overflow") << 3 << 2 << false << 1.0e7 << 0 << false << 1.5;
+        QTest::newRow("subnormal recovery") << 2 << 4 << true << 1.0e19 << 0 << false << 1.0e-310;
+    }
+
+    void t_suppressionRecoveryEdges()
+    {
+        QFETCH(int, intDig);
+        QFETCH(int, decDig);
+        QFETCH(bool, fixedFmt);
+        QFETCH(double, badValue);
+        QFETCH(int, recoverIntDig);
+        QFETCH(bool, digitRecovers);
+        QFETCH(double, goodValue);
+
+        configure(intDig, decDig);
+        if (fixedFmt) m_num->setFixedFormat(true);
+
+        m_num->silentSetValue(badValue); /* must enter the suppression state */
+        QLabel *first = m_num->template findChild<QLabel *>("layoutmember0");
+        QVERIFY(first);
+        QCOMPARE(first->text(), QString("*"));
+
+        if (recoverIntDig > 0) {
+            m_num->setIntDigits(recoverIntDig);
+            first = m_num->template findChild<QLabel *>("layoutmember0"); /* maybe rebuilt */
+            QVERIFY(first);
+            if (digitRecovers) {
+                bool ok = true, singleOk = true;
+                const int D = m_num->decDigits();
+                const long long expected = numFixedPointFromDecimalString(
+                    numOracleDecimalString(badValue, D), D, &ok);
+                QVERIFY(ok);
+                QCOMPARE(numReadDisplayedString(m_num, m_num->intDigits(), D, &singleOk),
+                         numExpectedDisplayString(expected, m_num->intDigits(), D));
+                /* shrinking again suppresses with stars, not with index digits */
+                m_num->setIntDigits(intDig);
+                for (int i = 0; i < m_num->intDigits() + m_num->decDigits(); i++) {
+                    QLabel *l = m_num->template findChild<QLabel *>(
+                        QString("layoutmember%1").arg(i));
+                    QVERIFY(l);
+                    QCOMPARE(l->text(), QString("*"));
+                }
+            } else {
+                QCOMPARE(first->text(), QString("*"));
+            }
+        }
+
+        /* a processable channel value always recovers the display */
+        m_num->silentSetValue(goodValue);
+        bool ok = true, singleOk = true;
+        const int I = m_num->intDigits(), D = m_num->decDigits();
+        const long long expected = numFixedPointFromDecimalString(
+            numOracleDecimalString(goodValue, D), D, &ok);
+        QVERIFY(ok);
+        QCOMPARE(numReadDisplayedString(m_num, I, D, &singleOk),
+                 numExpectedDisplayString(expected, I, D));
+        QVERIFY(singleOk);
+    }
+
+    void t_disconnectedColorUpdatesAreFiltered()
+    {
+        /* the update cycle re-sends the disconnected state permanently; the
+         * widget must restyle (and force a repaint resize) only once */
+        configure(3, 2);
+        m_num->silentSetValue(12.5);
+
+        const int modes[] = { 0 /* Static */, 1 /* Default */ };
+        for (size_t m = 0; m < sizeof(modes) / sizeof(modes[0]); m++) {
+            m_num->setColorMode((typename WidgetT::colMode) modes[m]);
+            m_num->setConnectedColors(true);
+            m_num->setConnectedColors(false); /* the first disconnect may restyle */
+
+            NumStyleChangeCounter counter;
+            m_num->installEventFilter(&counter);
+            for (int k = 0; k < 20; k++) m_num->setConnectedColors(false);
+            m_num->removeEventFilter(&counter);
+            QVERIFY2(counter.count == 0,
+                     qPrintable(QString("colorMode %1: %2 style changes during 20 "
+                                        "repeated disconnected updates")
+                                    .arg(modes[m]).arg(counter.count)));
+
+            /* the reconnect restores the configured colors */
+            m_num->setConnectedColors(true);
+            QVERIFY(!m_num->styleSheet().contains("rgba(255, 255, 255"));
+        }
     }
 
     void t_channelUpdateStormDoesNotRebuild()

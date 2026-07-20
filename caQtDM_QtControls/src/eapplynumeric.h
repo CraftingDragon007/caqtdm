@@ -139,7 +139,7 @@ public:
 	/**
 	 * fixed format: disables the automatic digit shifting of the numeric widget
 	 */
-        void setFixedFormat(bool f){ data->thisFixedFormat = f; }
+        void setFixedFormat(bool f){ data->setFixedFormat(f); }
         bool getFixedFormat() const { return data->thisFixedFormat; }
 
         void writeAccessW(bool access){ data->writeAccessW(access); }

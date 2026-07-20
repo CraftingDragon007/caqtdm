@@ -25,7 +25,8 @@
 
 #include <QtGui>
 #include "limitsDialog.h"
-#define PREC_LIMIT_NUMERIC 19
+/* total digit budget of the numeric widgets */
+#define PREC_LIMIT_NUMERIC ENumeric::MaxTotalDigits
 
 int limitsDialog::extractPrecisionFromFormat(const QString &fmt)
 {
@@ -339,7 +340,7 @@ limitsDialog::limitsDialog(QWidget *w, MutexKnobData *data, const QString &title
         row++;
         QLabel *integerLabel = new QLabel("integer digits");
         integerLineEdit = new QSpinBox();
-        integerLineEdit->setMinimum(0);
+        integerLineEdit->setMinimum(1);
         integerLineEdit->setMaximum(PREC_LIMIT_NUMERIC);
         integerLineEdit->setSingleStep(1);
         Layout->addWidget(integerLabel, row, 2);
@@ -354,6 +355,12 @@ limitsDialog::limitsDialog(QWidget *w, MutexKnobData *data, const QString &title
         Layout->addWidget(decimalLabel, row+1, 2);
         Layout->addWidget(decimalLineEdit, row+1, 3);
         decimalLineEdit->setValue(decDigits);
+
+        /* int + dec digits share the total digit budget of the widget */
+        integerLineEdit->setMaximum(PREC_LIMIT_NUMERIC - decimalLineEdit->value());
+        decimalLineEdit->setMaximum(PREC_LIMIT_NUMERIC - integerLineEdit->value());
+        connect(integerLineEdit, SIGNAL(valueChanged(int)), this, SLOT(intDigitsChanged(int)));
+        connect(decimalLineEdit, SIGNAL(valueChanged(int)), this, SLOT(decDigitsChanged(int)));
 
         QLabel *formatLabel = new QLabel("Fixed format ");
         formatComboBox = new QComboBox();
@@ -427,6 +434,16 @@ void limitsDialog::indexChanged(int) {
         decimalLineEdit->setDisabled(true);
         precisionLineEdit->setDisabled(false);
     }
+}
+
+void limitsDialog::intDigitsChanged(int v)
+{
+    decimalLineEdit->setMaximum(PREC_LIMIT_NUMERIC - v);
+}
+
+void limitsDialog::decDigitsChanged(int v)
+{
+    integerLineEdit->setMaximum(PREC_LIMIT_NUMERIC - v);
 }
 
 void limitsDialog::cancelClicked()

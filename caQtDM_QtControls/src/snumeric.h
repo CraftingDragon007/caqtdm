@@ -63,6 +63,9 @@ class QTCON_EXPORT SNumeric : public QFrame, public FloatDelegate
     Q_PROPERTY(bool digitsFontScaleEnabled READ digitsFontScaleEnabled WRITE setDigitsFontScaleEnabled)
 
 public:
+    /* total digit capacity: 10^19 - 1 does not fit long long any more */
+    enum { MaxTotalDigits = 18 };
+
     SNumeric(QWidget *parent, int intDigits = 2, int decDigits = 1);
     ~SNumeric(){}
 
@@ -79,6 +82,7 @@ public:
     int intDigits() const { return intDig; }
     void setDecDigits(int d);
     int decDigits() const { return decDig; }
+    void setFixedFormat(bool f);
     bool digitsFontScaleEnabled() { return d_fontScaleEnabled; }
     void setDigitsFontScaleEnabled(bool en);
 
@@ -126,6 +130,8 @@ private:
     void scheduleValueUpdated();
     bool canEdit();
     void suppressUserInput();
+    void restoreUserInput();
+    void updateSuppressionState();
 
     int intDig;
     int decDig;

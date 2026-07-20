@@ -109,6 +109,9 @@ void caNumeric::setColors(QColor bg, QColor fg, bool init)
 
 void caNumeric::setConnectedColors(bool connected)
 {
+    /* the disconnected state is re-sent on every update cycle: filter it */
+    if(!connected && !oldConnected) return;
+    oldConnected = connected;
     if(!connected) {
        setColors(QColor(Qt::white), QColor(Qt::white), true);
     } else {

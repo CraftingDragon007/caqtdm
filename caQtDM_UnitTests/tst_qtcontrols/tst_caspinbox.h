@@ -75,6 +75,11 @@ private slots:
     void autoShiftKeepsConfiguredLimits() { t_autoShiftKeepsConfiguredLimits(); }
     void autoShiftNegativeValues() { t_autoShiftNegativeValues(); }
     void fixedFormatDisablesAutoShift() { t_fixedFormatDisablesAutoShift(); }
+    void fixedFormatFreezesCurrentLayout() { t_fixedFormatFreezesCurrentLayout(); }
+    void digitChangeRecoversFromSuppression() { t_digitChangeRecoversFromSuppression(); }
+    void suppressionRecoveryEdges_data() { t_suppressionRecoveryEdges_data(); }
+    void suppressionRecoveryEdges() { t_suppressionRecoveryEdges(); }
+    void disconnectedColorUpdatesAreFiltered() { t_disconnectedColorUpdatesAreFiltered(); }
     void channelUpdateStormDoesNotRebuild() { t_channelUpdateStormDoesNotRebuild(); }
     void baselineChangeWhileShifted() { t_baselineChangeWhileShifted(); }
     void noDelayedResizeOnPlainValueUpdate() { t_noDelayedResizeOnPlainValueUpdate(); }

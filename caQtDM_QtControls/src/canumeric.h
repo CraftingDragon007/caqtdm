@@ -83,7 +83,7 @@ public:
     SourceMode getLimitsMode() const { return thisLimitsMode; }
 
     bool getFixedFormat()  const {return thisFixedFormat;}
-    void setFixedFormat(bool const &fixed) {thisFixedFormat=fixed;}
+    void setFixedFormat(bool const &fixed) {ENumeric::setFixedFormat(fixed);}
 
     void setLimitsMode(SourceMode limitsmode) { thisLimitsMode = limitsmode;}
 
@@ -127,5 +127,6 @@ private:
     QColor thisForeColor, oldForeColor;
     QColor thisBackColor, oldBackColor;
     bool renewStyleSheet;
+    bool oldConnected = true;
 };
 #endif
