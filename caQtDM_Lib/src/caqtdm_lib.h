@@ -39,6 +39,7 @@
 #include <QHeaderView>
 #include <QVector>
 #include <QMutex>
+#include <QElapsedTimer>
 #include <QFile>
 #include <QMap>
 #include <QtGui>
@@ -489,6 +490,8 @@ private:
     void hmiHandleKeyPressed(QObject *target, QKeyEvent *event);
 
     void hmiHandleMouse(QObject *target, QMouseEvent *event);
+
+    QElapsedTimer this_hmiMouseMoveSendTimer;   // throttles MouseMove events sent to the shared bus
 
     void hmiHandleIncomingEvent(QObject* target, QEvent *event, QEvent *originalEvent, bool isSourceExternal);
 

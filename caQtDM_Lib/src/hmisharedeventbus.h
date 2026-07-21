@@ -51,5 +51,7 @@ private:
     void createSharedMemory();
     int findOrCreateProcessSlot();
     void cleanupProcessSlot();
+    bool validateSegmentSize() const;
+    void disableBusOnSemaphoreFailure();
 };
 #endif // HMISHAREDEVENTBUS_H

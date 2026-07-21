@@ -423,6 +423,10 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
                 QSharedPointer<caHMIConfigTransferItem> item = QSharedPointer<caHMIConfigTransferItem>::create();
                 QDataStream in(payload);
                 in >> *item;
+                if (in.status() != QDataStream::Ok || item->uuid().isEmpty() || item->uuid().size() > 64) {
+                    qWarning() << "discarding malformed NewCaHMIConfig event";
+                    return;
+                }
 
                 bool found = false;
                 QWriteLocker locker(&CaQtDM_Lib::externalHmiConfigListLock);
@@ -436,6 +440,10 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
                 QString uuid;
                 QDataStream in(payload);
                 in >> uuid;
+                if (in.status() != QDataStream::Ok || uuid.isEmpty() || uuid.size() > 64) {
+                    qWarning() << "discarding malformed CaHMIConfigDeleted event";
+                    return;
+                }
                 QWriteLocker locker(&CaQtDM_Lib::externalHmiConfigListLock);
                 auto it = std::remove_if(CaQtDM_Lib::externalHmiConfigList.begin(), CaQtDM_Lib::externalHmiConfigList.end(),
                                          [&](const QSharedPointer<caHMIConfigTransferItem>& item) {
@@ -448,6 +456,10 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
                 QDataStream in(payload);
                 in >> uuid;
                 in >> enabled;
+                if (in.status() != QDataStream::Ok || uuid.isEmpty() || uuid.size() > 64) {
+                    qWarning() << "discarding malformed CaHMIConfigEnabledChanged event";
+                    return;
+                }
 
                 {
                     QWriteLocker locker(&CaQtDM_Lib::hmiConfigListLock);

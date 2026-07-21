@@ -1,5 +1,6 @@
 #include <QDebug>
 #include <QCoreApplication>
+#include <QVector>
 #include "hmisharedeventbus.h"
 #include "causerid.h"
 
@@ -86,6 +87,17 @@ bool HmiSharedEventBus::attachToSharedMemory() {
         }
     }
 
+    // Reject segments that are too small for our layout (e.g. stale leftovers)
+    if (!validateSegmentSize()) {
+        qCritical() << PREFIX << "Shared memory segment has unexpected size" << this_sharedMemory.size()
+                    << "- HMI event bus disabled for PID" << QCoreApplication::applicationPid();
+#ifdef linux
+        qCritical() << PREFIX << "Please clean up /tmp/*caQtDM* and stale ipcs -m / ipcs -s entries, then restart.";
+#endif
+        this_sharedMemory.detach();
+        return false;
+    }
+
     // Once attached (or created and attached), map the pointers to the data.
     this_header = static_cast<SharedHeader*>(this_sharedMemory.data());
     this_eventBuffer = reinterpret_cast<EventPayload*>(
@@ -93,6 +105,22 @@ bool HmiSharedEventBus::attachToSharedMemory() {
         );
 
     return true;
+}
+
+bool HmiSharedEventBus::validateSegmentSize() const {
+    // ">=" because Qt may round the size up to a page multiple
+    size_t expected = sizeof(SharedHeader) + EVENT_BUFFER_CAPACITY * sizeof(EventPayload);
+    return static_cast<size_t>(this_sharedMemory.size()) >= expected;
+}
+
+void HmiSharedEventBus::disableBusOnSemaphoreFailure() {
+    qCritical() << PREFIX << "Unable to aquire system semaphore, error:" << this_writeLockSemaphore.errorString();
+    qCritical() << PREFIX << "To prevent crashes HmiSharedEventBus is now disabled!";
+#ifdef linux
+    qCritical() << PREFIX << "Please clean up /tmp/*caQtDM* and restart the program if you want to use caHMIConfig features";
+#endif
+    this_isInitialized = false;
+    this_pollTimer.stop();
 }
 
 void HmiSharedEventBus::createSharedMemory() {
@@ -176,14 +204,13 @@ bool HmiSharedEventBus::sendEvent(int eventType, const QByteArray& payload) {
         return false;
     }
 
+    if (eventType <= EventTypes::Invalid || eventType > EventTypes::MousePress) {
+        qWarning() << PREFIX << "Refusing to send event with invalid type" << eventType;
+        return false;
+    }
+
     if (!this_writeLockSemaphore.acquire()) {
-        qCritical() << PREFIX << "Unable to aquire system semaphore, error:" << this_writeLockSemaphore.errorString();
-        qCritical() << PREFIX << "To prevent crashes HmiShharedEventBus is now disabled!";
-#ifdef linux
-        qCritical() << PREFIX << "Please clean up /tmp/*caQtDM* and restart the program if you want to use caHMIConfig features";
-#endif
-        this_isInitialized = false;
-        this_pollTimer.stop();
+        disableBusOnSemaphoreFailure();
         return false;
     }
 
@@ -200,6 +227,8 @@ bool HmiSharedEventBus::sendEvent(int eventType, const QByteArray& payload) {
     event.dataSize = payload.size();
     if (!payload.isEmpty()) {
         std::memcpy(event.data, payload.constData(), payload.size());
+        // Clear stale bytes behind the payload
+        std::memset(event.data + payload.size(), 0, EVENT_PAYLOAD_SIZE - payload.size());
     } else {
         std::memset(event.data, 0, EVENT_PAYLOAD_SIZE); // Clear if no payload.
     }
@@ -218,37 +247,69 @@ bool HmiSharedEventBus::sendEvent(int eventType, const QByteArray& payload) {
 }
 
 void HmiSharedEventBus::checkForNewEvents() {
-    if (!this_isInitialized || this_currentProcessSlotIndex == -1 || !this_header) {
+    if (!this_isInitialized || this_currentProcessSlotIndex == -1 || !this_header || !this_eventBuffer) {
         // Not fully initialized, or header not mapped yet.
         return;
     }
 
-    // Snapshot global and local counters to ensure consistency during processing.
+    struct PendingEvent {
+        int eventType;
+        int senderPid;
+        qint64 timestamp;
+        QByteArray payload;
+    };
+    QVector<PendingEvent> pending;
+
+    // copy under lock, emit after release (semaphore is not recursive)
+    if (!this_writeLockSemaphore.acquire()) {
+        disableBusOnSemaphoreFailure();
+        return;
+    }
+
     quint64 currentTotalEvents = this_header->totalEventsWritten;
     quint64& lastReadTotalEvents = this_header->processSlots[this_currentProcessSlotIndex].lastReadTotalEvents;
 
-    quint64 unreadGlobalEvents = currentTotalEvents - lastReadTotalEvents;
+    if (lastReadTotalEvents > currentTotalEvents) {
+        // Corrupted or reset counters: resync instead of underflowing
+        qWarning() << PREFIX << "Event counters inconsistent (" << lastReadTotalEvents << ">" << currentTotalEvents << "), resyncing.";
+        lastReadTotalEvents = currentTotalEvents;
+        this_writeLockSemaphore.release();
+        return;
+    }
 
+    quint64 unreadGlobalEvents = currentTotalEvents - lastReadTotalEvents;
     if (unreadGlobalEvents == 0) {
+        this_writeLockSemaphore.release();
         return; // No new events available
     }
 
     quint64 eventsToProcess = std::min(unreadGlobalEvents, (quint64)EVENT_BUFFER_CAPACITY);
-
     quint32 readBufferStartIndex = (this_header->currentWriteIndex - eventsToProcess + EVENT_BUFFER_CAPACITY * 2) % EVENT_BUFFER_CAPACITY;
 
-
+    pending.reserve((int)eventsToProcess);
     for (quint64 i = 0; i < eventsToProcess; ++i) {
         quint32 eventBufferIndex = (readBufferStartIndex + i) % EVENT_BUFFER_CAPACITY;
         const EventPayload& event = this_eventBuffer[eventBufferIndex];
 
-        QByteArray payloadData;
-        if (event.dataSize > 0 && event.dataSize <= EVENT_PAYLOAD_SIZE) {
-            payloadData = QByteArray(event.data, event.dataSize);
-        }
+        // Skip implausible slots
+        if (event.eventType <= EventTypes::Invalid || event.eventType > EventTypes::MousePress) continue;
+        if (event.dataSize < 0 || event.dataSize > EVENT_PAYLOAD_SIZE) continue;
+        if (event.senderPid <= 0) continue;
 
-        emit eventReceived(event.eventType, event.senderPid, event.timestamp, payloadData);
+        PendingEvent p;
+        p.eventType = event.eventType;
+        p.senderPid = event.senderPid;
+        p.timestamp = event.timestamp;
+        if (event.dataSize > 0) {
+            p.payload = QByteArray(event.data, event.dataSize);
+        }
+        pending.append(p);
     }
 
     lastReadTotalEvents = currentTotalEvents;
+    this_writeLockSemaphore.release();
+
+    for (int i = 0; i < pending.size(); ++i) {
+        emit eventReceived(pending.at(i).eventType, pending.at(i).senderPid, pending.at(i).timestamp, pending.at(i).payload);
+    }
 }
