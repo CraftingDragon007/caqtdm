@@ -145,14 +145,12 @@ void caSpinbox::setAlarmColors(short status)
 }
 
 void caSpinbox::paintEvent(QPaintEvent *event) {
-    QPen	pen;
-    QPainter p(this);
-    Q_UNUSED(event);
+    SNumeric::paintEvent(event);
+
     if(hasFocus()) {
-      //pen.setColor(palette().color(QPalette::Foreground));
-      pen.setColor(Qt::red);
-      p.setPen(pen);
-      p.drawRect(0,0,rect().width()-1, rect().height()-1);
+        QPen pen(Qt::red);
+        QPainter p(this);
+        p.drawRect(0,0,rect().width()-1, rect().height()-1);
     }
 }
 

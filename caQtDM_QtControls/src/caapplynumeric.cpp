@@ -40,8 +40,8 @@ caApplyNumeric::caApplyNumeric(QWidget *parent) : EApplyNumeric(parent)
     setPrecisionMode(Channel);
     setLimitsMode(Channel);
     thisColorMode = Static;
-    thisMaximum = 100000.0;
-    thisMinimum = -100000.0;
+    setMaxValue(100000.0);
+    setMinValue(-100000.0);
     setDigitsFontScaleEnabled(true);
     setForeground(Qt::black);
 

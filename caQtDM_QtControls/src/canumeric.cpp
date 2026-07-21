@@ -143,14 +143,12 @@ void caNumeric::setAlarmColors(short status)
 }
 
 void caNumeric::paintEvent(QPaintEvent *event) {
-    QPen	pen;
-    QPainter p(this);
-    Q_UNUSED(event);
+    ENumeric::paintEvent(event);
+
     if(hasFocus()) {
-      pen.setColor(Qt::red);
-      p.setPen(pen);
-      //p.drawRect(rect());
-      p.drawRect(0,0,rect().width()-1, rect().height()-1);
+        QPen pen(Qt::red);
+        QPainter p(this);
+        p.drawRect(0,0,rect().width()-1, rect().height()-1);
     }
 }
 
