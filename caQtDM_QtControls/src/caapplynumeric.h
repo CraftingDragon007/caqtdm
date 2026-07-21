@@ -65,8 +65,8 @@ void noStyle(QString style) {Q_UNUSED(style);}
 QString getPV() const;
 void setPV(QString const &newPV);
 
-int getAccessW() const {return thisAccessW;}
-void setAccessW(int access);
+bool getAccessW() const {return thisAccessW;}
+void setAccessW(bool access);
 
 colMode getColorMode() const { return thisColorMode; }
 
@@ -117,7 +117,7 @@ private:
 bool eventFilter(QObject *obj, QEvent *event);
 
 QString thisPV;
-int thisAccessW;
+bool thisAccessW;
 double thisMaximum, thisMinimum;
 SourceMode thisPrecMode;
 SourceMode thisLimitsMode;
