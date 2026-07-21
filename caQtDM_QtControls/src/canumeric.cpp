@@ -85,9 +85,8 @@ void caNumeric::setColors(QColor bg, QColor fg, bool init)
         }
         if(!init) {
             // force resize for repainting
-            QResizeEvent *re = new QResizeEvent(size(), size());
-            resizeEvent(re);
-            delete re;
+            QResizeEvent re(size(), size());
+            resizeEvent(&re);
             return;
         }
     }
@@ -101,9 +100,8 @@ void caNumeric::setColors(QColor bg, QColor fg, bool init)
         oldForeColor = fg;
         oldBackColor = bg;
         // force resize for repainting
-        QResizeEvent *re = new QResizeEvent(size(), size());
-        resizeEvent(re);
-        delete re;
+        QResizeEvent re(size(), size());
+        resizeEvent(&re);
     }
 }
 
