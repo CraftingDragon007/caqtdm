@@ -7,6 +7,7 @@
 #include <QSharedMemory>
 #include <QSystemSemaphore>
 #include <QTimer>
+#include <QElapsedTimer>
 #include "caQtDM_Lib_global.h"
 
 class CAQTDM_LIBSHARED_EXPORT HmiSharedEventBus : public QObject {
@@ -26,6 +27,9 @@ signals:
 
 private slots:
     void checkForNewEvents();
+    void performCleanupCheck();
+    void executeCleanup();
+    void onCleanupSafetyTimeout();
 
 private:
     explicit HmiSharedEventBus(QObject *parent = nullptr);
@@ -44,8 +48,13 @@ private:
 
     int this_currentProcessSlotIndex;
     QTimer this_pollTimer;
+    QTimer this_cleanupTimer;
+    QTimer this_cleanupSafetyTimer;
+    QElapsedTimer this_lastCleanupObserved;
 
     bool this_isInitialized;
+    bool this_cleanupInProgress;
+    bool this_cleanupPending;
 
     bool attachToSharedMemory();
     void createSharedMemory();
@@ -53,5 +62,6 @@ private:
     void cleanupProcessSlot();
     bool validateSegmentSize() const;
     void disableBusOnSemaphoreFailure();
+    void reRegisterAfterCleanup();
 };
 #endif // HMISHAREDEVENTBUS_H

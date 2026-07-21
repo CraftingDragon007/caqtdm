@@ -17,10 +17,18 @@ HmiSharedEventBus::HmiSharedEventBus(QObject *parent)
     this_header(nullptr),
     this_eventBuffer(nullptr),
     this_currentProcessSlotIndex(-1),
-    this_isInitialized(false) // Initially not set up
+    this_isInitialized(false), // Initially not set up
+    this_cleanupInProgress(false),
+    this_cleanupPending(false)
 {
     this_pollTimer.setInterval(50);
     connect(&this_pollTimer, &QTimer::timeout, this, &HmiSharedEventBus::checkForNewEvents);
+
+    this_cleanupTimer.setInterval(CLEANUP_INTERVAL_MS);
+    connect(&this_cleanupTimer, &QTimer::timeout, this, &HmiSharedEventBus::performCleanupCheck);
+    this_cleanupSafetyTimer.setSingleShot(true);
+    this_cleanupSafetyTimer.setInterval(CLEANUP_SAFETY_TIMEOUT_MS);
+    connect(&this_cleanupSafetyTimer, &QTimer::timeout, this, &HmiSharedEventBus::onCleanupSafetyTimeout);
 }
 
 HmiSharedEventBus::~HmiSharedEventBus() {
@@ -52,6 +60,8 @@ bool HmiSharedEventBus::setup() {
 
     // 3. Start polling for new events
     this_pollTimer.start();
+    this_cleanupTimer.start();
+    this_lastCleanupObserved.start();
     this_isInitialized = true;
     return true;
 }
@@ -61,6 +71,10 @@ void HmiSharedEventBus::shutdown() {
         return;
     }
     this_pollTimer.stop();
+    this_cleanupTimer.stop();
+    this_cleanupSafetyTimer.stop();
+    this_cleanupInProgress = false;
+    this_cleanupPending = false;
     cleanupProcessSlot();
 
     if (this_sharedMemory.isAttached()) {
@@ -121,6 +135,89 @@ void HmiSharedEventBus::disableBusOnSemaphoreFailure() {
 #endif
     this_isInitialized = false;
     this_pollTimer.stop();
+    this_cleanupTimer.stop();
+    this_cleanupSafetyTimer.stop();
+    this_cleanupInProgress = false;
+    this_cleanupPending = false;
+}
+
+void HmiSharedEventBus::performCleanupCheck() {
+    if (!this_isInitialized || this_currentProcessSlotIndex == -1 || !this_header) return;
+    if (this_cleanupInProgress || this_cleanupPending) return; // a cleanup is already running or scheduled
+
+    if (!this_writeLockSemaphore.acquire()) {
+        disableBusOnSemaphoreFailure();
+        return;
+    }
+    // Elect: lowest registered pid wins, no OS liveness check needed
+    qint64 electedPid = 0;
+    for (int i = 0; i < MAX_PROCESS_SLOTS; ++i) {
+        int pid = this_header->processSlots[i].pid;
+        if (pid != 0 && (electedPid == 0 || pid < electedPid)) electedPid = pid;
+    }
+    this_writeLockSemaphore.release();
+
+    // Fallback: if the elected pid is dead and never cleans, take over after 2 idle intervals.
+    // Staggered per slot so concurrent takeovers stay rare; reading a Started resets the clock.
+    qint64 stallThreshold = 2 * (qint64)CLEANUP_INTERVAL_MS
+                            + (qint64)this_currentProcessSlotIndex * 4 * CLEANUP_GRACE_MS;
+    bool cleanupStalled = this_lastCleanupObserved.isValid()
+                          && this_lastCleanupObserved.elapsed() > stallThreshold;
+    if (electedPid != QCoreApplication::applicationPid() && !cleanupStalled) return;
+
+    if (!sendEvent(EventTypes::CleanupStarted)) return; // abort this round
+    this_cleanupPending = true;
+    // Grace period so peers poll CleanupStarted before the ring is wiped
+    QTimer::singleShot(CLEANUP_GRACE_MS, this, &HmiSharedEventBus::executeCleanup);
+}
+
+void HmiSharedEventBus::executeCleanup() {
+    this_cleanupPending = false;
+    if (!this_isInitialized || !this_header || !this_eventBuffer) return;
+
+    if (!this_writeLockSemaphore.acquire()) {
+        disableBusOnSemaphoreFailure();
+        return;
+    }
+    // Wipe everything; liveness is proven by re-registration after CleanupFinished
+    int clearedSlots = 0;
+    for (int i = 0; i < MAX_PROCESS_SLOTS; ++i) {
+        if (this_header->processSlots[i].pid != 0) ++clearedSlots;
+        this_header->processSlots[i].pid = 0;
+        this_header->processSlots[i].lastReadTotalEvents = 0;
+    }
+    std::memset(this_eventBuffer, 0, (size_t)EVENT_BUFFER_CAPACITY * sizeof(EventPayload));
+    this_header->currentWriteIndex = 0;
+    this_header->totalEventsWritten = 0;
+    // Re-register the cleaner itself under the same lock (semaphore is not recursive)
+    this_header->processSlots[0].pid = QCoreApplication::applicationPid();
+    this_header->processSlots[0].lastReadTotalEvents = 0;
+    this_currentProcessSlotIndex = 0;
+    this_writeLockSemaphore.release();
+
+    this_lastCleanupObserved.restart();
+    // Our wipe supersedes any concurrent cleanup - never stay paused after cleaning
+    this_cleanupInProgress = false;
+    this_cleanupSafetyTimer.stop();
+    sendEvent(EventTypes::CleanupFinished);
+    qDebug() << PREFIX << "Cleanup done by PID" << QCoreApplication::applicationPid() << "- cleared" << clearedSlots << "slots";
+}
+
+void HmiSharedEventBus::reRegisterAfterCleanup() {
+    this_currentProcessSlotIndex = findOrCreateProcessSlot();
+    if (this_currentProcessSlotIndex == -1) {
+        qCritical() << PREFIX << "Re-registration after cleanup failed for PID" << QCoreApplication::applicationPid() << "- bus disabled.";
+        this_isInitialized = false;
+        this_pollTimer.stop();
+        this_cleanupTimer.stop();
+    }
+}
+
+void HmiSharedEventBus::onCleanupSafetyTimeout() {
+    if (!this_cleanupInProgress) return;
+    qWarning() << PREFIX << "CleanupFinished never arrived, resuming normal operation.( PID: "<< QCoreApplication::applicationPid()<< ")";
+    this_cleanupInProgress = false;
+    reRegisterAfterCleanup();
 }
 
 void HmiSharedEventBus::createSharedMemory() {
@@ -167,8 +264,8 @@ int HmiSharedEventBus::findOrCreateProcessSlot() {
         // Initialize this slot's last read index to the current total events written.
         // This ensures the process only sees events *after* it initialized.
         this_header->processSlots[freeSlot].lastReadTotalEvents = this_header->totalEventsWritten;
-        qDebug() << PREFIX << "Process" << currentPid << "claimed slot" << freeSlot
-                 << "last read total events set to" << this_header->totalEventsWritten;
+//        qDebug() << PREFIX << "Process" << currentPid << "claimed slot" << freeSlot
+//                 << "last read total events set to" << this_header->totalEventsWritten;
     } else {
         qCritical() << PREFIX << "No free process slots available for PID" << currentPid << ". Max processes reached (" << MAX_PROCESS_SLOTS << ").";
     }
@@ -185,7 +282,7 @@ void HmiSharedEventBus::cleanupProcessSlot() {
         if (this_header->processSlots[this_currentProcessSlotIndex].pid == QCoreApplication::applicationPid()) {
             this_header->processSlots[this_currentProcessSlotIndex].pid = 0; // Mark slot as free
             this_header->processSlots[this_currentProcessSlotIndex].lastReadTotalEvents = 0; // Reset
-            qDebug() << PREFIX << "Process" << QCoreApplication::applicationPid() << "released slot" << this_currentProcessSlotIndex;
+            // qDebug() << PREFIX << "Process" << QCoreApplication::applicationPid() << "released slot" << this_currentProcessSlotIndex;
         }
         this_writeLockSemaphore.release();
     }
@@ -197,6 +294,10 @@ bool HmiSharedEventBus::sendEvent(int eventType, const QByteArray& payload) {
         return false;
     }
 
+    if (this_cleanupInProgress && eventType != EventTypes::CleanupStarted && eventType != EventTypes::CleanupFinished) {
+        return false; // dropped silently during cleanup
+    }
+
     if (payload.size() > EVENT_PAYLOAD_SIZE) {
         qWarning() << PREFIX << "Event payload size (" << payload.size()
         << ") exceeds max allowed (" << EVENT_PAYLOAD_SIZE << "). Event truncated or ignored by PID" << QCoreApplication::applicationPid();
@@ -204,7 +305,7 @@ bool HmiSharedEventBus::sendEvent(int eventType, const QByteArray& payload) {
         return false;
     }
 
-    if (eventType <= EventTypes::Invalid || eventType > EventTypes::MousePress) {
+    if (eventType <= EventTypes::Invalid || eventType > LAST_EVENT_TYPE) {
         qWarning() << PREFIX << "Refusing to send event with invalid type" << eventType;
         return false;
     }
@@ -259,10 +360,22 @@ void HmiSharedEventBus::checkForNewEvents() {
         QByteArray payload;
     };
     QVector<PendingEvent> pending;
+    bool needReRegister = false;
 
     // copy under lock, emit after release (semaphore is not recursive)
     if (!this_writeLockSemaphore.acquire()) {
         disableBusOnSemaphoreFailure();
+        return;
+    }
+
+    // Slot no longer ours -> a cleanup wiped the table: re-register and resume.
+    // CleanupFinished may be invisible here (old slot index reused by another process).
+    if (this_header->processSlots[this_currentProcessSlotIndex].pid != QCoreApplication::applicationPid()) {
+        this_writeLockSemaphore.release();
+        this_lastCleanupObserved.restart();
+        this_cleanupInProgress = false;
+        this_cleanupSafetyTimer.stop();
+        reRegisterAfterCleanup();
         return;
     }
 
@@ -292,9 +405,25 @@ void HmiSharedEventBus::checkForNewEvents() {
         const EventPayload& event = this_eventBuffer[eventBufferIndex];
 
         // Skip implausible slots
-        if (event.eventType <= EventTypes::Invalid || event.eventType > EventTypes::MousePress) continue;
+        if (event.eventType <= EventTypes::Invalid || event.eventType > LAST_EVENT_TYPE) continue;
         if (event.dataSize < 0 || event.dataSize > EVENT_PAYLOAD_SIZE) continue;
         if (event.senderPid <= 0) continue;
+
+        if (event.eventType == EventTypes::CleanupStarted || event.eventType == EventTypes::CleanupFinished) {
+            this_lastCleanupObserved.restart();
+            if (event.senderPid != QCoreApplication::applicationPid()) {
+                if (event.eventType == EventTypes::CleanupStarted) {
+                    this_cleanupInProgress = true;
+                    this_cleanupSafetyTimer.start();
+                } else {
+                    this_cleanupInProgress = false;
+                    this_cleanupSafetyTimer.stop();
+                    needReRegister = true; // our slot was wiped, claim a fresh one after unlock
+                }
+            }
+            continue; // control events stay bus-internal
+        }
+        if (this_cleanupInProgress) continue; // paused: drop payload events
 
         PendingEvent p;
         p.eventType = event.eventType;
@@ -308,6 +437,8 @@ void HmiSharedEventBus::checkForNewEvents() {
 
     lastReadTotalEvents = currentTotalEvents;
     this_writeLockSemaphore.release();
+
+    if (needReRegister) reRegisterAfterCleanup(); // needs the semaphore, so after release
 
     for (int i = 0; i < pending.size(); ++i) {
         emit eventReceived(pending.at(i).eventType, pending.at(i).senderPid, pending.at(i).timestamp, pending.at(i).payload);

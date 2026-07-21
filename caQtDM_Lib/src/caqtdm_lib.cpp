@@ -7064,7 +7064,7 @@ void CaQtDM_Lib::hmiHandleMouse(QObject *target, QMouseEvent *event)
         // Throttle only the shared-bus publication of mouse moves
         bool throttled = (type == EventTypes::MouseMove
                           && this_hmiMouseMoveSendTimer.isValid()
-                          && this_hmiMouseMoveSendTimer.elapsed() < 20);
+                          && this_hmiMouseMoveSendTimer.elapsed() < MOUSE_THROTTLE_INTERVAL_MS);
         if (type != EventTypes::Invalid && !throttled) {
             if (type == EventTypes::MouseMove) this_hmiMouseMoveSendTimer.restart();
             QByteArray byteArray;
