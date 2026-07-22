@@ -7249,22 +7249,25 @@ void CaQtDM_Lib::Callback_ExternalHmiEventReceived(int eventType, int senderPid,
         int modifiers;
 
         in >> key >> modifiers;
+        if (in.status() != QDataStream::Ok) return;
         Qt::KeyboardModifiers qtModifiers = static_cast<Qt::KeyboardModifiers>(modifiers);
         QKeySequence sequence = QKeySequence(key | modifiers);
         qCDebug(caQtDMLibLog) << "received keys" << sequence.toString() << "from" << senderPid;
-        QEvent *constructed = new QKeyEvent(QEvent::KeyPress, key, qtModifiers, sequence.toString());
-        this->hmiHandleIncomingEvent(Q_NULLPTR, constructed, constructed, true);
+        QKeyEvent constructed(QEvent::KeyPress, key, qtModifiers, sequence.toString());
+        this->hmiHandleIncomingEvent(Q_NULLPTR, &constructed, &constructed, true);
     } else if (eventType == EventTypes::MouseMove || eventType == EventTypes::MousePress) {
         QDataStream in(payload);
 
         int x, y;
         in >> x >> y;
+        if (in.status() != QDataStream::Ok || qAbs(x) > 100000 || qAbs(y) > 100000) return;
         qCDebug(caQtDMLibLog) << "received mouse " << x << y << "from" << senderPid;
         QEvent::Type type = QEvent::None;
         if (eventType == EventTypes::MouseMove) type = QEvent::MouseMove;
         else if (eventType == EventTypes::MousePress) type = QEvent::MouseButtonPress;
-        QEvent *constructed = new QMouseEvent(type, QPointF(x, y), QPointF(x, y), Qt::MouseButton::NoButton, Qt::MouseButton::NoButton, Qt::KeyboardModifier::NoModifier);
-        this->hmiHandleIncomingEvent(Q_NULLPTR, constructed, constructed, true);
+        if (type == QEvent::None) return;
+        QMouseEvent constructed(type, QPointF(x, y), QPointF(x, y), Qt::MouseButton::NoButton, Qt::MouseButton::NoButton, Qt::KeyboardModifier::NoModifier);
+        this->hmiHandleIncomingEvent(Q_NULLPTR, &constructed, &constructed, true);
     }
 #endif
 }
@@ -7307,10 +7310,6 @@ void CaQtDM_Lib::hmiHandleMouse(QObject *target, QMouseEvent *event)
 #ifndef MOBILE
     HmiSharedEventBus& eventBus = HmiSharedEventBus::instance();
     if (eventBus.isInitialized()) {
-        QByteArray byteArray;
-        QDataStream out(&byteArray, QIODevice::WriteOnly);
-        out << correctedEvent.pos().x() << correctedEvent.pos().y();
-
         int type = EventTypes::Invalid;
 
         if (event->type() == QEvent::MouseMove) {
@@ -7319,7 +7318,17 @@ void CaQtDM_Lib::hmiHandleMouse(QObject *target, QMouseEvent *event)
             type = EventTypes::MousePress;
         }
 
-        eventBus.sendEvent(type, byteArray);
+        // Throttle only the shared-bus publication of mouse moves
+        bool throttled = (type == EventTypes::MouseMove
+                          && this_hmiMouseMoveSendTimer.isValid()
+                          && this_hmiMouseMoveSendTimer.elapsed() < MOUSE_THROTTLE_INTERVAL_MS);
+        if (type != EventTypes::Invalid && !throttled) {
+            if (type == EventTypes::MouseMove) this_hmiMouseMoveSendTimer.restart();
+            QByteArray byteArray;
+            QDataStream out(&byteArray, QIODevice::WriteOnly);
+            out << correctedEvent.pos().x() << correctedEvent.pos().y();
+            eventBus.sendEvent(type, byteArray);
+        }
     }
 #endif
     this->hmiHandleIncomingEvent(target, &correctedEvent, event, false);
