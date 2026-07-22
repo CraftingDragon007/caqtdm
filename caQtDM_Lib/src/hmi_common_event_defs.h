@@ -5,9 +5,8 @@
 #include <QByteArray>
 #include <cstring>
 
-// Unique keys for shared memory and semaphore
+// Unique key for shared memory (write lock = QSharedMemory::lock())
 #define SHARED_MEM_KEY "caQtDM_HmiSharedEventBus_SharedMem_%1"
-#define WRITE_LOCK_SEM_KEY "caQtDM_HmiSharedEventBus_WriteLock_%1"
 
 // Configuration parameters
 #define MAX_PROCESS_SLOTS 256      // Maximum number of concurrent processes

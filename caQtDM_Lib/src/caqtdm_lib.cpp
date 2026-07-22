@@ -3526,10 +3526,9 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         }
 
         if (HmiSharedConfigListManager::instance().isInitialized()) {
-            QList<QSharedPointer<caHMIConfigTransferItem>> list = HmiSharedConfigListManager::instance().readList();
-            list.append(transferItem->clone());
-
-            HmiSharedConfigListManager::instance().writeList(list);
+            HmiSharedConfigListManager::instance().updateList([&](QList<QSharedPointer<caHMIConfigTransferItem>> &list) {
+                list.append(transferItem->clone());
+            });
         }
 
         connect(hmiConfigWidget, &QObject::destroyed, [transferItem](QObject *sender) {
@@ -3555,14 +3554,13 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
             }
 
             if (HmiSharedConfigListManager::instance().isInitialized()) {
-                QList<QSharedPointer<caHMIConfigTransferItem>> list = HmiSharedConfigListManager::instance().readList();
-                auto it = std::remove_if(list.begin(), list.end(),
-                                         [&](const QSharedPointer<caHMIConfigTransferItem>& item) {
-                                             return item->uuid() == uuid;
-                                         });
-                list.erase(it, list.end());
-
-                HmiSharedConfigListManager::instance().writeList(list);
+                HmiSharedConfigListManager::instance().updateList([&](QList<QSharedPointer<caHMIConfigTransferItem>> &list) {
+                    auto it = std::remove_if(list.begin(), list.end(),
+                                             [&](const QSharedPointer<caHMIConfigTransferItem>& item) {
+                                                 return item->uuid() == uuid;
+                                             });
+                    list.erase(it, list.end());
+                });
             }
         });
 
@@ -4045,16 +4043,16 @@ void CaQtDM_Lib::GlobalShortcutWindow() {
     qint64 threeSecondsAgo = QDateTime::currentDateTime().addSecs(-3).toMSecsSinceEpoch();
 #ifndef MOBILE
     if (HmiSharedConfigListManager::instance().isInitialized()) {
-        auto currentExternalItems = HmiSharedConfigListManager::instance().readList();
-        QMutableListIterator<QSharedPointer<caHMIConfigTransferItem>> iterator(currentExternalItems);
-        while (iterator.hasNext()) {
-            auto item = iterator.next();
-            if (item->timestamp() < threeSecondsAgo) {
-                uuidsToRemove.insert(item->uuid());
-                iterator.remove();
+        HmiSharedConfigListManager::instance().updateList([&](QList<QSharedPointer<caHMIConfigTransferItem>> &list) {
+            QMutableListIterator<QSharedPointer<caHMIConfigTransferItem>> iterator(list);
+            while (iterator.hasNext()) {
+                auto item = iterator.next();
+                if (item->timestamp() < threeSecondsAgo) {
+                    uuidsToRemove.insert(item->uuid());
+                    iterator.remove();
+                }
             }
-        }
-        HmiSharedConfigListManager::instance().writeList(currentExternalItems);
+        });
     }
 
     {

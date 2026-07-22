@@ -491,11 +491,12 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
         heartBeatTimer = new QTimer(this);
         heartBeatTimer->setInterval(2000);
         connect(heartBeatTimer, &QTimer::timeout, this, [](){
-            auto sharedList = HmiSharedConfigListManager::instance().readList();
             qint64 time = QDateTime::currentMSecsSinceEpoch();
 
             //qDebug() << "HeartBeatTimer tick" << time;
-            {
+
+            QList<QByteArray> announcements;
+            HmiSharedConfigListManager::instance().updateList([&](QList<QSharedPointer<caHMIConfigTransferItem>> &sharedList) {
                 QReadLocker locker(&CaQtDM_Lib::hmiConfigListLock);
                 foreach (caHMIConfigTransferItem *config, CaQtDM_Lib::hmiConfigList) {
                     if (config == Q_NULLPTR) continue;
@@ -508,17 +509,24 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
                         }
                     }
                     if (!found) {
-                        sharedList.append(config->clone());
-                        if (HmiSharedEventBus::instance().isInitialized()) {
-                            QByteArray byteArray;
-                            QDataStream out(&byteArray, QIODevice::WriteOnly);
-                            out << *config;
-                            HmiSharedEventBus::instance().sendEvent(EventTypes::NewCaHMIConfig, byteArray);
-                        }
+                        auto clone = config->clone();
+                        clone->setTimestamp(time);
+                        sharedList.append(clone);
+                        QByteArray byteArray;
+                        QDataStream out(&byteArray, QIODevice::WriteOnly);
+                        out << *config;
+                        announcements.append(byteArray);
                     }
                 }
+            });
+
+            // Send events outside of updateList to keep the two shared memory
+            // locks from being held at the same time.
+            if (HmiSharedEventBus::instance().isInitialized()) {
+                foreach (const QByteArray &byteArray, announcements) {
+                    HmiSharedEventBus::instance().sendEvent(EventTypes::NewCaHMIConfig, byteArray);
+                }
             }
-            HmiSharedConfigListManager::instance().writeList(sharedList);
         });
         heartBeatTimer->start();
     }
