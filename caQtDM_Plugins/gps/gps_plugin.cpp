@@ -24,6 +24,10 @@
  */
 #include <QDebug>
 #include <QThread>
+#include <QCoreApplication>
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+#include <QPermissions>
+#endif
 
 #include "gps_plugin.h"
 #include "caQtDM_Plugins_global.h"
@@ -166,7 +170,31 @@ int gpsPlugin::initCommunicationLayer(MutexKnobData *data, MessageWindow *messag
     timerValues = new QTimer();
     connect(timerValues, SIGNAL(timeout()), this, SLOT(updateValues()));
     timerValues->start(500);
-
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+    // since Qt 6.5 the app must request the location permission itself
+    // (iOS/Android show no dialog and deliver no fixes without this)
+    QLocationPermission locationPermission;
+    locationPermission.setAccuracy(QLocationPermission::Precise);
+    locationPermission.setAvailability(QLocationPermission::WhenInUse);
+    switch (qApp->checkPermission(locationPermission)) {
+    case Qt::PermissionStatus::Undetermined:
+         qApp->requestPermission(locationPermission, this, [this](const QPermission &permission){
+             if (permission.status() == Qt::PermissionStatus::Granted){
+                 QMutexLocker locker(&mutex);
+                 if (enable_gps_readout) pos_data_source->startUpdates();
+             } else if (messagewindowP != Q_NULLPTR){
+                 messagewindowP->postMsgEvent(QtWarningMsg,(char*) "gps: location permission denied");
+             }
+         });
+         break;
+    case Qt::PermissionStatus::Denied:
+         if (messagewindowP != Q_NULLPTR)
+             messagewindowP->postMsgEvent(QtWarningMsg,(char*) "gps: location permission denied - enable it in the system settings");
+         break;
+    case Qt::PermissionStatus::Granted:
+         break;
+    }
+#endif
     pos_data_source = QGeoPositionInfoSource::createDefaultSource(this);
       if (pos_data_source) {
           connect(pos_data_source, SIGNAL(positionUpdated(QGeoPositionInfo)),

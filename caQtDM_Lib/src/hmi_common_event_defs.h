@@ -9,9 +9,17 @@
 #define SHARED_MEM_KEY "caQtDM_HmiSharedEventBus_SharedMem_%1"
 
 // Configuration parameters
-#define MAX_PROCESS_SLOTS 5000      // Maximum number of concurrent processes
+#define MAX_PROCESS_SLOTS 256      // Maximum number of concurrent processes
 #define EVENT_PAYLOAD_SIZE 8192    // Fixed size for event data payload
 #define EVENT_BUFFER_CAPACITY 512 // Max events in the ring buffer
+
+#define MOUSE_THROTTLE_INTERVAL_MS 10
+
+#define CLEANUP_INTERVAL_MS 60000        // 10 min
+#define CLEANUP_GRACE_MS 150             // > poll interval, lets peers see CleanupStarted
+#define CLEANUP_SAFETY_TIMEOUT_MS 5000   // resume if CleanupFinished never arrives
+
+#define PREFIX "HmiSharedEventBus"
 
 enum EventTypes {
     Invalid = 0,
@@ -20,8 +28,13 @@ enum EventTypes {
     CaHMIConfigEnabledChanged,
     KeyPress,
     MouseMove,
-    MousePress
+    MousePress,
+    CleanupStarted,   // bus-internal: cleaner announces cleanup
+    CleanupFinished   // bus-internal: cleaner announces completion
 };
+
+// Update when appending event types so all range guards stay correct
+#define LAST_EVENT_TYPE EventTypes::CleanupFinished
 
 // Structure of an event
 struct EventPayload {
