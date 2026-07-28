@@ -181,7 +181,10 @@ int gpsPlugin::initCommunicationLayer(MutexKnobData *data, MessageWindow *messag
          qApp->requestPermission(locationPermission, this, [this](const QPermission &permission){
              if (permission.status() == Qt::PermissionStatus::Granted){
                  QMutexLocker locker(&mutex);
-                 if (enable_gps_readout) pos_data_source->startUpdates();
+                 if (enable_gps_readout){
+                    pos_data_source = QGeoPositionInfoSource::createDefaultSource(this);
+                    if (pos_data_source) pos_data_source->startUpdates();
+                 }
              } else if (messagewindowP != Q_NULLPTR){
                  messagewindowP->postMsgEvent(QtWarningMsg,(char*) "gps: location permission denied");
              }
@@ -192,10 +195,14 @@ int gpsPlugin::initCommunicationLayer(MutexKnobData *data, MessageWindow *messag
              messagewindowP->postMsgEvent(QtWarningMsg,(char*) "gps: location permission denied - enable it in the system settings");
          break;
     case Qt::PermissionStatus::Granted:
+         pos_data_source = QGeoPositionInfoSource::createDefaultSource(this);
+         if (pos_data_source) pos_data_source->startUpdates();
          break;
     }
-#endif
+#else
     pos_data_source = QGeoPositionInfoSource::createDefaultSource(this);
+#endif
+
       if (pos_data_source) {
           connect(pos_data_source, SIGNAL(positionUpdated(QGeoPositionInfo)),
                   this, SLOT(positionUpdated(QGeoPositionInfo)));
