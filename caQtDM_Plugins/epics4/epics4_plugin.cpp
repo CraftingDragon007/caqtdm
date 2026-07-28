@@ -476,7 +476,7 @@ PVAChannel::PVAChannel(const string & fullName, const string & mapName,
     callbackThread(callbackThread),
     providerN(providerN)
 {
-    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "PVAChannel::PVAChannel() fullName" << fullName << mapName;
+    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "PVAChannel::PVAChannel() fullName" << QString::fromStdString(fullName) << QString::fromStdString(mapName);
 }
 
 PVAChannel::~PVAChannel()
