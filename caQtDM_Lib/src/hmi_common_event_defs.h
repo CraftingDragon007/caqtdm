@@ -19,8 +19,6 @@
 #define CLEANUP_GRACE_MS 150             // > poll interval, lets peers see CleanupStarted
 #define CLEANUP_SAFETY_TIMEOUT_MS 5000   // resume if CleanupFinished never arrives
 
-#define PREFIX "HmiSharedEventBus"
-
 enum EventTypes {
     Invalid = 0,
     NewCaHMIConfig,
