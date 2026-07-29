@@ -123,3 +123,24 @@ void TestCaSpinbox::selectionBorderSurvivesValueChange()
              qPrintable(QString("the value change cleared the selection border, "
                                 "stylesheet is now \"%1\"").arg(sel->styleSheet())));
 }
+
+void TestCaSpinbox::layoutShrinkVoidsSelection()
+{
+    configure(6, 2);
+    QWidget *tgt = inputTarget();
+    QVERIFY(tgt);
+    m_num->setValue(1.0);
+
+    /* select digit 5, then shrink the layout below it */
+    for (int k = 0; k < 6; k++) QTest::keyClick(tgt, Qt::Key_Right);
+    m_num->setDigits(2, 1);
+    QResizeEvent re(m_num->size(), m_num->size());
+    QApplication::sendEvent(m_num, &re); /* crashed with a stale lastLabel */
+
+    for (int i = 0; i < m_num->intDigits() + m_num->decDigits(); i++) {
+        QLabel *l = m_num->findChild<QLabel *>(QString("layoutmember%1").arg(i));
+        QVERIFY(l);
+        QVERIFY2(!l->styleSheet().contains("border"),
+                 qPrintable(QString("digit %1 still carries the selection border").arg(i)));
+    }
+}

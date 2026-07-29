@@ -386,6 +386,9 @@ bool ENumeric::applyDigitLayout(int newIntDig, int newDecDig){
     intDig = newIntDig;
     decDig = newDecDig;
     digits = intDig + decDig;
+    /* a shrunk layout voids a stale digit selection */
+    if (lastLabel >= digits) lastLabel = -1;
+    if (lastLabelOnTab >= digits) lastLabelOnTab = -1;
     /* re-clamp the limits to the new scale */
     setMinimum(d_minAsDouble);
     setMaximum(d_maxAsDouble);

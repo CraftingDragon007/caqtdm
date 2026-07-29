@@ -372,6 +372,9 @@ bool SNumeric::applyDigitLayout(int newIntDig, int newDecDig){
     intDig = newIntDig;
     decDig = newDecDig;
     digits = intDig + decDig;
+    /* a shrunk layout voids a stale digit selection */
+    if (lastLabel >= digits) lastLabel = -1;
+    if (lastLabelOnTab >= digits) lastLabelOnTab = -1;
     /* re-clamp the limits to the new scale */
     setMinimum(d_minAsDouble);
     setMaximum(d_maxAsDouble);
@@ -739,10 +742,11 @@ void SNumeric::resizeEvent(QResizeEvent *e)
         int i=0;
 
         // put a border around selected digit
-        for(int j=0; j< digits; j++) {
+        for(int j=0; j< digits && j < labels.length(); j++) {
             labels[j]->setStyleSheet(getStylesheetUpdate(labels[j]->styleSheet(), true));
         }
-        if(lastLabel != -1){
+        // bounds check: a digit layout change can leave a stale selection
+        if(lastLabel >= 0 && lastLabel < labels.length()){
             labels[lastLabel]->setStyleSheet(getStylesheetUpdate(labels[lastLabel]->styleSheet(), false));
         }
 
