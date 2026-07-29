@@ -129,6 +129,13 @@ inline void setIntDigitsA(QWidget *w, int &v) {
     else printf("caQtDM -- setIntDigitsA not implemented\n");
 }
 
+inline void setDigitsA(QWidget *w, int intDigits, int decDigits) {
+    if(caApplyNumeric* caapplynumericWidget = qobject_cast<caApplyNumeric *>(w))  caapplynumericWidget->setDigits(intDigits, decDigits);
+    else if(caNumeric* canumericWidget = qobject_cast<caNumeric *>(w))  canumericWidget->setDigits(intDigits, decDigits);
+    else if(caSpinbox* caspinboxWidget = qobject_cast<caSpinbox *>(w)) caspinboxWidget->setDigits(intDigits, decDigits);
+    else printf("caQtDM -- setDigitsA not implemented\n");
+}
+
 inline void setFixedFormatA(QWidget *w, bool v) {
     if(caApplyNumeric* caapplynumericWidget = qobject_cast<caApplyNumeric *>(w))  caapplynumericWidget->setFixedFormat(v);
     else if(caNumeric* canumericWidget = qobject_cast<caNumeric *>(w))  canumericWidget->setFixedFormat(v);

@@ -340,7 +340,8 @@ limitsDialog::limitsDialog(QWidget *w, MutexKnobData *data, const QString &title
         row++;
         QLabel *integerLabel = new QLabel("integer digits");
         integerLineEdit = new QSpinBox();
-        integerLineEdit->setMinimum(1);
+        /* 0 stays selectable as before; the widget setter ignores it */
+        integerLineEdit->setMinimum(0);
         integerLineEdit->setMaximum(PREC_LIMIT_NUMERIC);
         integerLineEdit->setSingleStep(1);
         Layout->addWidget(integerLabel, row, 2);
@@ -675,8 +676,8 @@ void limitsDialog::applyClicked()
 
         if(fixedFormat) {
            setFixedFormatA(thisWidget, true);
-           setDecDigitsA(thisWidget, decDigits);
-           setIntDigitsA(thisWidget, intDigits);
+           // both counts at once, they share the total digit budget
+           setDigitsA(thisWidget, intDigits, decDigits);
         } else {
            setFixedFormatA(thisWidget, false);
            if(precisionMode == Channel) {
