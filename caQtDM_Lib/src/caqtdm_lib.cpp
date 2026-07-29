@@ -9537,10 +9537,18 @@ void CaQtDM_Lib::ComputeNumericMaxMinPrec(QWidget* widget, const knobData& data)
 
         if(!fixedFormat) {
             if(precMode == caMode) {
+                // the widget decides how many decimals it accepts from the
+                // channel; default 4 keeps existing panels as they were
+                int maxChannelPrec = 4;
+                if (caApplyNumeric *w = qobject_cast<caApplyNumeric *>(widget))    maxChannelPrec = w->getMaxChannelPrecision();
+                else if (caNumeric *w = qobject_cast<caNumeric *>(widget))         maxChannelPrec = w->getMaxChannelPrecision();
+                else if (caSpinbox *w = qobject_cast<caSpinbox *>(widget))         maxChannelPrec = w->getMaxChannelPrecision();
+
                 prec = data.edata.precision;
-                 if(prec < 0) prec = 0;
-                 if(prec > 15) prec = 15;
+                if(prec < 0) prec = 0;
+                if(prec > maxChannelPrec) prec = maxChannelPrec;
                 maxAbsHoprLopr= qMax(fabs(maxValue), fabs(minValue));
+                if(qIsFinite(data.edata.rvalue)) maxAbsHoprLopr = qMax(maxAbsHoprLopr, fabs(data.edata.rvalue));
                 if(maxAbsHoprLopr > 1.0) {
                     width = (int)log10(maxAbsHoprLopr) + 2 + prec;
                 } else {
@@ -9549,20 +9557,19 @@ void CaQtDM_Lib::ComputeNumericMaxMinPrec(QWidget* widget, const knobData& data)
 
                 if (caApplyNumeric *applynumericWidget = qobject_cast<caApplyNumeric *>(widget)) {
                     qCDebug(caApplyNumericLog) << width-prec-1 << prec;
-                    applynumericWidget->setIntDigits(width-prec-1);
-                    applynumericWidget->setDecDigits(prec);
+                    applynumericWidget->setDigits(width-prec-1, prec);
                 } else if (caNumeric *numericWidget = qobject_cast<caNumeric *>(widget)) {
                     qCDebug(caNumericLog) << width-prec-1 << prec;
-                    numericWidget->setIntDigits(width-prec-1);
-                    numericWidget->setDecDigits(prec);
+                    numericWidget->setDigits(width-prec-1, prec);
                 } else if (caSpinbox *spinboxWidget = qobject_cast<caSpinbox *>(widget)) {
                     qCDebug(caSpinboxLog) << width-prec-1 << prec;
-                    spinboxWidget->setIntDigits(width-prec-1);
-                    spinboxWidget->setDecDigits(prec);
+                    spinboxWidget->setDigits(width-prec-1, prec);
                 }
 
             } else {
                 maxAbsHoprLopr= qMax(fabs(maxValue), fabs(minValue));
+                // see above: the value may reach beyond the limits
+                if(qIsFinite(data.edata.rvalue)) maxAbsHoprLopr = qMax(maxAbsHoprLopr, fabs(data.edata.rvalue));
 
                 if(maxAbsHoprLopr > 1.0) {
                     width = (int)log10(maxAbsHoprLopr) + 2 ;
