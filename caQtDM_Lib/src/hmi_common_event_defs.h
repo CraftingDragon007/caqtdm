@@ -15,7 +15,7 @@
 
 #define MOUSE_THROTTLE_INTERVAL_MS 10
 
-#define CLEANUP_INTERVAL_MS 60000        // 10 min
+#define CLEANUP_INTERVAL_MS 600000        // 10 min
 #define CLEANUP_GRACE_MS 150             // > poll interval, lets peers see CleanupStarted
 #define CLEANUP_SAFETY_TIMEOUT_MS 5000   // resume if CleanupFinished never arrives
 
