@@ -107,6 +107,12 @@ ${PACKAGE_BUILD_BASE}${PACKAGE_INST_BASE}/lib/controlsystems/libepics3_plugin.so
 ${PACKAGE_BUILD_BASE}${PACKAGE_INST_BASE}/lib/controlsystems/libdemo_plugin.so
 ${PACKAGE_BUILD_BASE}${PACKAGE_INST_BASE}/lib/controlsystems/libarchiveSF_plugin.so
 ${PACKAGE_BUILD_BASE}${PACKAGE_INST_BASE}/lib/controlsystems/libbsread_Plugin.so
+${PACKAGE_BUILD_BASE}${PACKAGE_INST_BASE}/lib/controlsystems/libinternal_plugin.so
+${PACKAGE_BUILD_BASE}${PACKAGE_INST_BASE}/lib/controlsystems/libenvironment_plugin.so
+${PACKAGE_BUILD_BASE}${PACKAGE_INST_BASE}/lib/controlsystems/libarchiveHTTP_plugin.so
+${PACKAGE_BUILD_BASE}${PACKAGE_INST_BASE}/lib/controlsystems/libmodbus_plugin.so
+${PACKAGE_BUILD_BASE}${PACKAGE_INST_BASE}/lib/controlsystems/libopcua_plugin.so
+${PACKAGE_BUILD_BASE}${PACKAGE_INST_BASE}/lib/controlsystems/libgps_plugin.so
 ${PACKAGE_BUILD_BASE}${PACKAGE_INST_BASE}/lib/designer/libqtcontrols_utilities_plugin.so
 ${PACKAGE_BUILD_BASE}${PACKAGE_INST_BASE}/lib/designer/libqtcontrols_controllers_plugin.so
 ${PACKAGE_BUILD_BASE}${PACKAGE_INST_BASE}/lib/designer/libqtcontrols_graphics_plugin.so
@@ -115,6 +121,8 @@ ${PACKAGE_BUILD_BASE}${PACKAGE_INST_BASE}/lib/libcaQtDM_Lib.so
 "
 for F in $FILES
 do
+    # optional plugins are not built in every configuration
+    [ -f "$F" ] || continue
     RPATH_OLD=$(chrpath -l $F | sed -e 's/.*RPATH=//')
     RPATH_NEW=$(echo $RPATH_OLD | sed -e 's%'${BUILD_HOME}'%'$PACKAGE_INST_BASE'/lib%')
     chrpath -r $RPATH_NEW $F

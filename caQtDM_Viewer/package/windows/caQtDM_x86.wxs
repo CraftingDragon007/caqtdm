@@ -113,6 +113,7 @@
                                 <File Id="ARCHIVEHTTP_PLUGIN.DLL" Name="archiveHTTP_plugin.dll" Source="$(env.CAQTDM_COLLECT)\controlsystems\archiveHTTP_plugin.dll" />
 				<File Id="MODBUS_PLUGIN.DLL" Name="modbus_plugin.dll" Source="$(env.CAQTDM_COLLECT)\controlsystems\modbus_plugin.dll" />
 				<File Id="ENVIRONMENT_PLUGIN.DLL" Name="environment_plugin.dll" Source="$(env.CAQTDM_COLLECT)\controlsystems\environment_plugin.dll" />
+				<File Id="INTERNAL_PLUGIN.DLL" Name="internal_plugin.dll" Source="$(env.CAQTDM_COLLECT)\controlsystems\internal_plugin.dll" />
 				<!---File Id="GPS_PLUGIN.DLL" Name="gps_plugin.dll" Source="$(env.CAQTDM_COLLECT)\controlsystems\gps_plugin.dll" -->
                             </Component>
                         </Directory>
