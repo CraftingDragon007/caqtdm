@@ -94,6 +94,7 @@ private slots:
     /* the digit border is the user's cursor and shares the label stylesheet
        with the rounding color — widget specific test */
     void selectionBorderSurvivesValueChange();
+    void layoutShrinkVoidsSelection();
 };
 
 #endif // TST_CASPINBOX_H
