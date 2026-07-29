@@ -5,7 +5,6 @@
 
 #define SHARED_MEMORY_LIST_KEY "caQtDM_HmiSharedConfigList_SharedMem_%1"
 #define MAX_SHARED_MEMORY_SIZE 1024 * 1024 // 1 MB
-#define PREFIX "HmiSharedConfigList"
 #define MIN_SERIALIZED_ITEM_SIZE 32
 
 HmiSharedConfigListManager::HmiSharedConfigListManager(QObject *parent)

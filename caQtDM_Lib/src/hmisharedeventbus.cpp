@@ -100,12 +100,12 @@ bool HmiSharedEventBus::attachToSharedMemory() {
         }
     }
 
-    // Reject segments that are too small for our layout (e.g. stale leftovers)
+    // Reject segments that do not match our layout (e.g. stale leftovers)
     if (!validateSegmentSize()) {
-        qCritical() << PREFIX << "Shared memory segment has unexpected size" << this_sharedMemory.size()
-                    << "- HMI event bus disabled for PID" << QCoreApplication::applicationPid();
+        qCCritical(caHMILog) << "Shared memory segment has unexpected size" << this_sharedMemory.size()
+                             << "- HMI event bus disabled for PID" << QCoreApplication::applicationPid();
 #ifdef linux
-        qCritical() << PREFIX << "Please clean up /tmp/*caQtDM* and stale ipcs -m / ipcs -s entries, then restart.";
+        qCCritical(caHMILog) << "Please clean up /tmp/*caQtDM* and stale ipcs -m / ipcs -s entries, then restart.";
 #endif
         this_sharedMemory.detach();
         return false;
@@ -121,16 +121,23 @@ bool HmiSharedEventBus::attachToSharedMemory() {
 }
 
 bool HmiSharedEventBus::validateSegmentSize() const {
-    // ">=" because Qt may round the size up to a page multiple
-    size_t expected = sizeof(SharedHeader) + EVENT_BUFFER_CAPACITY * sizeof(EventPayload);
-    return static_cast<size_t>(this_sharedMemory.size()) >= expected;
+    const size_t expected = sizeof(SharedHeader) + EVENT_BUFFER_CAPACITY * sizeof(EventPayload);
+    const size_t actual = static_cast<size_t>(this_sharedMemory.size());
+
+    // Lower bound: too small means our event buffer would run past the end.
+    // Upper bound: a noticeably larger segment was created with a different
+    // MAX_PROCESS_SLOTS, our buffer would then start inside its slot table.
+    // The slack only covers the page rounding Qt/the OS may apply; it stays
+    // well below the difference a changed slot count produces.
+    const size_t slack = 64 * 1024;
+    return actual >= expected && actual <= expected + slack;
 }
 
 void HmiSharedEventBus::disableBusOnLockFailure() {
-    qCritical() << PREFIX << "Unable to lock shared memory, error:" << this_sharedMemory.errorString();
-    qCritical() << PREFIX << "To prevent crashes HmiSharedEventBus is now disabled!";
+    qCCritical(caHMILog) << "Unable to lock shared memory, error:" << this_sharedMemory.errorString();
+    qCCritical(caHMILog) << "To prevent crashes HmiSharedEventBus is now disabled!";
 #ifdef linux
-    qCritical() << PREFIX << "Please clean up /tmp/*caQtDM* and restart the program if you want to use caHMIConfig features";
+    qCCritical(caHMILog) << "Please clean up /tmp/*caQtDM* and restart the program if you want to use caHMIConfig features";
 #endif
     this_isInitialized = false;
     this_pollTimer.stop();
@@ -199,13 +206,13 @@ void HmiSharedEventBus::executeCleanup() {
     this_cleanupInProgress = false;
     this_cleanupSafetyTimer.stop();
     sendEvent(EventTypes::CleanupFinished);
-    qDebug() << PREFIX << "Cleanup done by PID" << QCoreApplication::applicationPid() << "- cleared" << clearedSlots << "slots";
+    qCDebug(caHMILog) << "Cleanup done by PID" << QCoreApplication::applicationPid() << "- cleared" << clearedSlots << "slots";
 }
 
 void HmiSharedEventBus::reRegisterAfterCleanup() {
     this_currentProcessSlotIndex = findOrCreateProcessSlot();
     if (this_currentProcessSlotIndex == -1) {
-        qCritical() << PREFIX << "Re-registration after cleanup failed for PID" << QCoreApplication::applicationPid() << "- bus disabled.";
+        qCCritical(caHMILog) << "Re-registration after cleanup failed for PID" << QCoreApplication::applicationPid() << "- bus disabled.";
         this_isInitialized = false;
         this_pollTimer.stop();
         this_cleanupTimer.stop();
@@ -214,7 +221,7 @@ void HmiSharedEventBus::reRegisterAfterCleanup() {
 
 void HmiSharedEventBus::onCleanupSafetyTimeout() {
     if (!this_cleanupInProgress) return;
-    qWarning() << PREFIX << "CleanupFinished never arrived, resuming normal operation.( PID: "<< QCoreApplication::applicationPid()<< ")";
+    qCWarning(caHMILog) << "CleanupFinished never arrived, resuming normal operation.( PID: "<< QCoreApplication::applicationPid()<< ")";
     this_cleanupInProgress = false;
     reRegisterAfterCleanup();
 }
