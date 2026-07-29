@@ -40,7 +40,9 @@ Q_OBJECT
     Q_PROPERTY(QColor background READ getBackground WRITE setBackground)
     Q_PROPERTY(colMode colorMode READ getColorMode WRITE setColorMode)
     Q_PROPERTY(SourceMode precisionMode READ getPrecisionMode WRITE setPrecisionMode)
+    Q_PROPERTY(int maxChannelPrecision READ getMaxChannelPrecision WRITE setMaxChannelPrecision)
     Q_PROPERTY(bool fixedFormat READ getFixedFormat WRITE setFixedFormat)
+    Q_PROPERTY(bool autoDigitShift READ getAutoDigitShift WRITE setAutoDigitShift)
 
     Q_PROPERTY(SourceMode limitsMode READ getLimitsMode WRITE setLimitsMode)
     Q_ENUMS(SourceMode)
@@ -80,10 +82,18 @@ public:
     enum SourceMode {Channel = 0, User};
     SourceMode getPrecisionMode() const { return thisPrecMode; }
     void setPrecisionMode(SourceMode precmode) {thisPrecMode = precmode;}
+
+    int getMaxChannelPrecision() const {return thisMaxChannelPrecision;}
+    void setMaxChannelPrecision(int prec) {thisMaxChannelPrecision = qBound(0, prec, (int) ENumeric::MaxTotalDigits);}
+
     SourceMode getLimitsMode() const { return thisLimitsMode; }
 
-    bool getFixedFormat()  const {return thisFixedFormat;}
+    bool getFixedFormat()  const {return ENumeric::getFixedFormat();}
     void setFixedFormat(bool const &fixed) {ENumeric::setFixedFormat(fixed);}
+
+    /* delegated to the base class, a local copy would never reach it */
+    bool getAutoDigitShift() const {return ENumeric::getAutoDigitShift();}
+    void setAutoDigitShift(bool const &shift) {ENumeric::setAutoDigitShift(shift);}
 
     void setLimitsMode(SourceMode limitsmode) { thisLimitsMode = limitsmode;}
 
@@ -121,6 +131,9 @@ private:
     double thisMaximum, thisMinimum;
     SourceMode thisPrecMode;
     SourceMode thisLimitsMode;
+    /* 4 was the hard coded limit before it became configurable, keeping it as
+     * default leaves existing panels unchanged */
+    int thisMaxChannelPrecision = 4;
 
     colMode thisColorMode;
     colMode oldColorMode;

@@ -148,8 +148,8 @@ void caSpinbox::paintEvent(QPaintEvent *event) {
     SNumeric::paintEvent(event);
 
     if(hasFocus()) {
-        QPen pen(Qt::red);
         QPainter p(this);
+        p.setPen(QPen(Qt::red));
         p.drawRect(0,0,rect().width()-1, rect().height()-1);
     }
 }

@@ -44,7 +44,7 @@
 #include <limits>
 
 #define MIN_FONT_SIZE 3
-#define PREC_LIMIT_NUMERIC 15
+#define NUMERIC_ROUNDING_WARN_DIGITS 15
 /* long long storage limit: 10^19 - 1 does not fit any more */
 #define MAX_NUMERIC_DIGITS ((int) SNumeric::MaxTotalDigits)
 
@@ -271,9 +271,11 @@ void SNumeric::setValue(double v)
 }
 
 bool SNumeric::canEdit(){
-    /* the channel value must fit the available digit positions */
+    /* the channel value must fit the available digit positions; the decimal
+     * places only count when they can actually be traded for integer ones */
     if (!std::isfinite(csValue)) return false;
-    const int intCapacity = thisFixedFormat ? intDig : digits;
+    const bool canShift = thisAutoDigitShift && !thisFixedFormat;
+    const int intCapacity = canShift ? digits : intDig;
     if (fabs(csValue) >= (double) pow10ll(intCapacity)) {
         qCDebug(sNumericLog) << "canEdit=false:" << csValue << "does not fit" << intCapacity << "integer digits";
         return false;
@@ -283,7 +285,13 @@ bool SNumeric::canEdit(){
 
 void SNumeric::suppressUserInput(){
     suppressInput = true;
-    if (backupStylesheet.isEmpty()) backupStylesheet=this->styleSheet();
+    /* an empty stylesheet/tooltip is a valid state to return to, so the flag
+     * decides, not the emptiness of the backup */
+    if (!haveBackup) {
+        backupStylesheet = this->styleSheet();
+        backupToolTip = this->toolTip();
+        haveBackup = true;
+    }
     for(int i = 0; i < digits && i < labels.length(); i++){
         labels[i]->setText("*");
         labels[i]->setStyleSheet("QLabel {color:red;}");
@@ -297,9 +305,13 @@ void SNumeric::suppressUserInput(){
 
 void SNumeric::restoreUserInput(){
     suppressInput = false;
-    if (!backupStylesheet.isEmpty()) setStyleSheet(backupStylesheet);
-    backupStylesheet = "";
-    setToolTip("");
+    if (haveBackup) {
+        setStyleSheet(backupStylesheet);
+        setToolTip(backupToolTip);
+        backupStylesheet = "";
+        backupToolTip = "";
+        haveBackup = false;
+    }
     for (int i = 0; i < digits && i < labels.length(); i++) {
         labels[i]->setStyleSheet("");
     }
@@ -324,6 +336,11 @@ void SNumeric::updateSuppressionState(){
  * value: trade decimal digits for integer digits when the magnitude needs them */
 void SNumeric::updateDigitLayout(){
     if (thisFixedFormat) return; /* frozen: keep the displayed layout */
+    if (!thisAutoDigitShift) {
+        /* shifting is opt-in: without it the displayed layout is the baseline */
+        applyDigitLayout(orig_intDig, orig_decDig);
+        return;
+    }
     int newIntDig = orig_intDig;
     if (std::isfinite(csValue)) {
         /* integer digits needed by the magnitude */
@@ -435,29 +452,39 @@ void SNumeric::setMinimum(double v)
     }
 }
 
-void SNumeric::setIntDigits(int i)
+void SNumeric::setDigits(int i, int d)
 {
-    /* changes the configured baseline, the displayed digits follow via updateDigitLayout */
-    i = qBound(1, i, MAX_NUMERIC_DIGITS - orig_decDig);
-    if (i == orig_intDig) return;
-    qCDebug(sNumericLog) << "setIntDigits" << objectName() << i;
+    /* caQtDM_Lib computes width-prec-1, which can be 0, so clamp up to 1;
+     * integer digits win the budget, the magnitude has to stay displayable */
+    i = qBound(1, i, MAX_NUMERIC_DIGITS);
+    d = qBound(0, d, MAX_NUMERIC_DIGITS - i);
+    if (i == orig_intDig && d == orig_decDig) return;
+    qCDebug(sNumericLog) << "setDigits" << objectName() << i << d;
     orig_intDig = i;
+    orig_decDig = d;
     /* under fixed format the new baseline is applied directly */
     if (thisFixedFormat) applyDigitLayout(orig_intDig, orig_decDig);
     else updateDigitLayout();
     updateSuppressionState();
 }
 
+void SNumeric::setIntDigits(int i)
+{
+    setDigits(i, orig_decDig);
+}
+
 void SNumeric::setDecDigits(int d)
 {
-    /* changes the configured baseline, the displayed digits follow via updateDigitLayout */
-    d = qBound(0, d, MAX_NUMERIC_DIGITS - orig_intDig);
-    if (d == orig_decDig) return;
-    qCDebug(sNumericLog) << "setDecDigits" << objectName() << d;
-    orig_decDig = d;
-    /* under fixed format the new baseline is applied directly */
-    if (thisFixedFormat) applyDigitLayout(orig_intDig, orig_decDig);
-    else updateDigitLayout();
+    setDigits(orig_intDig, d);
+}
+
+void SNumeric::setAutoDigitShift(bool f)
+{
+    if (thisAutoDigitShift == f) return;
+    qCDebug(sNumericLog) << "setAutoDigitShift" << objectName() << f;
+    thisAutoDigitShift = f;
+    /* true resolves the layout against the value, false returns to the baseline */
+    updateDigitLayout();
     updateSuppressionState();
 }
 
@@ -539,7 +566,9 @@ void SNumeric::showData()
 }
 
 void SNumeric::triggerRoundColorUpdate(){
-    for(int i = 1; i < digits ; i++){
+    /* from 0: the first digit can never carry the rounding color, but it can
+     * carry the selection border, which has to be maintained here as well */
+    for(int i = 0; i < digits ; i++){
         updateRoundColors(i);
     }
 }
@@ -554,12 +583,16 @@ void SNumeric::updateRoundColors(int i) {
         if (labels[k]->text() != " ") shownDigits++;
     }
 
-    const int digitsToColorFromEnd = shownDigits - PREC_LIMIT_NUMERIC;
+    const int digitsToColorFromEnd = shownDigits - NUMERIC_ROUNDING_WARN_DIGITS;
+    QString style;
     if (digitsToColorFromEnd > 0 && i >= digits - digitsToColorFromEnd) {
-        labels[i]->setStyleSheet("QLabel {color:" + roundingColor.name() + ";}");
-    } else if (!labels[i]->styleSheet().isEmpty()) {
-        labels[i]->setStyleSheet("");
+        style = "QLabel {color:" + roundingColor.name() + ";}";
     }
+    /* the border marks the selected digit and acts as the user's cursor: it
+     * shares the stylesheet with the rounding color and must survive a value
+     * change, so both are composed here instead of overwriting each other */
+    style = getStylesheetUpdate(style, i != lastLabel);
+    if (labels[i]->styleSheet() != style) labels[i]->setStyleSheet(style);
 }
 
 /* coalesce: at most one delayed resize in flight */
@@ -586,16 +619,24 @@ bool SNumeric::eventFilter(QObject *obj, QEvent *event)
         } else {
             QApplication::restoreOverrideCursor();
         }
-    } else if(event->type() == QEvent::Leave && !suppressInput) {
+    } else if(event->type() == QEvent::Leave) {
+        /* Enter sets the override cursor unconditionally, so it has to be
+         * released unconditionally too - otherwise it stays for the whole
+         * application while the input is suppressed */
+        QApplication::restoreOverrideCursor();
+        /* the digit selection is the mouse cursor of this widget: dropping it
+         * on leave must happen even while the input is suppressed, otherwise
+         * the border reappears on recovery with the mouse long gone */
         lastLabelOnTab = lastLabel;
         lastLabel = -1;
-        /* fall back to the last channel value */
-        const long long capacity = pow10ll(digits) - 1;
-        data = qBound(-capacity, transformNumberSpace(csValue, decDig), capacity);
-        showData();
-        QApplication::restoreOverrideCursor();
-        valueUpdated();
-        updateGeometry();
+        if(!suppressInput) {
+            /* fall back to the last channel value */
+            const long long capacity = pow10ll(digits) - 1;
+            data = qBound(-capacity, transformNumberSpace(csValue, decDig), capacity);
+            showData();
+            valueUpdated();
+            updateGeometry();
+        }
     } else if (event->type() == QEvent::MouseButtonPress && !suppressInput) {
         QMouseEvent *ev = (QMouseEvent *) event;
         for (int i = 0; i < digits; i++) {
@@ -607,15 +648,17 @@ bool SNumeric::eventFilter(QObject *obj, QEvent *event)
             }
         }
 
-    // step on press: auto-repeats while held, and shields a parent scrollbar
-    } else if (event->type() == QEvent::KeyPress && !suppressInput) {
+    // this prevents a parent scrollbar to react to the up/down keys; the step
+    // itself happens on release, so holding a key does not ramp the channel
+    } else if (event->type() == QEvent::KeyPress) {
          QKeyEvent *ev = (QKeyEvent*) event;
-         if(ev->key() == Qt::Key_Up)   { upDataIndex(lastLabel);   return true; }
-         if(ev->key() == Qt::Key_Down) { downDataIndex(lastLabel); return true; }
+         if(ev->key() == Qt::Key_Down || ev->key() == Qt::Key_Up) return true;
 
     } else if(event->type() == QEvent::KeyRelease && !suppressInput)   {
         QKeyEvent *ev = (QKeyEvent *) event;
         if(ev->key() == Qt::Key_Escape) if (text != NULL) text->hide();
+        if(ev->key() == Qt::Key_Up) upDataIndex(lastLabel);
+        if(ev->key() == Qt::Key_Down) downDataIndex(lastLabel);
         if(ev->key() == Qt::Key_Left) {
             lastLabel--;
             if(lastLabel < 0) lastLabel = 0;

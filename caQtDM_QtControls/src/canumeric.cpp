@@ -38,7 +38,7 @@ caNumeric::caNumeric(QWidget *parent) : ENumeric(parent)
      setLimitsMode(Channel);
      setMaxValue(100000.0);
      setMinValue(-100000.0);
-     thisFixedFormat = false;
+     setFixedFormat(false);
      thisColorMode = Static;
      setDigitsFontScaleEnabled(true);
      setForeground(Qt::black);
@@ -146,8 +146,8 @@ void caNumeric::paintEvent(QPaintEvent *event) {
     ENumeric::paintEvent(event);
 
     if(hasFocus()) {
-        QPen pen(Qt::red);
         QPainter p(this);
+        p.setPen(QPen(Qt::red));
         p.drawRect(0,0,rect().width()-1, rect().height()-1);
     }
 }

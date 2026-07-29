@@ -45,8 +45,9 @@
 
 #define MIN_FONT_SIZE 5
 /* shown significant digits beyond this threshold get the rounding color,
- * same value as in snumeric.cpp (caSpinbox) */
-#define PREC_LIMIT_NUMERIC 15
+ * same value as in snumeric.cpp (caSpinbox); not to be confused with
+ * MaxTotalDigits, which is the storage capacity */
+#define NUMERIC_ROUNDING_WARN_DIGITS 15
 /* qint64 storage limit: 10^19 - 1 does not fit any more */
 #define MAX_NUMERIC_DIGITS ((int) ENumeric::MaxTotalDigits)
 
@@ -192,7 +193,8 @@ void ENumeric::init()
         temp->setObjectName(QString("layoutmember") + QString().setNum(i));
         temp->installEventFilter(lCWME);
 #ifndef MOBILE
-        temp->setAutoRepeat(true);
+        /* one step per click: holding the button must not ramp a real channel */
+        temp->setAutoRepeat(false);
         temp->setAutoRepeatInterval(200);
         temp->setAutoRepeatDelay(500);
 #endif
@@ -212,7 +214,8 @@ void ENumeric::init()
         temp2->setObjectName(QString("layoutmember") + QString().setNum(i));
         temp2->installEventFilter(lCWME);
 #ifndef MOBILE
-        temp2->setAutoRepeat(true);
+        /* one step per click: holding the button must not ramp a real channel */
+        temp2->setAutoRepeat(false);
         temp2->setAutoRepeatInterval(200);
         temp2->setAutoRepeatDelay(500);
 #endif
@@ -282,9 +285,11 @@ QString ENumeric::generate_valueString(){
 
 
 bool ENumeric::canEdit(){
-    /* the channel value must fit the available digit positions */
+    /* the channel value must fit the available digit positions; the decimal
+     * places only count when they can actually be traded for integer ones */
     if (!std::isfinite(csValue)) return false;
-    const int intCapacity = thisFixedFormat ? intDig : digits;
+    const bool canShift = thisAutoDigitShift && !thisFixedFormat;
+    const int intCapacity = canShift ? digits : intDig;
     if (fabs(csValue) >= (double) pow10ll(intCapacity)) {
         qCDebug(eNumericLog) << "canEdit=false:" << csValue << "does not fit" << intCapacity << "integer digits";
         return false;
@@ -294,7 +299,13 @@ bool ENumeric::canEdit(){
 
 void ENumeric::suppressUserInput(){
     suppressInput = true;
-    if (backupStylesheet.isEmpty()) backupStylesheet=this->styleSheet();
+    /* an empty stylesheet/tooltip is a valid state to return to, so the flag
+     * decides, not the emptiness of the backup */
+    if (!haveBackup) {
+        backupStylesheet = this->styleSheet();
+        backupToolTip = this->toolTip();
+        haveBackup = true;
+    }
     for(int i = 0; i < digits && i < labels.length(); i++){
         labels[i]->setText("*");
         labels[i]->setStyleSheet("QLabel {color:red;}");
@@ -308,9 +319,13 @@ void ENumeric::suppressUserInput(){
 
 void ENumeric::restoreUserInput(){
     suppressInput = false;
-    if (!backupStylesheet.isEmpty()) setStyleSheet(backupStylesheet);
-    backupStylesheet = "";
-    setToolTip("");
+    if (haveBackup) {
+        setStyleSheet(backupStylesheet);
+        setToolTip(backupToolTip);
+        backupStylesheet = "";
+        backupToolTip = "";
+        haveBackup = false;
+    }
     for (int i = 0; i < digits && i < labels.length(); i++) {
         labels[i]->setStyleSheet("");
     }
@@ -335,6 +350,11 @@ void ENumeric::updateSuppressionState(){
  * value: trade decimal digits for integer digits when the magnitude needs them */
 void ENumeric::updateDigitLayout(){
     if (thisFixedFormat) return; /* frozen: keep the displayed layout */
+    if (!thisAutoDigitShift) {
+        /* shifting is opt-in: without it the displayed layout is the baseline */
+        applyDigitLayout(orig_intDig, orig_decDig);
+        return;
+    }
     int newIntDig = orig_intDig;
     if (std::isfinite(csValue)) {
         /* integer digits needed by the magnitude */
@@ -411,30 +431,30 @@ void ENumeric::setMinimum(double v)
     }
 }
 
-void ENumeric::setIntDigits(int i)
+void ENumeric::setDigits(int i, int d)
 {
-    /* changes the configured baseline, the displayed digits follow via updateDigitLayout */
-    i = qBound(1, i, MAX_NUMERIC_DIGITS - orig_decDig);
-    if (i == orig_intDig) return;
-    qCDebug(eNumericLog) << "setIntDigits" << objectName() << i;
+    /* caQtDM_Lib computes width-prec-1, which can be 0, so clamp up to 1;
+     * integer digits win the budget, the magnitude has to stay displayable */
+    i = qBound(1, i, MAX_NUMERIC_DIGITS);
+    d = qBound(0, d, MAX_NUMERIC_DIGITS - i);
+    if (i == orig_intDig && d == orig_decDig) return;
+    qCDebug(eNumericLog) << "setDigits" << objectName() << i << d;
     orig_intDig = i;
+    orig_decDig = d;
     /* under fixed format the new baseline is applied directly */
     if (thisFixedFormat) applyDigitLayout(orig_intDig, orig_decDig);
     else updateDigitLayout();
     updateSuppressionState();
 }
 
+void ENumeric::setIntDigits(int i)
+{
+    setDigits(i, orig_decDig);
+}
+
 void ENumeric::setDecDigits(int d)
 {
-    /* changes the configured baseline, the displayed digits follow via updateDigitLayout */
-    d = qBound(0, d, MAX_NUMERIC_DIGITS - orig_intDig);
-    if (d == orig_decDig) return;
-    qCDebug(eNumericLog) << "setDecDigits" << objectName() << d;
-    orig_decDig = d;
-    /* under fixed format the new baseline is applied directly */
-    if (thisFixedFormat) applyDigitLayout(orig_intDig, orig_decDig);
-    else updateDigitLayout();
-    updateSuppressionState();
+    setDigits(orig_intDig, d);
 }
 
 void ENumeric::setFixedFormat(bool f)
@@ -444,6 +464,16 @@ void ENumeric::setFixedFormat(bool f)
     thisFixedFormat = f;
     /* true freezes the displayed layout, false resolves it again */
     if (!f) updateDigitLayout();
+    updateSuppressionState();
+}
+
+void ENumeric::setAutoDigitShift(bool f)
+{
+    if (thisAutoDigitShift == f) return;
+    qCDebug(eNumericLog) << "setAutoDigitShift" << objectName() << f;
+    thisAutoDigitShift = f;
+    /* true resolves the layout against the value, false returns to the baseline */
+    updateDigitLayout();
     updateSuppressionState();
 }
 
@@ -567,7 +597,7 @@ void ENumeric::updateRoundColors(int i) {
         if (labels[k]->text() != " ") shownDigits++;
     }
 
-    const int digitsToColorFromEnd = shownDigits - PREC_LIMIT_NUMERIC;
+    const int digitsToColorFromEnd = shownDigits - NUMERIC_ROUNDING_WARN_DIGITS;
     if (digitsToColorFromEnd > 0 && i >= digits - digitsToColorFromEnd) {
         labels[i]->setStyleSheet("QLabel {color:" + roundingColor.name() + ";}");
     } else if (!labels[i]->styleSheet().isEmpty()) {
@@ -637,21 +667,23 @@ bool ENumeric::eventFilter(QObject *obj, QEvent *event)
         } else {
             QApplication::restoreOverrideCursor();
         }
-    } else if(event->type() == QEvent::Leave && !suppressInput) {
-        QString ParentClassName = parent()->metaObject()->className();
+    } else if(event->type() == QEvent::Leave) {
         QApplication::restoreOverrideCursor();
-        if(ParentClassName.contains("caApplyNumeric")) {
-            qCDebug(eNumericLog) << "do nothing";
-        } else {
-            lastLabelOnTab = lastLabel;
-            lastLabel = -1;
-            /* fall back to the last channel value */
-            const qint64 capacity = pow10ll(digits) - 1;
-            data = qBound(-capacity, transformNumberSpace(csValue, decDig), capacity);
-            showData();
+        if(!suppressInput) {
+            QString ParentClassName = parent()->metaObject()->className();
+            if(ParentClassName.contains("caApplyNumeric")) {
+                qCDebug(eNumericLog) << "do nothing";
+            } else {
+                lastLabelOnTab = lastLabel;
+                lastLabel = -1;
+                /* fall back to the last channel value */
+                const qint64 capacity = pow10ll(digits) - 1;
+                data = qBound(-capacity, transformNumberSpace(csValue, decDig), capacity);
+                showData();
 
-            valueUpdated();
-            updateGeometry();
+                valueUpdated();
+                updateGeometry();
+            }
         }
     } else if(event->type() == QEvent::MouseButtonDblClick) {
         if(!_AccessW) return true;
@@ -665,15 +697,15 @@ bool ENumeric::eventFilter(QObject *obj, QEvent *event)
                 break;
             }
         }
-    // step on press: auto-repeats while held, and shields a parent scrollbar
-    } else if (event->type() == QEvent::KeyPress && !suppressInput) {
+    } else if (event->type() == QEvent::KeyPress) {
          QKeyEvent *ev = (QKeyEvent*) event;
-         if(ev->key() == Qt::Key_Up)   { upDataIndex(lastLabel);   return true; }
-         if(ev->key() == Qt::Key_Down) { downDataIndex(lastLabel); return true; }
+         if(ev->key() == Qt::Key_Down || ev->key() == Qt::Key_Up) return true;
 
     } else if(event->type() == QEvent::KeyRelease && !suppressInput)    {
         QKeyEvent *ev = (QKeyEvent *) event;
         if(ev->key() == Qt::Key_Escape) if (text != NULL) text->hide();
+        if(ev->key() == Qt::Key_Up) upDataIndex(lastLabel);
+        if(ev->key() == Qt::Key_Down) downDataIndex(lastLabel);
         if(ev->key() == Qt::Key_Left) {
             lastLabel--;
             if(lastLabel < 0) lastLabel = 0;

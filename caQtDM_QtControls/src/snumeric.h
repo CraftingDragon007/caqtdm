@@ -82,7 +82,14 @@ public:
     int intDigits() const { return intDig; }
     void setDecDigits(int d);
     int decDigits() const { return decDig; }
+    /* sets both baselines at once, normalized against MaxTotalDigits together */
+    void setDigits(int intDigits, int decDigits);
     void setFixedFormat(bool f);
+    bool getFixedFormat() const { return thisFixedFormat; }
+    /* opt-in: trade decimal digits for integer digits when the channel value
+     * needs them. Off by default, so a panel keeps its configured layout */
+    void setAutoDigitShift(bool f);
+    bool getAutoDigitShift() const { return thisAutoDigitShift; }
     bool inputSuppressed() const { return suppressInput; }
     bool digitsFontScaleEnabled() { return d_fontScaleEnabled; }
     void setDigitsFontScaleEnabled(bool en);
@@ -160,8 +167,12 @@ private:
     int orig_intDig;
     bool resizePending = false;
     bool suppressInput = false;
+    /* saved while the input is suppressed; haveBackup guards the restore,
+     * an empty stylesheet/tooltip is a valid state to return to */
+    bool haveBackup = false;
     QString backupStylesheet = "";
-public:
+    QString backupToolTip = "";
+    bool thisAutoDigitShift = false;
     bool thisFixedFormat = false;
 };
 #endif // EDIGIT_H

@@ -79,7 +79,11 @@ public:
     int intDigits() const { return intDig; }
     void setDecDigits(int d);
     int decDigits() const { return decDig; }
+    void setDigits(int intDigits, int decDigits);
     void setFixedFormat(bool f);
+    bool getFixedFormat() const { return thisFixedFormat; }
+    void setAutoDigitShift(bool f);
+    bool getAutoDigitShift() const { return thisAutoDigitShift; }
     bool inputSuppressed() const { return suppressInput; }
     bool digitsFontScaleEnabled() { return d_fontScaleEnabled; }
     void setDigitsFontScaleEnabled(bool en);
@@ -156,8 +160,10 @@ private:
     int orig_intDig;
     bool resizePending = false;
     bool suppressInput = false;
+    bool haveBackup = false;
     QString backupStylesheet = "";
-public:
+    QString backupToolTip = "";
+    bool thisAutoDigitShift = false;
     bool thisFixedFormat = false;
 };
 #endif // EDIGIT_H

@@ -140,7 +140,10 @@ public:
 	 * fixed format: disables the automatic digit shifting of the numeric widget
 	 */
         void setFixedFormat(bool f){ data->setFixedFormat(f); }
-        bool getFixedFormat() const { return data->thisFixedFormat; }
+        void setAutoDigitShift(bool f){ data->setAutoDigitShift(f); }
+        bool getAutoDigitShift() const { return data->getAutoDigitShift(); }
+
+        bool getFixedFormat() const { return data->getFixedFormat(); }
 
         void writeAccessW(bool access){ data->writeAccessW(access); }
 
@@ -165,6 +168,7 @@ public:
 	 * @return d	number of digits
 	 */
     int decDigits() const { return data->decDigits(); }
+    void setDigits(int i, int d){ data->setDigits(i, d); }
 	
 	/**
 	 * sets text displayed in the button
