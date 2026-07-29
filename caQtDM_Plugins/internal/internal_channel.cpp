@@ -33,6 +33,7 @@
 #include <QtGlobal>
 #include <QtMath>
 
+#include <climits>
 #include <stdlib.h>
 #include <string.h>
 
@@ -329,7 +330,8 @@ bool InternalChannel::configure(const QString &json, QString *errorString)
     if(object.contains("hihi"))   hihi.set(object["hihi"].toDouble());
     if(object.contains("overflow"))   overflow = object["overflow"].toBool();
     if(object.contains("persistent")) persistent = object["persistent"].toBool();
-    if(object.contains("nelm"))   nelm = qMax(1, (int) object["nelm"].toDouble());
+    if(object.contains("nelm"))
+        nelm = (int) qBound(1.0, object["nelm"].toDouble(), (double) INT_MAX);
     // NORD defaults to NELM (full array) and can never exceed it; an array
     // initialisation through "val" defines NORD unless it is given explicitly
     int initLength = qMax(m_waveOverride.size(), textArray.size());
@@ -732,21 +734,42 @@ double InternalChannel::elementValue(int i) const
     return currentValue() + i * step;
 }
 
-// allocates (or reuses) the dataB buffer of kData with the requested size
-static void allocateDataB(knobData *kData, int size)
+#define INTERNAL_BUFFER_WARN_BYTES (Q_INT64_C(64) * 1024 * 1024)
+
+static bool allocateDataB(knobData *kData, qint64 size)
 {
-    if(size != kData->edata.dataSize) {
+    if(size <= 0) return false;
+    if(size > (qint64) INT_MAX) {
+        qCWarning(internalChannelLog) << "requested buffer of" << size
+                                      << "bytes is not addressable for" << kData->pv;
+        return false;
+    }
+    if((int) size != kData->edata.dataSize) {
+        // only on a real allocation or size change, not on every publish
+        if(size > INTERNAL_BUFFER_WARN_BYTES) {
+            qCCritical(internalChannelLog) << "internal channel" << kData->pv << "allocates"
+                                           << (size / (1024 * 1024)) << "MB for its data buffer";
+        }
         if(kData->edata.dataB != (void *) Q_NULLPTR) free(kData->edata.dataB);
         kData->edata.dataB = (void *) malloc((size_t) size);
-        kData->edata.dataSize = size;
+        if(kData->edata.dataB == (void *) Q_NULLPTR) {
+            kData->edata.dataSize = 0;
+            qCWarning(internalChannelLog) << "could not allocate" << size << "bytes for" << kData->pv;
+            return false;
+        }
+        kData->edata.dataSize = (int) size;
     }
+    return kData->edata.dataB != (void *) Q_NULLPTR;
 }
 
 // writes a list of strings into dataB, separated by '\033' as the epics3 plugin does
 static void writeStringsToDataB(knobData *kData, const QStringList &items)
 {
     QByteArray joined = items.join(QChar('\033')).toLatin1();
-    allocateDataB(kData, joined.size() + 1);
+    if(!allocateDataB(kData, (qint64) joined.size() + 1)) {
+        kData->edata.valueCount = 0;
+        return;
+    }
     char *ptr = (char *) kData->edata.dataB;
     memcpy(ptr, joined.constData(), (size_t) joined.size());
     ptr[joined.size()] = '\0';
@@ -826,10 +849,13 @@ void InternalChannel::fillKnobData(knobData *kData) const
         kData->edata.rvalue = (double) native.charValue;
         kData->edata.ivalue = (long) native.charValue;
         kData->edata.valueCount = nord;
-        allocateDataB(kData, nord + 1);
-        char *ptr = (char *) kData->edata.dataB;
-        for(int i = 0; i < nord; i++) ptr[i] = (char) (quint8) ((qint64) elementValue(i));
-        ptr[nord] = '\0';
+        if(allocateDataB(kData, (qint64) nord + 1)) {
+            char *ptr = (char *) kData->edata.dataB;
+            for(int i = 0; i < nord; i++) ptr[i] = (char) (quint8) ((qint64) elementValue(i));
+            ptr[nord] = '\0';
+        } else {
+            kData->edata.valueCount = 0;
+        }
         break;
     }
 
@@ -838,9 +864,12 @@ void InternalChannel::fillKnobData(knobData *kData) const
         kData->edata.ivalue = (long) native.int16Value;
         kData->edata.valueCount = nord;
         if(nelm > 1) {
-            allocateDataB(kData, nord * (int) sizeof(qint16));
-            qint16 *ptr = (qint16 *) kData->edata.dataB;
-            for(int i = 0; i < nord; i++) ptr[i] = (qint16) (qint64) elementValue(i);
+            if(allocateDataB(kData, (qint64) nord * (qint64) sizeof(qint16))) {
+                qint16 *ptr = (qint16 *) kData->edata.dataB;
+                for(int i = 0; i < nord; i++) ptr[i] = (qint16) (qint64) elementValue(i);
+            } else {
+                kData->edata.valueCount = 0;
+            }
         }
         break;
     }
@@ -850,9 +879,12 @@ void InternalChannel::fillKnobData(knobData *kData) const
         kData->edata.ivalue = (long) native.int32Value;
         kData->edata.valueCount = nord;
         if(nelm > 1) {
-            allocateDataB(kData, nord * (int) sizeof(qint32));
-            qint32 *ptr = (qint32 *) kData->edata.dataB;
-            for(int i = 0; i < nord; i++) ptr[i] = (qint32) (qint64) elementValue(i);
+            if(allocateDataB(kData, (qint64) nord * (qint64) sizeof(qint32))) {
+                qint32 *ptr = (qint32 *) kData->edata.dataB;
+                for(int i = 0; i < nord; i++) ptr[i] = (qint32) (qint64) elementValue(i);
+            } else {
+                kData->edata.valueCount = 0;
+            }
         }
         break;
     }
@@ -862,9 +894,12 @@ void InternalChannel::fillKnobData(knobData *kData) const
         kData->edata.ivalue = (long) native.floatValue;
         kData->edata.valueCount = nord;
         if(nelm > 1) {
-            allocateDataB(kData, nord * (int) sizeof(float));
-            float *ptr = (float *) kData->edata.dataB;
-            for(int i = 0; i < nord; i++) ptr[i] = (float) elementValue(i);
+            if(allocateDataB(kData, (qint64) nord * (qint64) sizeof(float))) {
+                float *ptr = (float *) kData->edata.dataB;
+                for(int i = 0; i < nord; i++) ptr[i] = (float) elementValue(i);
+            } else {
+                kData->edata.valueCount = 0;
+            }
         }
         break;
     }
@@ -875,9 +910,12 @@ void InternalChannel::fillKnobData(knobData *kData) const
         kData->edata.ivalue = (long) native.doubleValue;
         kData->edata.valueCount = nord;
         if(nelm > 1) {
-            allocateDataB(kData, nord * (int) sizeof(double));
-            double *ptr = (double *) kData->edata.dataB;
-            for(int i = 0; i < nord; i++) ptr[i] = elementValue(i);
+            if(allocateDataB(kData, (qint64) nord * (qint64) sizeof(double))) {
+                double *ptr = (double *) kData->edata.dataB;
+                for(int i = 0; i < nord; i++) ptr[i] = elementValue(i);
+            } else {
+                kData->edata.valueCount = 0;
+            }
         }
         break;
     }
