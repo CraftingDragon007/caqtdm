@@ -38,7 +38,7 @@
 static genSoftPV *registerInternalGenSoftPV(CaQtDM_Lib *lib, InternalPlugin *plugin, QWidget *host,
                                             const QString &variable, const QString &hopr,
                                             const QString &lopr, const QString &drvl = QString(),
-                                            const QString &drvh = QString())
+                                            const QString &drvh = QString(), int precision = -1)
 {
     genSoftPV *softpv = new genSoftPV(host);
     softpv->setVariable(variable);
@@ -47,6 +47,7 @@ static genSoftPV *registerInternalGenSoftPV(CaQtDM_Lib *lib, InternalPlugin *plu
     if(!lopr.isEmpty()) softpv->setLopr(lopr);
     if(!drvl.isEmpty()) softpv->setDrvl(drvl);
     if(!drvh.isEmpty()) softpv->setDrvh(drvh);
+    if(precision >= 0) softpv->setPrecision(precision);
     lib->HandleWidget(softpv, "", true, true);
 
     QMetaObject::invokeMethod(plugin, "updateChannels", Qt::DirectConnection);
@@ -160,6 +161,33 @@ static void checkWidgetPicksUpFieldWrite(CaQtDM_Lib *lib, InternalPlugin *plugin
 
     QCOMPARE(w->getMinValue(), 0.0);
     QCOMPARE(w->getMaxValue(), 100.0);
+
+    delete w;
+}
+
+// maxChannelPrecision caps the decimals taken from the channel; default 4 is
+// what caQtDM_Lib had hard coded before the property existed
+template<class WidgetT>
+static void checkMaxChannelPrecision(CaQtDM_Lib *lib, InternalPlugin *plugin, QWidget *host,
+                                     const QString &variable)
+{
+    // no HOPR/LOPR: the limits fall back to +-100000
+    registerInternalGenSoftPV(lib, plugin, host, variable, "", "", QString(), QString(), 8);
+
+    WidgetT *w = new WidgetT(host);
+    w->setPrecisionMode(WidgetT::Channel);
+    w->setPV("internal://" + variable);
+    lib->HandleWidget(w, "", false, false);
+
+    QMetaObject::invokeMethod(plugin, "updateChannels", Qt::DirectConnection);
+
+    QCOMPARE(w->getMaxChannelPrecision(), 4);
+    QCOMPARE(w->decDigits(), 4);
+
+    // raising the cap lets the channel precision through on the next initialize
+    w->setMaxChannelPrecision(10);
+    writeInternalField(plugin, variable, "PREC", 8.0);
+    QCOMPARE(w->decDigits(), 8);
 
     delete w;
 }
@@ -665,6 +693,16 @@ void TestCaQtDM_Lib::computeNumericMaxMinPrecIgnoresChannelInUserMode()
                                             "T_Numeric_User");
     checkUserModeIgnoresChannel<caSpinbox>(m_caQtDM_Lib, m_internalPlugin, m_parentAS,
                                             "T_Spinbox_User");
+}
+
+void TestCaQtDM_Lib::computeNumericMaxMinPrecHonoursMaxChannelPrecision()
+{
+    checkMaxChannelPrecision<caApplyNumeric>(m_caQtDM_Lib, m_internalPlugin, m_parentAS,
+                                              "T_ApplyNumeric_Prec");
+    checkMaxChannelPrecision<caNumeric>(m_caQtDM_Lib, m_internalPlugin, m_parentAS,
+                                         "T_Numeric_Prec");
+    checkMaxChannelPrecision<caSpinbox>(m_caQtDM_Lib, m_internalPlugin, m_parentAS,
+                                         "T_Spinbox_Prec");
 }
 
 void TestCaQtDM_Lib::computeNumericMaxMinPrecUpdatesWhenChannelChanges()

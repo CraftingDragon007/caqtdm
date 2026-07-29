@@ -56,6 +56,7 @@ private slots:
     void computeNumericMaxMinPrecUsesChannelDispLimits();
     void computeNumericMaxMinPrecFallsBackWithoutLimits();
     void computeNumericMaxMinPrecIgnoresChannelInUserMode();
+    void computeNumericMaxMinPrecHonoursMaxChannelPrecision();
     void computeNumericMaxMinPrecUpdatesWhenChannelChanges();
 
 private:

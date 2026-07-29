@@ -77,6 +77,8 @@ private slots:
     void autoShiftKeepsConfiguredLimits() { t_autoShiftKeepsConfiguredLimits(); }
     void autoShiftNegativeValues() { t_autoShiftNegativeValues(); }
     void fixedFormatDisablesAutoShift() { t_fixedFormatDisablesAutoShift(); }
+    void autoShiftIsOptIn() { t_autoShiftIsOptIn(); }
+    void setDigitsIsAtomic() { t_setDigitsIsAtomic(); }
     void fixedFormatFreezesCurrentLayout() { t_fixedFormatFreezesCurrentLayout(); }
     void digitChangeRecoversFromSuppression() { t_digitChangeRecoversFromSuppression(); }
     void suppressionRecoveryEdges_data() { t_suppressionRecoveryEdges_data(); }

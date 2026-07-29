@@ -278,12 +278,13 @@ protected:
 
     void configure(int intDig, int decDig)
     {
-        /* free the digit budget first: the widget clamps the total to 18 digits */
-        m_num->setDecDigits(0);
-        m_num->setIntDigits(intDig);
         m_num->setMaxValue(1.0);
         m_num->setMinValue(-1.0);
-        m_num->setDecDigits(decDig);
+        /* both counts at once: they share the total digit budget, setting them
+         * one after the other would clamp each against the other's old value */
+        m_num->setDigits(intDig, decDig);
+        /* the suite exercises the automatic digit shift, which is opt-in */
+        m_num->setAutoDigitShift(true);
         const double cap = capacity(intDig, decDig);
         m_num->setMaxValue(cap);
         m_num->setMinValue(-cap);
@@ -1213,6 +1214,53 @@ protected:
                  numExpectedDisplayString(123456, 5, 1));
     }
 
+    void t_autoShiftIsOptIn()
+    {
+        /* opt-in: without the shift an oversized value suppresses instead */
+        QVERIFY2(!m_num->getAutoDigitShift(),
+                 "automatic digit shift must be off by default");
+
+        configure(2, 4);
+        m_num->setAutoDigitShift(false);
+        QCOMPARE(m_num->intDigits(), 2);
+        QCOMPARE(m_num->decDigits(), 4);
+
+        m_num->silentSetValue(12345.6); /* does not fit 2 integer digits */
+        QCOMPARE(m_num->intDigits(), 2);
+        QCOMPARE(m_num->decDigits(), 4);
+        QLabel *first = m_num->template findChild<QLabel *>("layoutmember0");
+        QVERIFY(first);
+        QVERIFY2(first->text() == QString("*"),
+                 "without the shift an oversized value must suppress the input");
+
+        m_num->silentSetValue(1.5); /* fits again, still no shift */
+        QCOMPARE(m_num->intDigits(), 2);
+        QCOMPARE(m_num->decDigits(), 4);
+        bool singleOk = true;
+        QCOMPARE(numReadDisplayedString(m_num, 2, 4, &singleOk),
+                 numExpectedDisplayString(15000, 2, 4));
+    }
+
+    void t_setDigitsIsAtomic()
+    {
+        /* setDigits must not clamp either count against the other's old value */
+        configure(2, 15);
+        m_num->setAutoDigitShift(false);
+        QCOMPARE(m_num->intDigits(), 2);
+        QCOMPARE(m_num->decDigits(), 15);
+
+        m_num->setDigits(7, 2);
+        QVERIFY2(m_num->intDigits() == 7,
+                 qPrintable(QString("setDigits(7,2) from (2,15) gave %1 integer digits, "
+                                    "the decimal baseline still limits it")
+                                .arg(m_num->intDigits())));
+        QCOMPARE(m_num->decDigits(), 2);
+
+        m_num->setDigits(2, 15); /* and back */
+        QCOMPARE(m_num->intDigits(), 2);
+        QCOMPARE(m_num->decDigits(), 15);
+    }
+
     void t_fixedFormatFreezesCurrentLayout()
     {
         /* switching fixed format on at runtime freezes the layout as displayed,
@@ -1294,7 +1342,11 @@ protected:
         QTest::newRow("smallest overflow") << 1 << 0 << true << 10.0 << 2 << true << 5.0;
         QTest::newRow("huge 18 digit value") << 3 << 2 << true << 9.99e17 << 16 << false << 0.05;
         QTest::newRow("full integer capacity") << 18 << 0 << false << 1.0e18 << 0 << false << 9.98e17;
-        QTest::newRow("tiny decimals, full budget") << 2 << 16 << true << 100.0 << 3 << false << 6.0e-17;
+        /* setDigits gives the integer digits priority over the shared budget:
+         * asking for 3 of them yields 3 (and 15 decimals), so 100.0 becomes
+         * displayable again — previously the request was clamped away by the
+         * 16 configured decimals and the widget stayed suppressed */
+        QTest::newRow("tiny decimals, full budget") << 2 << 16 << true << 100.0 << 3 << true << 6.0e-17;
         QTest::newRow("negative big") << 3 << 2 << true << -99999.9 << 5 << true << -0.5;
         QTest::newRow("dbl_max saturates") << 5 << 2 << true << DBL_MAX << 6 << false << 12.5;
         QTest::newRow("negative saturation") << 5 << 2 << true << -1.0e19 << 6 << false << -0.5;

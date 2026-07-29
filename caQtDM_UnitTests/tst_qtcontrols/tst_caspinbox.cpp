@@ -102,3 +102,24 @@ void TestCaSpinbox::incrementDecrementByButtons()
     if (expectSignals >= 0)
         QCOMPARE(spy.count(), expectSignals);
 }
+
+void TestCaSpinbox::selectionBorderSurvivesValueChange()
+{
+    configure(3, 2);
+    QWidget *tgt = inputTarget();
+    QVERIFY(tgt);
+    m_num->setValue(1.0);
+
+    /* not digit 0: the old rounding color loop started at index 1 */
+    QTest::keyClick(tgt, Qt::Key_Right);
+    QTest::keyClick(tgt, Qt::Key_Right);
+    QLabel *sel = m_num->findChild<QLabel *>("layoutmember1");
+    QVERIFY(sel);
+    QVERIFY2(sel->styleSheet().contains("border"),
+             "the selected digit must be marked with a border");
+
+    m_num->setValue(2.0); /* goes through showData and the rounding colors */
+    QVERIFY2(sel->styleSheet().contains("border"),
+             qPrintable(QString("the value change cleared the selection border, "
+                                "stylesheet is now \"%1\"").arg(sel->styleSheet())));
+}

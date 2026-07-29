@@ -75,6 +75,8 @@ private slots:
     void autoShiftKeepsConfiguredLimits() { t_autoShiftKeepsConfiguredLimits(); }
     void autoShiftNegativeValues() { t_autoShiftNegativeValues(); }
     void fixedFormatDisablesAutoShift() { t_fixedFormatDisablesAutoShift(); }
+    void autoShiftIsOptIn() { t_autoShiftIsOptIn(); }
+    void setDigitsIsAtomic() { t_setDigitsIsAtomic(); }
     void fixedFormatFreezesCurrentLayout() { t_fixedFormatFreezesCurrentLayout(); }
     void digitChangeRecoversFromSuppression() { t_digitChangeRecoversFromSuppression(); }
     void suppressionRecoveryEdges_data() { t_suppressionRecoveryEdges_data(); }
@@ -88,6 +90,10 @@ private slots:
      * selected with the arrow keys — widget specific test */
     void incrementDecrementByButtons_data();
     void incrementDecrementByButtons();
+
+    /* the digit border is the user's cursor and shares the label stylesheet
+       with the rounding color — widget specific test */
+    void selectionBorderSurvivesValueChange();
 };
 
 #endif // TST_CASPINBOX_H
