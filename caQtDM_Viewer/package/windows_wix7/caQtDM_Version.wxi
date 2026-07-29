@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Include xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <!--
+  UpgradeCodes per architecture.
+  The x64 code MUST stay identical to the old WiX3 installer
+  (package/windows/caQtDM_Version.wxi), otherwise upgrades of existing
+  installations will not remove the old version.
+
+  The product version is no longer maintained here: build_package.bat reads
+  the FILEVERSION from caQtDM.exe (which gets it from qtdefs.pri via
+  caQtDM.rc) and passes it to wix as -d ProductVersion=x.y.z.w
+  -->
+<?define CaQtDM_x64_ProductUpgradeCode = "86ABEDAA-C06B-4485-9DF0-5EFE2EB497DD"?>
+<?define CaQtDM_arm64_ProductUpgradeCode = "ADA65AA1-CB09-4888-9B98-EAA86D4F56D1"?>
+</Include>

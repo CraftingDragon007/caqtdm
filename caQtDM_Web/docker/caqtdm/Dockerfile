@@ -107,7 +107,8 @@ RUN apk add --no-cache \
     perl \
     zlib \
     ttf-dejavu \
-    fontconfig
+    fontconfig \
+    mesa-gl 
 
 COPY caQtDM_Tests/ /opt/caqtdm/caqtdm_tests/
 
