@@ -37,9 +37,13 @@ Q_LOGGING_CATEGORY(webLog, "caqtdm.viewer.web")
 
 int main(int argc, char **argv)
 {
+    qputenv("QT_QPA_PLATFORM", QByteArrayLiteral("offscreen"));
+    qputenv("QT_QPA_FONTDIR", QByteArrayLiteral("."));
+
     QApplication app(argc, argv);
     QCoreApplication::setOrganizationName("Paul Scherrer Institut");
     QCoreApplication::setApplicationName("caQtDM-UnitTests-Viewer-Input");
+    setlocale(LC_NUMERIC, "C");
     int status = 0;
 
     {

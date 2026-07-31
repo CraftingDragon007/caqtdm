@@ -50,7 +50,9 @@ bool HTTPCONFIGURATOR = false;
 #include <string>
 
 #if QT_VERSION > QT_VERSION_CHECK(5,0,0)
-#ifndef MOBILE
+// UNIT_TESTING: caqtdm_lib.h blanks the export macro, so MSVC could not
+// import the bus symbols; the tests do not use the HMI bus anyway
+#if !defined(MOBILE) && !defined(UNIT_TESTING)
 #include <hmisharedeventbus.h>
 #include <hmisharedconfiglistmanager.h>
 #endif
@@ -483,7 +485,7 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
 #else
     Q_UNUSED(attach);
 #endif
-#ifndef MOBILE
+#if !defined(MOBILE) && !defined(UNIT_TESTING)
     if (!HmiSharedEventBus::instance().setup()) {
         qCCritical(fileOpenWindowLog) << "Failed to set up HmiSharedEventBus. Unable to receive or send events using this instance (pid:" << QCoreApplication::applicationPid() << ")";
     } else {
