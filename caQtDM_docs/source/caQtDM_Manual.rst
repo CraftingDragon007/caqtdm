@@ -2830,7 +2830,8 @@ option                                    meaning
 ``-macrodefs filename``                   will load macro definitions from file
 
 ``-dg [xpos[xypos]][+xoffset[+yoffsets]`` specifies the geometry (location and size) of the synoptic display
-``-httpconfig``
+``-httpconfig``                           will display a network configuration screen at startup, see
+                                          :ref:`network-configuration-file`
 ``-print``                                print file and exit
 ``-savetoimage``                          will save image file and exit
 ``-cs defaultcontrolsystempluginname``    will override the default epics3 datasource
@@ -2860,6 +2861,43 @@ y = 100; and move the display window corresponding to def.ui to x =
 400 and y = 150::
 
    caQtDM -dg 100x100+100+100 abc.ui &
+
+.. _network-configuration-file:
+
+Network Configuration File
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When started with ``-httpconfig``, caQtDM shows a configuration screen where a
+url and a configuration file can be selected. The selection is stored in
+``caQtDM_IOS_Config.xml`` in the local download directory and reused on the
+next start.
+
+The configuration file itself is downloaded from the selected url. It is a
+plain text file with one environment variable per line, the name first and the
+value following after a blank::
+
+   EPICS_CA_MAX_ARRAY_BYTES 150000000
+   EPICS_CA_ADDR_LIST my-cagateway.example.org
+   CAQTDM_LAUNCHFILE overview.ui
+   CAQTDM_URL_DISPLAY_PATH https://example.org/panels
+
+The variables are applied before the panels are loaded and before the control
+system plugins are loaded, so they can be used to point caQtDM at a different
+gateway or panel repository.
+
+.. note::
+
+   Because this file is downloaded over the network, security relevant
+   variables can **not** be set from it. Rejected are the variables that
+   control loading of code or execution of commands, in particular
+   ``QT_PLUGIN_PATH``, everything starting with ``LD_`` or ``DYLD_``,
+   ``PATH``, ``CAQTDM_EXEC_LIST``, ``MEDM_EXEC_LIST``, ``CAQTDM_WEB_PATH``
+   and the ``PYTHON*`` variables. Rejected lines are reported in the
+   caQtDM message window and in the log.
+
+   This restriction applies only to the downloaded configuration file. All
+   these variables can still be set normally in the shell environment before
+   starting caQtDM.
 
 Description Files
 -----------------

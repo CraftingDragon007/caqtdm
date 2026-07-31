@@ -48,7 +48,8 @@ class NetworkAccess:public QObject
     Q_OBJECT
 
 public:
-    NetworkAccess();
+    // pass a manager to inject a replacement, otherwise an own one is created
+    explicit NetworkAccess(QNetworkAccessManager *managerToUse = Q_NULLPTR);
     ~NetworkAccess(){}
     bool requestUrl(const QUrl url, const QString &file = Q_NULLPTR);
     const QString lastError();

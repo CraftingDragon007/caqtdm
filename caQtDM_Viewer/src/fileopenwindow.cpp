@@ -704,7 +704,7 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
     }
 
     //set all the environment variables that we need
-    setAllEnvironmentVariables(file);
+    setAllEnvironmentVariables(file, messageWindow);
 
     // now check if file exists and download it. (file is specified by the environment variables CAQTDM_LAUNCHFILE and CAQTDM_URL_DISPLAY)
     QString launchFile = (QString)  qgetenv("CAQTDM_LAUNCHFILE");
@@ -900,7 +900,43 @@ void FileOpenWindow::saveConfigFile(const QString &filename, QList<QString> &url
 }
 
 
-void FileOpenWindow::setAllEnvironmentVariables(const QString &fileName)
+// names that must not come from a downloaded configuration file; extend here when needed
+static const char *blockedEnvNames[] = {
+    "QT_PLUGIN_PATH", "QT_QPA_PLATFORM_PLUGIN_PATH", "QML_IMPORT_PATH", "QML2_IMPORT_PATH",
+    "PATH", "CAQTDM_EXEC_LIST", "MEDM_EXEC_LIST", "CAQTDM_WEB_PATH",
+    "PYTHONPATH", "PYTHONHOME", "PYTHONSTARTUP",
+    "IFS", "BASH_ENV", "ENV",
+    Q_NULLPTR
+};
+static const char *blockedEnvPrefixes[] = { "LD_", "DYLD_", Q_NULLPTR };
+
+#define MAX_ENVNAME_LENGTH 64
+#define MAX_ENVVALUE_LENGTH 4096
+
+static bool envNameIsBlocked(const QString &name)
+{
+    for(int i=0; blockedEnvPrefixes[i] != Q_NULLPTR; i++) {
+        if(name.startsWith(QLatin1String(blockedEnvPrefixes[i]))) return true;
+    }
+    for(int i=0; blockedEnvNames[i] != Q_NULLPTR; i++) {
+        if(name == QLatin1String(blockedEnvNames[i])) return true;
+    }
+    return false;
+}
+
+static bool envNameIsWellFormed(const QString &name)
+{
+    if(name.isEmpty() || name.size() > MAX_ENVNAME_LENGTH) return false;
+    for(int i=0; i<name.size(); i++) {
+        const QChar c = name.at(i);
+        if(!((c >= QLatin1Char('A') && c <= QLatin1Char('Z')) ||
+             (c >= QLatin1Char('0') && c <= QLatin1Char('9')) ||
+             c == QLatin1Char('_'))) return false;
+    }
+    return true;
+}
+
+void FileOpenWindow::setAllEnvironmentVariables(const QString &fileName, MessageWindow *messageWindow)
 {
     char asc[MAX_STRING_LENGTH];
     Specials specials;
@@ -911,7 +947,10 @@ void FileOpenWindow::setAllEnvironmentVariables(const QString &fileName)
     EnvFile.append(fileName);
     QFile file(EnvFile);
     if(!file.open(QIODevice::ReadOnly)) {
-        QMessageBox::information(Q_NULLPTR, "open file error setAllEnviromentVariables", file.errorString());
+        qCWarning(fileOpenWindowLog) << "caQtDM -- could not open configuration file" << EnvFile << file.errorString();
+        if(messageWindow != Q_NULLPTR) {
+            QMessageBox::information(Q_NULLPTR, "open file error setAllEnviromentVariables", file.errorString());
+        }
         return;
     }
 
@@ -921,23 +960,41 @@ void FileOpenWindow::setAllEnvironmentVariables(const QString &fileName)
         QString line = in.readLine();
         QStringList fields = line.split(" ");
         if(fields.count() > 1) {
+            const QString envName = fields.at(0);
             QString envString = "";
             for(int i=1; i<fields.count(); i++) {
                 envString.append(fields.at(i));
                 if(i<fields.count() -1) envString.append(" ");
             }
-            setenv(qasc(fields.at(0)), qasc(envString), 1);
+
+            if(!envNameIsWellFormed(envName) || envString.size() > MAX_ENVVALUE_LENGTH) {
+                snprintf(asc, MAX_STRING_LENGTH, "environment variable rejected (malformed name or oversized value): %s",
+                         qasc(envName.left(MAX_ENVNAME_LENGTH)));
+                if(messageWindow != Q_NULLPTR) messageWindow->postMsgEvent(QtWarningMsg, asc);
+                qCWarning(fileOpenWindowLog) << "caQtDM -- rejected malformed environment variable"
+                                             << envName.left(MAX_ENVNAME_LENGTH) << "from configuration file" << fileName;
+                continue;
+            }
+            if(envNameIsBlocked(envName)) {
+                snprintf(asc, MAX_STRING_LENGTH, "environment variable %s can not be set from a configuration file", qasc(envName));
+                if(messageWindow != Q_NULLPTR) messageWindow->postMsgEvent(QtWarningMsg, asc);
+                qCWarning(fileOpenWindowLog) << "caQtDM -- blocked security relevant environment variable" << envName
+                                             << "from configuration file" << fileName;
+                continue;
+            }
+
+            setenv(qasc(envName), qasc(envString), 1);
             //messageWindow->postMsgEvent(QtDebugMsg, (char*) qasc(envString));
         } else if(line.size() > 0) {
             snprintf(asc, MAX_STRING_LENGTH, "environment variable could not be set from %s", qasc(line));
-            messageWindow->postMsgEvent(QtWarningMsg, asc);
+            if(messageWindow != Q_NULLPTR) messageWindow->postMsgEvent(QtWarningMsg, asc);
         }
     }
     //Replacement for standard writable directory
     setenv("CAQTDM_DISPLAY_PATH", qasc(stdpathdoc), 1);
 
     snprintf(asc, MAX_STRING_LENGTH, "epics configuration file loaded: %s", qasc(fileName));
-    messageWindow->postMsgEvent(QtDebugMsg, asc);
+    if(messageWindow != Q_NULLPTR) messageWindow->postMsgEvent(QtDebugMsg, asc);
     file.close();
 }
 

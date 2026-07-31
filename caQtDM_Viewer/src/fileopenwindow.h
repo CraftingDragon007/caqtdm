@@ -113,7 +113,8 @@
      void shellCommand(QString command);
      void cycleWindows();
 
-     void setAllEnvironmentVariables(const QString &fileName);
+     // static so that it can be exercised without constructing the window
+     static void setAllEnvironmentVariables(const QString &fileName, MessageWindow *messageWindow);
      void parseConfigFile(const QString &filename, QList<QString> &urls, QList<QString> &files);
      void saveConfigFile(const QString &filename, QList<QString> &urls, QList<QString> &files);
 
@@ -180,7 +181,7 @@
              if(!MSQ_getPtrs(front, rear)) return;
 
              if(MSQ_isFull()){
-                 qDebug() << "caQtDM -- attach queue is full";
+                 qCWarning(fileOpenWindowLog) << "caQtDM -- attach queue is full";
              } else {
                  if(front == -1) front = 0;
                  rear = (rear + 1) % RingSize;
