@@ -54,8 +54,10 @@
 #include "knobData.h"
 #include "mutexKnobData.h"
 #include "caqtdm_lib.h"
+#include "loggingcategories.h"
 #include "ui_main.h"
 #include <stdio.h>
+#include <string.h>
 
 #include "epicsExternals.h"
 #if defined(_MSC_VER)
@@ -119,12 +121,26 @@
      QString getStatusBarContents();
 
 
-     void MSQ_getPtrs(int &front, int &rear) {
-             if (!sharedMemory.isAttached()) return;
+     // segment size of this layout, rejects foreign segments
+     static int MSQ_segmentSize() {
+             return (int) (BlopSize * RingSize + 2 * sizeof(uint));
+         }
+
+         // false when the indices from shared memory are unusable
+         bool MSQ_getPtrs(int &front, int &rear) {
+             if (!sharedMemory.isAttached()) return false;
              int *ptr1 = (int*) sharedMemory.data();
              front = *ptr1;
              int *ptr2 = ptr1 + 1;
              rear = *ptr2;
+             if(front < -1 || front >= RingSize || rear < -1 || rear >= RingSize) {
+                 qCWarning(fileOpenWindowLog) << "caQtDM -- corrupted attach queue indices" << front << rear << "==> reset";
+                 front = -1;
+                 rear = -1;
+                 MSQ_setPtrs(front, rear);
+                 return false;
+             }
+             return true;
          }
 
          void MSQ_setPtrs(int front, int rear) {
@@ -136,11 +152,13 @@
          }
 
          void MSQ_init() {
-             MSQ_setPtrs(-1, -1);
+             front = -1;
+             rear = -1;
+             MSQ_setPtrs(front, rear);
          }
 
          bool MSQ_isFull() {
-             MSQ_getPtrs(front, rear);
+             if(!MSQ_getPtrs(front, rear)) return false;
 
              if(front == 0 && rear == RingSize - 1){
                  return true;
@@ -152,14 +170,14 @@
          }
 
          bool MSQ_isEmpty() {
-             MSQ_getPtrs(front, rear);
+             if(!MSQ_getPtrs(front, rear)) return true;
 
              if(front == -1) return true;
              else return false;
          }
 
          void MSQ_enQueue(_blop element) {
-             MSQ_getPtrs(front, rear);
+             if(!MSQ_getPtrs(front, rear)) return;
 
              if(MSQ_isFull()){
                  qDebug() << "caQtDM -- attach queue is full";
@@ -177,14 +195,12 @@
          _blop MSQ_deQueue() {
              _blop element;
 
-             MSQ_getPtrs(front, rear);
-             //qDebug() << front << rear;
-
              if(MSQ_isEmpty()){
                  return(empty);
              } else {
                  char *ptr = (char*) (((char*) sharedMemory.data()) + (front * BlopSize) + 2*sizeof(int));
                  memcpy(element.blop, (char*) ptr, BlopSize);
+                 element.blop[BlopSize - 1] = '\0';   // sender may not terminate
                  if(front == rear) {
                      front = -1;
                      rear = -1;

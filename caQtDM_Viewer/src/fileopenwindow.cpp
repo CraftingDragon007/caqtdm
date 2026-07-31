@@ -246,6 +246,12 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
                                bool attach, bool minimize, QString geometry, bool printscreen, bool resizing,
                                QMap<QString, QString> options): QMainWindow(parent)
 {
+    // queue state must be valid before the first timer tick
+    front = -1;
+    rear = -1;
+    memset(&empty, 0, sizeof(empty));
+    timer = (QTimer*) Q_NULLPTR;
+
     // definitions for last opened file
     debugWindow = true;
     fromIOS = false;
@@ -419,6 +425,13 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
         for(int j=0; j<10; j++) {
             Sleep::msleep(150);
             if (sharedMemory.attach()) {
+                // foreign layout, unusable
+                if(sharedMemory.size() != MSQ_segmentSize()) {
+                    qCWarning(fileOpenWindowLog) << "caQtDM -- shared memory of unexpected size" << sharedMemory.size()
+                                                 << "(expected" << MSQ_segmentSize() << ") ==> incompatible instance, standalone";
+                    sharedMemory.detach();
+                    break;
+                }
                 memoryAttached = true;
                 break;
             }
@@ -449,10 +462,10 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
     } else {
         _isRunning = false;
         // create shared memory with a default value to note that no message is available.
-        if (!sharedMemory.create(BlopSize * RingSize + 2 * sizeof(uint))) {
+        if (!sharedMemory.create(MSQ_segmentSize())) {
             qCCritical(fileOpenWindowLog) << "caQtDM -- Unable to create shared memory:" << sharedMemory.errorString();
         } else {
-            int size =  BlopSize * RingSize + 2 * sizeof(uint);
+            int size =  MSQ_segmentSize();
             QByteArray byteArray(size, '\0');
             qCInfo(fileOpenWindowLog) << "caQtDM -- created shared memory";
             sharedMemory.lock();
@@ -954,6 +967,7 @@ void FileOpenWindow::timerEvent(QTimerEvent *event)
 
             QList<CaQtDM_Lib *> all = this->findChildren<CaQtDM_Lib *>();
             foreach(QWidget* widget, all) widget->close();
+            if (timer) timer->stop();
             if (sharedMemory.isAttached()) sharedMemory.detach();
             qApp->exit(0);
         }
@@ -1100,6 +1114,7 @@ void FileOpenWindow::timerEvent(QTimerEvent *event)
     // we want to ask with timeout if the application has to be closed. 23-jan-2013 no yust exit (in case of tablet do not exit)
 #ifndef MOBILE
     if(this->findChildren<CaQtDM_Lib *>().count() <= 0 && userClose) {
+        if (timer) timer->stop();
         if (sharedMemory.isAttached()) sharedMemory.detach();
         qApp->exit(0);
     } else if(this->findChildren<CaQtDM_Lib *>().count() > 0) {
@@ -1408,6 +1423,7 @@ void FileOpenWindow::doSomething()
         QFile::remove(lastFile);
     }
 #endif
+    if (timer) timer->stop();
     sharedMemory.detach();
 }
 
@@ -1669,6 +1685,7 @@ void FileOpenWindow::Callback_ActionExit()
         }
 
 // detach shared memory, delete pv container
+        if (timer) timer->stop();
         if (sharedMemory.isAttached()) sharedMemory.detach();
         qApp->exit(0);
         //exit(0);
@@ -1822,8 +1839,10 @@ void FileOpenWindow::checkForMessage()
 {
      _blop element;
 
+    if (!sharedMemory.isAttached()) return;
+
     // check and remove message in shared memory
-    sharedMemory.lock();
+    if(!sharedMemory.lock()) return;
     element = MSQ_deQueue();
     sharedMemory.unlock();
     if(element.blop[0] == '\0') {
@@ -1849,10 +1868,19 @@ bool FileOpenWindow::sendMessage(const QString &message)
     _blop element;
     if (!_isRunning) return false;
     QByteArray byteArray(message.toUtf8());
-    byteArray.append('\0');
     const char *from = byteArray.data();
-    memcpy(element.blop, from, byteArray.size());
-    sharedMemory.lock();
+    // whole struct is published, must not carry stack content
+    memset(&element, 0, sizeof(element));
+    if(byteArray.size() >= (int) BlopSize) {
+        qCWarning(fileOpenWindowLog) << "caQtDM -- message too long for the attach queue ("
+                                     << byteArray.size() << ">=" << BlopSize << "), truncated";
+    }
+    memcpy(element.blop, from, qMin((int) byteArray.size(), (int) BlopSize - 1));
+    element.blop[BlopSize - 1] = '\0';
+    if(!sharedMemory.lock()) {
+        qCWarning(fileOpenWindowLog) << "caQtDM -- could not lock shared memory, message not sent";
+        return false;
+    }
     MSQ_enQueue(element);
     sharedMemory.unlock();
     return true;
