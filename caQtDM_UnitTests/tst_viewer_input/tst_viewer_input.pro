@@ -3,6 +3,10 @@ include(../unitTests.pri)
 
 QT += network gui widgets designer uitools printsupport
 
+unix:!macx {
+    equals(QT_MAJOR_VERSION, 5): QT += x11extras
+}
+
 web {
     QT += websockets
 }
