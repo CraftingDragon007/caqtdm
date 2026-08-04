@@ -428,7 +428,7 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
             Sleep::msleep(150);
             if (sharedMemory.attach()) {
                 // foreign layout, unusable
-                if(sharedMemory.size() != MSQ_segmentSize()) {
+                    if(sharedMemory.size() <= MSQ_segmentSize()) {
                     qCWarning(fileOpenWindowLog) << "caQtDM -- shared memory of unexpected size" << sharedMemory.size()
                                                  << "(expected" << MSQ_segmentSize() << ") ==> incompatible instance, standalone";
                     sharedMemory.detach();
@@ -1112,9 +1112,9 @@ void FileOpenWindow::timerEvent(QTimerEvent *event)
             }
         }
         if(timeout++ > 4) {    // seems we did not get everything
-            if (this) {
+            if (this!=Q_NULLPTR) {
               CaQtDM_Lib * widget = this->findChild<CaQtDM_Lib *>();
-              widget->printPS("caQtDM.ps");
+              if (widget!=Q_NULLPTR) widget->printPS("caQtDM.ps");
               qCWarning(fileOpenWindowLog) << "caQtDM -- file has been printed to caQtDM.ps, probably with errors";
             }else{
               qCCritical(fileOpenWindowLog) << "caQtDM -- no panel was loaded, nothing o print!";
