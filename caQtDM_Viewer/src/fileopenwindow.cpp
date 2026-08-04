@@ -1112,9 +1112,13 @@ void FileOpenWindow::timerEvent(QTimerEvent *event)
             }
         }
         if(timeout++ > 4) {    // seems we did not get everything
-            CaQtDM_Lib * widget = this->findChild<CaQtDM_Lib *>();
-            widget->printPS("caQtDM.ps");
-            qCWarning(fileOpenWindowLog) << "caQtDM -- file has been printed to caQtDM.ps, probably with errors";
+            if (this) {
+              CaQtDM_Lib * widget = this->findChild<CaQtDM_Lib *>();
+              widget->printPS("caQtDM.ps");
+              qCWarning(fileOpenWindowLog) << "caQtDM -- file has been printed to caQtDM.ps, probably with errors";
+            }else{
+              qCCritical(fileOpenWindowLog) << "caQtDM -- no panel was loaded, nothing o print!";
+            }
             qApp->exit(1);
             exit(1);
         }
