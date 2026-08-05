@@ -1,4 +1,4 @@
-CAQTDM_VERSION = V4.6.1
+CAQTDM_VERSION = V4.9.0
 
 exists(../.git) {
   GIT_VERSION = $$system(git --version)
