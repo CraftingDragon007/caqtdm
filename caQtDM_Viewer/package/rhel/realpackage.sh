@@ -19,9 +19,8 @@ fi
 
 # If you want to compile latest release candidate uncomment this line
 REPOSITORY_NAME=caqtdm
-PACKAGE_VERSION=4.6.1
 REPOSITORY=https://github.com/caqtdm/$REPOSITORY_NAME.git
-# BRANCH_OR_TAG=V${PACKAGE_VERSION}
+# BRANCH_OR_TAG=V${CAQTDM_VERSION}
 BRANCH_OR_TAG=Development
 
 #### Clone and build caqtdm sources
@@ -31,10 +30,25 @@ cd $REPOSITORY_NAME
 git checkout $BRANCH_OR_TAG
 rm -rf .git
 cd ..
+
+# Package version: env CAQTDM_VERSION wins, else qtdefs.pri, else 1.0.0
+if [ -z "${CAQTDM_VERSION}" ]; then
+  CAQTDM_VERSION=$(sed -n 's/^[[:space:]]*CAQTDM_VERSION[[:space:]]*=[[:space:]]*[Vv]\{0,1\}\([0-9][0-9.]*\).*/\1/p' ./caqtdm/caQtDM_Viewer/qtdefs.pri 2>/dev/null | head -n 1)
+fi
+if [ -z "${CAQTDM_VERSION}" ]; then
+  echo "WARNING: could not determine caQtDM version, falling back to 1.0.0"
+  CAQTDM_VERSION=1.0.0
+fi
+PACKAGE_VERSION=${CAQTDM_VERSION}
+echo "PACKAGE_VERSION=${PACKAGE_VERSION}"
+
 if [ "$1" != "--rpmdev" ]; then
     mv ./caqtdm.spec "./caqtdm.spec_$(date +"%Y_%m_%d_%I_%M")"
     cp ./caqtdm/caQtDM_Viewer/package/rhel/caqtdm.spec ./
 fi
+
+# Keep the spec version in sync with the resolved package version
+sed -i "s/^Version:.*/Version: ${PACKAGE_VERSION}/" ./caqtdm.spec
 
 
 

@@ -20,10 +20,20 @@ fi
 
 # If you want to compile latest release candidate uncomment this line
 REPOSITORY_NAME=caqtdm
-PACKAGE_VERSION=4.6.0
 REPOSITORY=https://github.com/caqtdm/$REPOSITORY_NAME.git
-# BRANCH_OR_TAG=V${PACKAGE_VERSION}
+# BRANCH_OR_TAG=V${CAQTDM_VERSION}
 BRANCH_OR_TAG=Development
+
+# Package version: env CAQTDM_VERSION wins, else qtdefs.pri, else 1.0.0
+if [ -z "${CAQTDM_VERSION}" ]; then
+  CAQTDM_VERSION=$(sed -n 's/^[[:space:]]*CAQTDM_VERSION[[:space:]]*=[[:space:]]*[Vv]\{0,1\}\([0-9][0-9.]*\).*/\1/p' ../../../qtdefs.pri 2>/dev/null | head -n 1)
+fi
+if [ -z "${CAQTDM_VERSION}" ]; then
+  echo "WARNING: could not determine caQtDM version, falling back to 1.0.0"
+  CAQTDM_VERSION=1.0.0
+fi
+PACKAGE_VERSION=${CAQTDM_VERSION}
+echo "PACKAGE_VERSION=${PACKAGE_VERSION}"
 
 rm -rf caqtdm-${PACKAGE_VERSION}  || true
 if [ "$1" != "--no-checkout" ]; then
@@ -75,6 +85,21 @@ pwd
 cp -rf ../debian/* debian/
 rm -rf debian/*.ex debian/README.Debian debian/README.source
 pwd
+
+# Keep debian/changelog in sync: prepend an entry if the top version differs
+CHANGELOG_VERSION=$(sed -n '1s/^caqtdm (\([0-9][0-9.]*\).*/\1/p' debian/changelog)
+if [ "${CHANGELOG_VERSION}" != "${PACKAGE_VERSION}" ]; then
+  {
+    echo "caqtdm (${PACKAGE_VERSION}-1) unstable; urgency=medium"
+    echo ""
+    echo "  * Automated build (create-deb.sh)"
+    echo ""
+    echo " -- Helge Brands <helge.brands@psi.ch>  $(date -R)"
+    echo ""
+    cat debian/changelog
+  } > debian/changelog.new
+  mv debian/changelog.new debian/changelog
+fi
 
 # Build the package
 dpkg-buildpackage -us -uc
