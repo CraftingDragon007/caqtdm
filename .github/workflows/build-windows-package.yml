@@ -34,7 +34,7 @@ jobs:
         qt-version: ['6.9.3', '6.10.0']
         qwt-version: ['6.3']
         zeromq-version: ['4.3.5']
-        epics-version: ['R7.0.9']
+        epics-version: ['R7.0.9','R7.0.10']
         
     defaults:
       run:
