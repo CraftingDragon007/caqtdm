@@ -39,10 +39,11 @@
 
 Q_LOGGING_CATEGORY(networkAccessLog, "caqtdm.widgets.networkaccess")
 
-NetworkAccess::NetworkAccess()
+NetworkAccess::NetworkAccess(QNetworkAccessManager *managerToUse)
 {
     finished = false;
-    manager = new QNetworkAccessManager;
+    if(managerToUse != Q_NULLPTR) manager = managerToUse;
+    else manager = new QNetworkAccessManager(this);
     eventLoop = new QEventLoop(this);
     errorString = "";
     connect(this, SIGNAL(requestFinished()), this, SLOT(downloadFinished()) );
@@ -113,6 +114,17 @@ void NetworkAccess::finishReply(QNetworkReply *reply)
     if(thisFile.length() > 0) {
         Specials specials;
         QString filePath = specials.getStdPath();
+
+        // the name may come from a downloaded file; resolve it and keep it below the directory
+        const QString baseDir = QDir::cleanPath(filePath);
+        const QString targetPath = QDir::cleanPath(baseDir + "/" + thisFile);
+        if(!targetPath.startsWith(baseDir + "/")) {
+            errorString = tr("networkaccess: refused to write outside the download directory: %1").arg(thisFile);
+            qCWarning(networkAccessLog) << "caQtDM -- refused download outside" << baseDir << ":" << thisFile;
+            emit requestFinished();
+            reply->deleteLater();
+            return;
+        }
 
         // create directory if not exists
         QFileInfo fi(thisFile);

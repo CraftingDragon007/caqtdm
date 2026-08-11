@@ -40,7 +40,9 @@ Q_PROPERTY(QColor foreground READ getForeground WRITE setForeground)
 Q_PROPERTY(QColor background READ getBackground WRITE setBackground)
 Q_PROPERTY(colMode colorMode READ getColorMode WRITE setColorMode)
 Q_PROPERTY(SourceMode precisionMode READ getPrecisionMode WRITE setPrecisionMode)
+Q_PROPERTY(int maxChannelPrecision READ getMaxChannelPrecision WRITE setMaxChannelPrecision)
 Q_PROPERTY(bool fixedFormat READ getFixedFormat WRITE setFixedFormat)
+Q_PROPERTY(bool autoDigitShift READ getAutoDigitShift WRITE setAutoDigitShift)
 
 Q_PROPERTY(SourceMode limitsMode READ getLimitsMode WRITE setLimitsMode)
 Q_ENUMS(SourceMode)
@@ -65,8 +67,8 @@ void noStyle(QString style) {Q_UNUSED(style);}
 QString getPV() const;
 void setPV(QString const &newPV);
 
-int getAccessW() const {return thisAccessW;}
-void setAccessW(int access);
+bool getAccessW() const {return thisAccessW;}
+void setAccessW(bool access);
 
 colMode getColorMode() const { return thisColorMode; }
 
@@ -81,8 +83,15 @@ enum SourceMode {Channel = 0, User};
 SourceMode getPrecisionMode() const { return thisPrecMode; }
 void setPrecisionMode(SourceMode precmode) {thisPrecMode = precmode;}
 
-bool getFixedFormat()  const {return thisFixedFormat;}
-void setFixedFormat(bool const &fixed) {thisFixedFormat=fixed;}
+int getMaxChannelPrecision() const {return thisMaxChannelPrecision;}
+void setMaxChannelPrecision(int prec) {thisMaxChannelPrecision = qBound(0, prec, (int) ENumeric::MaxTotalDigits);}
+
+/* delegated to the embedded ENumeric, a local copy would never reach it */
+bool getFixedFormat()  const {return EApplyNumeric::getFixedFormat();}
+void setFixedFormat(bool const &fixed) {EApplyNumeric::setFixedFormat(fixed);}
+
+bool getAutoDigitShift() const {return EApplyNumeric::getAutoDigitShift();}
+void setAutoDigitShift(bool const &shift) {EApplyNumeric::setAutoDigitShift(shift);}
 
 SourceMode getLimitsMode() const { return thisLimitsMode; }
 void setLimitsMode(SourceMode limitsmode) { thisLimitsMode = limitsmode;}
@@ -116,17 +125,20 @@ private:
 bool eventFilter(QObject *obj, QEvent *event);
 
 QString thisPV;
-int thisAccessW;
+bool thisAccessW;
 double thisMaximum, thisMinimum;
 SourceMode thisPrecMode;
 SourceMode thisLimitsMode;
-bool thisFixedFormat;
+/* 4 was the hard coded limit before it became configurable, keeping it as
+ * default leaves existing panels unchanged */
+int thisMaxChannelPrecision = 4;
 
 QColor thisForeColor, oldForeColor;
 QColor thisBackColor, oldBackColor;
 colMode thisColorMode;
 colMode oldColorMode;
 bool renewStyleSheet;
+bool oldConnected = true;
 
 };
 #endif

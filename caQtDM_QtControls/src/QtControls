@@ -33,6 +33,7 @@
 #include <camessagebutton.h>
 #include <cacamera.h>
 #include <cacalc.h>
+#include <gensoftpv.h>
 #include <catogglebutton.h>
 #include <cascriptbutton.h>
 #include <cadoubletabwidget.h>
@@ -60,6 +61,7 @@
     #include <cadoubletabwidgetextensionfactory.h>
     #include <capolylinetaskmenu.h>
     #include <pvtaskmenu.h>
+    #include <gensoftpvtaskmenu.h>
 #endif
 
 #endif

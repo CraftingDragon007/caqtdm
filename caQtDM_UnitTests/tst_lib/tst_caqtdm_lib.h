@@ -29,9 +29,12 @@
 #include "fakefileopenwindow.h"
 
 #include <caqtdm_lib.h>
+#include <internal_plugin.h>
 
 #include <QObject>
 #include <QTest>
+
+class caInclude;
 
 class TestCaQtDM_Lib : public QObject
 {
@@ -49,10 +52,19 @@ private slots:
     void parseForQRectConstWorks();
     void treatMacroWorks();
     void expandsMacrosInCa3DSceneConfig();
+    void getLongValueFromStringWorks();
+    void getDoubleValueFromStringWorks();
+    void computeNumericMaxMinPrecUsesChannelDispLimits();
+    void computeNumericMaxMinPrecFallsBackWithoutLimits();
+    void computeNumericMaxMinPrecIgnoresChannelInUserMode();
+    void computeNumericMaxMinPrecHonoursMaxChannelPrecision();
+    void computeNumericMaxMinPrecUpdatesWhenChannelChanges();
 
 private:
     FakeFileOpenWindow *m_fakeFileOpenWindow;
+    caInclude *m_parentAS;
     MutexKnobData *m_mutexKnobData;
+    InternalPlugin *m_internalPlugin;
     CaQtDM_Lib *m_caQtDM_Lib;
 };
 

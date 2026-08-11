@@ -39,6 +39,7 @@
 #include <QHeaderView>
 #include <QVector>
 #include <QMutex>
+#include <QElapsedTimer>
 #include <QFile>
 #include <QMap>
 #include <QtGui>
@@ -71,6 +72,9 @@
 #ifndef MOBILE
    #include "myQProcess.h"
    #include "processWindow.h"
+#endif
+#ifdef WEB
+#include "vncwebchildprocess.h"
 #endif
 #include "mutexKnobData.h"
 #include "mutexKnobDataWrapper.h"
@@ -144,6 +148,33 @@ public:
 
     static QList<caHMIConfigTransferItem*> hmiConfigList;
     static QReadWriteLock hmiConfigListLock;
+
+#ifdef WEB
+    static QHash<QString, VncWebChildProcess*> webChildProcesses;
+    static QReadWriteLock webChildProcessesLock;
+
+    static quint16 vncPortIndex;
+    static quint16 vncPort;
+    static quint16 webPort;
+    static QString webHost;
+    static bool slaveServer;
+    static bool vncServer;
+    static bool noVncPlugin;
+    static bool noVncReadonly;
+    static bool interactionBasedTimeout;
+    static uint webTimeout;
+    static quint16 webInstanceLimit;
+
+    static bool webAllowInsecureCaShellCommands;
+
+    static void addWebChildProcess(QString absoluteFilePath, QString macros, VncWebChildProcess* childProcess);
+    static VncWebChildProcess* getWebChildProcess(QString absoluteFilePath, QString macros);
+    static QString getChildProcessKey(QString absoluteFilePath, QString macros);
+
+    static VncWebChildProcess* startVncChildProcess(quint16 vncPort, quint16 webPort, QString file, QString macros, QWidget* parent = nullptr);
+#else
+#define vncServer false
+#endif
 
     // interface implementation
     int addMonitor(QWidget *thisW, knobData *data, QString pv, QWidget *w, int *specData, QMap<QString, QString> map, QString *pvRep);
@@ -262,25 +293,28 @@ public:
 #endif
     }
 
-    void save_graphics(QString filename)
-    {
+    void save_graphics(QString filename) {
+        if (this) {
 #if QT_VERSION > QT_VERSION_CHECK(5, 0, 0)
-        QPixmap pm = this->grab();
+            QPixmap pm = this->grab();
 #else
-        QPixmap pm = QPixmap::grabWidget(this);
+          QPixmap pm = QPixmap::grabWidget(this);
 #endif
-        QString text = QDate::currentDate().toString("yyyy-MM-dd");
-        text += " " + QTime::currentTime().toString("hh:mm:ss");
-        text += ", " + this->thisFileShort;
-        QPainter painter( &pm );
-        QFont qfont = painter.font();
-        qfont.setPointSizeF(8);
-        painter.setFont(qfont);
-        painter.drawText(QPoint(0, 10), text );
-        if (pm.save(filename,"PNG",-1)){
-            printf("caQtDM image file saved\n");
-        }else{
-            printf("caQtDM image file save failed\n");
+            QString text = QDate::currentDate().toString("yyyy-MM-dd");
+            text += " " + QTime::currentTime().toString("hh:mm:ss");
+            text += ", " + this->thisFileShort;
+            QPainter painter(&pm);
+            QFont qfont = painter.font();
+            qfont.setPointSizeF(8);
+            painter.setFont(qfont);
+            painter.drawText(QPoint(0, 10), text);
+            if (pm.save(filename, "PNG", -1)) {
+              printf("caQtDM image file saved\n");
+            } else {
+              printf("caQtDM image file save failed\n");
+            }
+        } else {
+            printf("caQtDM no panel was loaded\n");
         }
     }
 
@@ -305,6 +339,7 @@ signals:
     void Signal_ReloadWindow(QWidget*);
     void Signal_ReloadWindowL();
     void Signal_ReloadAllWindows();
+    void Signal_Closing();
     void fileChanged(const QString&);
 
 #ifndef UNIT_TESTING
@@ -506,6 +541,8 @@ public:
 
     void hmiHandleMouse(QObject *target, QMouseEvent *event);
 
+    QElapsedTimer this_hmiMouseMoveSendTimer;   // throttles MouseMove events sent to the shared bus
+
     void hmiHandleIncomingEvent(QObject* target, QEvent *event, QEvent *originalEvent, bool isSourceExternal);
 
     void wmHandleResize(QObject* target, QWidget* wmSignalRescaleWidget, QResizeEvent *event, const QString &channelA, const QString &channelB);
@@ -597,6 +634,11 @@ public slots:
     }
 
     void Callback_printWindow() {
+        if (vncServer) {
+            QMessageBox::critical(this, "Error", "Printing disabled in web version");
+            return;
+        }
+
         print();
     }
 

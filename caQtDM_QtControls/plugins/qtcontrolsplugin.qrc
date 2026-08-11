@@ -44,5 +44,6 @@
         <file>pixmaps/replacemacro.png</file>
         <file>pixmaps/input.png</file>
         <file>pixmaps/wmrescale.png</file>
+        <file>pixmaps/genSoftPV.png</file>
     </qresource>
 </RCC>

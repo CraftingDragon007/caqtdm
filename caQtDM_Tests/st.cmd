@@ -1,5 +1,7 @@
 ## Load record instances
+asSetFilename("security.acf")
 dbLoadDatabase ("mySimulation.db", "", "")
+dbLoadDatabase ("numeric_test.db", "", "")
 iocInit()
 
 dbpf byteArray01 '[1, 2, 3, 4, 5]'

@@ -50,9 +50,16 @@ bool HTTPCONFIGURATOR = false;
 #include <string>
 
 #if QT_VERSION > QT_VERSION_CHECK(5,0,0)
-#ifndef MOBILE
+// UNIT_TESTING: caqtdm_lib.h blanks the export macro, so MSVC could not
+// import the bus symbols; the tests do not use the HMI bus anyway
+#if !defined(MOBILE) && !defined(UNIT_TESTING)
 #include <hmisharedeventbus.h>
 #include <hmisharedconfiglistmanager.h>
+#endif
+#ifdef WEB
+#include <websocketserver.h>
+#include <webportpool.h>
+#include <weblaunchermanager.h>
 #endif
 #endif
 
@@ -61,6 +68,7 @@ bool HTTPCONFIGURATOR = false;
 #include "messagebox.h"
 #include "configDialog.h"
 #include "caQtDM_Lib_global.h"
+#include "loggingcategories.h"
 
 #if defined(linux) || defined(__FreeBSD__)
 #include <sys/resource.h>
@@ -240,6 +248,12 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
                                bool attach, bool minimize, QString geometry, bool printscreen, bool resizing,
                                QMap<QString, QString> options): QMainWindow(parent)
 {
+    // queue state must be valid before the first timer tick
+    front = -1;
+    rear = -1;
+    memset(&empty, 0, sizeof(empty));
+    timer = (QTimer*) Q_NULLPTR;
+
     // definitions for last opened file
     debugWindow = true;
     fromIOS = false;
@@ -266,11 +280,12 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
 #endif
     // Set Window Title without the whole path
     QString title("caQtDM ");
-    title.append(BUILDVERSION);
-    title.append(" Build=");
-    title.append(__DATE__);
-    title.append(" ");
-    title.append(BUILDTIME);
+    QString version(BUILDVERSION);
+    version.append(" Build=");
+    version.append(__DATE__);
+    version.append(" ");
+    version.append(BUILDTIME);
+    title.append(version);
 
     // set for epics longer waveforms
     QString maxBytes = (QString)  qgetenv("EPICS_CA_MAX_ARRAY_BYTES");
@@ -289,6 +304,57 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
     setGeometry(0,0, 300, 150);
     this->statusBar()->show();
 
+#ifdef WEB
+    // disable buttons that shouldn't be used when in vnc and hide window
+    if (options["vnc_server"].toInt() == 1) {
+        CaQtDM_Lib::vncServer = options["vnc_server"].toInt();
+        CaQtDM_Lib::noVncPlugin = options["novnc_plugin"].toInt();
+        CaQtDM_Lib::noVncReadonly = options["novnc_readonly"].toInt();
+
+        bool ok;
+        quint16 web_port = options["web_port"].toUShort(&ok);
+        quint16 vnc_port = options["vnc_port"].toUShort(&ok);
+
+        if (!ok) {
+            qCritical(webLog) << "Invalid web/vnc ports defined, stuff will break.";
+        } else {
+            CaQtDM_Lib::webPort = web_port;
+            CaQtDM_Lib::vncPort = vnc_port;
+        }
+
+        QString host = options["web_host"];
+        CaQtDM_Lib::webHost = host;
+
+        CaQtDM_Lib::slaveServer = options["slave_server"].toInt();
+
+        CaQtDM_Lib::webTimeout = options["web_timeout"].toUInt();
+        CaQtDM_Lib::interactionBasedTimeout = options["web_interaction_based_timeout"].toInt();
+
+        CaQtDM_Lib::webInstanceLimit = options["web_instance_limit"].toUShort();
+
+        WebSocketServer::instance().setup(version, host, web_port);
+
+        connect(messageWindow, &MessageWindow::newMessageReceivedEvent, [](QString text){
+            WebSocketServer::instance().sendLog(text);
+        });
+
+        connect(qApp, &QCoreApplication::aboutToQuit, &WebSocketServer::instance(), &WebSocketServer::applicationShutdown);
+
+        QString launcherFile = options["web_launcher_file"];
+        if (!launcherFile.isNull()) {
+            WebLauncherManager::instance().setup(launcherFile);
+        }
+
+        ui.fileAction->setEnabled(false);
+        ui.timedAction->setEnabled(false);
+        ui.directAction->setEnabled(false);
+        ui.exitAction->setEnabled(false);
+        ui.fileAction->setEnabled(false);
+        ui.menuMenu->setEnabled(false);
+        ui.menuBar->setEnabled(false);
+    } else {
+#endif
+
     connect(this, &FileOpenWindow::themeChanged, messageWindow, &MessageWindow::themeChanged);
 
     // connect action buttons
@@ -302,6 +368,10 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
     connect( this->ui.helpAction, SIGNAL( triggered() ), this, SLOT(Callback_ActionHelp()) );
     connect( this->ui.emptycacheAction, SIGNAL( triggered() ), this, SLOT(Callback_EmptyCache()) );
     this->ui.timedAction->setChecked(true);
+
+#ifdef WEB
+    }
+#endif
 
     setWindowTitle(title);
 
@@ -357,6 +427,13 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
         for(int j=0; j<10; j++) {
             Sleep::msleep(150);
             if (sharedMemory.attach()) {
+                // foreign layout, unusable
+                    if(sharedMemory.size() <= MSQ_segmentSize()) {
+                    qCWarning(fileOpenWindowLog) << "caQtDM -- shared memory of unexpected size" << sharedMemory.size()
+                                                 << "(expected" << MSQ_segmentSize() << ") ==> incompatible instance, standalone";
+                    sharedMemory.detach();
+                    break;
+                }
                 memoryAttached = true;
                 break;
             }
@@ -387,10 +464,10 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
     } else {
         _isRunning = false;
         // create shared memory with a default value to note that no message is available.
-        if (!sharedMemory.create(BlopSize * RingSize + 2 * sizeof(uint))) {
+        if (!sharedMemory.create(MSQ_segmentSize())) {
             qCCritical(fileOpenWindowLog) << "caQtDM -- Unable to create shared memory:" << sharedMemory.errorString();
         } else {
-            int size =  BlopSize * RingSize + 2 * sizeof(uint);
+            int size =  MSQ_segmentSize();
             QByteArray byteArray(size, '\0');
             qCInfo(fileOpenWindowLog) << "caQtDM -- created shared memory";
             sharedMemory.lock();
@@ -408,7 +485,7 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
 #else
     Q_UNUSED(attach);
 #endif
-#ifndef MOBILE
+#if !defined(MOBILE) && !defined(UNIT_TESTING)
     if (!HmiSharedEventBus::instance().setup()) {
         qCCritical(fileOpenWindowLog) << "Failed to set up HmiSharedEventBus. Unable to receive or send events using this instance (pid:" << QCoreApplication::applicationPid() << ")";
     } else {
@@ -420,6 +497,10 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
                 QSharedPointer<caHMIConfigTransferItem> item = QSharedPointer<caHMIConfigTransferItem>::create();
                 QDataStream in(payload);
                 in >> *item;
+                if (in.status() != QDataStream::Ok || item->uuid().isEmpty() || item->uuid().size() > 64) {
+                    qWarning() << "discarding malformed NewCaHMIConfig event";
+                    return;
+                }
 
                 bool found = false;
                 QWriteLocker locker(&CaQtDM_Lib::externalHmiConfigListLock);
@@ -433,6 +514,10 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
                 QString uuid;
                 QDataStream in(payload);
                 in >> uuid;
+                if (in.status() != QDataStream::Ok || uuid.isEmpty() || uuid.size() > 64) {
+                    qWarning() << "discarding malformed CaHMIConfigDeleted event";
+                    return;
+                }
                 QWriteLocker locker(&CaQtDM_Lib::externalHmiConfigListLock);
                 auto it = std::remove_if(CaQtDM_Lib::externalHmiConfigList.begin(), CaQtDM_Lib::externalHmiConfigList.end(),
                                          [&](const QSharedPointer<caHMIConfigTransferItem>& item) {
@@ -445,6 +530,10 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
                 QDataStream in(payload);
                 in >> uuid;
                 in >> enabled;
+                if (in.status() != QDataStream::Ok || uuid.isEmpty() || uuid.size() > 64) {
+                    qWarning() << "discarding malformed CaHMIConfigEnabledChanged event";
+                    return;
+                }
 
                 {
                     QWriteLocker locker(&CaQtDM_Lib::hmiConfigListLock);
@@ -476,11 +565,12 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
         heartBeatTimer = new QTimer(this);
         heartBeatTimer->setInterval(2000);
         connect(heartBeatTimer, &QTimer::timeout, this, [](){
-            auto sharedList = HmiSharedConfigListManager::instance().readList();
             qint64 time = QDateTime::currentMSecsSinceEpoch();
 
             qCDebug(fileOpenWindowLog) << "HeartBeatTimer tick" << time;
-            {
+
+            QList<QByteArray> announcements;
+            HmiSharedConfigListManager::instance().updateList([&](QList<QSharedPointer<caHMIConfigTransferItem>> &sharedList) {
                 QReadLocker locker(&CaQtDM_Lib::hmiConfigListLock);
                 foreach (caHMIConfigTransferItem *config, CaQtDM_Lib::hmiConfigList) {
                     if (config == Q_NULLPTR) continue;
@@ -493,17 +583,24 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
                         }
                     }
                     if (!found) {
-                        sharedList.append(config->clone());
-                        if (HmiSharedEventBus::instance().isInitialized()) {
-                            QByteArray byteArray;
-                            QDataStream out(&byteArray, QIODevice::WriteOnly);
-                            out << *config;
-                            HmiSharedEventBus::instance().sendEvent(EventTypes::NewCaHMIConfig, byteArray);
-                        }
+                        auto clone = config->clone();
+                        clone->setTimestamp(time);
+                        sharedList.append(clone);
+                        QByteArray byteArray;
+                        QDataStream out(&byteArray, QIODevice::WriteOnly);
+                        out << *config;
+                        announcements.append(byteArray);
                     }
                 }
+            });
+
+            // Send events outside of updateList to keep the two shared memory
+            // locks from being held at the same time.
+            if (HmiSharedEventBus::instance().isInitialized()) {
+                foreach (const QByteArray &byteArray, announcements) {
+                    HmiSharedEventBus::instance().sendEvent(EventTypes::NewCaHMIConfig, byteArray);
+                }
             }
-            HmiSharedConfigListManager::instance().writeList(sharedList);
         });
         heartBeatTimer->start();
     }
@@ -609,7 +706,7 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
     }
 
     //set all the environment variables that we need
-    setAllEnvironmentVariables(file);
+    setAllEnvironmentVariables(file, messageWindow);
 
     // now check if file exists and download it. (file is specified by the environment variables CAQTDM_LAUNCHFILE and CAQTDM_URL_DISPLAY)
     QString launchFile = (QString)  qgetenv("CAQTDM_LAUNCHFILE");
@@ -805,7 +902,43 @@ void FileOpenWindow::saveConfigFile(const QString &filename, QList<QString> &url
 }
 
 
-void FileOpenWindow::setAllEnvironmentVariables(const QString &fileName)
+// names that must not come from a downloaded configuration file; extend here when needed
+static const char *blockedEnvNames[] = {
+    "QT_PLUGIN_PATH", "QT_QPA_PLATFORM_PLUGIN_PATH", "QML_IMPORT_PATH", "QML2_IMPORT_PATH",
+    "PATH", "CAQTDM_EXEC_LIST", "MEDM_EXEC_LIST", "CAQTDM_WEB_PATH",
+    "PYTHONPATH", "PYTHONHOME", "PYTHONSTARTUP",
+    "IFS", "BASH_ENV", "ENV",
+    Q_NULLPTR
+};
+static const char *blockedEnvPrefixes[] = { "LD_", "DYLD_", Q_NULLPTR };
+
+#define MAX_ENVNAME_LENGTH 64
+#define MAX_ENVVALUE_LENGTH 4096
+
+static bool envNameIsBlocked(const QString &name)
+{
+    for(int i=0; blockedEnvPrefixes[i] != Q_NULLPTR; i++) {
+        if(name.startsWith(QLatin1String(blockedEnvPrefixes[i]))) return true;
+    }
+    for(int i=0; blockedEnvNames[i] != Q_NULLPTR; i++) {
+        if(name == QLatin1String(blockedEnvNames[i])) return true;
+    }
+    return false;
+}
+
+static bool envNameIsWellFormed(const QString &name)
+{
+    if(name.isEmpty() || name.size() > MAX_ENVNAME_LENGTH) return false;
+    for(int i=0; i<name.size(); i++) {
+        const QChar c = name.at(i);
+        if(!((c >= QLatin1Char('A') && c <= QLatin1Char('Z')) ||
+             (c >= QLatin1Char('0') && c <= QLatin1Char('9')) ||
+             c == QLatin1Char('_'))) return false;
+    }
+    return true;
+}
+
+void FileOpenWindow::setAllEnvironmentVariables(const QString &fileName, MessageWindow *messageWindow)
 {
     char asc[MAX_STRING_LENGTH];
     Specials specials;
@@ -816,7 +949,10 @@ void FileOpenWindow::setAllEnvironmentVariables(const QString &fileName)
     EnvFile.append(fileName);
     QFile file(EnvFile);
     if(!file.open(QIODevice::ReadOnly)) {
-        QMessageBox::information(Q_NULLPTR, "open file error setAllEnviromentVariables", file.errorString());
+        qCWarning(fileOpenWindowLog) << "caQtDM -- could not open configuration file" << EnvFile << file.errorString();
+        if(messageWindow != Q_NULLPTR) {
+            QMessageBox::information(Q_NULLPTR, "open file error setAllEnviromentVariables", file.errorString());
+        }
         return;
     }
 
@@ -826,23 +962,41 @@ void FileOpenWindow::setAllEnvironmentVariables(const QString &fileName)
         QString line = in.readLine();
         QStringList fields = line.split(" ");
         if(fields.count() > 1) {
+            const QString envName = fields.at(0);
             QString envString = "";
             for(int i=1; i<fields.count(); i++) {
                 envString.append(fields.at(i));
                 if(i<fields.count() -1) envString.append(" ");
             }
-            setenv(qasc(fields.at(0)), qasc(envString), 1);
+
+            if(!envNameIsWellFormed(envName) || envString.size() > MAX_ENVVALUE_LENGTH) {
+                snprintf(asc, MAX_STRING_LENGTH, "environment variable rejected (malformed name or oversized value): %s",
+                         qasc(envName.left(MAX_ENVNAME_LENGTH)));
+                if(messageWindow != Q_NULLPTR) messageWindow->postMsgEvent(QtWarningMsg, asc);
+                qCWarning(fileOpenWindowLog) << "caQtDM -- rejected malformed environment variable"
+                                             << envName.left(MAX_ENVNAME_LENGTH) << "from configuration file" << fileName;
+                continue;
+            }
+            if(envNameIsBlocked(envName)) {
+                snprintf(asc, MAX_STRING_LENGTH, "environment variable %s can not be set from a configuration file", qasc(envName));
+                if(messageWindow != Q_NULLPTR) messageWindow->postMsgEvent(QtWarningMsg, asc);
+                qCWarning(fileOpenWindowLog) << "caQtDM -- blocked security relevant environment variable" << envName
+                                             << "from configuration file" << fileName;
+                continue;
+            }
+
+            setenv(qasc(envName), qasc(envString), 1);
             //messageWindow->postMsgEvent(QtDebugMsg, (char*) qasc(envString));
         } else if(line.size() > 0) {
             snprintf(asc, MAX_STRING_LENGTH, "environment variable could not be set from %s", qasc(line));
-            messageWindow->postMsgEvent(QtWarningMsg, asc);
+            if(messageWindow != Q_NULLPTR) messageWindow->postMsgEvent(QtWarningMsg, asc);
         }
     }
     //Replacement for standard writable directory
     setenv("CAQTDM_DISPLAY_PATH", qasc(stdpathdoc), 1);
 
     snprintf(asc, MAX_STRING_LENGTH, "epics configuration file loaded: %s", qasc(fileName));
-    messageWindow->postMsgEvent(QtDebugMsg, asc);
+    if(messageWindow != Q_NULLPTR) messageWindow->postMsgEvent(QtDebugMsg, asc);
     file.close();
 }
 
@@ -863,8 +1017,16 @@ void FileOpenWindow::timerEvent(QTimerEvent *event)
     if(caQtDM_TimeOutEnabled) {
         caQtDM_TimeLeft -= 1.0/3600.0;
         if(caQtDM_TimeLeft <= 0) {
+#ifdef WEB
+            if (WebSocketServer::instance().isInitialized() && CaQtDM_Lib::interactionBasedTimeout && CaQtDM_Lib::slaveServer) {
+                qDebug() << "Sending interaction based shutdown msg";
+                WebSocketServer::instance().sendInteractionBasedShutdownMsg();
+            }
+#endif
+
             QList<CaQtDM_Lib *> all = this->findChildren<CaQtDM_Lib *>();
             foreach(QWidget* widget, all) widget->close();
+            if (timer) timer->stop();
             if (sharedMemory.isAttached()) sharedMemory.detach();
             qApp->exit(0);
         }
@@ -950,9 +1112,13 @@ void FileOpenWindow::timerEvent(QTimerEvent *event)
             }
         }
         if(timeout++ > 4) {    // seems we did not get everything
-            CaQtDM_Lib * widget = this->findChild<CaQtDM_Lib *>();
-            widget->printPS("caQtDM.ps");
-            qCWarning(fileOpenWindowLog) << "caQtDM -- file has been printed to caQtDM.ps, probably with errors";
+            if (this!=Q_NULLPTR) {
+              CaQtDM_Lib * widget = this->findChild<CaQtDM_Lib *>();
+              if (widget!=Q_NULLPTR) widget->printPS("caQtDM.ps");
+              qCWarning(fileOpenWindowLog) << "caQtDM -- file has been printed to caQtDM.ps, probably with errors";
+            }else{
+              qCCritical(fileOpenWindowLog) << "caQtDM -- no panel was loaded, nothing o print!";
+            }
             qApp->exit(1);
             exit(1);
         }
@@ -1011,6 +1177,7 @@ void FileOpenWindow::timerEvent(QTimerEvent *event)
     // we want to ask with timeout if the application has to be closed. 23-jan-2013 no yust exit (in case of tablet do not exit)
 #ifndef MOBILE
     if(this->findChildren<CaQtDM_Lib *>().count() <= 0 && userClose) {
+        if (timer) timer->stop();
         if (sharedMemory.isAttached()) sharedMemory.detach();
         qApp->exit(0);
     } else if(this->findChildren<CaQtDM_Lib *>().count() > 0) {
@@ -1177,6 +1344,47 @@ QMainWindow *FileOpenWindow::loadMainWindow(const QPoint &position, const QStrin
     mutexKnobData->setSuppressUpdates(false);
     messageWindow->postMsgEvent(QtDebugMsg, asc);
     free(asc);
+
+#ifdef WEB
+    QPointer<QMainWindow> safeMainWindow = mainWindow;
+
+    if (CaQtDM_Lib::vncServer) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        // qt 6 timing issues, instant resize would destroy caInlcude
+        QTimer::singleShot(1000, [safeMainWindow]{
+#endif
+            if (!safeMainWindow) {
+                qCWarning(webLog) << "caQtDM_Lib destroyed before windows size adjustment";
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+                return;
+#endif
+            } else {
+                QByteArray envWidth = qgetenv("CAQTDM_VIRTUAL_WIDTH");
+                QByteArray envHeight = qgetenv("CAQTDM_VIRTUAL_HEIGHT");
+
+                if (!envWidth.isEmpty() && !envHeight.isEmpty()) {
+                    bool wOk, hOk;
+
+                    int width = envWidth.toInt(&wOk);
+                    int height = envHeight.toInt(&hOk);
+
+                    QSize minSize = safeMainWindow->minimumSize();
+                    QSize maxSize = safeMainWindow->maximumSize();
+
+                    width = qMin(width, maxSize.width());
+                    height = qMin(height, maxSize.height());
+                    width = qMax(width, minSize.width());
+                    height = qMax(height, minSize.height());
+
+                    qCInfo(webLog) << "Setting window size to virtual monitor size" << width << height;
+                    safeMainWindow->setGeometry(safeMainWindow->x(), safeMainWindow->y(), width, height);
+                }
+            }
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        });
+#endif
+    }
+#endif
     return mainWindow;
 }
 
@@ -1243,6 +1451,42 @@ void FileOpenWindow::cycleWindows()
 void FileOpenWindow::nextWindow()
 {
     cycleWindows();
+}
+
+void FileOpenWindow::doSomething()
+{
+#ifdef WEB
+    {
+        QWriteLocker locker(&CaQtDM_Lib::webChildProcessesLock);
+        foreach (auto item, CaQtDM_Lib::webChildProcesses) {
+            if (item == nullptr) continue;
+            QProcess *process = item->process();
+            if (process != nullptr) {
+                if (process->state() == QProcess::Running) {
+                    qCInfo(webLog) << "Stopping child process (pid:" << process->processId() << "vnc port:" << item->vncPort() << ")";
+                    process->terminate();
+
+                    if (!process->waitForFinished(5000)) {
+                        qCWarning(webLog) << "Child process did not terminate gracefully (pid:" << process->processId() << "vnc port:" << item->vncPort() << "), killing it.";
+                        process->kill();
+                        process->waitForFinished(1000);
+                    }
+                }
+                item->deleteLater();
+            }
+        }
+    }
+#endif
+
+    printf("About to quit!\n");
+#if defined linux || defined TARGET_OS_MAC
+    // remove temporary file created by caQtDM for pipe reading
+    if(lastFile.contains("qt-tempFile")) {
+        QFile::remove(lastFile);
+    }
+#endif
+    if (timer) timer->stop();
+    sharedMemory.detach();
 }
 
 /**
@@ -1503,6 +1747,7 @@ void FileOpenWindow::Callback_ActionExit()
         }
 
 // detach shared memory, delete pv container
+        if (timer) timer->stop();
         if (sharedMemory.isAttached()) sharedMemory.detach();
         qApp->exit(0);
         //exit(0);
@@ -1656,8 +1901,10 @@ void FileOpenWindow::checkForMessage()
 {
      _blop element;
 
+    if (!sharedMemory.isAttached()) return;
+
     // check and remove message in shared memory
-    sharedMemory.lock();
+    if(!sharedMemory.lock()) return;
     element = MSQ_deQueue();
     sharedMemory.unlock();
     if(element.blop[0] == '\0') {
@@ -1683,10 +1930,19 @@ bool FileOpenWindow::sendMessage(const QString &message)
     _blop element;
     if (!_isRunning) return false;
     QByteArray byteArray(message.toUtf8());
-    byteArray.append('\0');
     const char *from = byteArray.data();
-    memcpy(element.blop, from, byteArray.size());
-    sharedMemory.lock();
+    // whole struct is published, must not carry stack content
+    memset(&element, 0, sizeof(element));
+    if(byteArray.size() >= (int) BlopSize) {
+        qCWarning(fileOpenWindowLog) << "caQtDM -- message too long for the attach queue ("
+                                     << byteArray.size() << ">=" << BlopSize << "), truncated";
+    }
+    memcpy(element.blop, from, qMin((int) byteArray.size(), (int) BlopSize - 1));
+    element.blop[BlopSize - 1] = '\0';
+    if(!sharedMemory.lock()) {
+        qCWarning(fileOpenWindowLog) << "caQtDM -- could not lock shared memory, message not sent";
+        return false;
+    }
     MSQ_enQueue(element);
     sharedMemory.unlock();
     return true;

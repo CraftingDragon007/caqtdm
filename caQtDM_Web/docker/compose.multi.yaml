@@ -1,0 +1,42 @@
+services:
+  nginx:
+    image: caqtdm-web/nginx
+    build:
+      context: ../
+      dockerfile: docker/nginx/Dockerfile
+    ports:
+      - "127.0.0.1:8443:443"
+      - "127.0.0.1:8080:80"
+    networks:
+      - caqtdm-web
+    environment:
+      BASIC_AUTH_USER: user
+      BASIC_AUTH_PASSWORD: password
+      CAQTDM_DEFAULT_BACKEND: caqtdm-1
+      CAQTDM_PATH_MAP: |
+        ~^/instance1/ caqtdm-1;
+        ~^/instance2/ caqtdm-2;
+    volumes:
+      - ../caqtdm_web_subroutes.conf.template:/etc/nginx/templates/caqtdm_web.conf.template:ro
+      # To use your own cert, bind-mount it once:
+      # - ./certs/caqtdm_web.crt:/etc/nginx/ssl/caqtdm_web.crt:ro
+      # - ./certs/caqtdm_web.key:/etc/nginx/ssl/caqtdm_web.key:ro
+
+  caqtdm-1:
+    image: caqtdm-web/caqtdm
+    build:
+      context: ../../
+      dockerfile: caQtDM_Web/docker/caqtdm/Dockerfile
+    networks:
+      - caqtdm-web
+
+  caqtdm-2:
+    image: caqtdm-web/caqtdm
+    build:
+      context: ../../
+      dockerfile: caQtDM_Web/docker/caqtdm/Dockerfile
+    networks:
+      - caqtdm-web
+
+networks:
+  caqtdm-web: {}

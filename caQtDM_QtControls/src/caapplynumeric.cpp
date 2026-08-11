@@ -40,14 +40,14 @@ caApplyNumeric::caApplyNumeric(QWidget *parent) : EApplyNumeric(parent)
     setPrecisionMode(Channel);
     setLimitsMode(Channel);
     thisColorMode = Static;
-    thisMaximum = 100000.0;
-    thisMinimum = -100000.0;
+    setMaxValue(100000.0);
+    setMinValue(-100000.0);
     setDigitsFontScaleEnabled(true);
     setForeground(Qt::black);
 
     renewStyleSheet = true;
     setBackground(QColor(230,230,230));
-    thisFixedFormat = false;
+    setFixedFormat(false);
     installEventFilter(this);
 
     setElevation(on_top);
@@ -63,9 +63,10 @@ void caApplyNumeric::setPV(QString const &newPV)
         thisPV = newPV;
     }
 
-void caApplyNumeric::setAccessW(int access)
+void caApplyNumeric::setAccessW(bool access)
 {
      thisAccessW = access;
+     writeAccessW(access);
 }
 
 
@@ -107,11 +108,13 @@ void caApplyNumeric::setColors(QColor bg, QColor fg, bool init)
         }
         if(!init) {
             // force resize for repainting
-            QResizeEvent *re = new QResizeEvent(size(), size());
-            resizeEvent(re);
-            delete re;
+            QResizeEvent re(size(), size());
+            resizeEvent(&re);
             return;
         }
+    }else if(thisColorMode == Static){
+        setStyleSheet("");
+        renewStyleSheet = true;
     }
 
     if((bg != oldBackColor) || (fg != oldForeColor)  || renewStyleSheet || styleSheet().isEmpty()) {
@@ -128,14 +131,16 @@ void caApplyNumeric::setColors(QColor bg, QColor fg, bool init)
         oldBackColor = bg;
 
         // force resize for repainting
-        QResizeEvent *re = new QResizeEvent(size(), size());
-        resizeEvent(re);
-        delete re;
+        QResizeEvent re(size(), size());
+        resizeEvent(&re);
     }
 }
 
 void caApplyNumeric::setConnectedColors(bool connected)
 {
+    /* the disconnected state is re-sent on every update cycle: filter it */
+    if(!connected && !oldConnected) return;
+    oldConnected = connected;
     if(!connected) {
        setColors(QColor(Qt::white), QColor(Qt::white), true);
     } else {

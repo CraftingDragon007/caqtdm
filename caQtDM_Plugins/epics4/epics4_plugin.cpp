@@ -476,7 +476,7 @@ PVAChannel::PVAChannel(const string & fullName, const string & mapName,
     callbackThread(callbackThread),
     providerN(providerN)
 {
-    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "PVAChannel::PVAChannel() fullName" << fullName << mapName;
+    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "PVAChannel::PVAChannel() fullName" << QString::fromStdString(fullName) << QString::fromStdString(mapName);
 }
 
 PVAChannel::~PVAChannel()
@@ -505,7 +505,7 @@ void PVAChannel::channelCreated(const Status & status, Channel::shared_pointer c
 {
     if(Epics4Plugin::getDebug()) {
         qCDebug(::epics4Log) << "PVAChannel::created"
-             << "fullName" << getFullName() << "status.isOK()" << ( status.isOK() ? "true" : "false")
+             << "fullName" << QString::fromStdString(getFullName()) << "status.isOK()" << ( status.isOK() ? "true" : "false")
              << "channel->isConnected())" << ( channel->isConnected() ? "true" : "false");
     }
     if(!status.isOK()) {
@@ -526,7 +526,7 @@ void PVAChannel::channelStateChange(
     bool value = (connectionState==Channel::CONNECTED ? true :  false);
     if(Epics4Plugin::getDebug()) {
         qCDebug(::epics4Log) << "PVAChannel::channelStateChange isConnected" << ( value ? "true" : "false")
-             << "fullName" << getFullName() << "num" << num;
+             << "fullName" << QString::fromStdString(getFullName()) << "num" << num;
     }
 
     for(size_t ind = 0; ind<num; ++ind) {
@@ -537,12 +537,12 @@ void PVAChannel::channelStateChange(
 
 void PVAChannel::connect(const string & channelName,const string & providerName)
 {
-    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "PVAChannel::connect" + channelName;
+    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << QString::fromStdString("PVAChannel::connect " + channelName);
 
     if(!providerN) {
         requester->message(channelName + " provider " + providerName + "not registered",errorMessage);
     }
-    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << "PVAChannel::provider=" + providerN->getProviderName();
+    if(Epics4Plugin::getDebug()) qCDebug(::epics4Log) << QString::fromStdString("PVAChannel::provider=" + providerN->getProviderName());
 
     pvaChannelRequester = PVAChannelRequesterPtr(new PVAChannelRequester(shared_from_this()));
 
@@ -556,7 +556,7 @@ void PVAChannel::connect(const string & channelName,const string & providerName)
 
     if(Epics4Plugin::getDebug()) {
         qCDebug(::epics4Log) << "PVAChannel::connect" << channel.get()
-             << "fullName" << getFullName()
+             << "fullName" << QString::fromStdString(getFullName())
              << "channel->isConnected())" <<( channel->isConnected() ? "true" : "false");
     }
 
@@ -566,7 +566,7 @@ void PVAChannel::addInterface(const PVAInterfacePtr & pvaInterface)
 {
     if(Epics4Plugin::getDebug()) {
         qCDebug(::epics4Log) << "PVAChannel::addInterface"
-             << "fullName" << getFullName()
+             << "fullName" << QString::fromStdString(getFullName())
              << "channel->isConnected())" << ( channel->isConnected() ? "true" : "false");
     }
     Lock xx(mutex);
@@ -581,7 +581,7 @@ bool PVAChannel::removeInterface(const PVAInterfacePtr & pvaInterface)
     size_t num = pvaInterfaceList.size();
     if(Epics4Plugin::getDebug()) {
         qCDebug(::epics4Log) << "PVAChannel::removeInterface"
-             << "fullName" << getFullName() << "num" << num;
+             << "fullName" << QString::fromStdString(getFullName()) << "num" << num;
     }
     for(size_t ind = 0; ind<num; ++ind) {
         PVAInterfacePtr _interface = pvaInterfaceList[ind].lock();
@@ -697,7 +697,7 @@ void PVAInterface::channelStateChange(bool isConnected)
 {
     if(Epics4Plugin::getDebug()) {
         qCDebug(::epics4Log) << "PVAInterface::channelStateChange index" << index
-             << "fullName" << pvaChannel->getFullName()
+             << "fullName" << QString::fromStdString(pvaChannel->getFullName())
              << "isConnected" << (isConnected ? "true" : "false");
     }
     if(gotFirstConnect) mutexKnobData->SetMutexKnobDataConnected(index, isConnected);
@@ -1769,9 +1769,9 @@ int Epics4Plugin::pvAddMonitor(int index, knobData *kData, int rate, int skip)
     string mapname = fullname + "_" + out.str();
 
     if(Epics4Plugin::getDebug()) {
-        qCDebug(::epics4Log) << "providerName" << providerName
-             << "channelName" << channelName
-             << "fullname" << fullname;
+        qCDebug(::epics4Log) << "providerName" << QString::fromStdString(providerName)
+             << "channelName" << QString::fromStdString(channelName)
+             << "fullname" << QString::fromStdString(fullname);
     }
 
 #if  EPICS_VERSION > 6

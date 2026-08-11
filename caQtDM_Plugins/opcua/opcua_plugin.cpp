@@ -91,6 +91,7 @@ int OPCUAPlugin::initCommunicationLayer(MutexKnobData *data,
         if (!url.isEmpty()) {
             fileFunction.checkFileAndDownload(opcua_database_file, url);
         }
+        qCDebug(opcuaLog) << "Search for database file" << opcua_database_file;
         searchFile *s = new searchFile(opcua_database_file);
         QString fileNameFound = s->findFile();
         delete s;
@@ -101,6 +102,8 @@ int OPCUAPlugin::initCommunicationLayer(MutexKnobData *data,
                 m_messageWindowP->postMsgEvent(QtDebugMsg, msg.toUtf8().data());
             }
             continue;
+        }else{
+            qCDebug(opcuaLog) << "found a database file" << fileNameFound;
         }
 
         QFile file(fileNameFound);
@@ -1010,6 +1013,8 @@ caType OPCUAPlugin::generateCaTypeFromVariant(const QVariant &value,
         return caINT;
     case QMetaType::QString:
         return caSTRING;
+    case QMetaType::QDateTime:
+        return caSTRING;
     default:
         return caDOUBLE;
     }
@@ -1042,7 +1047,11 @@ void OPCUAPlugin::updateKnobDataFromVariantSingle(knobData &kData,
         kData.edata.precision = 0;
         break;
     case caSTRING:
-        copyStringToDataB(kData, value.toString());
+        if (QT_VARIANT_TYPE(value)==QMetaType::QDateTime) {
+            QDateTime now = QDateTime::currentDateTime();
+            QString utcInfo = QTimeZone::systemTimeZone().displayName(now, QTimeZone::OffsetName);
+            copyStringToDataB(kData, value.toDateTime().toString(Qt::ISODateWithMs)+" ("+utcInfo+")" );
+        } else copyStringToDataB(kData, value.toString());
         break;
     default:
         kData.edata.rvalue = 0.0;

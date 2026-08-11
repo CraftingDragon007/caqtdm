@@ -82,7 +82,7 @@ PVDialog::PVDialog(QWidget *tic, QWidget *parent) : QDialog(parent)
     int pos;
     QString prefix("");
     QStringList plugins;
-    plugins <<""<<"epics3"<<"epics4"<<"bsread"<<"environment"<<"modbus"<<"gps"<<"archiveHTTP"<<"opcua";
+    plugins <<""<<"epics3"<<"epics4"<<"bsread"<<"environment"<<"internal"<<"modbus"<<"gps"<<"archiveHTTP"<<"opcua";
 
     if(caLed *w = qobject_cast<caLed *>(tic)) PV = w->getPV();
     else if (caLinearGauge *w = qobject_cast<caLinearGauge*>(tic)) PV = w->getPV();

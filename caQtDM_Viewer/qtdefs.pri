@@ -1,4 +1,4 @@
-CAQTDM_VERSION = V4.6.1
+CAQTDM_VERSION = V4.9.0
 
 exists(../.git) {
   GIT_VERSION = $$system(git --version)
@@ -52,7 +52,7 @@ unix {
 
 
 # Set the overall Deployment Target for MACOSX
-# QMAKE_MACOSX_DEPLOYMENT_TARGET = 18
+# QMAKE_MACOSX_DEPLOYMENT_TARGET = 18.0
 
 # at psi the designer in 4.8.2 is patched in order to display tooltip description (not a nice test, but for now ok)
 # when the qt version is higher then 5.5.0 then we can also compile the plugins with description texts
@@ -139,6 +139,20 @@ exists($(EPICSINCLUDE)/pv/pvAccess.h) {
        message( "Configuring build for epics4 plugin with epics7" )
        CONFIG += epics4
     }
+}
+
+_CAQTDM_WEB = $$(CAQTDM_WEB)
+isEmpty(_CAQTDM_WEB) {
+message( "caQtDM Web support will not be built" )
+}
+else {
+  greaterThan(QT_VER_MAJ, 4) {
+    CONFIG += web
+    DEFINES += WEB
+    web {
+      message( "Configuring build for caQtDM Web" )
+    }
+  }
 }
 
 _CAQTDM_MODBUS = $$(CAQTDM_MODBUS)

@@ -83,8 +83,13 @@ jobs:
       - name: Install build tools (OpenSSL for Qt OPC UA)
         run: |
           set -euo pipefail
+          brew uninstall --cask --force $(brew list --cask)
+          brew remove rustup xcodes aws-sam-cli azure-cli pipx  || true
+          brew remove python3
           brew update
+          brew upgrade  || true
           brew install openssl@3 || true
+          brew install python@3.14 || true
           echo "OPENSSL_ROOT_DIR=$(brew --prefix openssl@3)" >> "$GITHUB_ENV"
 
       - name: Create dependencies install directory

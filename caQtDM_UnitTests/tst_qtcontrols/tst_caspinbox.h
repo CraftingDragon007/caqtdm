@@ -1,0 +1,100 @@
+/*
+ *  This file is part of the caQtDM Framework, developed at the Paul Scherrer Institut,
+ *  Villigen, Switzerland
+ *
+ *  The caQtDM Framework is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  The caQtDM Framework is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with the caQtDM Framework.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ *  Copyright (c) 2010 - 2026
+ *
+ *  Author:
+ *    Helge Brands
+ */
+
+#ifndef TST_CASPINBOX_H
+#define TST_CASPINBOX_H
+
+#include <caspinbox.h>
+
+#include "tst_numeric_suite.h"
+
+#include <QObject>
+#include <QTest>
+
+/* Reliability tests for the double-value display of caSpinbox / SNumeric,
+ * exactly the same test bodies as for caNumeric (tst_numeric_suite.h) */
+class TestCaSpinbox : public QObject, private NumericSuiteBase<caSpinbox, SNumeric>
+{
+    Q_OBJECT
+public:
+    TestCaSpinbox() = default;
+
+private slots:
+    void initTestCase();
+    void init() { t_init(); }
+    void cleanup() { t_cleanup(); }
+
+    void helperSelfTest() { t_helperSelfTest(); }
+    void roundTripValue_data() { t_roundTripValue_data(); }
+    void roundTripValue() { t_roundTripValue(); }
+    void displayIntegrity_data() { t_displayIntegrity_data(); }
+    void displayIntegrity() { t_displayIntegrity(); }
+    void displayedValueCorrectness_data() { t_displayedValueCorrectness_data(); }
+    void displayedValueCorrectness() { t_displayedValueCorrectness(); }
+    void precisionBoundary_data() { t_precisionBoundary_data(); }
+    void precisionBoundary() { t_precisionBoundary(); }
+    void outOfRangeValueIsIgnored() { t_outOfRangeValueIsIgnored(); }
+    void limitsAreClampedToDisplayCapacity() { t_limitsAreClampedToDisplayCapacity(); }
+    void snumericCtorDigitsOverflow() { t_ctorDigitsOverflow(); }
+    void setDecDigitsRescaling_data() { t_setDecDigitsRescaling_data(); }
+    void setDecDigitsRescaling() { t_setDecDigitsRescaling(); }
+    void valueChangedEmissionSemantics() { t_valueChangedEmissionSemantics(); }
+    void autoShiftOnChannelValue() { t_autoShiftOnChannelValue(); }
+    void suppressUserInputOnUnrepresentableValue() { t_suppressUserInputOnUnrepresentableValue(); }
+    void roundingColorsMarkDigitsBeyondPrecision() { t_roundingColorsMarkDigitsBeyondPrecision(); }
+    void nanAndInfHandling() { t_nanAndInfHandling(); }
+    void negativeZeroAndTinyValues() { t_negativeZeroAndTinyValues(); }
+    void asymmetricLimits() { t_asymmetricLimits(); }
+    void keyboardIncrementDecrement() { t_keyboardIncrementDecrement(); }
+    void writeAccessBlocksInput() { t_writeAccessBlocksInput(); }
+    void suppressBlocksInteraction() { t_suppressBlocksInteraction(); }
+    void mouseLeaveRevertsToChannelValue() { t_mouseLeaveRevertsToChannelValue(true); }
+    void signalArgumentOnIncrement() { t_signalArgumentOnIncrement(); }
+    void decimalPointPosition() { t_decimalPointPosition(); }
+    void libDigitPattern() { t_libDigitPattern(); }
+    void autoShiftKeepsConfiguredLimits() { t_autoShiftKeepsConfiguredLimits(); }
+    void autoShiftNegativeValues() { t_autoShiftNegativeValues(); }
+    void fixedFormatDisablesAutoShift() { t_fixedFormatDisablesAutoShift(); }
+    void autoShiftIsOptIn() { t_autoShiftIsOptIn(); }
+    void setDigitsIsAtomic() { t_setDigitsIsAtomic(); }
+    void fixedFormatFreezesCurrentLayout() { t_fixedFormatFreezesCurrentLayout(); }
+    void digitChangeRecoversFromSuppression() { t_digitChangeRecoversFromSuppression(); }
+    void suppressionRecoveryEdges_data() { t_suppressionRecoveryEdges_data(); }
+    void suppressionRecoveryEdges() { t_suppressionRecoveryEdges(); }
+    void disconnectedColorUpdatesAreFiltered() { t_disconnectedColorUpdatesAreFiltered(); }
+    void channelUpdateStormDoesNotRebuild() { t_channelUpdateStormDoesNotRebuild(); }
+    void baselineChangeWhileShifted() { t_baselineChangeWhileShifted(); }
+    void noDelayedResizeOnPlainValueUpdate() { t_noDelayedResizeOnPlainValueUpdate(); }
+
+    /* caSpinbox has a single up/down button pair acting on the digit that was
+     * selected with the arrow keys — widget specific test */
+    void incrementDecrementByButtons_data();
+    void incrementDecrementByButtons();
+
+    /* the digit border is the user's cursor and shares the label stylesheet
+       with the rounding color — widget specific test */
+    void selectionBorderSurvivesValueChange();
+    void layoutShrinkVoidsSelection();
+};
+
+#endif // TST_CASPINBOX_H

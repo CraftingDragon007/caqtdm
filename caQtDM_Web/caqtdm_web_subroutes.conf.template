@@ -1,0 +1,235 @@
+map $request_uri $caqtdm_backend {
+    default ${CAQTDM_DEFAULT_BACKEND};
+    ${CAQTDM_PATH_MAP}
+}
+
+map $request_uri $caqtdm_auth_file {
+    default /etc/nginx/.htpasswd;
+    ${CAQTDM_AUTH_FILE_MAP}
+}
+
+# Server Block for Plain HTTP Traffic (port 80)
+server {
+    listen 80;
+    listen [::]:80;
+    server_name _;
+
+    resolver ${DNS_SERVER} ipv6=off;
+
+    # Option 1: Redirect all HTTP to HTTPS for security.
+    # Uncomment the line below if you want to enforce HTTPS.
+    # return 301 https://$host$request_uri;
+
+    # Option 2: Proxy plain HTTP traffic.
+    # If you enable Option 1, you can remove or comment out the rest of this block
+
+    ${AUTH_CONFIG}
+
+    add_header X-Frame-Options DENY;
+    add_header X-Content-Type-Options nosniff;
+    add_header X-XSS-Protection "1; mode=block";
+
+    location ~* "^(/[^/]+)?/websockify/(3\d{4})$" {
+        set $backend_host $caqtdm_backend;
+
+        rewrite "^(/[^/]+)?/websockify/(3\d{4})$" /$2 break;
+
+        proxy_pass http://$backend_host:$2;
+        proxy_set_header Host $host;
+
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+        proxy_read_timeout 61s;
+        proxy_buffering off;
+    }
+
+    root /var/www/caqtdm_web;
+
+    location ^~ /admin {
+        index index.html;
+        try_files $uri $uri/ =404;
+    }
+
+    location ^~ /noVNC {
+        root /var/www/caqtdm_web/user;
+        try_files $uri $uri/ =404;
+
+        add_header X-Frame-Options "SAMEORIGIN" always;
+    }
+
+    location ^~ /url-builder {
+        root /var/www/caqtdm_web/user;
+        index index.html;
+        try_files $uri $uri/ =404;
+        add_header X-Frame-Options "SAMEORIGIN" always;
+    }
+
+    location = /favicon.ico {
+        root /var/www/caqtdm_web/user;
+        expires 30d;
+    }
+
+    location ~* "^/[^/]+/url-builder(/.*)?$" {
+        rewrite "^/[^/]+/url-builder(.*)$" /url-builder$1 break;
+        root /var/www/caqtdm_web/user;
+        index index.html;
+        try_files $uri $uri/ /url-builder/ =404;
+        add_header X-Frame-Options "SAMEORIGIN" always;
+    }
+
+    location ~* "^/[^/]+$" {
+        return 301 $scheme://$http_host$uri/;
+    }
+
+    location ~* "^/[^/]+/$" {
+        root /var/www/caqtdm_web/user;
+        index index.html;
+        try_files /index.html =404;
+    }
+
+    location ~* "^/[^/]+/(.*)$" {
+        root /var/www/caqtdm_web/user;
+        try_files /$1 /$1/ =404;
+    }
+
+    location = / {
+        root /var/www/caqtdm_web/static;
+        try_files /index.html =404;
+    }
+
+    location = /static {
+        return 301 /static/;
+    }
+
+    location ^~ /static/ {
+        alias /var/www/caqtdm_web/static/;
+        try_files $uri $uri/ =404;
+    }
+
+    location / {
+        root /var/www/caqtdm_web/user;
+        index index.html;
+        try_files $uri $uri/ =404;
+    }
+}
+
+
+# HTTPS Server Block (port 443)
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name _;
+
+    resolver ${DNS_SERVER} ipv6=off;
+
+    ${AUTH_CONFIG}
+
+    ssl_certificate /etc/nginx/ssl/${INSTALL_CERT_BASENAME}.crt;
+    ssl_certificate_key /etc/nginx/ssl/${INSTALL_CERT_BASENAME}.key;
+
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers 'TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384';
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 1d;
+    ssl_session_tickets off;
+    ssl_stapling on;
+    ssl_stapling_verify on;
+    add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload";
+    add_header X-Frame-Options DENY;
+    add_header X-Content-Type-Options nosniff;
+    add_header X-XSS-Protection "1; mode=block";
+
+    location ~* "^(/[^/]+)?/websockify/(3\d{4})$" {
+        set $backend_host $caqtdm_backend;
+
+        rewrite "^(/[^/]+)?/websockify/(3\d{4})$" /$2 break;
+
+        proxy_pass http://$backend_host:$2;
+        proxy_set_header Host $host;
+
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+        proxy_read_timeout 61s;
+        proxy_buffering off;
+    }
+
+    root /var/www/caqtdm_web;
+
+    location ^~ /admin {
+        index index.html;
+        try_files $uri $uri/ =404;
+    }
+
+    location ^~ /noVNC {
+        root /var/www/caqtdm_web/user;
+        try_files $uri $uri/ =404;
+
+        add_header X-Frame-Options "SAMEORIGIN" always;
+    }
+
+    location ^~ /url-builder {
+        root /var/www/caqtdm_web/user/url-builder;
+        index index.html;
+        try_files $uri $uri/ =404;
+        add_header X-Frame-Options "SAMEORIGIN" always;
+    }
+
+    location = /favicon.ico {
+        root /var/www/caqtdm_web/user;
+        expires 30d;
+    }
+
+    location ~* "^/[^/]+/url-builder(/.*)?$" {
+        rewrite "^/[^/]+/url-builder(.*)$" /url-builder$1 break;
+        root /var/www/caqtdm_web/user;
+        index index.html;
+        try_files $uri $uri/ /url-builder/ =404;
+        add_header X-Frame-Options "SAMEORIGIN" always;
+    }
+
+    location ~* "^/[^/]+$" {
+        return 301 $scheme://$http_host$uri/;
+    }
+
+    location ~* "^/[^/]+/$" {
+        root /var/www/caqtdm_web/user;
+        index index.html;
+        try_files /index.html =404;
+    }
+
+    location ~* "^/[^/]+/(.*)$" {
+        root /var/www/caqtdm_web/user;
+        try_files /$1 /$1/ =404;
+    }
+
+    location = / {
+        root /var/www/caqtdm_web/static;
+        try_files /index.html =404;
+    }
+
+    location = /static {
+        return 301 /static/;
+    }
+
+    location ^~ /static/ {
+        alias /var/www/caqtdm_web/static/;
+        try_files $uri $uri/ =404;
+    }
+
+    location / {
+        root /var/www/caqtdm_web/user;
+        index index.html;
+        try_files $uri $uri/ =404;
+    }
+}

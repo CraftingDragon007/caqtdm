@@ -19,8 +19,10 @@
  *
  *  Author:
  *    Anton Mezger
+ *    Yannick Wernle
  *  Contact details:
  *    anton.mezger@psi.ch
+ *    yannick.wernle@psi.ch
  */
 
 #ifndef SNumeric_H
@@ -61,6 +63,9 @@ class QTCON_EXPORT SNumeric : public QFrame, public FloatDelegate
     Q_PROPERTY(bool digitsFontScaleEnabled READ digitsFontScaleEnabled WRITE setDigitsFontScaleEnabled)
 
 public:
+    /* total digit capacity: 10^19 - 1 does not fit long long any more */
+    enum { MaxTotalDigits = 18 };
+
     SNumeric(QWidget *parent, int intDigits = 2, int decDigits = 1);
     ~SNumeric(){}
 
@@ -68,7 +73,7 @@ public:
     void writeAccessW(bool access);
     void setValue(double v);
     void silentSetValue(double v);
-    double value() const { return data*pow(10.0, -decDig); }
+    double value() const;
     void setMaximum(double v);
     double maximum() const { return d_maxAsDouble; }
     void setMinimum(double v);
@@ -77,6 +82,15 @@ public:
     int intDigits() const { return intDig; }
     void setDecDigits(int d);
     int decDigits() const { return decDig; }
+    /* sets both baselines at once, normalized against MaxTotalDigits together */
+    void setDigits(int intDigits, int decDigits);
+    void setFixedFormat(bool f);
+    bool getFixedFormat() const { return thisFixedFormat; }
+    /* opt-in: trade decimal digits for integer digits when the channel value
+     * needs them. Off by default, so a panel keeps its configured layout */
+    void setAutoDigitShift(bool f);
+    bool getAutoDigitShift() const { return thisAutoDigitShift; }
+    bool inputSuppressed() const { return suppressInput; }
     bool digitsFontScaleEnabled() { return d_fontScaleEnabled; }
     void setDigitsFontScaleEnabled(bool en);
 
@@ -114,6 +128,19 @@ private:
     void downDataIndex(int id);
     void upDataIndex(int id);
 
+    QString getStylesheetUpdate(QString styleSheet, bool resetBorder = false);
+    void updateRoundColors(int i);
+    void triggerRoundColorUpdate();
+    double transformNumberSpace(long long value, int dig);
+    long long transformNumberSpace(double value, int dig);
+    void updateDigitLayout();
+    bool applyDigitLayout(int newIntDig, int newDecDig);
+    void scheduleValueUpdated();
+    bool canEdit();
+    void suppressUserInput();
+    void restoreUserInput();
+    void updateSuppressionState();
+
     int intDig;
     int decDig;
     int digits;
@@ -133,5 +160,19 @@ private:
     bool _AccessW;
     int lastLabel, lastLabelOnTab;
     double csValue;
+
+    QColor roundingColor;
+    /* configured digit baseline, the auto shift trades within it */
+    int orig_decDig;
+    int orig_intDig;
+    bool resizePending = false;
+    bool suppressInput = false;
+    /* saved while the input is suppressed; haveBackup guards the restore,
+     * an empty stylesheet/tooltip is a valid state to return to */
+    bool haveBackup = false;
+    QString backupStylesheet = "";
+    QString backupToolTip = "";
+    bool thisAutoDigitShift = false;
+    bool thisFixedFormat = false;
 };
 #endif // EDIGIT_H

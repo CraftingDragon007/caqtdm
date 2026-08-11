@@ -125,6 +125,7 @@ SOURCES	+= \
     src/cacamera.cpp \
     src/imagewidget.cpp \
     src/cacalc.cpp \
+    src/gensoftpv.cpp \
     src/parsepepfile.cpp \
     src/catogglebutton.cpp \
     src/cascriptbutton.cpp \
@@ -174,6 +175,8 @@ XDR_HACK {
 !MOBILE {
     SOURCES +=  src/pvtaskmenu.cpp src/pvdialog.cpp
     HEADERS +=  src/pvtaskmenu.h src/pvdialog.h
+    SOURCES +=  src/gensoftpvtaskmenu.cpp src/gensoftpvdialog.cpp
+    HEADERS +=  src/gensoftpvtaskmenu.h src/gensoftpvdialog.h
     SOURCES +=  src/cadoubletabwidgetextensionfactory.cpp  src/cadoubletabwidgetextension.cpp
     SOURCES +=  src/capolylinetaskmenu.cpp src/capolylinedialog.cpp
     SOURCES +=  src/ca3dwidgettaskmenu.cpp src/ca3dconfigdialog.cpp
@@ -262,6 +265,7 @@ HEADERS	+= \
     src/cacamera.h \
     src/imagewidget.h \
     src/cacalc.h \
+    src/gensoftpv.h \
     src/qtcontrols_global.h \
     src/alarmdefs.h \
     src/parsepepfile.h \

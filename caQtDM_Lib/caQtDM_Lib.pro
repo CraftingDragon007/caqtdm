@@ -17,6 +17,10 @@ contains(QT_VER_MAJ, 4) {
 
 contains(QT_VER_MAJ, 5) {
     QT += widgets  uitools opengl
+    web {
+        QT += websockets
+        DEFINES += WEB
+    }
     !ios:!android {
        message("caQtDM_Lib -- printsupport added")
        QT += printsupport
@@ -27,7 +31,13 @@ contains(QT_VER_MAJ, 5) {
 }
 
 contains(QT_VER_MAJ, 6) {
-    QT += widgets  uitools opengl xml
+    QT += widgets uitools opengl xml
+
+    web {
+        QT += websockets
+        DEFINES += WEB
+    }
+
     !ios:!android {
        message("caQtDM_Lib -- printsupport added")
        QT += printsupport
@@ -82,6 +92,14 @@ SOURCES +=\
     src/hmisharedeventbus.cpp \
 }
 
+web {
+SOURCES +=\
+    websocketserver.cpp \
+    vncwebchildprocess.cpp \
+    webportpool.cpp \
+    weblaunchermanager.cpp
+}
+
 
 HEADERS += caqtdm_lib.h\
         caQtDM_Lib_global.h \
@@ -113,6 +131,14 @@ HEADERS += \
     src/hmisharedeventbus.h \
 }
 
+web {
+HEADERS += \
+    websocketserver.h \
+    vncwebchildprocess.h \
+    webportpool.h \
+    weblaunchermanager.h
+}
+
 
 
 
@@ -132,4 +158,3 @@ australian: {
 }
 
 FORMS +=
-

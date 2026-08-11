@@ -1,0 +1,2131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>780</width>
+    <height>724</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>internal plugin test</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <widget class="QLabel" name="label_title">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>8</y>
+      <width>760</width>
+      <height>32</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>18</pointsize>
+     </font>
+    </property>
+    <property name="text">
+     <string>internal:// plugin test (EPICS types, alarms, counters, NELM/NORD)</string>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignmentFlag::AlignCenter</set>
+    </property>
+   </widget>
+   <widget class="QWidget" name="gridLayoutWidget">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>48</y>
+      <width>760</width>
+      <height>392</height>
+     </rect>
+    </property>
+    <layout class="QGridLayout" name="gridLayout">
+     <item row="0" column="0">
+      <widget class="caLabel" name="calabel_ramp">
+       <property name="minimumSize">
+        <size>
+         <width>400</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>double counter 0..100 with EPICS alarms (lolo 10, low 20, high 80, hihi 90):</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="caLineEdit" name="calineedit_ramp">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>30</height>
+        </size>
+       </property>
+       <property name="channel" stdset="0">
+        <string>internal://RAMP</string>
+       </property>
+       <property name="colorMode">
+        <enum>caLineEdit::colMode::Alarm_Default</enum>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="caLabel" name="calabel_ramp_led">
+       <property name="minimumSize">
+        <size>
+         <width>400</width>
+         <height>21</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>same channel on a LED with alarm colors (shared, no JSON needed):</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="caLed" name="caled_ramp">
+       <property name="channel" stdset="0">
+        <string>internal://RAMP</string>
+       </property>
+       <property name="colorMode">
+        <enum>caLed::colMode::Alarm</enum>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0">
+      <widget class="caLabel" name="calabel_count">
+       <property name="minimumSize">
+        <size>
+         <width>400</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>persistent long counter, 1 per second (survives display reload):</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="1">
+      <widget class="caLineEdit" name="calineedit_count">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>30</height>
+        </size>
+       </property>
+       <property name="channel" stdset="0">
+        <string>internal://COUNT</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="0">
+      <widget class="caLabel" name="calabel_int16">
+       <property name="minimumSize">
+        <size>
+         <width>400</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>native int16 counter, wraps at 32767 to -32768 (dbr_short_t):</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="1">
+      <widget class="caLineEdit" name="calineedit_int16">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>30</height>
+        </size>
+       </property>
+       <property name="channel" stdset="0">
+        <string>internal://INT16</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="0">
+      <widget class="caLabel" name="calabel_state">
+       <property name="minimumSize">
+        <size>
+         <width>400</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>enum cycling OFF/ON/ERROR (1s):</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="1">
+      <widget class="caLineEdit" name="calineedit_state">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>30</height>
+        </size>
+       </property>
+       <property name="channel" stdset="0">
+        <string>internal://STATE</string>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="0">
+      <widget class="caLabel" name="calabel_message">
+       <property name="minimumSize">
+        <size>
+         <width>400</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>constant string:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="1">
+      <widget class="caLineEdit" name="calineedit_message">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>30</height>
+        </size>
+       </property>
+       <property name="channel" stdset="0">
+        <string>internal://MESSAGE</string>
+       </property>
+      </widget>
+     </item>
+     <item row="6" column="0">
+      <widget class="caLabel" name="calabel_serial">
+       <property name="minimumSize">
+        <size>
+         <width>400</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>string regex generator STATE-[0-9]{2} (500ms):</string>
+       </property>
+      </widget>
+     </item>
+     <item row="6" column="1">
+      <widget class="caLineEdit" name="calineedit_serial">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>30</height>
+        </size>
+       </property>
+       <property name="channel" stdset="0">
+        <string>internal://SERIAL</string>
+       </property>
+      </widget>
+     </item>
+     <item row="7" column="0">
+      <widget class="caLabel" name="calabel_setpoint">
+       <property name="minimumSize">
+        <size>
+         <width>400</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>writable double (entry left, readback right):</string>
+       </property>
+      </widget>
+     </item>
+     <item row="7" column="1">
+      <layout class="QHBoxLayout" name="horizontalLayout_setpoint">
+       <item>
+        <widget class="caTextEntry" name="catextentry_setpoint">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>30</height>
+          </size>
+         </property>
+         <property name="channel" stdset="0">
+          <string>internal://SETPOINT</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="caLineEdit" name="calineedit_setpoint">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>30</height>
+          </size>
+         </property>
+         <property name="channel" stdset="0">
+          <string>internal://SETPOINT</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item row="8" column="0">
+      <widget class="caLabel" name="calabel_fields">
+       <property name="minimumSize">
+        <size>
+         <width>400</width>
+         <height>21</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;EPICS fields on RAMP: force severity (menu),&lt;/p&gt;&lt;p&gt;move HIHI (entry + readback):&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+      </widget>
+     </item>
+     <item row="8" column="1">
+      <layout class="QHBoxLayout" name="horizontalLayout_fields">
+       <item>
+        <layout class="QGridLayout" name="gridLayout_2">
+         <item row="1" column="1">
+          <widget class="caLineEdit" name="calineedit_ramp_hihi">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>31</height>
+            </size>
+           </property>
+           <property name="channel" stdset="0">
+            <string>internal://RAMP.HIHI</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="caTextEntry" name="catextentry_ramp_hihi">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>31</height>
+            </size>
+           </property>
+           <property name="channel" stdset="0">
+            <string>internal://RAMP.HIHI</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="0">
+          <widget class="caTextEntry" name="catextentry_ramp_high">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>31</height>
+            </size>
+           </property>
+           <property name="channel" stdset="0">
+            <string notr="true">internal://RAMP.HIGH</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="caLineEdit" name="calineedit_ramp_high">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>31</height>
+            </size>
+           </property>
+           <property name="channel" stdset="0">
+            <string notr="true">internal://RAMP.HIGH</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0">
+          <widget class="caMenu" name="camenu_ramp_sevr">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>31</height>
+            </size>
+           </property>
+           <property name="channel" stdset="0">
+            <string>internal://RAMP.SEVR</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </item>
+     <item row="9" column="0">
+      <widget class="caLabel" name="calabel_proc">
+       <property name="minimumSize">
+        <size>
+         <width>400</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>string processed by regex [a-z]*([0-9]+).* -&gt; num=\1 (entry left, result right):</string>
+       </property>
+      </widget>
+     </item>
+     <item row="9" column="1">
+      <layout class="QHBoxLayout" name="horizontalLayout_proc">
+       <item>
+        <widget class="caTextEntry" name="catextentry_proc">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>30</height>
+          </size>
+         </property>
+         <property name="channel" stdset="0">
+          <string>internal://PROC</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="caLineEdit" name="calineedit_proc">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>30</height>
+          </size>
+         </property>
+         <property name="channel" stdset="0">
+          <string>internal://PROC</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+    </layout>
+   </widget>
+   <widget class="caLabel" name="calabel_wave">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>440</y>
+      <width>760</width>
+      <height>18</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>double waveform, NORD=16 used of NELM=32 maximum elements, ramp advancing every 200ms:</string>
+    </property>
+   </widget>
+   <widget class="caWaveTable" name="cawavetable_wave">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>462</y>
+      <width>760</width>
+      <height>76</height>
+     </rect>
+    </property>
+    <property name="channel" stdset="0">
+     <string notr="true">internal://WAVE</string>
+    </property>
+    <property name="numberOfRows">
+     <number>16</number>
+    </property>
+    <property name="numberOfColumns">
+     <number>16</number>
+    </property>
+    <row/>
+    <row/>
+    <row/>
+    <row/>
+    <row/>
+    <row/>
+    <row/>
+    <row/>
+    <row/>
+    <row/>
+    <row/>
+    <row/>
+    <row/>
+    <row/>
+    <row/>
+    <row/>
+    <column/>
+    <column/>
+    <column/>
+    <column/>
+    <column/>
+    <column/>
+    <column/>
+    <column/>
+    <column/>
+    <column/>
+    <column/>
+    <column/>
+    <column/>
+    <column/>
+    <column/>
+    <column/>
+    <item row="0" column="0">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="0" column="1">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="0" column="2">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="0" column="3">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="0" column="4">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="0" column="5">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="0" column="6">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="0" column="7">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="0" column="8">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="0" column="9">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="0" column="10">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="0" column="11">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="0" column="12">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="0" column="13">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="0" column="14">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="0" column="15">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="1" column="0">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="1" column="1">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="1" column="2">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="1" column="3">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="1" column="4">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="1" column="5">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="1" column="6">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="1" column="7">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="1" column="8">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="1" column="9">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="1" column="10">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="1" column="11">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="1" column="12">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="1" column="13">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="1" column="14">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="1" column="15">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="2" column="0">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="2" column="1">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="2" column="2">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="2" column="3">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="2" column="4">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="2" column="5">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="2" column="6">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="2" column="7">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="2" column="8">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="2" column="9">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="2" column="10">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="2" column="11">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="2" column="12">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="2" column="13">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="2" column="14">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="2" column="15">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="3" column="0">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="3" column="1">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="3" column="2">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="3" column="3">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="3" column="4">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="3" column="5">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="3" column="6">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="3" column="7">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="3" column="8">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="3" column="9">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="3" column="10">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="3" column="11">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="3" column="12">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="3" column="13">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="3" column="14">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="3" column="15">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="4" column="0">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="4" column="1">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="4" column="2">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="4" column="3">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="4" column="4">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="4" column="5">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="4" column="6">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="4" column="7">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="4" column="8">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="4" column="9">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="4" column="10">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="4" column="11">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="4" column="12">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="4" column="13">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="4" column="14">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="4" column="15">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="5" column="0">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="5" column="1">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="5" column="2">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="5" column="3">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="5" column="4">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="5" column="5">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="5" column="6">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="5" column="7">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="5" column="8">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="5" column="9">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="5" column="10">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="5" column="11">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="5" column="12">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="5" column="13">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="5" column="14">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="5" column="15">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="6" column="0">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="6" column="1">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="6" column="2">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="6" column="3">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="6" column="4">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="6" column="5">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="6" column="6">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="6" column="7">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="6" column="8">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="6" column="9">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="6" column="10">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="6" column="11">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="6" column="12">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="6" column="13">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="6" column="14">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="6" column="15">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="7" column="0">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="7" column="1">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="7" column="2">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="7" column="3">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="7" column="4">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="7" column="5">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="7" column="6">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="7" column="7">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="7" column="8">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="7" column="9">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="7" column="10">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="7" column="11">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="7" column="12">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="7" column="13">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="7" column="14">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="7" column="15">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="8" column="0">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="8" column="1">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="8" column="2">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="8" column="3">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="8" column="4">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="8" column="5">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="8" column="6">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="8" column="7">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="8" column="8">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="8" column="9">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="8" column="10">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="8" column="11">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="8" column="12">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="8" column="13">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="8" column="14">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="8" column="15">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="9" column="0">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="9" column="1">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="9" column="2">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="9" column="3">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="9" column="4">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="9" column="5">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="9" column="6">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="9" column="7">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="9" column="8">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="9" column="9">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="9" column="10">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="9" column="11">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="9" column="12">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="9" column="13">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="9" column="14">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="9" column="15">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="10" column="0">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="10" column="1">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="10" column="2">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="10" column="3">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="10" column="4">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="10" column="5">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="10" column="6">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="10" column="7">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="10" column="8">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="10" column="9">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="10" column="10">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="10" column="11">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="10" column="12">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="10" column="13">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="10" column="14">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="10" column="15">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="11" column="0">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="11" column="1">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="11" column="2">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="11" column="3">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="11" column="4">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="11" column="5">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="11" column="6">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="11" column="7">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="11" column="8">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="11" column="9">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="11" column="10">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="11" column="11">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="11" column="12">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="11" column="13">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="11" column="14">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="11" column="15">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="12" column="0">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="12" column="1">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="12" column="2">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="12" column="3">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="12" column="4">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="12" column="5">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="12" column="6">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="12" column="7">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="12" column="8">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="12" column="9">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="12" column="10">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="12" column="11">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="12" column="12">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="12" column="13">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="12" column="14">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="12" column="15">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="13" column="0">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="13" column="1">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="13" column="2">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="13" column="3">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="13" column="4">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="13" column="5">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="13" column="6">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="13" column="7">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="13" column="8">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="13" column="9">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="13" column="10">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="13" column="11">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="13" column="12">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="13" column="13">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="13" column="14">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="13" column="15">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="14" column="0">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="14" column="1">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="14" column="2">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="14" column="3">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="14" column="4">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="14" column="5">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="14" column="6">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="14" column="7">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="14" column="8">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="14" column="9">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="14" column="10">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="14" column="11">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="14" column="12">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="14" column="13">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="14" column="14">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="14" column="15">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="15" column="0">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="15" column="1">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="15" column="2">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="15" column="3">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="15" column="4">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="15" column="5">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="15" column="6">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="15" column="7">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="15" column="8">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="15" column="9">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="15" column="10">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="15" column="11">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="15" column="12">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="15" column="13">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="15" column="14">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="15" column="15">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+   </widget>
+   <widget class="caLabel" name="calabel_winit">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>546</y>
+      <width>760</width>
+      <height>18</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>static waveform initialized from a val array (NORD=4 of NELM=8):</string>
+    </property>
+   </widget>
+   <widget class="caWaveTable" name="cawavetable_winit">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>568</y>
+      <width>760</width>
+      <height>76</height>
+     </rect>
+    </property>
+    <property name="channel" stdset="0">
+     <string>internal://WINIT</string>
+    </property>
+    <property name="numberOfRows">
+     <number>1</number>
+    </property>
+    <property name="numberOfColumns">
+     <number>4</number>
+    </property>
+    <row/>
+    <column/>
+    <column/>
+    <column/>
+    <column/>
+    <item row="0" column="0">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="0" column="1">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="0" column="2">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+    <item row="0" column="3">
+     <property name="font">
+      <font/>
+     </property>
+    </item>
+   </widget>
+   <widget class="caLabel" name="calabel_definitions">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>674</y>
+      <width>88</width>
+      <height>18</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>definitions:</string>
+    </property>
+   </widget>
+   <widget class="genSoftPV" name="gensoftpv_ramp">
+    <property name="geometry">
+     <rect>
+      <x>100</x>
+      <y>674</y>
+      <width>72</width>
+      <height>18</height>
+     </rect>
+    </property>
+    <property name="variable">
+     <string>RAMP</string>
+    </property>
+    <property name="mode">
+     <enum>genSoftPV::Mode::Counter</enum>
+    </property>
+    <property name="step">
+     <double>0.100000000000000</double>
+    </property>
+    <property name="period">
+     <number>20</number>
+    </property>
+    <property name="drvl">
+     <string>0</string>
+    </property>
+    <property name="drvh">
+     <string>100</string>
+    </property>
+    <property name="low">
+     <string>20</string>
+    </property>
+    <property name="lolo">
+     <string>10</string>
+    </property>
+    <property name="high">
+     <string>80</string>
+    </property>
+    <property name="hihi">
+     <string>90</string>
+    </property>
+    <property name="persistent">
+     <bool>true</bool>
+    </property>
+    <property name="units">
+     <string>V</string>
+    </property>
+    <property name="precision">
+     <number>2</number>
+    </property>
+   </widget>
+   <widget class="genSoftPV" name="gensoftpv_count">
+    <property name="geometry">
+     <rect>
+      <x>175</x>
+      <y>674</y>
+      <width>72</width>
+      <height>18</height>
+     </rect>
+    </property>
+    <property name="variable">
+     <string>COUNT</string>
+    </property>
+    <property name="dataType">
+     <enum>genSoftPV::DataType::Long</enum>
+    </property>
+    <property name="mode">
+     <enum>genSoftPV::Mode::Counter</enum>
+    </property>
+    <property name="persistent">
+     <bool>true</bool>
+    </property>
+   </widget>
+   <widget class="genSoftPV" name="gensoftpv_int16">
+    <property name="geometry">
+     <rect>
+      <x>250</x>
+      <y>674</y>
+      <width>72</width>
+      <height>18</height>
+     </rect>
+    </property>
+    <property name="variable">
+     <string>INT16</string>
+    </property>
+    <property name="dataType">
+     <enum>genSoftPV::DataType::Int</enum>
+    </property>
+    <property name="mode">
+     <enum>genSoftPV::Mode::Counter</enum>
+    </property>
+    <property name="value">
+     <string>32700</string>
+    </property>
+    <property name="step">
+     <double>10.000000000000000</double>
+    </property>
+    <property name="period">
+     <number>500</number>
+    </property>
+   </widget>
+   <widget class="genSoftPV" name="gensoftpv_state">
+    <property name="geometry">
+     <rect>
+      <x>325</x>
+      <y>674</y>
+      <width>72</width>
+      <height>18</height>
+     </rect>
+    </property>
+    <property name="variable">
+     <string>STATE</string>
+    </property>
+    <property name="dataType">
+     <enum>genSoftPV::DataType::Enum</enum>
+    </property>
+    <property name="mode">
+     <enum>genSoftPV::Mode::Counter</enum>
+    </property>
+    <property name="enumStrings">
+     <stringlist>
+      <string>OFF</string>
+      <string>ON</string>
+      <string>ERROR</string>
+     </stringlist>
+    </property>
+   </widget>
+   <widget class="genSoftPV" name="gensoftpv_message">
+    <property name="geometry">
+     <rect>
+      <x>400</x>
+      <y>674</y>
+      <width>72</width>
+      <height>18</height>
+     </rect>
+    </property>
+    <property name="variable">
+     <string>MESSAGE</string>
+    </property>
+    <property name="dataType">
+     <enum>genSoftPV::DataType::String</enum>
+    </property>
+    <property name="value">
+     <string>hello from the internal plugin</string>
+    </property>
+    <property name="overflow">
+     <bool>false</bool>
+    </property>
+   </widget>
+   <widget class="genSoftPV" name="gensoftpv_serial">
+    <property name="geometry">
+     <rect>
+      <x>475</x>
+      <y>674</y>
+      <width>72</width>
+      <height>18</height>
+     </rect>
+    </property>
+    <property name="variable">
+     <string>SERIAL</string>
+    </property>
+    <property name="dataType">
+     <enum>genSoftPV::DataType::String</enum>
+    </property>
+    <property name="mode">
+     <enum>genSoftPV::Mode::Counter</enum>
+    </property>
+    <property name="period">
+     <number>500</number>
+    </property>
+    <property name="overflow">
+     <bool>false</bool>
+    </property>
+    <property name="regex">
+     <string>STATE-[0-9]{2}</string>
+    </property>
+   </widget>
+   <widget class="genSoftPV" name="gensoftpv_setpoint">
+    <property name="geometry">
+     <rect>
+      <x>550</x>
+      <y>674</y>
+      <width>72</width>
+      <height>18</height>
+     </rect>
+    </property>
+    <property name="variable">
+     <string>SETPOINT</string>
+    </property>
+    <property name="mode">
+     <enum>genSoftPV::Mode::Constant</enum>
+    </property>
+    <property name="value">
+     <string>50</string>
+    </property>
+    <property name="drvl">
+     <string>0</string>
+    </property>
+    <property name="drvh">
+     <string>100</string>
+    </property>
+    <property name="overflow">
+     <bool>false</bool>
+    </property>
+   </widget>
+   <widget class="genSoftPV" name="gensoftpv_wave">
+    <property name="geometry">
+     <rect>
+      <x>625</x>
+      <y>674</y>
+      <width>72</width>
+      <height>18</height>
+     </rect>
+    </property>
+    <property name="variable">
+     <string>WAVE</string>
+    </property>
+    <property name="mode">
+     <enum>genSoftPV::Mode::Counter</enum>
+    </property>
+    <property name="value">
+     <string>0;1;2;3;4;5</string>
+    </property>
+    <property name="period">
+     <number>200</number>
+    </property>
+    <property name="nelm">
+     <number>32</number>
+    </property>
+    <property name="nord">
+     <number>16</number>
+    </property>
+   </widget>
+   <widget class="genSoftPV" name="gensoftpv_winit">
+    <property name="geometry">
+     <rect>
+      <x>700</x>
+      <y>674</y>
+      <width>72</width>
+      <height>18</height>
+     </rect>
+    </property>
+    <property name="variable">
+     <string>WINIT</string>
+    </property>
+    <property name="value">
+     <string>1.5;2.5;3.5;4.5</string>
+    </property>
+    <property name="nelm">
+     <number>8</number>
+    </property>
+   </widget>
+   <widget class="genSoftPV" name="gensoftpv_proc">
+    <property name="geometry">
+     <rect>
+      <x>100</x>
+      <y>698</y>
+      <width>72</width>
+      <height>18</height>
+     </rect>
+    </property>
+    <property name="variable">
+     <string>PROC</string>
+    </property>
+    <property name="dataType">
+     <enum>genSoftPV::DataType::String</enum>
+    </property>
+    <property name="value">
+     <string>num=\1</string>
+    </property>
+    <property name="regex">
+     <string>[a-z]*([0-9]+).*</string>
+    </property>
+   </widget>
+  </widget>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>caMenu</class>
+   <extends>QComboBox</extends>
+   <header>caMenu</header>
+  </customwidget>
+  <customwidget>
+   <class>caTextEntry</class>
+   <extends>caLineEdit</extends>
+   <header>caTextEntry</header>
+  </customwidget>
+  <customwidget>
+   <class>caLabel</class>
+   <extends>QLabel</extends>
+   <header>caLabel</header>
+  </customwidget>
+  <customwidget>
+   <class>caLed</class>
+   <extends>QWidget</extends>
+   <header>caLed</header>
+  </customwidget>
+  <customwidget>
+   <class>caLineEdit</class>
+   <extends>QLineEdit</extends>
+   <header>caLineEdit</header>
+  </customwidget>
+  <customwidget>
+   <class>caWaveTable</class>
+   <extends>QTableWidget</extends>
+   <header>caWaveTable</header>
+  </customwidget>
+  <customwidget>
+   <class>genSoftPV</class>
+   <extends>QLabel</extends>
+   <header>genSoftPV</header>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

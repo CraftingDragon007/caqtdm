@@ -19,8 +19,10 @@
  *
  *  Author:
  *    Anton Mezger
+ *    Yannick Wernle
  *  Contact details:
  *    anton.mezger@psi.ch
+ *    yannick.wernle@psi.ch
  */
 
 #ifndef ENUMERIC_H
@@ -59,13 +61,16 @@ class QTCON_EXPORT ENumeric : public QFrame, public FloatDelegate
     Q_PROPERTY(bool digitsFontScaleEnabled READ digitsFontScaleEnabled WRITE setDigitsFontScaleEnabled)
 
 public:
+    /* total digit capacity: 10^19 - 1 does not fit qint64 any more */
+    enum { MaxTotalDigits = 18 };
+
     ENumeric(QWidget *parent, int intDigits = 2, int decDigits = 1);
     ~ENumeric(){}
 
     bool readAccessW() const {return _AccessW;}
     void writeAccessW(bool access);
     void silentSetValue(double v);
-    double value() const { return data*pow(10.0, -decDig); }
+    double value() const;
     void setMaximum(double v);
     double maximum() const { return d_maxAsDouble; }
     void setMinimum(double v);
@@ -74,6 +79,12 @@ public:
     int intDigits() const { return intDig; }
     void setDecDigits(int d);
     int decDigits() const { return decDig; }
+    void setDigits(int intDigits, int decDigits);
+    void setFixedFormat(bool f);
+    bool getFixedFormat() const { return thisFixedFormat; }
+    void setAutoDigitShift(bool f);
+    bool getAutoDigitShift() const { return thisAutoDigitShift; }
+    bool inputSuppressed() const { return suppressInput; }
     bool digitsFontScaleEnabled() { return d_fontScaleEnabled; }
     void setDigitsFontScaleEnabled(bool en);
 
@@ -103,6 +114,9 @@ protected:
     virtual QSize minimumSizeHint() const;
 
 private:
+    void updateDigitLayout();
+    bool applyDigitLayout(int newIntDig, int newDecDig);
+    void scheduleValueUpdated();
     void mouseDoubleClickEvent(QMouseEvent*);
     bool eventFilter(QObject *obj, QEvent *event);
     void init();
@@ -112,15 +126,22 @@ private:
     void reconstructGeometry();
     void downDataIndex(int id);
     void upDataIndex(int id);
+    void updateRoundColors(int i);
+    void triggerRoundColorUpdate();
+    double transformNumberSpace(qint64 value, int dig);
+    qint64 transformNumberSpace(double value, int dig);
+    bool canEdit();
+    void suppressUserInput();
+    void restoreUserInput();
+    void updateSuppressionState();
+    QString generate_valueString();
 
-    int idUpVuoto, idDownVuoto;
-    int idUpPoint, idDownPoint;
     int intDig;
     int decDig;
     int digits;
-    long long data;
-    long long minVal;
-    long long maxVal;
+    qint64 data;
+    qint64 minVal;
+    qint64 maxVal;
     double d_minAsDouble, d_maxAsDouble;
     QButtonGroup *bup;
     QButtonGroup *bdown;
@@ -132,5 +153,17 @@ private:
     bool _AccessW;
     int lastLabel, lastLabelOnTab;
     double csValue;
+
+    QColor roundingColor;
+    /* configured digit baseline, the auto shift trades within it */
+    int orig_decDig;
+    int orig_intDig;
+    bool resizePending = false;
+    bool suppressInput = false;
+    bool haveBackup = false;
+    QString backupStylesheet = "";
+    QString backupToolTip = "";
+    bool thisAutoDigitShift = false;
+    bool thisFixedFormat = false;
 };
 #endif // EDIGIT_H

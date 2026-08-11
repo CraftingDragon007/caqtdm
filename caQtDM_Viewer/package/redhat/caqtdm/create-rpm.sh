@@ -4,10 +4,20 @@ echo "     caQtDM BuildScript2RPM  "
 echo ""
 # If you want to compile latest release candidate uncomment this line
 REPOSITORY_NAME=caqtdm
-PACKAGE_VERSION=4.6.1
 REPOSITORY=https://github.com/caqtdm/$REPOSITORY_NAME.git
-# BRANCH_OR_TAG=V${PACKAGE_VERSION}
+# BRANCH_OR_TAG=V${CAQTDM_VERSION}
 BRANCH_OR_TAG=Development
+
+# Package version: env CAQTDM_VERSION wins, else qtdefs.pri, else 1.0.0
+if [ -z "${CAQTDM_VERSION}" ]; then
+  CAQTDM_VERSION=$(sed -n 's/^[[:space:]]*CAQTDM_VERSION[[:space:]]*=[[:space:]]*[Vv]\{0,1\}\([0-9][0-9.]*\).*/\1/p' ../../../qtdefs.pri 2>/dev/null | head -n 1)
+fi
+if [ -z "${CAQTDM_VERSION}" ]; then
+  echo "WARNING: could not determine caQtDM version, falling back to 1.0.0"
+  CAQTDM_VERSION=1.0.0
+fi
+PACKAGE_VERSION=${CAQTDM_VERSION}
+echo "PACKAGE_VERSION=${PACKAGE_VERSION}"
  
 if [ "$1" == "--help" ]; then
   echo "" 
@@ -59,8 +69,8 @@ else
 fi
 fi
 
-if [ ! -d "~/rpmbuild/SOURCES/" ]; then
-   mkdir -p "~/rpmbuild/SOURCES/"
+if [ ! -d "$HOME/rpmbuild/SOURCES/" ]; then
+   mkdir -p "$HOME/rpmbuild/SOURCES/"
 fi
 
 : "${EPICS_BASE_TARGET:=/usr/local/epics/base-7.0.9}"
@@ -70,5 +80,8 @@ export CAQTDM_NORPATH=1
 cp caqtdm-${PACKAGE_VERSION}.tar.gz  ~/rpmbuild/SOURCES/
 
 cp *patch* ~/rpmbuild/SOURCES/ || true
+
+# Keep the spec version in sync with the resolved package version
+sed -i "s/^Version:.*/Version: ${PACKAGE_VERSION}/" ./caqtdm.spec
 
 rpmbuild -ba caqtdm.spec

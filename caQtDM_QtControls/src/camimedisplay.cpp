@@ -43,12 +43,19 @@ void caMimeDisplay::Callback_Clicked(int indx)
     QStringList Urls = getFiles().split(";");
 
     if(indx <  Urls.count()) {
+        QString urlStr = Urls.at(indx);
         QUrl url(Urls.at(indx));
 
         qCDebug(caMimeDisplayLog) << "call mime" << url.toString();
 
         // file contains things like http:// or file:// or ...
-        if(Urls.at(indx).contains("://")) {
+        if(urlStr.contains("://")) {
+#ifdef WEB
+            if (m_isVNC) {
+                emit triggerURLWeb(urlStr);
+                return;
+            }
+#endif
             // test if local file exists
             if (url.toString().contains(QLatin1String("file://"), Qt::CaseInsensitive)) {
                 QString filePath = url.toLocalFile();
@@ -71,7 +78,15 @@ void caMimeDisplay::Callback_Clicked(int indx)
 
             // must be a local file we have to search its location (application path, CAQTDM_DISPLAY_PATH, CAQTDM_MIME_PATH
         } else {
-            QString fileName = Urls.at(indx);
+#ifdef WEB
+            if (m_isVNC) {
+                if (!urlStr.startsWith(":"))
+                urlStr = "file://" + urlStr;
+                emit triggerURLWeb(urlStr);
+                return;
+            }
+#endif
+            QString fileName = urlStr;
             qCDebug(caMimeDisplayLog) << fileName;
             // find from application path
             QFile filePath(fileName);
@@ -125,4 +140,8 @@ bool caMimeDisplay::eventFilter(QObject *obj, QEvent *event)
     return QObject::eventFilter(obj, event);
 }
 
-
+#ifdef WEB
+void caMimeDisplay::setVNCEnabled(bool isVNC) {
+    m_isVNC = isVNC;
+}
+#endif

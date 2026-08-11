@@ -81,6 +81,8 @@ class Caqtdm < Formula
 
      system "install_name_tool", "-change", "libcaQtDM_Lib.dylib", "@rpath/libcaQtDM_Lib.dylib", "#{plugins}/libdemo_plugin.dylib"
 
+     system "install_name_tool", "-change", "libcaQtDM_Lib.dylib", "@rpath/libcaQtDM_Lib.dylib", "#{plugins}/libinternal_plugin.dylib"
+
      system "install_name_tool", "-change", "libcaQtDM_Lib.dylib", "@rpath/libcaQtDM_Lib.dylib", "#{plugins}/libenvironment_plugin.dylib"
      system "install_name_tool", "-change", "libqtcontrols.dylib", "@rpath/libqtcontrols.dylib", "#{plugins}/libenvironment_plugin.dylib"
 

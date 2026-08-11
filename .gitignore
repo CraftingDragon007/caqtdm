@@ -33,6 +33,7 @@ qrc_*.cpp
 *.OBJ
 *.PDB
 *.o
+*.so
 *.apk
 
 # Android Signing

@@ -5,6 +5,7 @@
 
 #define SHARED_MEMORY_LIST_KEY "caQtDM_HmiSharedConfigList_SharedMem_%1"
 #define MAX_SHARED_MEMORY_SIZE 1024 * 1024 // 1 MB
+#define MIN_SERIALIZED_ITEM_SIZE 32
 
 HmiSharedConfigListManager::HmiSharedConfigListManager(QObject *parent)
     : QObject{parent},
@@ -60,76 +61,137 @@ HmiSharedConfigListManager& HmiSharedConfigListManager::instance() {
     return manager;
 }
 
-QList<QSharedPointer<caHMIConfigTransferItem>> HmiSharedConfigListManager::readList() {
-    QList<QSharedPointer<caHMIConfigTransferItem>> list;
-    QByteArray rawDataFromSharedMemory;
+QByteArray HmiSharedConfigListManager::readRawDataLocked() {
+    QByteArray rawData;
+    quint32 dataSize = 0;
 
-    if (this_sharedMemory.lock()) {
-        quint32 dataSize = 0;
-        if (this_sharedMemory.constData() && static_cast<size_t>(this_sharedMemory.size()) >= sizeof(quint32)) {
-            memcpy(&dataSize, this_sharedMemory.constData(), sizeof(quint32));
-        } else {
-            qCWarning(caHMILog) << "Shared memory is empty or too small to read data size.";
-            this_sharedMemory.unlock();
-            return list;
-        }
-
-        if (dataSize > 0 && (sizeof(quint32) + dataSize) <= static_cast<size_t>(this_sharedMemory.size())) {
-            const char* dataPtr = static_cast<const char*>(this_sharedMemory.constData()) + sizeof(quint32);
-            rawDataFromSharedMemory = QByteArray(dataPtr, static_cast<int>(dataSize)); // Copy actual data
-        } else if (dataSize == 0) {
-            qCDebug(caHMILog) << "Shared memory contains an empty list.";
-        } else {
-            qCWarning(caHMILog) << "Invalid data size detected in shared memory or shared memory too small. Data size:" << dataSize << "Shared memory size:" << this_sharedMemory.size();
-        }
-        this_sharedMemory.unlock();
+    if (this_sharedMemory.constData() && static_cast<size_t>(this_sharedMemory.size()) >= sizeof(quint32)) {
+        memcpy(&dataSize, this_sharedMemory.constData(), sizeof(quint32));
     } else {
-        qCCritical(caHMILog) << "Failed to lock shared memory for reading:" << this_sharedMemory.errorString();
+        qCWarning(caHMILog) << "Shared memory is empty or too small to read data size.";
+        return rawData;
     }
 
-    if (!rawDataFromSharedMemory.isEmpty()) {
-        QDataStream stream(&rawDataFromSharedMemory, QIODevice::ReadOnly);
-        quint32 count = 0;
-        stream >> count;
+    if (dataSize > 0 && (sizeof(quint32) + dataSize) <= static_cast<size_t>(this_sharedMemory.size())) {
+        const char* dataPtr = static_cast<const char*>(this_sharedMemory.constData()) + sizeof(quint32);
+        rawData = QByteArray(dataPtr, static_cast<int>(dataSize)); // Copy actual data
+    } else if (dataSize == 0) {
+        qCDebug(caHMILog) << "Shared memory contains an empty list.";
+    } else {
+        qCWarning(caHMILog) << "Invalid data size detected in shared memory or shared memory too small. Data size:" << dataSize << "Shared memory size:" << this_sharedMemory.size();
+    }
+    return rawData;
+}
 
-        for (quint32 i = 0; i < count; ++i) {
-            QSharedPointer<caHMIConfigTransferItem> config = QSharedPointer<caHMIConfigTransferItem>::create();
-            stream >> *config.data();
-            list.append(config);
+bool HmiSharedConfigListManager::writeRawDataLocked(const QByteArray &serializedData) {
+    quint32 dataSize = static_cast<quint32>(serializedData.size());
+    quint32 totalRequiredSize = sizeof(quint32) + dataSize;
+
+    if (totalRequiredSize > static_cast<quint32>(this_sharedMemory.size())) {
+        qCCritical(caHMILog) << "New list is too large to fit in shared memory."
+                    << "Required:" << totalRequiredSize << "Available:" << this_sharedMemory.size();
+        return false;
+    }
+
+    char* memPtr = static_cast<char*>(this_sharedMemory.data());
+    quint32 invalidSize = 0;
+    memcpy(memPtr, &invalidSize, sizeof(quint32));
+    memcpy(memPtr + sizeof(quint32), serializedData.constData(), dataSize);
+    memcpy(memPtr, &dataSize, sizeof(quint32));
+    qCDebug(caHMILog) << "List successfully written to shared memory. Size:" << dataSize << "bytes.";
+    return true;
+}
+
+QList<QSharedPointer<caHMIConfigTransferItem>> HmiSharedConfigListManager::deserializeList(const QByteArray &rawData) {
+    QList<QSharedPointer<caHMIConfigTransferItem>> list;
+    if (rawData.isEmpty()) {
+        return list;
+    }
+
+    QDataStream stream(rawData);
+    quint32 count = 0;
+    stream >> count;
+
+    if (count > static_cast<quint32>(rawData.size()) / MIN_SERIALIZED_ITEM_SIZE) {
+        qCWarning(caHMILog) << "Implausible item count" << count << "in shared memory list ("
+                            << rawData.size() << "bytes), discarding list.";
+        return list;
+    }
+
+    for (quint32 i = 0; i < count; ++i) {
+        QSharedPointer<caHMIConfigTransferItem> config = QSharedPointer<caHMIConfigTransferItem>::create();
+        stream >> *config.data();
+        if (stream.status() != QDataStream::Ok) {
+            qCWarning(caHMILog) << "Corrupted list data in shared memory (item" << i + 1 << "of"
+                                << count << "), discarding list.";
+            list.clear();
+            return list;
         }
+        list.append(config);
     }
     return list;
 }
 
-bool HmiSharedConfigListManager::writeList(const QList<QSharedPointer<caHMIConfigTransferItem>> &newList) {
+QByteArray HmiSharedConfigListManager::serializeList(const QList<QSharedPointer<caHMIConfigTransferItem>> &list) {
     QByteArray serializedData;
     QDataStream stream(&serializedData, QIODevice::WriteOnly);
 
-    stream << static_cast<quint32>(newList.size());
+    stream << static_cast<quint32>(list.size());
 
-    foreach(QSharedPointer<caHMIConfigTransferItem> item, newList) {
+    foreach(QSharedPointer<caHMIConfigTransferItem> item, list) {
         stream << *item;
     }
+    return serializedData;
+}
 
-    quint32 dataSize = static_cast<quint32>(serializedData.size());
-    quint32 totalRequiredSize = sizeof(quint32) + dataSize;
-
-    if (totalRequiredSize > MAX_SHARED_MEMORY_SIZE) {
-        qCCritical(caHMILog) << "New list is too large to fit in shared memory."
-                    << "Required:" << totalRequiredSize << "Available:" << MAX_SHARED_MEMORY_SIZE;
-        return false;
-    }
+QList<QSharedPointer<caHMIConfigTransferItem>> HmiSharedConfigListManager::readList() {
+    QByteArray rawDataFromSharedMemory;
 
     if (this_sharedMemory.lock()) {
-        memcpy(this_sharedMemory.data(), &dataSize, sizeof(quint32));
-        memcpy(static_cast<char*>(this_sharedMemory.data()) + sizeof(quint32), serializedData.constData(), dataSize);
+        rawDataFromSharedMemory = readRawDataLocked();
         this_sharedMemory.unlock();
-        qCDebug(caHMILog) << "List successfully written to shared memory. Size:" << dataSize << "bytes.";
-        emit dataChanged();
-        // Note: This signal is only emitted within the current process.
+    } else {
+        qCCritical(caHMILog) << "Failed to lock shared memory for reading:" << this_sharedMemory.errorString();
+        return QList<QSharedPointer<caHMIConfigTransferItem>>();
+    }
+
+    return deserializeList(rawDataFromSharedMemory);
+}
+
+bool HmiSharedConfigListManager::writeList(const QList<QSharedPointer<caHMIConfigTransferItem>> &newList) {
+    QByteArray serializedData = serializeList(newList);
+
+    bool ok = false;
+    if (this_sharedMemory.lock()) {
+        ok = writeRawDataLocked(serializedData);
+        this_sharedMemory.unlock();
     } else {
         qCCritical(caHMILog) << "Failed to lock shared memory for writing:" << this_sharedMemory.errorString();
         return false;
     }
-    return true;
+
+    if (ok) {
+        emit dataChanged();
+        // Note: This signal is only emitted within the current process.
+    }
+    return ok;
+}
+
+bool HmiSharedConfigListManager::updateList(const std::function<void(QList<QSharedPointer<caHMIConfigTransferItem>>&)> &mutator) {
+    if (!this_sharedMemory.lock()) {
+        qCCritical(caHMILog) << "Failed to lock shared memory for update:" << this_sharedMemory.errorString();
+        return false;
+    }
+
+    QList<QSharedPointer<caHMIConfigTransferItem>> list = deserializeList(readRawDataLocked());
+    mutator(list);
+    bool ok = writeRawDataLocked(serializeList(list));
+
+    this_sharedMemory.unlock();
+
+    if (ok) {
+        emit dataChanged();
+        // Note: This signal is only emitted within the current process.
+    }
+    return ok;
 }

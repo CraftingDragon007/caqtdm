@@ -75,6 +75,8 @@ class CAQTDM_LIBSHARED_EXPORT limitsDialog : public QWidget
      void cancelClicked();
      void applyClicked();
      void indexChanged(int);
+     void intDigitsChanged(int);
+     void decDigitsChanged(int);
 
  protected:
      virtual void closeEvent(QCloseEvent *event);

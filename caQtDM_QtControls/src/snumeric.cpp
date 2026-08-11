@@ -19,8 +19,10 @@
  *
  *  Author:
  *    Anton Mezger
+ *    Yannick Wernle
  *  Contact details:
  *    anton.mezger@psi.ch
+ *    yannick.wernle@psi.ch
  */
 
 #include "snumeric.h"
@@ -38,33 +40,42 @@
 #include <QTimer>
 #include <QtDebug>
 #include <QApplication>
+#include <cmath>
+#include <limits>
 
 #define MIN_FONT_SIZE 3
+#define NUMERIC_ROUNDING_WARN_DIGITS 15
+/* long long storage limit: 10^19 - 1 does not fit any more */
+#define MAX_NUMERIC_DIGITS ((int) SNumeric::MaxTotalDigits)
 
-#if (_MSC_VER == 1600)
-extern int round (double x);
-#endif
+/* exact integer power of ten, n in [0, MAX_NUMERIC_DIGITS] */
+static long long pow10ll(int n)
+{
+    long long r = 1;
+    for (int i = 0; i < n; i++) r *= 10;
+    return r;
+}
 
 Q_LOGGING_CATEGORY(sNumericLog, "caqtdm.widgets.snumeric")
 
 SNumeric::SNumeric(QWidget *parent, int id, int dd) : QFrame(parent), FloatDelegate()
 {
     lastLabelOnTab = lastLabel = -1;
-    intDig = id;
-    decDig = dd;
-    digits = id + dd;
+    intDig = qBound(1, id, MAX_NUMERIC_DIGITS);
+    decDig = qBound(0, dd, MAX_NUMERIC_DIGITS - intDig);
+    orig_intDig = intDig;
+    orig_decDig = decDig;
+    digits = intDig + decDig;
     data = 0;
     csValue = 0.0;
-    minVal = (int) -pow(10.0, digits) + 1;
-    maxVal = (int) pow(10.0, digits) - 1;
-#ifdef _MSC_VER
-    d_minAsDouble = (double) round(minVal);
-    d_maxAsDouble = (double) round(maxVal);
-#else
-    d_minAsDouble = (double) roundl(minVal);
-    d_maxAsDouble = (double) roundl(maxVal);
-#endif
+    thisFixedFormat = false;
+    maxVal = pow10ll(digits) - 1;
+    minVal = -maxVal;
+    d_minAsDouble = (double) minVal;
+    d_maxAsDouble = (double) maxVal;
 
+    QColor cText = this->palette().color(QPalette::Text);
+    roundingColor = QColor(180 - cText.red(), 180 - cText.green(), 180 - cText.blue(), 255);
     bup = NULL;
     bdown = NULL;
     box = NULL;
@@ -126,6 +137,9 @@ void SNumeric::setDigitsFontScaleEnabled(bool en)
 
 void SNumeric::clearContainers()
 {
+    /* both are deleted below, avoid dangling pointers */
+    signLabel = Q_NULLPTR;
+    pointLabel = Q_NULLPTR;
     if (box) {
         labels.clear();
         QString pattern="layoutmember*";
@@ -152,15 +166,15 @@ void SNumeric::init()
     LeftClickWithModifiersEater *lCWME = findChild<LeftClickWithModifiersEater *>("leftClickWithModifiersEater");
     setFocusPolicy(Qt::StrongFocus);
 
-    box = new QGridLayout(this);
-    SETMARGIN_QT456(box,1);
-    SETSPACING_QT456(box,0);
+        if(box == NULL) box = new QGridLayout(this);
+        if(bup == NULL) bup = new QButtonGroup(this);
+        if(bdown == NULL) bdown = new QButtonGroup(this);
+        SETMARGIN_QT456(box,1);
+        SETSPACING_QT456(box,0);
 
-    box->setRowStretch(0,1);
-    //box->setRowStretch(1,1);
-    //box->setRowStretch(2,1);
-    bup = new QButtonGroup(this);
-    bdown = new QButtonGroup(this);
+        box->setRowStretch(0,1);
+        //box->setRowStretch(1,1);
+        //box->setRowStretch(2,1);
 
     for (int i = 0; i < digits; i++) {
         QLabel *l;
@@ -203,12 +217,21 @@ void SNumeric::init()
     QPushButton *temp = new QPushButton(this);
     temp->setObjectName(QString("layoutmember") + QString().setNum(0));
     temp->installEventFilter(lCWME);
-
+#ifndef MOBILE
+    temp->setAutoRepeat(true);
+    temp->setAutoRepeatInterval(200);
+    temp->setAutoRepeatDelay(500);
+#endif
     bup->addButton(temp);
 
     QPushButton *temp2 = new QPushButton(this);
     temp2->setObjectName(QString("layoutmember") + QString().setNum(0));
     temp2->installEventFilter(lCWME);
+#ifndef MOBILE
+    temp2->setAutoRepeat(true);
+    temp2->setAutoRepeatInterval(200);
+    temp2->setAutoRepeatDelay(500);
+#endif
     bdown->addButton(temp2);
 
 
@@ -226,11 +249,14 @@ void SNumeric::init()
 
     connect(bup, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(upData(QAbstractButton*)));
     connect(bdown, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(downData(QAbstractButton*)));
+
+    /* delayed resize for the freshly built layout */
+    scheduleValueUpdated();
 }
 
 void SNumeric::setValue(double v)
 {
-    long long temp = (long long) round(v * pow(10.0, decDig));
+    long long temp = transformNumberSpace(v, decDig);
     if ((temp >= minVal) && (temp <= maxVal))
     {
         bool valChanged = data != temp;
@@ -240,81 +266,259 @@ void SNumeric::setValue(double v)
          */
         showData();
         if (valChanged)
-            emit valueChanged(temp*pow(10.0, -decDig));
+            emit valueChanged(transformNumberSpace(temp, -decDig));
     }
 }
 
-// written from CS
+bool SNumeric::canEdit(){
+    /* the channel value must fit the available digit positions; the decimal
+     * places only count when they can actually be traded for integer ones */
+    if (!std::isfinite(csValue)) return false;
+    const bool canShift = thisAutoDigitShift && !thisFixedFormat;
+    const int intCapacity = canShift ? digits : intDig;
+    if (fabs(csValue) >= (double) pow10ll(intCapacity)) {
+        qCDebug(sNumericLog) << "canEdit=false:" << csValue << "does not fit" << intCapacity << "integer digits";
+        return false;
+    }
+    return true;
+}
+
+void SNumeric::suppressUserInput(){
+    suppressInput = true;
+    /* an empty stylesheet/tooltip is a valid state to return to, so the flag
+     * decides, not the emptiness of the backup */
+    if (!haveBackup) {
+        backupStylesheet = this->styleSheet();
+        backupToolTip = this->toolTip();
+        haveBackup = true;
+    }
+    for(int i = 0; i < digits && i < labels.length(); i++){
+        labels[i]->setText("*");
+        labels[i]->setStyleSheet("QLabel {color:red;}");
+    }
+    if (signLabel) signLabel->setText("");
+
+    this->setStyleSheet("* {color: red;}");
+    this->setToolTip("input broke widget: awaiting processable input");
+    update();
+}
+
+void SNumeric::restoreUserInput(){
+    suppressInput = false;
+    if (haveBackup) {
+        setStyleSheet(backupStylesheet);
+        setToolTip(backupToolTip);
+        backupStylesheet = "";
+        backupToolTip = "";
+        haveBackup = false;
+    }
+    for (int i = 0; i < digits && i < labels.length(); i++) {
+        labels[i]->setStyleSheet("");
+    }
+}
+
+/* after a layout or format change: enter, refresh or leave the suppression state */
+void SNumeric::updateSuppressionState(){
+    if (!canEdit()) {
+        suppressUserInput(); /* also re-stars freshly rebuilt labels */
+        return;
+    }
+    if (suppressInput) {
+        restoreUserInput();
+        /* the last channel value becomes displayable again */
+        const long long capacity = pow10ll(digits) - 1;
+        data = qBound(-capacity, transformNumberSpace(csValue, decDig), capacity);
+        showData();
+    }
+}
+
+/* resolve the displayed digits from the configured baseline and the channel
+ * value: trade decimal digits for integer digits when the magnitude needs them */
+void SNumeric::updateDigitLayout(){
+    if (thisFixedFormat) return; /* frozen: keep the displayed layout */
+    if (!thisAutoDigitShift) {
+        /* shifting is opt-in: without it the displayed layout is the baseline */
+        applyDigitLayout(orig_intDig, orig_decDig);
+        return;
+    }
+    int newIntDig = orig_intDig;
+    if (std::isfinite(csValue)) {
+        /* integer digits needed by the magnitude */
+        double mag = fabs(csValue);
+        int needed = 1;
+        while (mag >= 10.0 && needed < MAX_NUMERIC_DIGITS) {
+            mag /= 10.0;
+            needed++;
+        }
+        newIntDig = qBound(orig_intDig, needed, orig_intDig + orig_decDig);
+    }
+    applyDigitLayout(newIntDig, orig_intDig + orig_decDig - newIntDig);
+}
+
+/* rebuild the digit layout, rescaling the stored value to the new scale */
+bool SNumeric::applyDigitLayout(int newIntDig, int newDecDig){
+    if (newIntDig == intDig && newDecDig == decDig) return false;
+    qCDebug(sNumericLog) << "applyDigitLayout:" << objectName() << "intDig" << intDig << "->" << newIntDig
+                         << "decDig" << decDig << "->" << newDecDig;
+    /* rescale to the new scale, rounding half away from zero */
+    if (newDecDig > decDig) {
+        data = data * pow10ll(newDecDig - decDig);
+    } else if (newDecDig < decDig) {
+        const long long divisor = pow10ll(decDig - newDecDig);
+        const long long half = divisor / 2;
+        data = (data >= 0) ? (data + half) / divisor : (data - half) / divisor;
+    }
+    clearContainers();
+    intDig = newIntDig;
+    decDig = newDecDig;
+    digits = intDig + decDig;
+    /* a shrunk layout voids a stale digit selection */
+    if (lastLabel >= digits) lastLabel = -1;
+    if (lastLabelOnTab >= digits) lastLabelOnTab = -1;
+    /* re-clamp the limits to the new scale */
+    setMinimum(d_minAsDouble);
+    setMaximum(d_maxAsDouble);
+    init();
+    return true;
+}
+
 void SNumeric::silentSetValue(double v)
 {
     csValue = v;
-    long long temp = (long long) round(v * pow(10.0, decDig));
-    data = temp;
+
+    if (!canEdit()) {
+        if (!suppressInput) suppressUserInput();
+        return;
+    }
+
+    /* value is processable (again): restore the normal display */
+    if (suppressInput) restoreUserInput();
+
+    updateDigitLayout(); /* may rebuild the digit layout */
+
+    /* channel values bypass the limits but not the display capacity */
+    const long long capacity = pow10ll(digits) - 1;
+    data = qBound(-capacity, transformNumberSpace(v, decDig), capacity);
     showData();
 }
 
 void SNumeric::setMaximum(double v)
 {
-    if (v >= d_minAsDouble)
-    {
+    if (v >= d_minAsDouble) {
         d_maxAsDouble = v;
-        maxVal = (long long) round(v* (long)pow(10.0, decDig));
+        /* clamped to the display capacity */
+        maxVal = qMin(transformNumberSpace(v, decDig), pow10ll(digits) - 1);
     }
+}
+
+long long SNumeric::transformNumberSpace(double value, int dig){
+    /* correctly rounded double -> fixed point conversion via the decimal text
+     * representation; unrepresentable values saturate to the long long range */
+    if (dig < 0) dig = 0;
+    if (!std::isfinite(value)) {
+        return (value < 0.0) ? std::numeric_limits<long long>::min()
+                             : std::numeric_limits<long long>::max();
+    }
+    QByteArray s = QByteArray::number(value, 'f', dig);
+    const bool neg = s.startsWith('-');
+    if (neg) s.remove(0, 1);
+    const int dot = s.indexOf('.');
+    const QByteArray intPart = (dot < 0) ? s : s.left(dot);
+    const QByteArray fracPart = (dot < 0) ? QByteArray() : s.mid(dot + 1);
+    if (intPart.size() + fracPart.size() > MAX_NUMERIC_DIGITS) {
+        return neg ? std::numeric_limits<long long>::min()
+                   : std::numeric_limits<long long>::max();
+    }
+    long long mag = intPart.toLongLong() * pow10ll(fracPart.size());
+    if (!fracPart.isEmpty()) mag += fracPart.toLongLong();
+    return neg ? -mag : mag;
+}
+
+double SNumeric::transformNumberSpace(long long value, int dig){
+    /* dividing by the exact power of ten gives the correctly rounded double */
+    if (dig < 0) return (double) value / (double) pow10ll(-dig);
+    return (double) value * (double) pow10ll(dig);
+}
+
+double SNumeric::value() const
+{
+    /* dividing by the exact power of ten gives the correctly rounded double */
+    return (double) data / (double) pow10ll(decDig);
 }
 
 void SNumeric::setMinimum(double v)
 {
-    if (v <= d_maxAsDouble)
-    {
+    if (v <= d_maxAsDouble) {
         d_minAsDouble = v;
-        minVal = (long long) round(v* (long)pow(10.0, decDig));
+        /* clamped to the display capacity */
+        minVal = qMax(transformNumberSpace(v, decDig), -(pow10ll(digits) - 1));
     }
+}
+
+void SNumeric::setDigits(int i, int d)
+{
+    /* caQtDM_Lib computes width-prec-1, which can be 0, so clamp up to 1;
+     * integer digits win the budget, the magnitude has to stay displayable */
+    i = qBound(1, i, MAX_NUMERIC_DIGITS);
+    d = qBound(0, d, MAX_NUMERIC_DIGITS - i);
+    if (i == orig_intDig && d == orig_decDig) return;
+    qCDebug(sNumericLog) << "setDigits" << objectName() << i << d;
+    orig_intDig = i;
+    orig_decDig = d;
+    /* under fixed format the new baseline is applied directly */
+    if (thisFixedFormat) applyDigitLayout(orig_intDig, orig_decDig);
+    else updateDigitLayout();
+    updateSuppressionState();
 }
 
 void SNumeric::setIntDigits(int i)
 {
-    if (i < 1) return;
-    clearContainers();
-    intDig = i;
-    digits = intDig + decDig;
-    init();
+    setDigits(i, orig_decDig);
 }
 
 void SNumeric::setDecDigits(int d)
 {
-    if (d < 0) return;
-    clearContainers();
-    data = (long long) (data * pow(10.0, d - decDig));
-    maxVal = (long long) (maxVal * pow(10.0, d - decDig));
-    minVal = (long long) (minVal * pow(10.0, d - decDig));
-    decDig = d;
-    digits = intDig + decDig;
-    /* when changing decimal digits, minimum and maximum need to be recalculated, to avoid
-     * round issues. So, recalculating maximum and minimum is required  to obtain precision
-     */
-    setMinimum(d_minAsDouble);
-    setMaximum(d_maxAsDouble);
-    init();
+    setDigits(orig_intDig, d);
+}
+
+void SNumeric::setAutoDigitShift(bool f)
+{
+    if (thisAutoDigitShift == f) return;
+    qCDebug(sNumericLog) << "setAutoDigitShift" << objectName() << f;
+    thisAutoDigitShift = f;
+    /* true resolves the layout against the value, false returns to the baseline */
+    updateDigitLayout();
+    updateSuppressionState();
+}
+
+void SNumeric::setFixedFormat(bool f)
+{
+    if (thisFixedFormat == f) return;
+    qCDebug(sNumericLog) << "setFixedFormat" << objectName() << f;
+    thisFixedFormat = f;
+    /* true freezes the displayed layout, false resolves it again */
+    if (!f) updateDigitLayout();
+    updateSuppressionState();
 }
 
 void SNumeric::upData(QAbstractButton* b)
 {
     Q_UNUSED(b);
-    if(lastLabel > -1) upDataIndex(lastLabel);
+    if(!suppressInput){
+        if(lastLabel > -1) upDataIndex(lastLabel);
+    }
 }
 
 void SNumeric::upDataIndex(int id)
 {
     if(!_AccessW) return;
-    if(id == -1) return;
-    double datad = (double) data;
-    double power =  pow(10.0, digits-id-1);
-    datad = datad + power;
-    if (datad <= (double) maxVal) {
-        data = (long long) datad;
-        power = pow(10.0, -decDig);
-        datad = datad * power;
-        emit valueChanged(datad);
+    if(id < 0 || id >= digits) return;
+    /* pure long long arithmetic, exact also for |data| > 2^53 */
+    const long long power = pow10ll(digits - id - 1);
+    const long long datad = data + power;
+    if (datad <= maxVal) {
+        data = datad;
+        emit valueChanged(transformNumberSpace(data, -decDig));
         showData();
     }
     if (text != NULL) text->hide();
@@ -323,21 +527,21 @@ void SNumeric::upDataIndex(int id)
 void SNumeric::downData(QAbstractButton* b)
 {
     Q_UNUSED(b);
-    if(lastLabel > -1) downDataIndex(lastLabel);
+    if(!suppressInput){
+        if(lastLabel > -1) downDataIndex(lastLabel);
+    }
 }
 
 void SNumeric::downDataIndex(int id)
 {
     if(!_AccessW) return;
-    if(id == -1) return;
-    double datad = (double) data;
-    double power =  pow(10.0, digits-id-1);
-    datad = datad - power;
-    if (datad >= (double) minVal) {
-        data = (long long) datad;
-        power = pow(10.0, -decDig);
-        datad = datad * power;
-        emit valueChanged(datad);
+    if(id < 0 || id >= digits) return;
+    /* pure long long arithmetic, exact also for |data| > 2^53 */
+    const long long power = pow10ll(digits - id - 1);
+    const long long datad = data - power;
+    if (datad >= minVal) {
+        data = datad;
+        emit valueChanged(transformNumberSpace(data, -decDig));
         showData();
     }
     if (text != NULL) text->hide();
@@ -345,39 +549,66 @@ void SNumeric::downDataIndex(int id)
 
 void SNumeric::showData()
 {
-    int thisDigit, prvDigit;
-    bool suppress = true;
-    long long temp = data;
-    double num = 0;
-    if (data < 0)
-        signLabel->setText(QString("-"));
-    else
-        signLabel->setText(QString("+"));
+    if (suppressInput) return;
 
-    for (int i = 0; i < digits; i++)
-    {
-        double power =  pow(10.0, digits-i-1);
-        double numd = (double) temp / power;
-        if(numd >=0)
-            num = floor(numd);
-        else
-            num = ceil(numd);
-        numd = num * power;
-        temp = temp - (long long) numd;
+    if (signLabel) signLabel->setText(data < 0 ? QString("-") : QString("+"));
 
-        thisDigit = abs((int) num);
-        if(i>0 && prvDigit == 0 && suppress) labels[i-1]->setText(" ");
-        labels[i]->setText(QString().setNum(abs((int) num)));
-        prvDigit = thisDigit;
-        if(thisDigit != 0) suppress = false;
-        if(i >= intDig-1)  suppress = false;
-
+    /* integer digit decomposition, exact also for |data| > 2^53 */
+    long long mag = (data < 0) ? -data : data;
+    for (int i = digits - 1; i >= 0; i--) {
+        if (i < labels.length()) labels[i]->setText(QString::number((int) (mag % 10)));
+        mag /= 10;
     }
+    /* blank leading zeros, the last integer digit always stays */
+    for (int i = 0; i < intDig - 1 && i < labels.length(); i++) {
+        if (labels[i]->text() != " " && labels[i]->text() != "0") break;
+        labels[i]->setText(" ");
+    }
+
+    triggerRoundColorUpdate();
+}
+
+void SNumeric::triggerRoundColorUpdate(){
+    /* from 0: the first digit can never carry the rounding color, but it can
+     * carry the selection border, which has to be maintained here as well */
+    for(int i = 0; i < digits ; i++){
+        updateRoundColors(i);
+    }
+}
+
+void SNumeric::updateRoundColors(int i) {
+    if (suppressInput) return;
+    if (i < 0 || i >= labels.length()) return;
+
+    /* count the shown digits (sign, point and blanks do not count) */
+    int shownDigits = 0;
+    for (int k = 0; k < digits && k < labels.length(); k++) {
+        if (labels[k]->text() != " ") shownDigits++;
+    }
+
+    const int digitsToColorFromEnd = shownDigits - NUMERIC_ROUNDING_WARN_DIGITS;
+    QString style;
+    if (digitsToColorFromEnd > 0 && i >= digits - digitsToColorFromEnd) {
+        style = "QLabel {color:" + roundingColor.name() + ";}";
+    }
+    /* the border marks the selected digit and acts as the user's cursor: it
+     * shares the stylesheet with the rounding color and must survive a value
+     * change, so both are composed here instead of overwriting each other */
+    style = getStylesheetUpdate(style, i != lastLabel);
+    if (labels[i]->styleSheet() != style) labels[i]->setStyleSheet(style);
+}
+
+/* coalesce: at most one delayed resize in flight */
+void SNumeric::scheduleValueUpdated()
+{
+    if (resizePending) return;
+    resizePending = true;
     QTimer::singleShot(1000, this, SLOT(valueUpdated()));
 }
 
 void SNumeric::valueUpdated()
 {
+    resizePending = false;
     QResizeEvent *re = new QResizeEvent(size(), size());
     resizeEvent(re);
     delete re;
@@ -392,15 +623,24 @@ bool SNumeric::eventFilter(QObject *obj, QEvent *event)
             QApplication::restoreOverrideCursor();
         }
     } else if(event->type() == QEvent::Leave) {
+        /* Enter sets the override cursor unconditionally, so it has to be
+         * released unconditionally too - otherwise it stays for the whole
+         * application while the input is suppressed */
+        QApplication::restoreOverrideCursor();
+        /* the digit selection is the mouse cursor of this widget: dropping it
+         * on leave must happen even while the input is suppressed, otherwise
+         * the border reappears on recovery with the mouse long gone */
         lastLabelOnTab = lastLabel;
         lastLabel = -1;
-        long long temp = (long long) round(csValue * pow(10.0, decDig));
-        data = temp;
-        showData();
-        QApplication::restoreOverrideCursor();
-        valueUpdated();
-        updateGeometry();
-    } else if (event->type() == QEvent::MouseButtonPress) {
+        if(!suppressInput) {
+            /* fall back to the last channel value */
+            const long long capacity = pow10ll(digits) - 1;
+            data = qBound(-capacity, transformNumberSpace(csValue, decDig), capacity);
+            showData();
+            valueUpdated();
+            updateGeometry();
+        }
+    } else if (event->type() == QEvent::MouseButtonPress && !suppressInput) {
         QMouseEvent *ev = (QMouseEvent *) event;
         for (int i = 0; i < digits; i++) {
             QRect widgetRect = labels[i]->geometry();
@@ -411,12 +651,13 @@ bool SNumeric::eventFilter(QObject *obj, QEvent *event)
             }
         }
 
-    // this prevents a parent scrollbar to react to the up/down keys
+    // this prevents a parent scrollbar to react to the up/down keys; the step
+    // itself happens on release, so holding a key does not ramp the channel
     } else if (event->type() == QEvent::KeyPress) {
          QKeyEvent *ev = (QKeyEvent*) event;
-         if(ev->key() ==Qt::Key_Down || ev->key() ==Qt::Key_Up) return true;
+         if(ev->key() == Qt::Key_Down || ev->key() == Qt::Key_Up) return true;
 
-    } else if(event->type() == QEvent::KeyRelease)   {
+    } else if(event->type() == QEvent::KeyRelease && !suppressInput)   {
         QKeyEvent *ev = (QKeyEvent *) event;
         if(ev->key() == Qt::Key_Escape) if (text != NULL) text->hide();
         if(ev->key() == Qt::Key_Up) upDataIndex(lastLabel);
@@ -426,17 +667,16 @@ bool SNumeric::eventFilter(QObject *obj, QEvent *event)
             if(lastLabel < 0) lastLabel = 0;
             valueUpdated();
         }
-        if(ev->key() == Qt::Key_Right) {
+        if(ev->key() == Qt::Key_Right && !suppressInput) {
             lastLabel++;
             if(lastLabel > (digits-1)) lastLabel = digits-1;
             valueUpdated();
         }
         // move cursor with tab focus
-        if(ev->key() == Qt::Key_Tab) {
-            QCursor *cur = new QCursor;
+        if(ev->key() == Qt::Key_Tab && !suppressInput) {
             QPoint p = QWidget::mapToGlobal(QPoint(this->width()/2, this->height()/2));
             lastLabel = lastLabelOnTab;
-            cur->setPos( p.x(), p.y());
+            QCursor::setPos(p.x(), p.y());
             setFocus();
             valueUpdated();
         }
@@ -502,12 +742,13 @@ void SNumeric::resizeEvent(QResizeEvent *e)
         int i=0;
 
         // put a border around selected digit
-        for(int j=0; j< digits; j++) {
-            labels[j]->setStyleSheet("");
+        for(int j=0; j< digits && j < labels.length(); j++) {
+            labels[j]->setStyleSheet(getStylesheetUpdate(labels[j]->styleSheet(), true));
         }
-        if(lastLabel != -1)
-            labels[lastLabel]->setStyleSheet("border: 2px solid red;");
-
+        // bounds check: a digit layout change can leave a stale selection
+        if(lastLabel >= 0 && lastLabel < labels.length()){
+            labels[lastLabel]->setStyleSheet(getStylesheetUpdate(labels[lastLabel]->styleSheet(), false));
+        }
 
         foreach (QAbstractButton* but, bup->buttons()) {
             temp = qobject_cast<QPushButton *>(but);
@@ -546,7 +787,7 @@ void SNumeric::resizeEvent(QResizeEvent *e)
     QFont signFont("Monospace");  // + and - should have same size
     QFont labelFont;
     ESimpleLabel *l1 = findChild<ESimpleLabel *>();
-    labelFont = l1->font();
+    if(l1 != NULL) labelFont = l1->font();
     if(d_fontScaleEnabled && intDig > 0)
     {
         // this can not work correctly when resizing continously, characters will grow
@@ -574,6 +815,17 @@ void SNumeric::resizeEvent(QResizeEvent *e)
     QWidget::resizeEvent(e);
 }
 
+QString SNumeric::getStylesheetUpdate(QString styleSheet, bool resetBorder){
+    QString borderStyle = "border: 2px solid red;";
+    if (styleSheet.length() > 0) {
+        if (resetBorder) {
+            styleSheet = styleSheet.replace(borderStyle, "");
+        } else {
+            if(styleSheet.contains("}")) styleSheet = styleSheet.replace("}", (borderStyle +" }"));
+        }
+    }else if(!resetBorder) styleSheet = borderStyle;
+    return styleSheet;
+}
 
 void  SNumeric::formatButton(QPushButton *button) {
     button->setText("");
@@ -604,6 +856,6 @@ void SNumeric::setDisabled(bool b)
 
 void SNumeric::showEvent(QShowEvent *e)
 {
-    QTimer::singleShot(1000, this, SLOT(valueUpdated()));
+    scheduleValueUpdated();
     QWidget::showEvent(e);
 }

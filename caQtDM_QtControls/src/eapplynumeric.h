@@ -137,6 +137,17 @@ public:
         double minimum() const { return data->minimum(); }
 
 	/**
+	 * fixed format: disables the automatic digit shifting of the numeric widget
+	 */
+        void setFixedFormat(bool f){ data->setFixedFormat(f); }
+        void setAutoDigitShift(bool f){ data->setAutoDigitShift(f); }
+        bool getAutoDigitShift() const { return data->getAutoDigitShift(); }
+
+        bool getFixedFormat() const { return data->getFixedFormat(); }
+
+        void writeAccessW(bool access){ data->writeAccessW(access); }
+
+	/**
 	 * sets number of integer digits to be displayed
 	 * @param i	number of digits
 	 */
@@ -157,6 +168,7 @@ public:
 	 * @return d	number of digits
 	 */
     int decDigits() const { return data->decDigits(); }
+    void setDigits(int i, int d){ data->setDigits(i, d); }
 	
 	/**
 	 * sets text displayed in the button

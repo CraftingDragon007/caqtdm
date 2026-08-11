@@ -87,9 +87,8 @@ void caSpinbox::setColors(QColor bg, QColor fg, bool init)
         }
         if(!init) {
             // force resize for repainting
-            QResizeEvent *re = new QResizeEvent(size(), size());
-            resizeEvent(re);
-            delete re;
+            QResizeEvent re(size(), size());
+            resizeEvent(&re);
             return;
         }
     }
@@ -103,14 +102,16 @@ void caSpinbox::setColors(QColor bg, QColor fg, bool init)
         oldForeColor = fg;
         oldBackColor = bg;
         // force resize for repainting
-        QResizeEvent *re = new QResizeEvent(size(), size());
-        resizeEvent(re);
-        delete re;
+        QResizeEvent re(size(), size());
+        resizeEvent(&re);
     }
 }
 
 void caSpinbox::setConnectedColors(bool connected)
 {
+    /* the disconnected state is re-sent on every update cycle: filter it */
+    if(!connected && !oldConnected) return;
+    oldConnected = connected;
     if(!connected) {
        setColors(QColor(Qt::white), QColor(Qt::white), true);
     } else {
@@ -144,14 +145,12 @@ void caSpinbox::setAlarmColors(short status)
 }
 
 void caSpinbox::paintEvent(QPaintEvent *event) {
-    QPen	pen;
-    QPainter p(this);
-    Q_UNUSED(event);
+    SNumeric::paintEvent(event);
+
     if(hasFocus()) {
-      //pen.setColor(palette().color(QPalette::Foreground));
-      pen.setColor(Qt::red);
-      p.setPen(pen);
-      p.drawRect(0,0,rect().width()-1, rect().height()-1);
+        QPainter p(this);
+        p.setPen(QPen(Qt::red));
+        p.drawRect(0,0,rect().width()-1, rect().height()-1);
     }
 }
 

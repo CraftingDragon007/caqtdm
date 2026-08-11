@@ -25,6 +25,8 @@
 
 #include <QtGui>
 #include "limitsDialog.h"
+/* total digit budget of the numeric widgets */
+#define PREC_LIMIT_NUMERIC ENumeric::MaxTotalDigits
 
 int limitsDialog::extractPrecisionFromFormat(const QString &fmt)
 {
@@ -177,7 +179,8 @@ limitsDialog::limitsDialog(QWidget *w, MutexKnobData *data, const QString &title
     buttonBox->addButton(button, QDialogButtonBox::ApplyRole );
 
     if(className.contains("caNumeric") || className.contains("caApplyNumeric") || className.contains("caSpinbox")) {
-         Layout->addWidget(buttonBox, 5, 0, 1, -1);
+        precisionLineEdit->setMaximum(PREC_LIMIT_NUMERIC);
+        Layout->addWidget(buttonBox, 5, 0, 1, -1);
     }
     else if(className.contains("caSlider"))
     {
@@ -337,8 +340,9 @@ limitsDialog::limitsDialog(QWidget *w, MutexKnobData *data, const QString &title
         row++;
         QLabel *integerLabel = new QLabel("integer digits");
         integerLineEdit = new QSpinBox();
+        /* 0 stays selectable as before; the widget setter ignores it */
         integerLineEdit->setMinimum(0);
-        integerLineEdit->setMaximum(7);
+        integerLineEdit->setMaximum(PREC_LIMIT_NUMERIC);
         integerLineEdit->setSingleStep(1);
         Layout->addWidget(integerLabel, row, 2);
         Layout->addWidget(integerLineEdit, row, 3);
@@ -347,11 +351,17 @@ limitsDialog::limitsDialog(QWidget *w, MutexKnobData *data, const QString &title
         QLabel *decimalLabel = new QLabel("decimal digits");
         decimalLineEdit = new QSpinBox();
         decimalLineEdit->setMinimum(0);
-        decimalLineEdit->setMaximum(5);
+        decimalLineEdit->setMaximum(PREC_LIMIT_NUMERIC);
         decimalLineEdit->setSingleStep(1);
         Layout->addWidget(decimalLabel, row+1, 2);
         Layout->addWidget(decimalLineEdit, row+1, 3);
         decimalLineEdit->setValue(decDigits);
+
+        /* int + dec digits share the total digit budget of the widget */
+        integerLineEdit->setMaximum(PREC_LIMIT_NUMERIC - decimalLineEdit->value());
+        decimalLineEdit->setMaximum(PREC_LIMIT_NUMERIC - integerLineEdit->value());
+        connect(integerLineEdit, SIGNAL(valueChanged(int)), this, SLOT(intDigitsChanged(int)));
+        connect(decimalLineEdit, SIGNAL(valueChanged(int)), this, SLOT(decDigitsChanged(int)));
 
         QLabel *formatLabel = new QLabel("Fixed format ");
         formatComboBox = new QComboBox();
@@ -425,6 +435,16 @@ void limitsDialog::indexChanged(int) {
         decimalLineEdit->setDisabled(true);
         precisionLineEdit->setDisabled(false);
     }
+}
+
+void limitsDialog::intDigitsChanged(int v)
+{
+    decimalLineEdit->setMaximum(PREC_LIMIT_NUMERIC - v);
+}
+
+void limitsDialog::decDigitsChanged(int v)
+{
+    integerLineEdit->setMaximum(PREC_LIMIT_NUMERIC - v);
 }
 
 void limitsDialog::cancelClicked()
@@ -639,6 +659,8 @@ void limitsDialog::applyClicked()
 
         // ************* we have a caNumeric, caApplyNumeric or caSpinbox
     } else if(className.contains("caNumeric") || className.contains("caApplyNumeric")  || className.contains("caSpinbox")) {
+        if(prec > PREC_LIMIT_NUMERIC) prec = PREC_LIMIT_NUMERIC;
+        // qDebug() << "set precision to:"  << prec;
 
         if(limitsMode == Channel) {
             setLimitsModeChannel(thisWidget);
@@ -654,8 +676,8 @@ void limitsDialog::applyClicked()
 
         if(fixedFormat) {
            setFixedFormatA(thisWidget, true);
-           setDecDigitsA(thisWidget, decDigits);
-           setIntDigitsA(thisWidget, intDigits);
+           // both counts at once, they share the total digit budget
+           setDigitsA(thisWidget, intDigits, decDigits);
         } else {
            setFixedFormatA(thisWidget, false);
            if(precisionMode == Channel) {

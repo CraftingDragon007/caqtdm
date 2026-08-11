@@ -19,8 +19,10 @@
  *
  *  Author:
  *    Anton Mezger
+ *    Yannick Wernle
  *  Contact details:
  *    anton.mezger@psi.ch
+ *    yannick.wernle@psi.ch
  */
 
 #include "enumeric.h"
@@ -38,41 +40,47 @@
 #include <QTimer>
 #include <QtDebug>
 #include <QApplication>
+#include <cmath>
+#include <limits>
 
 #define MIN_FONT_SIZE 5
+/* shown significant digits beyond this threshold get the rounding color,
+ * same value as in snumeric.cpp (caSpinbox); not to be confused with
+ * MaxTotalDigits, which is the storage capacity */
+#define NUMERIC_ROUNDING_WARN_DIGITS 15
+/* qint64 storage limit: 10^19 - 1 does not fit any more */
+#define MAX_NUMERIC_DIGITS ((int) ENumeric::MaxTotalDigits)
 
-#if (_MSC_VER == 1600)
-int round (double x) {
-    int i = (int) x;
-    if (x >= 0.0) {
-        return ((x-i) >= 0.5) ? (i + 1) : (i);
-    } else {
-        return (-x+i >= 0.5) ? (i - 1) : (i);
-    }
+/* exact integer power of ten, n in [0, MAX_NUMERIC_DIGITS] */
+static qint64 pow10ll(int n)
+{
+    qint64 r = 1;
+    for (int i = 0; i < n; i++) r *= 10;
+    return r;
 }
-#endif
 
 Q_LOGGING_CATEGORY(eNumericLog, "caqtdm.widgets.enumeric")
 
 ENumeric::ENumeric(QWidget *parent, int id, int dd) : QFrame(parent), FloatDelegate()
 {
     lastLabelOnTab = lastLabel = -1;
-    intDig = id;
-    decDig = dd;
-    digits = id + dd;
+    intDig = qBound(1, id, MAX_NUMERIC_DIGITS);
+    decDig = qBound(0, dd, MAX_NUMERIC_DIGITS - intDig);
+    orig_intDig = intDig;
+    orig_decDig = decDig;
+    digits = intDig + decDig;
+    qCDebug(eNumericLog) << "ENumeric::ENumeric" << digits;
+
     data = 0;
     csValue = 0.0;
-    minVal = (int) -pow(10.0, digits) + 1;
-    maxVal = (int) pow(10.0, digits) - 1;
+    thisFixedFormat = false;
+    maxVal = pow10ll(digits) - 1;
+    minVal = -maxVal;
+    d_minAsDouble = (double) minVal;
+    d_maxAsDouble = (double) maxVal;
 
-#ifdef _MSC_VER
-    d_minAsDouble = (double) round(minVal);
-    d_maxAsDouble = (double) round(maxVal);
-#else
-    d_minAsDouble = (double) roundl(minVal);
-    d_maxAsDouble = (double) roundl(maxVal);
-#endif
-
+    QColor cText = this->palette().color(QPalette::Text);
+    roundingColor = QColor(180 - cText.red(), 180 - cText.green(), 180 - cText.blue(), 255);
     bup = NULL;
     bdown = NULL;
     box = NULL;
@@ -83,7 +91,6 @@ ENumeric::ENumeric(QWidget *parent, int id, int dd) : QFrame(parent), FloatDeleg
     setMinimumWidth(5*digits);
     LeftClickWithModifiersEater *leftClickWithModifiersEater = new LeftClickWithModifiersEater(this);
     leftClickWithModifiersEater->setObjectName("leftClickWithModifiersEater");
-
     init();
     installEventFilter(this);
     writeAccessW(true);
@@ -134,6 +141,10 @@ void ENumeric::setDigitsFontScaleEnabled(bool en)
 
 void ENumeric::clearContainers()
 {
+    qCDebug(eNumericLog) << "clearContainers";
+    /* both are deleted below, avoid dangling pointers */
+    signLabel = Q_NULLPTR;
+    pointLabel = Q_NULLPTR;
     if (box) {
         labels.clear();
         QString pattern="layoutmember*";
@@ -157,17 +168,17 @@ void ENumeric::clearContainers()
 
 void ENumeric::init()
 {
+    qCDebug(eNumericLog) << "init";
     LeftClickWithModifiersEater *lCWME = findChild<LeftClickWithModifiersEater *>("leftClickWithModifiersEater");
     setFocusPolicy(Qt::StrongFocus);
-
-    box = new QGridLayout(this);
-    box->setSpacing(0);
-    SETMARGIN_QT456(box,1);
-    box->setRowStretch(0,1);
-    box->setRowStretch(1,1);
-    box->setRowStretch(2,1);
-    bup = new QButtonGroup(this);
-    bdown = new QButtonGroup(this);
+        if(box == NULL) box = new QGridLayout(this);
+        if(bup == NULL) bup = new QButtonGroup(this);
+        if(bdown == NULL) bdown = new QButtonGroup(this);
+        box->setSpacing(0);
+        SETMARGIN_QT456(box,1);
+        box->setRowStretch(0,1);
+        box->setRowStretch(1,1);
+        box->setRowStretch(2,1);
 
     for (int i = 0; i < digits; i++) {
         QLabel *l;
@@ -182,6 +193,7 @@ void ENumeric::init()
         temp->setObjectName(QString("layoutmember") + QString().setNum(i));
         temp->installEventFilter(lCWME);
 #ifndef MOBILE
+        /* one step per click: holding the button must not ramp a real channel */
         temp->setAutoRepeat(false);
         temp->setAutoRepeatInterval(200);
         temp->setAutoRepeatDelay(500);
@@ -202,6 +214,7 @@ void ENumeric::init()
         temp2->setObjectName(QString("layoutmember") + QString().setNum(i));
         temp2->installEventFilter(lCWME);
 #ifndef MOBILE
+        /* one step per click: holding the button must not ramp a real channel */
         temp2->setAutoRepeat(false);
         temp2->setAutoRepeatInterval(200);
         temp2->setAutoRepeatDelay(500);
@@ -237,27 +250,169 @@ void ENumeric::init()
 
     connect(bup, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(upData(QAbstractButton*)));
     connect(bdown, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(downData(QAbstractButton*)));
+
+    /* delayed resize for the freshly built layout */
+    scheduleValueUpdated();
 }
 
 void ENumeric::setValue(double v)
 {
-    long long temp = (long long) round(v * pow(10.0, decDig));
+    /* user driven value: out-of-range values are ignored */
+    qint64 temp = transformNumberSpace(v, decDig);
     if ((temp >= minVal) && (temp <= maxVal)) {
         bool valChanged = data != temp;
         data = temp;
-        /* call this before emitting value changed to be sure that the value is up to date
-         * in the labels of the TNumeric.
-         */
+        /* update the labels before emitting */
         showData();
-        if (valChanged) emit valueChanged(temp*pow(10.0, -decDig));
+        if (valChanged) emit valueChanged(transformNumberSpace(temp, -decDig));
     }
+}
+
+QString ENumeric::generate_valueString(){
+    QString valueString="";
+    if(signLabel && (signLabel->text() == "-")) valueString += signLabel->text();
+    for(int i = 0; i < digits; i++){
+        if(i == intDig) valueString += ".";
+        if (i<labels.length()){
+            QString txt = labels[i]->text();
+            if(txt != " ") valueString += txt;
+        }
+    }
+    return valueString;
+}
+
+
+
+
+bool ENumeric::canEdit(){
+    /* the channel value must fit the available digit positions; the decimal
+     * places only count when they can actually be traded for integer ones */
+    if (!std::isfinite(csValue)) return false;
+    const bool canShift = thisAutoDigitShift && !thisFixedFormat;
+    const int intCapacity = canShift ? digits : intDig;
+    if (fabs(csValue) >= (double) pow10ll(intCapacity)) {
+        qCDebug(eNumericLog) << "canEdit=false:" << csValue << "does not fit" << intCapacity << "integer digits";
+        return false;
+    }
+    return true;
+}
+
+void ENumeric::suppressUserInput(){
+    suppressInput = true;
+    /* an empty stylesheet/tooltip is a valid state to return to, so the flag
+     * decides, not the emptiness of the backup */
+    if (!haveBackup) {
+        backupStylesheet = this->styleSheet();
+        backupToolTip = this->toolTip();
+        haveBackup = true;
+    }
+    for(int i = 0; i < digits && i < labels.length(); i++){
+        labels[i]->setText("*");
+        labels[i]->setStyleSheet("QLabel {color:red;}");
+    }
+    if (signLabel) signLabel->setText("");
+
+    this->setStyleSheet("* {color: red;}");
+    this->setToolTip("input broke widget: awaiting processable input");
+    update();
+}
+
+void ENumeric::restoreUserInput(){
+    suppressInput = false;
+    if (haveBackup) {
+        setStyleSheet(backupStylesheet);
+        setToolTip(backupToolTip);
+        backupStylesheet = "";
+        backupToolTip = "";
+        haveBackup = false;
+    }
+    for (int i = 0; i < digits && i < labels.length(); i++) {
+        labels[i]->setStyleSheet("");
+    }
+}
+
+/* after a layout or format change: enter, refresh or leave the suppression state */
+void ENumeric::updateSuppressionState(){
+    if (!canEdit()) {
+        suppressUserInput(); /* also re-stars freshly rebuilt labels */
+        return;
+    }
+    if (suppressInput) {
+        restoreUserInput();
+        /* the last channel value becomes displayable again */
+        const qint64 capacity = pow10ll(digits) - 1;
+        data = qBound(-capacity, transformNumberSpace(csValue, decDig), capacity);
+        showData();
+    }
+}
+
+/* resolve the displayed digits from the configured baseline and the channel
+ * value: trade decimal digits for integer digits when the magnitude needs them */
+void ENumeric::updateDigitLayout(){
+    if (thisFixedFormat) return; /* frozen: keep the displayed layout */
+    if (!thisAutoDigitShift) {
+        /* shifting is opt-in: without it the displayed layout is the baseline */
+        applyDigitLayout(orig_intDig, orig_decDig);
+        return;
+    }
+    int newIntDig = orig_intDig;
+    if (std::isfinite(csValue)) {
+        /* integer digits needed by the magnitude */
+        double mag = fabs(csValue);
+        int needed = 1;
+        while (mag >= 10.0 && needed < MAX_NUMERIC_DIGITS) {
+            mag /= 10.0;
+            needed++;
+        }
+        newIntDig = qBound(orig_intDig, needed, orig_intDig + orig_decDig);
+    }
+    applyDigitLayout(newIntDig, orig_intDig + orig_decDig - newIntDig);
+}
+
+/* rebuild the digit layout, rescaling the stored value to the new scale */
+bool ENumeric::applyDigitLayout(int newIntDig, int newDecDig){
+    if (newIntDig == intDig && newDecDig == decDig) return false;
+    qCDebug(eNumericLog) << "applyDigitLayout:" << objectName() << "intDig" << intDig << "->" << newIntDig
+                         << "decDig" << decDig << "->" << newDecDig;
+    /* rescale to the new scale, rounding half away from zero */
+    if (newDecDig > decDig) {
+        data = data * pow10ll(newDecDig - decDig);
+    } else if (newDecDig < decDig) {
+        const qint64 divisor = pow10ll(decDig - newDecDig);
+        const qint64 half = divisor / 2;
+        data = (data >= 0) ? (data + half) / divisor : (data - half) / divisor;
+    }
+    clearContainers();
+    intDig = newIntDig;
+    decDig = newDecDig;
+    digits = intDig + decDig;
+    /* a shrunk layout voids a stale digit selection */
+    if (lastLabel >= digits) lastLabel = -1;
+    if (lastLabelOnTab >= digits) lastLabelOnTab = -1;
+    /* re-clamp the limits to the new scale */
+    setMinimum(d_minAsDouble);
+    setMaximum(d_maxAsDouble);
+    init();
+    return true;
 }
 
 void ENumeric::silentSetValue(double v)
 {
     csValue = v;
-    long long temp = (long long) round(v * pow(10.0, decDig));
-    data = temp;
+
+    if (!canEdit()) {
+        if (!suppressInput) suppressUserInput();
+        return;
+    }
+
+    /* value is processable (again): restore the normal display */
+    if (suppressInput) restoreUserInput();
+
+    updateDigitLayout(); /* may rebuild the digit layout */
+
+    /* channel values bypass the limits but not the display capacity */
+    const qint64 capacity = pow10ll(digits) - 1;
+    data = qBound(-capacity, transformNumberSpace(v, decDig), capacity);
     showData();
 }
 
@@ -265,7 +420,8 @@ void ENumeric::setMaximum(double v)
 {
     if (v >= d_minAsDouble) {
         d_maxAsDouble = v;
-        maxVal = (long long) round(v* (long)pow(10.0, decDig));
+        /* clamped to the display capacity */
+        maxVal = qMin(transformNumberSpace(v, decDig), pow10ll(digits) - 1);
     }
 }
 
@@ -273,77 +429,135 @@ void ENumeric::setMinimum(double v)
 {
     if (v <= d_maxAsDouble) {
         d_minAsDouble = v;
-        minVal = (long long) round(v* (long)pow(10.0, decDig));
+        /* clamped to the display capacity */
+        minVal = qMax(transformNumberSpace(v, decDig), -(pow10ll(digits) - 1));
     }
+}
+
+void ENumeric::setDigits(int i, int d)
+{
+    /* caQtDM_Lib computes width-prec-1, which can be 0, so clamp up to 1;
+     * integer digits win the budget, the magnitude has to stay displayable */
+    i = qBound(1, i, MAX_NUMERIC_DIGITS);
+    d = qBound(0, d, MAX_NUMERIC_DIGITS - i);
+    if (i == orig_intDig && d == orig_decDig) return;
+    qCDebug(eNumericLog) << "setDigits" << objectName() << i << d;
+    orig_intDig = i;
+    orig_decDig = d;
+    /* under fixed format the new baseline is applied directly */
+    if (thisFixedFormat) applyDigitLayout(orig_intDig, orig_decDig);
+    else updateDigitLayout();
+    updateSuppressionState();
 }
 
 void ENumeric::setIntDigits(int i)
 {
-    if (i < 1) return;
-    clearContainers();
-    intDig = i;
-    digits = intDig + decDig;
-    init();
+    setDigits(i, orig_decDig);
 }
 
 void ENumeric::setDecDigits(int d)
 {
-    if (d < 0) return;
-    clearContainers();
-    data = (long long) (data * pow(10.0, d - decDig));
-    maxVal = (long long) (maxVal * pow(10.0, d - decDig));
-    minVal = (long long) (minVal * pow(10.0, d - decDig));
-    decDig = d;
-    digits = intDig + decDig;
-    /* when changing decimal digits, minimum and maximum need to be recalculated, to avoid
-     * round issues. So, recalculating maximum and minimum is required  to obtain precision
-     */
-    setMinimum(d_minAsDouble);
-    setMaximum(d_maxAsDouble);
-    init();
+    setDigits(orig_intDig, d);
+}
+
+void ENumeric::setFixedFormat(bool f)
+{
+    if (thisFixedFormat == f) return;
+    qCDebug(eNumericLog) << "setFixedFormat" << objectName() << f;
+    thisFixedFormat = f;
+    /* true freezes the displayed layout, false resolves it again */
+    if (!f) updateDigitLayout();
+    updateSuppressionState();
+}
+
+void ENumeric::setAutoDigitShift(bool f)
+{
+    if (thisAutoDigitShift == f) return;
+    qCDebug(eNumericLog) << "setAutoDigitShift" << objectName() << f;
+    thisAutoDigitShift = f;
+    /* true resolves the layout against the value, false returns to the baseline */
+    updateDigitLayout();
+    updateSuppressionState();
 }
 
 void ENumeric::upData(QAbstractButton* b)
 {
-    int id = b->objectName().remove("layoutmember").toInt();
-    upDataIndex(id);
+    if(!suppressInput){
+        int id = b->objectName().remove("layoutmember").toInt();
+        upDataIndex(id);
+    }
 }
 
 void ENumeric::upDataIndex(int id)
 {
     if(!_AccessW) return;
-    if(id == -1) return;
-    double datad = (double) data;
-    double power =  pow(10.0, digits-id-1);
-    datad = datad + power;
-    if (datad <= (double) maxVal) {
-        data = (long long) datad;
-        power = pow(10.0, -decDig);
-        datad = datad * power;
-        emit valueChanged(datad);
+    if(id < 0 || id >= digits) return;
+    /* pure qint64 arithmetic, exact also for |data| > 2^53 */
+    const qint64 power = pow10ll(digits - id - 1);
+    const qint64 datad = data + power;
+    qCDebug(eNumericLog) << "upDataIndex:" << id << datad << maxVal << power;
+    if (datad <= maxVal) {
+        data = datad;
+        emit valueChanged(transformNumberSpace(data, -decDig));
         showData();
     }
     if (text != NULL) text->hide();
 }
 
+qint64 ENumeric::transformNumberSpace(double value, int dig){
+    /* correctly rounded double -> fixed point conversion via the decimal text
+     * representation; unrepresentable values saturate to the qint64 range */
+    if (dig < 0) dig = 0;
+    if (!std::isfinite(value)) {
+        return (value < 0.0) ? std::numeric_limits<qint64>::min()
+                             : std::numeric_limits<qint64>::max();
+    }
+    QByteArray s = QByteArray::number(value, 'f', dig);
+    const bool neg = s.startsWith('-');
+    if (neg) s.remove(0, 1);
+    const int dot = s.indexOf('.');
+    const QByteArray intPart = (dot < 0) ? s : s.left(dot);
+    const QByteArray fracPart = (dot < 0) ? QByteArray() : s.mid(dot + 1);
+    if (intPart.size() + fracPart.size() > MAX_NUMERIC_DIGITS) {
+        return neg ? std::numeric_limits<qint64>::min()
+                   : std::numeric_limits<qint64>::max();
+    }
+    qint64 mag = intPart.toLongLong() * pow10ll(fracPart.size());
+    if (!fracPart.isEmpty()) mag += fracPart.toLongLong();
+    return neg ? -mag : mag;
+}
+
+double ENumeric::transformNumberSpace(qint64 value, int dig){
+    /* dividing by the exact power of ten gives the correctly rounded double */
+    if (dig < 0) return (double) value / (double) pow10ll(-dig);
+    return (double) value * (double) pow10ll(dig);
+}
+
+double ENumeric::value() const
+{
+    /* dividing by the exact power of ten gives the correctly rounded double */
+    return (double) data / (double) pow10ll(decDig);
+}
+
 void ENumeric::downData(QAbstractButton* b)
 {
-    int id = b->objectName().remove("layoutmember").toInt();
-    downDataIndex(id);
+    if(!suppressInput){
+        int id = b->objectName().remove("layoutmember").toInt();
+        downDataIndex(id);
+    }
 }
 
 void ENumeric::downDataIndex(int id)
 {
     if(!_AccessW) return;
-    if(id == -1) return;
-    double datad = (double) data;
-    double power =  pow(10.0, digits-id-1);
-    datad = datad - power;
-    if (datad >= (double) minVal) {
-        data = (long long) datad;
-        power = pow(10.0, -decDig);
-        datad = datad * power;
-        emit valueChanged(datad);
+    if(id < 0 || id >= digits) return;
+    /* pure qint64 arithmetic, exact also for |data| > 2^53 */
+    const qint64 power = pow10ll(digits - id - 1);
+    const qint64 datad = data - power;
+    qCDebug(eNumericLog) << "downDataIndex:" << id << datad << minVal << power;
+    if (datad >= minVal) {
+        data = datad;
+        emit valueChanged(transformNumberSpace(data, -decDig));
         showData();
     }
     if (text != NULL) text->hide();
@@ -351,37 +565,60 @@ void ENumeric::downDataIndex(int id)
 
 void ENumeric::showData()
 {
-    int thisDigit, prvDigit;
-    bool suppress = true;
-    long long temp = data;
-    double num = 0;
-    if (data < 0)
-        signLabel->setText(QString("-"));
-    else
-        signLabel->setText(QString("+"));
+    if (suppressInput) return;
 
-    for (int i = 0; i < digits; i++) {
-        double power =  pow(10.0, digits-i-1);
-        double numd = (double) temp / power;
-        if(numd >=0)
-            num = floor(numd);
-        else
-            num = ceil(numd);
-        numd = num * power;
-        temp = temp - (long long) numd;
+    if (signLabel) signLabel->setText(data < 0 ? QString("-") : QString("+"));
 
-        thisDigit = abs((int) num);
-        if(i>0 && prvDigit == 0 && suppress) labels[i-1]->setText(" ");
-        labels[i]->setText(QString().setNum(abs((int) num)));
-        prvDigit = thisDigit;
-        if(thisDigit != 0) suppress = false;
-        if(i >= intDig-1)  suppress = false;
+    /* integer digit decomposition, exact also for |data| > 2^53 */
+    qint64 mag = (data < 0) ? -data : data;
+    for (int i = digits - 1; i >= 0; i--) {
+        if (i < labels.length()) labels[i]->setText(QString::number((int) (mag % 10)));
+        mag /= 10;
     }
+    /* blank leading zeros, the last integer digit always stays */
+    for (int i = 0; i < intDig - 1 && i < labels.length(); i++) {
+        if (labels[i]->text() != " " && labels[i]->text() != "0") break;
+        labels[i]->setText(" ");
+    }
+
+    triggerRoundColorUpdate();
+}
+
+void ENumeric::triggerRoundColorUpdate(){
+    for(int i = 1; i < digits ; i++){
+        updateRoundColors(i);
+    }
+}
+
+void ENumeric::updateRoundColors(int i) {
+    if (suppressInput) return;
+    if (i < 0 || i >= labels.length()) return;
+
+    /* count the shown digits (sign, point and blanks do not count) */
+    int shownDigits = 0;
+    for (int k = 0; k < digits && k < labels.length(); k++) {
+        if (labels[k]->text() != " ") shownDigits++;
+    }
+
+    const int digitsToColorFromEnd = shownDigits - NUMERIC_ROUNDING_WARN_DIGITS;
+    if (digitsToColorFromEnd > 0 && i >= digits - digitsToColorFromEnd) {
+        labels[i]->setStyleSheet("QLabel {color:" + roundingColor.name() + ";}");
+    } else if (!labels[i]->styleSheet().isEmpty()) {
+        labels[i]->setStyleSheet("");
+    }
+}
+
+/* coalesce: at most one delayed resize in flight */
+void ENumeric::scheduleValueUpdated()
+{
+    if (resizePending) return;
+    resizePending = true;
     QTimer::singleShot(1000, this, SLOT(valueUpdated()));
 }
 
 void ENumeric::valueUpdated()
 {
+    resizePending = false;
     QResizeEvent *re = new QResizeEvent(size(), size());
     resizeEvent(re);
     delete re;
@@ -400,22 +637,29 @@ void ENumeric::dataInput()
 
 void ENumeric::mouseDoubleClickEvent(QMouseEvent*)
 {
-    if (text == NULL) {
-        text = new QLineEdit(this);
-    }else{
+    if(!suppressInput){
+        if (text == NULL) {
+            qCDebug(eNumericLog) << "generate new QLineEdit";
+            text = new QLineEdit(this);
+            /* connect only once, otherwise the connections accumulate */
+            connect(text, SIGNAL(returnPressed()), this, SLOT(dataInput()));
+            connect(text, SIGNAL(editingFinished()), text, SLOT(hide()));
+        } else {
+            qCDebug(eNumericLog) << "reuse existing QLineEdit and raise it to front";
+        }
         text->raise();
         text->show();
+
+        QString valueString = generate_valueString();
+        text->setText(valueString);
+
+        text->setGeometry(QRect(box->cellRect(1, 0).topLeft(), box->cellRect(1, box->columnCount() - 1).bottomRight()));
+        text->setFont(signLabel->font());
+        text->setAlignment(Qt::AlignRight);
+        text->setMaxLength(digits+2);
+        text->setSelection(0, valueString.length());
+        text->setFocus();
     }
-    connect(text, SIGNAL(returnPressed()), this, SLOT(dataInput()));
-    connect(text, SIGNAL(editingFinished()), text, SLOT(hide()));
-
-    text->setGeometry(QRect(box->cellRect(1, 0).topLeft(), box->cellRect(1, box->columnCount() - 1).bottomRight()));
-    text->setFont(signLabel->font());
-    text->setAlignment(Qt::AlignRight);
-    text->setMaxLength(digits+2);
-    text->setText("");
-    text->setFocus();
-
 }
 
 bool ENumeric::eventFilter(QObject *obj, QEvent *event)
@@ -427,22 +671,26 @@ bool ENumeric::eventFilter(QObject *obj, QEvent *event)
             QApplication::restoreOverrideCursor();
         }
     } else if(event->type() == QEvent::Leave) {
-        QString ParentClassName = parent()->metaObject()->className();
-        if(ParentClassName.contains("caApplyNumeric")) {
-            qCDebug(eNumericLog) << "do nothing";
-        } else {
-            lastLabelOnTab = lastLabel;
-            lastLabel = -1;
-            long long temp = (long long) round(csValue * pow(10.0, decDig));
-            data = temp;
-            showData();
-            QApplication::restoreOverrideCursor();
-            valueUpdated();
-            updateGeometry();
+        QApplication::restoreOverrideCursor();
+        if(!suppressInput) {
+            QString ParentClassName = parent()->metaObject()->className();
+            if(ParentClassName.contains("caApplyNumeric")) {
+                qCDebug(eNumericLog) << "do nothing";
+            } else {
+                lastLabelOnTab = lastLabel;
+                lastLabel = -1;
+                /* fall back to the last channel value */
+                const qint64 capacity = pow10ll(digits) - 1;
+                data = qBound(-capacity, transformNumberSpace(csValue, decDig), capacity);
+                showData();
+
+                valueUpdated();
+                updateGeometry();
+            }
         }
     } else if(event->type() == QEvent::MouseButtonDblClick) {
         if(!_AccessW) return true;
-    } else if (event->type() == QEvent::MouseButtonPress) {
+    } else if (event->type() == QEvent::MouseButtonPress && !suppressInput) {
         QMouseEvent *ev = (QMouseEvent *) event;
         for (int i = 0; i < digits; i++) {
             QRect widgetRect = labels[i]->geometry();
@@ -452,12 +700,11 @@ bool ENumeric::eventFilter(QObject *obj, QEvent *event)
                 break;
             }
         }
-    // this prevents a parent scrollbar to react to the up/down keys
     } else if (event->type() == QEvent::KeyPress) {
          QKeyEvent *ev = (QKeyEvent*) event;
-         if(ev->key() ==Qt::Key_Down || ev->key() ==Qt::Key_Up) return true;
+         if(ev->key() == Qt::Key_Down || ev->key() == Qt::Key_Up) return true;
 
-    } else if(event->type() == QEvent::KeyRelease)    {
+    } else if(event->type() == QEvent::KeyRelease && !suppressInput)    {
         QKeyEvent *ev = (QKeyEvent *) event;
         if(ev->key() == Qt::Key_Escape) if (text != NULL) text->hide();
         if(ev->key() == Qt::Key_Up) upDataIndex(lastLabel);
@@ -467,17 +714,16 @@ bool ENumeric::eventFilter(QObject *obj, QEvent *event)
             if(lastLabel < 0) lastLabel = 0;
             valueUpdated();
         }
-        if(ev->key() == Qt::Key_Right) {
+        if(ev->key() == Qt::Key_Right && !suppressInput) {
             lastLabel++;
             if(lastLabel > (digits-1)) lastLabel = digits-1;
             valueUpdated();
         }
         // move cursor with tab focus
-        if(ev->key() == Qt::Key_Tab) {
-            QCursor *cur = new QCursor;
+        if(ev->key() == Qt::Key_Tab && !suppressInput) {
             QPoint p = QWidget::mapToGlobal(QPoint(this->width()/2, this->height()/2));
             lastLabel = lastLabelOnTab;
-            cur->setPos( p.x(), p.y());
+            QCursor::setPos(p.x(), p.y());
             setFocus();
             valueUpdated();
         }
@@ -606,7 +852,7 @@ void ENumeric::resizeEvent(QResizeEvent *e)
     QFont signFont("Monospace");  // + and - should have same size
     QFont labelFont;
     ESimpleLabel *l1 = findChild<ESimpleLabel *>();
-    labelFont = l1->font();
+    if(l1 != NULL)labelFont = l1->font();
     if(d_fontScaleEnabled && intDig > 0)
     {
         // this can not work correctly when resizing continously, characters will grow
@@ -674,6 +920,6 @@ void ENumeric::setDisabled(bool b)
 
 void ENumeric::showEvent(QShowEvent *e)
 {
-    QTimer::singleShot(1000, this, SLOT(valueUpdated()));
+    scheduleValueUpdated();
     QWidget::showEvent(e);
 }

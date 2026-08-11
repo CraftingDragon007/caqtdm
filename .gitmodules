@@ -1,0 +1,3 @@
+[submodule "caQtDM_Web/user/noVNC"]
+	path = caQtDM_Web/user/noVNC
+	url = https://github.com/novnc/noVNC.git

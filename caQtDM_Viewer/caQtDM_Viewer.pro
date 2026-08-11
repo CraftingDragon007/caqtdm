@@ -11,6 +11,9 @@ contains(QT_VER_MAJ, 4) {
 }
 contains(QT_VER_MAJ, 5) {
    QT     += core gui svg uitools network opengl
+   web {
+      QT += websockets
+   }
    modbus{
       QT += serialbus
       DEFINES += CAQTDM_MODBUS
@@ -39,6 +42,9 @@ contains(QT_VER_MAJ, 6) {
         QT += 3dcore 3drender 3dinput 3dlogic 3dextras
     }
     CONFIG += qt warn_on thread widgets
+    web {
+       QT += websockets
+    }
     modbus{
        QT += serialbus
        DEFINES += CAQTDM_MODBUS
@@ -89,13 +95,15 @@ SOURCES +=\
     fileopenwindow.cpp \
     messagebox.cpp \
     configDialog.cpp \
-    pipereader.cpp
+    pipereader.cpp \
+    signalhandler.cpp
 
 HEADERS  +=  \
     messagebox.h \
     fileopenwindow.h \
     configDialog.h \
     pipereader.h \
+    signalhandler.h \
     src/loggingcategories.h
 
 CAQTDM_NO_CUSTOM_LOGHANDLER = $$(CAQTDM_NO_CUSTOM_LOGHANDLER)

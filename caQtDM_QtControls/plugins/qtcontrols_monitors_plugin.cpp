@@ -62,6 +62,9 @@ void CustomWidgetInterface_Monitors::initialize(QDesignerFormEditorInterface *fo
         Q_ASSERT(manager != 0);
         manager->registerExtensions(new PVTaskMenuFactory(manager),
                                     Q_TYPEID(QDesignerTaskMenuExtension));
+        // for edition of the generic soft pv options
+        manager->registerExtensions(new GenSoftPVTaskMenuFactory(manager),
+                                    Q_TYPEID(QDesignerTaskMenuExtension));
 #else
     Q_UNUSED(formEditor);
 #endif
@@ -503,6 +506,30 @@ caCalcInterface::caCalcInterface(QObject* parent) : CustomWidgetInterface_Monito
     d_icon = qpixmap.scaled(70, 70, Qt::IgnoreAspectRatio, Qt::FastTransformation);
 }
 
+QWidget *genSoftPVInterface::createWidget(QWidget* parent)
+{
+    return new genSoftPV(parent);
+}
+
+genSoftPVInterface::genSoftPVInterface(QObject* parent) : CustomWidgetInterface_Monitors(parent)
+{
+    strng name[2], type[2] = {"", ""};
+    longtext text[2] = {"channel name for the internal plugin, referenced as internal://<variable>",
+                        "initial value: scalar, text or ';' separated list for waveforms"};
+
+    strcpy(name[0], "variable");
+    strcpy(type[0], "multiline");
+    strcpy(name[1], "value");
+    strcpy(type[1], "multiline");
+
+    d_domXml = XmlFunc("genSoftPV", "gensoftpv", 0, 0, 100, 20, name, type, text, 2);
+    d_toolTip = "[define generic soft process variable of any EPICS type for the internal plugin]";
+    d_name = "genSoftPV";
+    d_include = "genSoftPV";
+    QPixmap qpixmap = QPixmap(":pixmaps/genSoftPV.png");
+    d_icon = qpixmap.scaled(70, 70, Qt::IgnoreAspectRatio, Qt::FastTransformation);
+}
+
 QWidget *caWaterfallPlotInterface::createWidget(QWidget* parent)
 {
     return new caWaterfallPlot(parent);
@@ -622,6 +649,7 @@ CustomWidgetCollectionInterface_Monitors::CustomWidgetCollectionInterface_Monito
     d_plugins.append(new caBitnamesInterface(this));
     d_plugins.append(new caCameraInterface(this));
     d_plugins.append(new caCalcInterface(this));
+    d_plugins.append(new genSoftPVInterface(this));
     d_plugins.append(new caWaterfallPlotInterface(this));
     d_plugins.append(new caScan2DInterface(this));
     d_plugins.append(new caLineDrawInterface(this));

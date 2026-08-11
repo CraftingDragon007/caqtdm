@@ -25,11 +25,16 @@
 
 #include <QCoreApplication>
 #include <QTest>
+#include <clocale>
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 #include "tst_ca3dconfig.h"
 #include "tst_ca3dconfigdialog.h"
 #endif
+#include "tst_gensoftpv.h"
+#include "tst_canumeric.h"
+#include "tst_caspinbox.h"
+#include "tst_caapplynumeric.h"
 #include "tst_pvdialog.h"
 
 int main(int argc, char **argv)
@@ -40,6 +45,8 @@ int main(int argc, char **argv)
     QApplication app(argc, argv);
     QApplication::setOrganizationName("Paul Scherrer Institut");
     QApplication::setApplicationName("caQtDM-UnitTests-QtControls");
+    // to avoid failing tests because of a comma as decimal separator
+    setlocale(LC_NUMERIC, "C");
     int status = 0;
 
     {
@@ -64,6 +71,26 @@ int main(int argc, char **argv)
         status |= QTest::qExec(&tc, argc, argv);
     }
 #endif
+
+    {
+        TestGenSoftPV tc;
+        status |= QTest::qExec(&tc, argc, argv);
+    }
+
+    {
+        TestCaNumeric tc;
+        status |= QTest::qExec(&tc, argc, argv);
+    }
+
+    {
+        TestCaSpinbox tc;
+        status |= QTest::qExec(&tc, argc, argv);
+    }
+
+    {
+        TestCaApplyNumeric tc;
+        status |= QTest::qExec(&tc, argc, argv);
+    }
 
     return status;
 }

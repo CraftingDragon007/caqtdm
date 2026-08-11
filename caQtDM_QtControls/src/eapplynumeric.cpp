@@ -108,6 +108,8 @@ void EApplyNumeric::setFont(const QFont &f)
 
 void EApplyNumeric::applyValue()
 {
+  /* while suppressed the stored value is stale, do not write it */
+  if (data->inputSuppressed()) return;
   emit clicked(data->value());
 }
 

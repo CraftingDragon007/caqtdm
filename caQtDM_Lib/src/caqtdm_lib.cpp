@@ -39,6 +39,12 @@
 #include "hmisharedeventbus.h"
 #include "hmisharedconfiglistmanager.h"
 #endif
+
+#ifdef WEB
+#include "websocketserver.h"
+#include "webportpool.h"
+#include "weblaunchermanager.h"
+#endif
 #endif
 
 #include <QObject>
@@ -131,6 +137,9 @@
 
 #define POPUPDEFENITION "popup.ui"
 
+#ifdef WEB
+#define WEB_CARELATED_DISPLAY_ERROR_MSG "Unable to open this caRelatedDisplay, please check your caQtDM Web configuration."
+#endif
 
 // used for calculating visibility for several types of widgets
 #define ComputeVisibility(x, obj)  {  \
@@ -325,7 +334,10 @@ static bool fileListEntryResolves(const QString &fileName)
         fileNameUi.append(".ui");
     }
 
+    qCDebug(caRelatedDisplayLog) << "fileListEntryResolves: name=" << fileName << "len=" << fileName.size() << "uiVariant=" << fileNameUi;
+
     if (QFileInfo::exists(fileName) || QFileInfo::exists(fileNameUi)) {
+        qCDebug(caRelatedDisplayLog) << "fileListEntryResolves: matched directly (cwd)";
         return true;
     }
 
@@ -336,11 +348,14 @@ static bool fileListEntryResolves(const QString &fileName)
 #if defined(_WIN32) || defined(_WIN64)
         paths[i] = paths[i].replace("\"", "");
 #endif
-        if (QFileInfo::exists(paths[i] + "/" + fileName) || QFileInfo::exists(paths[i] + "/" + fileNameUi)) {
+        bool hit = QFileInfo::exists(paths[i] + "/" + fileName) || QFileInfo::exists(paths[i] + "/" + fileNameUi);
+        qCDebug(caRelatedDisplayLog) << "fileListEntryResolves: candidate[" << i << "]=" << QDir::toNativeSeparators(paths[i] + "/" + fileName) << "hit=" << hit;
+        if (hit) {
             return true;
         }
     }
 
+    qCDebug(caRelatedDisplayLog) << "fileListEntryResolves: NOT RESOLVED name=" << fileName;
     return false;
 }
 
@@ -376,6 +391,78 @@ bool fixFileListRelative(const QString &cainclude_path, QString *filelist, bool 
     if (affected) *filelist = files.join(";");
     return affected;
 }
+
+#ifdef WEB
+static QString webResolveDisplayPath(const QString &file)
+{
+    qCDebug(webRelatedDisplay) << "webResolveDisplayPath: input=" << file << "len=" << file.size()
+                               << "DISPLAY_PATH=" << (QString) qgetenv("CAQTDM_DISPLAY_PATH");
+
+    fileFunctions filefunction;
+    filefunction.checkFileAndDownload(file);
+
+    searchFile filecheck(file);
+    QString resolvedPath = filecheck.findFile();
+    bool entryResolves = fileListEntryResolves(file);
+    qCDebug(webRelatedDisplay) << "webResolveDisplayPath: findFile(input)=" << QDir::toNativeSeparators(resolvedPath)
+                               << "fileListEntryResolves=" << entryResolves;
+    if (!resolvedPath.isNull() || !entryResolves) {
+        qCDebug(webRelatedDisplay) << "webResolveDisplayPath: return(early)=" << QDir::toNativeSeparators(resolvedPath);
+        return resolvedPath;
+    }
+
+    QString fallback = file;
+    if (fallback.endsWith(".edl") || fallback.endsWith(".adl")) {
+        fallback.replace(".adl", ".ui").replace(".edl", ".ui");
+    } else if (!fallback.endsWith(".ui")) {
+        fallback.append(".ui");
+    }
+
+    if (fallback == file) {
+        qCDebug(webRelatedDisplay) << "webResolveDisplayPath: fallback==input, return=" << QDir::toNativeSeparators(resolvedPath);
+        return resolvedPath;
+    }
+
+    filefunction.checkFileAndDownload(fallback);
+    searchFile fallbackCheck(fallback);
+    QString fallbackResolved = fallbackCheck.findFile();
+    qCDebug(webRelatedDisplay) << "webResolveDisplayPath: fallback=" << fallback << "findFile(fallback)=" << QDir::toNativeSeparators(fallbackResolved);
+    return fallbackResolved;
+}
+
+static QString webOpenPathFromDisplayPath(const QString &path)
+{
+    QFileInfo pathInfo(path);
+    if (pathInfo.isRelative()) return path;
+
+    QString displayPath = (QString) qgetenv("CAQTDM_DISPLAY_PATH");
+    QStringList paths = displayPath.split(pathSeparator, SKIP_EMPTY_PARTS);
+    QString normalizedPath = QDir::cleanPath(path);
+    QString bestRelativePath;
+
+    for (int i=0; i < paths.count(); i++) {
+#if defined(_WIN32) || defined(_WIN64)
+        paths[i] = paths[i].replace("\"", "");
+#endif
+        QString basePath = QDir::cleanPath(paths[i]);
+        if (basePath.isEmpty()) continue;
+
+        QDir baseDir(basePath);
+        QString relativePath = baseDir.relativeFilePath(normalizedPath);
+        relativePath.replace('\\', '/');
+        QFileInfo relativeInfo(relativePath);
+        if (!relativeInfo.isAbsolute() && relativePath != ".." && !relativePath.startsWith("../") && fileListEntryResolves(relativePath)) {
+            if (bestRelativePath.isEmpty() || relativePath.length() < bestRelativePath.length()) {
+                bestRelativePath = relativePath;
+            }
+        }
+    }
+
+    if (!bestRelativePath.isEmpty()) return "./" + bestRelativePath;
+
+    return QFileInfo(path).fileName();
+}
+#endif
 
 Q_LOGGING_CATEGORY(caQtDMLibLog, "caqtdm.lib.lib")
 Q_LOGGING_CATEGORY(fileIOLog, "caqtdm.lib.fileio")
@@ -425,6 +512,9 @@ Q_LOGGING_CATEGORY(caTableLog, "caqtdm.widgets.catable")
 Q_LOGGING_CATEGORY(caWaveTableLog, "caqtdm.widgets.cawavetable")
 Q_LOGGING_CATEGORY(replaceMacroLog, "caqtdm.widgets.replacemacro")
 Q_LOGGING_CATEGORY(caScan2DLog, "caqtdm.widgets.scan2d")
+#ifdef WEB
+Q_LOGGING_CATEGORY(webRelatedDisplay, "caqtdm.web.relateddisplay")
+#endif
 #endif
 
 QList<QSharedPointer<caHMIConfigTransferItem>> CaQtDM_Lib::externalHmiConfigList;
@@ -432,6 +522,24 @@ QReadWriteLock CaQtDM_Lib::externalHmiConfigListLock;
 
 QList<caHMIConfigTransferItem*> CaQtDM_Lib::hmiConfigList;
 QReadWriteLock CaQtDM_Lib::hmiConfigListLock;
+
+#ifdef WEB
+QHash<QString, VncWebChildProcess*> CaQtDM_Lib::webChildProcesses;
+QReadWriteLock CaQtDM_Lib::webChildProcessesLock;
+
+quint16 CaQtDM_Lib::vncPortIndex = 1;
+quint16 CaQtDM_Lib::vncPort;
+quint16 CaQtDM_Lib::webPort;
+QString CaQtDM_Lib::webHost;
+bool CaQtDM_Lib::slaveServer;
+bool CaQtDM_Lib::vncServer;
+bool CaQtDM_Lib::noVncPlugin;
+bool CaQtDM_Lib::noVncReadonly;
+bool CaQtDM_Lib::interactionBasedTimeout;
+bool CaQtDM_Lib::webAllowInsecureCaShellCommands;
+uint CaQtDM_Lib::webTimeout;
+quint16 CaQtDM_Lib::webInstanceLimit;
+#endif
 
 /**
  * CaQtDM_Lib destructor
@@ -728,10 +836,18 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
     }
 
     if(nbIncludes > 0 && !thisFileFull.contains(POPUPDEFENITION)) {
-        splash = new SplashScreen(parent);
-        splash->setMaximum(nbIncludes);
-        splash->show();
-        splash->setProgress(0);
+#ifdef WEB
+        if (vncServer && WebSocketServer::instance().isInitialized()) {
+            WebSocketServer::instance().sendProgressInfo(0, nbIncludes);
+        } else {
+#endif
+            splash = new SplashScreen(parent);
+            splash->setMaximum(nbIncludes);
+            splash->show();
+            splash->setProgress(0);
+#ifdef WEB
+        }
+#endif
     }
 
     savedFile[0] = fi.baseName();
@@ -804,7 +920,7 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
 
     // due to crash in connection with the splash screen, changed
     // these instructions to the botton of this class
-    if(nbIncludes > 0 && !thisFileFull.contains(POPUPDEFENITION)) {
+    if(nbIncludes > 0 && !thisFileFull.contains(POPUPDEFENITION) && !vncServer) {
         Sleep::msleep(200);
         // this seems to causes the crash and is not really needed here?
         //splash->finish(this);
@@ -866,15 +982,17 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
     connect(ReloadAllWindowsAction, SIGNAL(triggered()), this, SLOT(Callback_reloadAllWindows()));
     this->addAction(ReloadAllWindowsAction);
 
-    // add a print action
-    QAction *PrintWindowAction = new QAction(this);
+    if (!vncServer) {
+        // add a print action
+        QAction *PrintWindowAction = new QAction(this);
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    PrintWindowAction->setShortcut(QApplication::translate("MainWindow", "Ctrl+P", 0, QApplication::UnicodeUTF8));
+        PrintWindowAction->setShortcut(QApplication::translate("MainWindow", "Ctrl+P", 0, QApplication::UnicodeUTF8));
 #else
-    PrintWindowAction->setShortcut(QApplication::translate("MainWindow", "Ctrl+P", Q_NULLPTR));
+        PrintWindowAction->setShortcut(QApplication::translate("MainWindow", "Ctrl+P", Q_NULLPTR));
 #endif
-    connect(PrintWindowAction, SIGNAL(triggered()), this, SLOT(Callback_printWindow()));
-    this->addAction(PrintWindowAction);
+        connect(PrintWindowAction, SIGNAL(triggered()), this, SLOT(Callback_printWindow()));
+        this->addAction(PrintWindowAction);
+    }
 
     // add a resize action
     QAction *ResizeUpAction = new QAction(this);
@@ -1345,6 +1463,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
     QString className(w1->metaObject()->className());
     if(!className.contains("ca") && !className.contains("QTextBrowser") && !className.contains("replaceMacro") &&
+            !className.contains("genSoftPV") &&
             !className.contains("QE") && !className.contains("QTabWidget")&& !className.contains("QGroupBox")) return;
 
     int nbMonitors = 0;
@@ -1358,7 +1477,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
     qCDebug(caQtDMLibLog) << w1->metaObject()->className() << w1->objectName();
 
-    if(className.contains("ca") || className.contains("QTextBrowser") || className.contains("replaceMacro") || className.contains("QTabWidget")|| className.contains("QGroupBox")) {
+    if(className.contains("ca") || className.contains("QTextBrowser") || className.contains("replaceMacro") || className.contains("genSoftPV") || className.contains("QTabWidget")|| className.contains("QGroupBox")) {
         PRINT(printf("\n%*c %s macro=<%s>", 15 * level, '+', qasc(w1->objectName()), qasc(macro)));
         map = createMap(macro);
         // insert special macro into map
@@ -1553,6 +1672,32 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
             calcWidget->setProperty("Taken", true);
         }
 
+        // generic soft pvs for the internal plugin, prioritized like the caCalc softs
+        else if(genSoftPV* softpvWidget = qobject_cast<genSoftPV *>(w1)) {
+            if(treatPrimary) {
+                w1->setProperty("Taken", true);
+
+                QString pv = softpvWidget->getVariable();
+                reaffectText(map, &pv, w1);
+                if(pv.isEmpty()) {
+                    postMessage(QtWarningMsg, (char*) qasc(tr("genSoftPV widget %1 has no variable name, ignored").arg(w1->objectName())));
+                    return;
+                }
+                softpvWidget->setVariable(pv);
+
+                w1->setProperty("ObjectType", caCalc_Widget);
+                QWidget *tabWidget = getTabParent(w1);
+                w1->setProperty("parentTab", QVariant::fromValue(tabWidget));
+
+                pv = "internal://" + pv;
+                addMonitor(myWidget, &kData, qasc(pv), w1, specData, map, &pv);
+
+                w1->setContextMenuPolicy(Qt::CustomContextMenu);
+                connect(w1, SIGNAL(customContextMenuRequested(const QPoint&)), this, SLOT(ShowContextMenu(const QPoint&)));
+                w1->setProperty("Connect", false);
+            }
+        }
+
         return;
     }
 /*
@@ -1686,8 +1831,11 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         if(reaffectText(map, &text, w1))  relatedWidget->setArgs(text);
 
         text = relatedWidget->getFiles();
+        qCDebug(caRelatedDisplayLog) << "create caRelatedDisplay files: cainclude_path=" << QDir::toNativeSeparators(cainclude_path) << "before=" << text;
         bool affected = reaffectText(map, &text, w1);
+        qCDebug(caRelatedDisplayLog) << "create caRelatedDisplay files: afterReaffect=" << text << "affected=" << affected;
         affected |= fixFileListRelative(cainclude_path, &text);
+        qCDebug(caRelatedDisplayLog) << "create caRelatedDisplay files: afterFixRelative=" << text << "affected=" << affected;
         if (affected) relatedWidget->setFiles(text);
 
         text = relatedWidget->getLabel();
@@ -1733,6 +1881,16 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
         qCDebug(caMimeDisplayLog) << "create caMimeDisplay";
         w1->setProperty("ObjectType", caMimeDisplay_Widget);
+
+#ifdef WEB
+        mimeWidget->setVNCEnabled(vncServer);
+
+        connect(mimeWidget, &caMimeDisplay::triggerURLWeb, this, [](QString url) {
+            if (WebSocketServer::instance().isInitialized()) {
+                WebSocketServer::instance().sendOpenURLRequest(url);
+            }
+        });
+#endif
 
         QString text;
         text= mimeWidget->getLabels();
@@ -1909,7 +2067,9 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
         // finish tooltip
         tooltip.append(ToolTipPostfix);
-        cameraWidget->setToolTip(tooltip);
+
+        if (!vncServer)
+            cameraWidget->setToolTip(tooltip);
 
         cameraWidget->setProperty("Taken", true);
 
@@ -3017,6 +3177,11 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         if(nbIncludes > 0 && !thisFileFull.contains(POPUPDEFENITION)) {
             for (int i = topIncludesWidgetList.count()-1; i >= 0; --i) {
                 if(w1 ==  topIncludesWidgetList.at(i)) {
+#ifdef WEB
+                    if (vncServer && WebSocketServer::instance().isInitialized()) {
+                        WebSocketServer::instance().sendProgressUpdate(splashCounter++);
+                    } else
+#endif
                     splash->setProgress(splashCounter++);
                     QApplication::processEvents();
                     break;
@@ -3293,7 +3458,8 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
         // finish tooltip
         tooltip.append(ToolTipPostfix);
-        cartesianplotWidget->setToolTip(tooltip);
+        if (!vncServer)
+            cartesianplotWidget->setToolTip(tooltip);
 
         // reaffect titles
         title = cartesianplotWidget->getTitlePlot();
@@ -3353,7 +3519,8 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
         // finish tooltip
         tooltip.append(ToolTipPostfix);
-        waterfallplotWidget->setToolTip(tooltip);
+        if (!vncServer)
+            waterfallplotWidget->setToolTip(tooltip);
 
         // insert dataindex list
         integerList.insert(0, nbMonitors);
@@ -3434,7 +3601,8 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
         // finish tooltip
         tooltip.append(ToolTipPostfix);
-        stripplotWidget->setToolTip(tooltip);
+        if (!vncServer)
+            stripplotWidget->setToolTip(tooltip);
 
         title = stripplotWidget->getTitlePlot();
         if(reaffectText(map, &title, w1)) stripplotWidget->setTitlePlot(title);
@@ -3614,7 +3782,8 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
         // finish tooltip
         tooltip.append(ToolTipPostfix);
-        scan2dWidget->setToolTip(tooltip);
+        if (!vncServer)
+            scan2dWidget->setToolTip(tooltip);
 
         integerList.insert(0, nbMonitors); /* set property into stripplotWidget */
         scan2dWidget->setProperty("MonitorList", integerList);
@@ -3706,6 +3875,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         transferItem->setCaptureRange(hmiConfigWidget->captureRange());
         transferItem->setUUID(hmiConfigWidget->uuid());
         transferItem->setPID(QCoreApplication::applicationPid());
+        transferItem->setTimestamp(QDateTime::currentMSecsSinceEpoch());
         transferItem->setWidgetCallback(hmiConfigWidget);
         transferItem->setParentWindowCallback(parentWindow);
         QWriteLocker locker(&hmiConfigListLock);
@@ -3719,10 +3889,9 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         }
 
         if (HmiSharedConfigListManager::instance().isInitialized()) {
-            QList<QSharedPointer<caHMIConfigTransferItem>> list = HmiSharedConfigListManager::instance().readList();
-            list.append(transferItem->clone());
-
-            HmiSharedConfigListManager::instance().writeList(list);
+            HmiSharedConfigListManager::instance().updateList([&](QList<QSharedPointer<caHMIConfigTransferItem>> &list) {
+                list.append(transferItem->clone());
+            });
         }
 
         connect(hmiConfigWidget, &QObject::destroyed, [transferItem](QObject *sender) {
@@ -3748,14 +3917,13 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
             }
 
             if (HmiSharedConfigListManager::instance().isInitialized()) {
-                QList<QSharedPointer<caHMIConfigTransferItem>> list = HmiSharedConfigListManager::instance().readList();
-                auto it = std::remove_if(list.begin(), list.end(),
-                                         [&](const QSharedPointer<caHMIConfigTransferItem>& item) {
-                                             return item->uuid() == uuid;
-                                         });
-                list.erase(it, list.end());
-
-                HmiSharedConfigListManager::instance().writeList(list);
+                HmiSharedConfigListManager::instance().updateList([&](QList<QSharedPointer<caHMIConfigTransferItem>> &list) {
+                    auto it = std::remove_if(list.begin(), list.end(),
+                                             [&](const QSharedPointer<caHMIConfigTransferItem>& item) {
+                                                 return item->uuid() == uuid;
+                                             });
+                    list.erase(it, list.end());
+                });
             }
         });
 
@@ -4181,6 +4349,7 @@ void CaQtDM_Lib::UndefinedMacrosWindow()
     int maxW = (w + count + macroTable->verticalHeader()->width() + macroTable->verticalScrollBar()->width());
     macroWindow->setMinimumWidth(maxW+25);
 
+    connect(this, &CaQtDM_Lib::Signal_Closing, macroWindow, &QDialog::close);
     if(!showMax) showNormal();
     else showMaximized();
     macroWindow->exec();
@@ -4231,16 +4400,16 @@ void CaQtDM_Lib::GlobalShortcutWindow() {
     qint64 threeSecondsAgo = QDateTime::currentDateTime().addSecs(-3).toMSecsSinceEpoch();
 #ifndef MOBILE
     if (HmiSharedConfigListManager::instance().isInitialized()) {
-        auto currentExternalItems = HmiSharedConfigListManager::instance().readList();
-        QMutableListIterator<QSharedPointer<caHMIConfigTransferItem>> iterator(currentExternalItems);
-        while (iterator.hasNext()) {
-            auto item = iterator.next();
-            if (item->timestamp() < threeSecondsAgo) {
-                uuidsToRemove.insert(item->uuid());
-                iterator.remove();
+        HmiSharedConfigListManager::instance().updateList([&](QList<QSharedPointer<caHMIConfigTransferItem>> &list) {
+            QMutableListIterator<QSharedPointer<caHMIConfigTransferItem>> iterator(list);
+            while (iterator.hasNext()) {
+                auto item = iterator.next();
+                if (item->timestamp() < threeSecondsAgo) {
+                    uuidsToRemove.insert(item->uuid());
+                    iterator.remove();
+                }
             }
-        }
-        HmiSharedConfigListManager::instance().writeList(currentExternalItems);
+        });
     }
 
     {
@@ -4349,6 +4518,8 @@ void CaQtDM_Lib::GlobalShortcutWindow() {
     for (int i = 0; i < count; i++) w += table->columnWidth(i);
     int maxW = (w + count + table->verticalHeader()->width() + table->verticalScrollBar()->width());
     table->setMinimumWidth(maxW + 25);
+
+    connect(this, &CaQtDM_Lib::Signal_Closing, shortcutWindow, &QDialog::close);
 
     shortcutWindow->showNormal();
     shortcutWindow->exec();
@@ -4511,8 +4682,9 @@ int CaQtDM_Lib::addMonitor(QWidget *thisW, knobData *kData, QString pv, QWidget 
     memset(&kData->pv,0,MAXPVLEN);
     qstrncpy(kData->pv, qasc(trimmedPV), MAXPVLEN-1);
 
-    // find the plugin we are going to use
-    if(!pluginName.contains("intern")) {
+    // find the plugin we are going to use ("intern" is the softPV pseudo plugin,
+    // exact match so that the "internal" plugin is not swallowed here)
+    if(pluginName != QLatin1String("intern")) {
         plugininterface = getControlInterface(pluginName);
         // and set it to the widget and the pointer to the data
         kData->pluginInterface = (void *) plugininterface;
@@ -4560,7 +4732,8 @@ int CaQtDM_Lib::addMonitor(QWidget *thisW, knobData *kData, QString pv, QWidget 
     }
 
     tooltip.append(ToolTipPostfix);
-    w->setToolTip(tooltip);
+    if (!vncServer)
+        w->setToolTip(tooltip);
 
     memcpy(kData->specData, specData, sizeof(int) * NBSPECS);
     kData->thisW = (void*) thisW;
@@ -6728,6 +6901,8 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
         Q_UNUSED(cahmiConfigWidget)
     } else if (wmSignalRescale *wmSignalRescaleWidget = qobject_cast<wmSignalRescale*>(w)) {
         Q_UNUSED(wmSignalRescaleWidget)
+    } else if (genSoftPV *genSoftPVWidget = qobject_cast<genSoftPV*>(w)) {
+        Q_UNUSED(genSoftPVWidget)
     } else {
         // something else (user defined monitors with non ca imageWidgets ?) ==============================================
         qCWarning(caQtDMLibLog) << "unrecognized widget" << w->metaObject()->className();
@@ -7022,10 +7197,11 @@ void CaQtDM_Lib::Callback_CaCalc(double value)
  */
 void CaQtDM_Lib::Callback_EApplyNumeric(double value)
 {
-    int32_t idata = (int32_t) value;
+    int32_t idata = (int32_t) llround(value);
     double rdata = value;
 
     caApplyNumeric *numeric = qobject_cast<caApplyNumeric *>(sender());
+    if(!numeric) return;
     if(!numeric->getAccessW()) return;
     if(numeric->getPV().length() > 0) {
         TreatOrdinaryValue(numeric->getPV(), rdata,  idata, "", (QWidget*) numeric);
@@ -7036,10 +7212,11 @@ void CaQtDM_Lib::Callback_EApplyNumeric(double value)
  */
 void CaQtDM_Lib::Callback_ENumeric(double value)
 {
-    int32_t idata = (int32_t) value;
+    int32_t idata = (int32_t) llround(value);
     double rdata = value;
 
     caNumeric *numeric = qobject_cast<caNumeric *>(sender());
+    if(!numeric) return;
     if(!numeric->getAccessW()) return;
     if(numeric->getPV().length() > 0) {
         TreatOrdinaryValue(numeric->getPV(), rdata,  idata, "", (QWidget*) numeric);
@@ -7051,10 +7228,11 @@ void CaQtDM_Lib::Callback_ENumeric(double value)
  */
 void CaQtDM_Lib::Callback_Spinbox(double value)
 {
-    int32_t idata = (int32_t) value;
+    int32_t idata = (int32_t) llround(value);
     double rdata = value;
 
     caSpinbox *numeric = qobject_cast<caSpinbox *>(sender());
+    if(!numeric) return;
     if(!numeric->getAccessW()) return;
     if(numeric->getPV().length() > 0) {
         TreatOrdinaryValue(numeric->getPV(), rdata,  idata, "", (QWidget*) numeric);
@@ -7218,22 +7396,25 @@ void CaQtDM_Lib::Callback_ExternalHmiEventReceived(int eventType, int senderPid,
         int modifiers;
 
         in >> key >> modifiers;
+        if (in.status() != QDataStream::Ok) return;
         Qt::KeyboardModifiers qtModifiers = static_cast<Qt::KeyboardModifiers>(modifiers);
         QKeySequence sequence = QKeySequence(key | modifiers);
         qCDebug(caQtDMLibLog) << "received keys" << sequence.toString() << "from" << senderPid;
-        QEvent *constructed = new QKeyEvent(QEvent::KeyPress, key, qtModifiers, sequence.toString());
-        this->hmiHandleIncomingEvent(Q_NULLPTR, constructed, constructed, true);
+        QKeyEvent constructed(QEvent::KeyPress, key, qtModifiers, sequence.toString());
+        this->hmiHandleIncomingEvent(Q_NULLPTR, &constructed, &constructed, true);
     } else if (eventType == EventTypes::MouseMove || eventType == EventTypes::MousePress) {
         QDataStream in(payload);
 
         int x, y;
         in >> x >> y;
+        if (in.status() != QDataStream::Ok || qAbs(x) > 100000 || qAbs(y) > 100000) return;
         qCDebug(caQtDMLibLog) << "received mouse " << x << y << "from" << senderPid;
         QEvent::Type type = QEvent::None;
         if (eventType == EventTypes::MouseMove) type = QEvent::MouseMove;
         else if (eventType == EventTypes::MousePress) type = QEvent::MouseButtonPress;
-        QEvent *constructed = new QMouseEvent(type, QPointF(x, y), QPointF(x, y), Qt::MouseButton::NoButton, Qt::MouseButton::NoButton, Qt::KeyboardModifier::NoModifier);
-        this->hmiHandleIncomingEvent(Q_NULLPTR, constructed, constructed, true);
+        if (type == QEvent::None) return;
+        QMouseEvent constructed(type, QPointF(x, y), QPointF(x, y), Qt::MouseButton::NoButton, Qt::MouseButton::NoButton, Qt::KeyboardModifier::NoModifier);
+        this->hmiHandleIncomingEvent(Q_NULLPTR, &constructed, &constructed, true);
     }
 #endif
 }
@@ -7276,10 +7457,6 @@ void CaQtDM_Lib::hmiHandleMouse(QObject *target, QMouseEvent *event)
 #ifndef MOBILE
     HmiSharedEventBus& eventBus = HmiSharedEventBus::instance();
     if (eventBus.isInitialized()) {
-        QByteArray byteArray;
-        QDataStream out(&byteArray, QIODevice::WriteOnly);
-        out << correctedEvent.pos().x() << correctedEvent.pos().y();
-
         int type = EventTypes::Invalid;
 
         if (event->type() == QEvent::MouseMove) {
@@ -7288,7 +7465,17 @@ void CaQtDM_Lib::hmiHandleMouse(QObject *target, QMouseEvent *event)
             type = EventTypes::MousePress;
         }
 
-        eventBus.sendEvent(type, byteArray);
+        // Throttle only the shared-bus publication of mouse moves
+        bool throttled = (type == EventTypes::MouseMove
+                          && this_hmiMouseMoveSendTimer.isValid()
+                          && this_hmiMouseMoveSendTimer.elapsed() < MOUSE_THROTTLE_INTERVAL_MS);
+        if (type != EventTypes::Invalid && !throttled) {
+            if (type == EventTypes::MouseMove) this_hmiMouseMoveSendTimer.restart();
+            QByteArray byteArray;
+            QDataStream out(&byteArray, QIODevice::WriteOnly);
+            out << correctedEvent.pos().x() << correctedEvent.pos().y();
+            eventBus.sendEvent(type, byteArray);
+        }
     }
 #endif
     this->hmiHandleIncomingEvent(target, &correctedEvent, event, false);
@@ -7508,6 +7695,9 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
     QStringList args = w->getArgs().split(";");
     QStringList removeParents = w->getReplaceModes().split(";");
 
+    qCDebug(caRelatedDisplayLog) << "Callback_RelatedDisplayClicked: indx=" << indx
+                                 << "rawFiles=" << w->getFiles() << "fileCount=" << files.count();
+
 
     // special case where macros are coming from a macro definition file
     // when specified with %(read filename) in the argument list
@@ -7536,33 +7726,311 @@ void CaQtDM_Lib::Callback_RelatedDisplayClicked(int indx)
     QString geometry = "+%1+%2";
     geometry = geometry.arg(xpos).arg(ypos);
 
-    // do we have to remove this window while removeparent was specified
-    if(indx < removeParents.count()) {
-        QString removeParent = removeParents.at(indx);
-        removeParent = removeParent.toLower();
-        if(removeParent.contains("true")) {
-            this->close();
-        } else {
-            // in case we do not remove the parent let the window manager position the new window
-            geometry = "";
-            // however it is possible that the user wanted a fixed position
-            if((w->getPosition().x() != -1) || w->getPosition().y() != -1) {
-                if(w->getPosition().x() < 0) xpos = 0; else xpos= w->getPosition().x();
-                if(w->getPosition().y() < 0) ypos = 0; else ypos = w->getPosition().y();
-                geometry = "+%1+%2";
-                geometry = geometry.arg(xpos).arg(ypos);
+
+
+    if (!vncServer) {
+
+        // do we have to remove this window while removeparent was specified
+        if(indx < removeParents.count()) {
+            QString removeParent = removeParents.at(indx);
+            removeParent = removeParent.toLower();
+            if(removeParent.contains("true")) {
+                this->close();
+            } else {
+                // in case we do not remove the parent let the window manager position the new window
+                geometry = "";
+                // however it is possible that the user wanted a fixed position
+                if((w->getPosition().x() != -1) || w->getPosition().y() != -1) {
+                    if(w->getPosition().x() < 0) xpos = 0; else xpos= w->getPosition().x();
+                    if(w->getPosition().y() < 0) ypos = 0; else ypos = w->getPosition().y();
+                    geometry = "+%1+%2";
+                    geometry = geometry.arg(xpos).arg(ypos);
+                }
             }
+        }
+
+        // open new file and
+        if(indx < files.count() && indx < args.count()) {
+            emit Signal_OpenNewWFile(files[indx].trimmed(), args[indx].trimmed(), geometry, "true");
+        } else if(indx < files.count()) {
+            emit Signal_OpenNewWFile(files[indx].trimmed(), "", geometry, "true");
+        }
+
+    }
+#ifdef WEB
+    else if (!slaveServer) {
+        // start new process and vnc or novnc
+
+        if (indx >= files.count()) {
+            qCWarning(webRelatedDisplay) << "Tried to open unavailable file through caRelatedDisplay (index was larger or equal than/to file count)";
+            QMessageBox::critical(this, "Error", "Tried to open unavailable file through caRelatedDisplay (index was larger or equal than/to file count)");
+            return;
+        }
+
+        QString file = files[indx].trimmed();
+        qCDebug(webRelatedDisplay) << "RelatedDisplay(master): rawEntry=" << files[indx] << "len=" << files[indx].size()
+                                   << "trimmed=" << file << "len=" << file.size();
+        QString absolutePath = webResolveDisplayPath(file);
+        qCDebug(webRelatedDisplay) << "RelatedDisplay(master): resolved=" << QDir::toNativeSeparators(absolutePath);
+
+        if (absolutePath.isNull()) {
+            qCWarning(webRelatedDisplay) << "caRelatedDisplay ui file not found";
+            QMessageBox::critical(this, "Error - File not found", "The specified path is either invalid or CAQTDM_DISPLAY_PATH hasn't been correctly set");
+            return;
+        }
+
+        quint16 new_vnc_port;
+        quint16 new_web_port;
+
+        QString macros;
+        if (indx < args.count()) {
+            macros = args[indx].trimmed();
+        }
+
+        VncWebChildProcess* existing = getWebChildProcess(absolutePath, macros);
+
+        QString webOpenPath = webOpenPathFromDisplayPath(absolutePath);
+
+        if (existing != nullptr) {
+            if (existing->process() == nullptr || existing->process()->state() == QProcess::ProcessState::NotRunning) {
+                existing->deleteLater();
+            } else if (WebSocketServer::instance().isInitialized()) {
+                WebSocketServer::instance().sendOpenFileRequest(webOpenPath, macros);
+                return;
+            }
+        }
+
+        int processCount;
+        {
+            QReadLocker locker(&CaQtDM_Lib::webChildProcessesLock);
+            processCount = CaQtDM_Lib::webChildProcesses.count();
+        }
+
+        if (processCount >= CaQtDM_Lib::webInstanceLimit - 1) {
+            qCInfo(webRelatedDisplay) << "Couldn't start child process, instance limit reached";
+            QMessageBox::critical(this, "Error - Couldn't start instance", "Maximum instance limit reached");
+            return;
+        }
+
+        if (!WebPortPool::instance()->allocate(new_vnc_port, new_web_port)) {
+            qCWarning(webRelatedDisplay) << "Failed to allocate ports for new instance" << file << "- pool exhausted ("
+                       << WebPortPool::instance()->freeCount() << "free)";
+            QMessageBox::critical(this, "Error - Couldn't start instance", "Maximum instance limit reached");
+            return;
+        }
+
+        VncWebChildProcess *item = startVncChildProcess(new_vnc_port, new_web_port, absolutePath, macros, this);
+
+        if (WebSocketServer::instance().isInitialized()) {
+            WebSocketServer::instance().sendOpenFileRequest(webOpenPath, macros);
+        }
+
+        addWebChildProcess(absolutePath, macros, item);
+    } else {
+        QString file = files[indx].trimmed();
+        qCDebug(webRelatedDisplay) << "RelatedDisplay(slave): rawEntry=" << files[indx] << "len=" << files[indx].size()
+                                   << "trimmed=" << file << "len=" << file.size();
+        QString absolutePath = webResolveDisplayPath(file);
+        qCDebug(webRelatedDisplay) << "RelatedDisplay(slave): resolved=" << QDir::toNativeSeparators(absolutePath);
+
+        if (absolutePath.isNull()) {
+            qCInfo(webRelatedDisplay) << "caRelatedDisplay ui " << file <<" file not found";
+            QMessageBox::critical(this, "Error - File not found", "The specified path is either invalid or CAQTDM_DISPLAY_PATH hasn't been correctly set");
+            return;
+        }
+
+        QString webOpenPath = webOpenPathFromDisplayPath(absolutePath);
+
+        QString macros;
+        if (indx < args.count()) {
+            macros = args[indx].trimmed();
+        }
+
+        if (WebSocketServer::instance().isInitialized()) {
+            WebSocketServer::instance().sendOpenFileRequest(webOpenPath, macros);
+        }
+    }
+#endif
+}
+
+
+#ifdef WEB
+QString CaQtDM_Lib::getChildProcessKey(QString absoluteFilePath, QString macros) {
+    QString key = absoluteFilePath;
+    if (macros.length() > 0) {
+        key += '\0';
+        key += macros;
+    }
+    return key;
+}
+
+void CaQtDM_Lib::addWebChildProcess(QString absoluteFilePath, QString macros, VncWebChildProcess* childProcess) {
+
+    QString key = getChildProcessKey(absoluteFilePath, macros);
+
+    QWriteLocker webChildProcessesLocker(&webChildProcessesLock);
+    webChildProcesses.insert(key, childProcess);
+}
+
+/**
+ * @brief This function queries vncWebChildProcesses for an item,
+ * if the result is nullptr or the process is no longer running,
+ * then the item is also removed from the list.
+ * @param absoluteFilePath The absolute file path to the ui file that the child process has loaded
+ * @param macros The corresponding macros of the child process
+ * @return The resulting item or nullptr if nothing was found or the item itself is a nullptr
+ */
+VncWebChildProcess* CaQtDM_Lib::getWebChildProcess(QString absoluteFilePath, QString macros) {
+
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
+    const auto skip_empty_parts = Qt::SkipEmptyParts;
+#else
+    const auto skip_empty_parts = QString::SkipEmptyParts;
+#endif
+
+    QString key;
+    QStringList incomingMacros = macros.split(QChar(';'), (Qt::SplitBehavior)skip_empty_parts);
+    incomingMacros.sort();
+
+    foreach (QString item, webChildProcesses.keys()) {
+        QStringList itemParts = item.split(QChar('\0'));
+
+        if (itemParts.isEmpty() || itemParts[0] != absoluteFilePath) {
+            continue;
+        }
+
+        QStringList itemMacros;
+        if (itemParts.length() > 1) {
+            itemMacros = itemParts[1].split(';', skip_empty_parts);
+            itemMacros.sort();
+        }
+
+        if (incomingMacros == itemMacros) {
+            key = item;
+            break;
         }
     }
 
-    // open new file and
-    if(indx < files.count() && indx < args.count()) {
-        emit Signal_OpenNewWFile(files[indx].trimmed(), args[indx].trimmed(), geometry, "true");
-    } else if(indx < files.count()) {
-        emit Signal_OpenNewWFile(files[indx].trimmed(), "", geometry, "true");
+    if (key.isEmpty()) {
+        return nullptr;
     }
 
+    auto result = webChildProcesses.find(key);
+    if (result != webChildProcesses.end()) {
+        if (result.value() == nullptr) {
+            webChildProcesses.remove(key);
+            return nullptr;
+        }
+
+        if (result.value()->process() == nullptr || result.value()->process()->state() == QProcess::ProcessState::NotRunning) {
+            webChildProcesses.remove(key);
+            return nullptr;
+        }
+
+        return result.value();
+    }
+    return nullptr;
 }
+
+VncWebChildProcess* CaQtDM_Lib::startVncChildProcess(quint16 vncPort, quint16 webPort, QString file, QString macros, QWidget *parent) {
+    QString caQtDM_executable = QApplication::applicationFilePath();
+    QString executable;
+
+    if (!noVncPlugin) {
+        QString web_path = qgetenv("CAQTDM_WEB_PATH");
+        if (web_path.length() <= 0) {
+            web_path = QDir(QApplication::applicationDirPath() + "/../caQtDM_Web").absolutePath();
+        }
+
+        QString websockify_path = QDir(web_path + "/websockify").absolutePath();
+        QFileInfo websockify_info(websockify_path);
+        if (!websockify_info.exists()) {
+            qCCritical(webChildProcess) << "websockify does not exist inside caQtDM_Web folder, unable to start another instance for caRelatedDisplay, please ensure you specified the right CAQTDM_WEB_PATH and the websockify folder exists within it.";
+            if (parent) QMessageBox::critical(parent, "Error", WEB_CARELATED_DISPLAY_ERROR_MSG);
+            return nullptr;
+        }
+        if (websockify_info.isFile()) {
+            qCCritical(webChildProcess) << "websockify is a file and not a folder, please ensure that you initialized the websockify git submodule.";
+            if (parent) QMessageBox::critical(parent, "Error", WEB_CARELATED_DISPLAY_ERROR_MSG);
+            return nullptr;
+        }
+        if (!websockify_info.isDir()) {
+            qCCritical(webChildProcess) << "websockify is neither a folder nor a file, please check if you provided the right CAQTDM_WEB_PATH";
+            if (parent) QMessageBox::critical(parent, "Error", WEB_CARELATED_DISPLAY_ERROR_MSG);
+            return nullptr;
+        }
+        QFile runScript(websockify_path + "/run");
+
+        if (!runScript.exists()) {
+            qCCritical(webChildProcess) << "websockify run script, please check if you provided the right CAQTDM_WEB_PATH and if websockify was correctly cloned inside it";
+            if (parent) QMessageBox::critical(parent, "Error", WEB_CARELATED_DISPLAY_ERROR_MSG);
+            return nullptr;
+        }
+
+        executable = runScript.fileName();
+    } else executable = caQtDM_executable;
+
+    VncWebChildProcess *item = new VncWebChildProcess(vncPort, webPort);
+    QProcess *child = new QProcess(item);
+    child->setProgram(executable);
+
+    QList<QString> process_args;
+
+    if (!noVncPlugin) {
+        process_args.append(QString::number(vncPort));
+        process_args.append("--");
+        process_args.append(caQtDM_executable);
+    }
+    process_args.append("-server");
+    if (noVncPlugin) {
+        process_args.append("-novnc");
+        if (noVncReadonly)
+            process_args.append("-novnc_readonly");
+    }
+    process_args.append("-slave_server");
+    process_args.append("-server_port");
+    process_args.append(QString::number(vncPort));
+    process_args.append("-web_server_port");
+    process_args.append(QString::number(webPort));
+
+    if(macros.trimmed().length() > 0) {
+        process_args.append("-macro");
+        process_args.append(macros.trimmed());
+    }
+
+    QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
+
+    if (!noVncPlugin) {
+        environment.remove("LD_PRELOAD");
+    }
+
+    if (webTimeout != 0 && interactionBasedTimeout) {
+        environment.insert("CAQTDM_TIMEOUT_HOURS", QString::number((double)webTimeout / 60 / 60));
+        process_args.append("-web_interaction_timeout");
+    } else if (webTimeout != 0) {
+        process_args.append("-web_timeout");
+        process_args.append(QString::number(webTimeout));
+    }
+
+    process_args.append("-host");
+    process_args.append(webHost);
+
+    if (WebLauncherManager::instance().isInitialized()) {
+        process_args.append("-web_launcher_root_file");
+        process_args.append(WebLauncherManager::instance().getRootFile());
+    }
+
+    process_args.append(file);
+
+    child->setProcessEnvironment(environment);
+    child->setArguments(process_args);
+
+    child->start();
+
+    item->setProcess(child);
+    return item;
+}
+#endif
 
 /**
  * callback will write value to device
@@ -7633,6 +8101,12 @@ void CaQtDM_Lib::Callback_ByteControllerClicked(int bit)
 void CaQtDM_Lib::Callback_ScriptButton()
 {
 #ifndef MOBILE
+#ifdef WEB
+    if (vncServer && !webAllowInsecureCaShellCommands) {
+        QMessageBox::critical(this, "Error", "caScriptButton script execution disabled due to security reasons");
+        return;
+    }
+#endif
     QString command = "";
     bool displayWindow,CloseOnExit0;
     caScriptButton *w = qobject_cast<caScriptButton *>(sender());
@@ -7761,6 +8235,12 @@ void CaQtDM_Lib::Callback_TableDoubleClicked(const QString& pv)
 
 void CaQtDM_Lib::Callback_ShellCommandClicked(int indx)
 {
+#ifdef WEB
+    if (vncServer && !webAllowInsecureCaShellCommands) {
+        QMessageBox::critical(this, "Error", "caShellCommand execution disabled due to security reasons");
+        return;
+    }
+#endif
     QString separator((QChar)27);
 
     caShellCommand *choice = qobject_cast<caShellCommand *>(sender());
@@ -7857,6 +8337,12 @@ void CaQtDM_Lib::shellCommand(QString command) {
 
 void CaQtDM_Lib::closeWindow()
 {
+#ifdef WEB
+    if (vncServer && !slaveServer && this->property("open_as_popupwindow").isNull()) {
+        QMessageBox::critical(this, "Error", "Closing of main process prohibited in web mode");
+        return;
+    }
+#endif
     this->close();
 }
 
@@ -7895,6 +8381,7 @@ void CaQtDM_Lib::resizeFullWindow(QRect& q)
 void CaQtDM_Lib::closeEvent(QCloseEvent* ce)
 {
     Q_UNUSED(ce);
+    emit Signal_Closing();
 
     QString thisFileName =  property("fileString").toString().section('/',-1);
     QString launchFile = (QString) qgetenv("CAQTDM_LAUNCHFILE");
@@ -7961,6 +8448,15 @@ void CaQtDM_Lib::closeEvent(QCloseEvent* ce)
   */
 void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
 {
+#ifdef WEB
+    // prevent opening of popup windows when main window is to small to properly display them
+    if (vncServer && (this->width() < 380 || this->height() < 560)) {
+        if (WebSocketServer::instance().isInitialized())
+            WebSocketServer::instance().sendError("Widget is to small to be able to display a context menu or popup window");
+        return;
+    }
+#endif
+
     QMenu myMenu;
     QPoint cursorPos =QCursor::pos() ;
     QString ClassName;
@@ -8024,6 +8520,7 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
         }
     }
 
+    if (w == nullptr) return;
     // get the monitor list back for this widget
     QVariant monitorList=w->property("MonitorList");
     QVariantList MonitorList = monitorList.toList();
@@ -8191,9 +8688,11 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
         onMain = true;
         myMenu.addAction(UNDEFINEDMACROS);
         myMenu.addAction(GLOBALSHORTCUTS);
-        myMenu.addAction(PRINTWINDOW);
+        if (!vncServer) {
+            myMenu.addAction(PRINTWINDOW);
+            myMenu.addAction(RAISEWINDOW);
+        }
         myMenu.addAction(RELOADWINDOW);
-        myMenu.addAction(RAISEWINDOW);
         myMenu.addAction(INCLUDES);
     }
 
@@ -8267,7 +8766,7 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
                 knobData *kPtr = mutexKnobDataP->GetMutexKnobDataPtr(dataIndex);
                 if((kPtr != (knobData *) Q_NULLPTR) && (strlen(kPtr->pv) > 0)) {
                     myMenu.addAction(INPUTDIALOG);
-                    if((kPtr->edata.fieldtype == caSTRING) || (kPtr->edata.fieldtype == caCHAR)) {
+                    if(((kPtr->edata.fieldtype == caSTRING) || (kPtr->edata.fieldtype == caCHAR)) && !vncServer) {
                         myMenu.addAction(FILEDIALOG);
                     }
                 }
@@ -8298,6 +8797,7 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
         }
     }
 
+    connect(this, &CaQtDM_Lib::Signal_Closing, &myMenu, &QWidget::close);
     QAction* selectedItem = myMenu.exec(cursorPos);
 
     if (selectedItem) {
@@ -8384,6 +8884,7 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
             info.append(InfoPostfix);
             myMessageBox box(this);
             box.setText("<html>" + info + "</html>");
+            connect(this, &CaQtDM_Lib::Signal_Closing, &box, &QWidget::close);
             box.exec();
 
         } else  if(selectedItem->text().contains(GETINFO)) {
@@ -8638,6 +9139,7 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
 
             myMessageBox box(this);
             box.setText("<!DOCTYPE html><html>" + info + "</html>");
+            connect(this, &CaQtDM_Lib::Signal_Closing, &box, &QWidget::close);
             box.exec();
 
         // add a file dialog to simplify user path+file input
@@ -8683,9 +9185,11 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
         } else if(selectedItem->text().contains(CHANGEAXIS)) {
             if(caStripPlot* stripplotWidget = qobject_cast<caStripPlot *>(w)) {
                 limitsStripplotDialog dialog(stripplotWidget, mutexKnobDataP, "stripplot modifications", this);
+                connect(this, &CaQtDM_Lib::Signal_Closing, &dialog, &QWidget::close);
                 dialog.exec();
             } else if(caCartesianPlot* cartesianplotWidget = qobject_cast<caCartesianPlot *>(w)) {
                 limitsCartesianplotDialog dialog(cartesianplotWidget, mutexKnobDataP, "cartesianplot modifications", this);
+                connect(this, &CaQtDM_Lib::Signal_Closing, &dialog, &QWidget::close);
                 dialog.exec();
                 if (dialog.getChannelScalingWasReset()) {
                    char asc[MAX_STRING_LENGTH];
@@ -8737,11 +9241,13 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
         } else if(selectedItem->text().contains(CHANGEVALUE)) {
             if(caSlider* sliderWidget = qobject_cast<caSlider *>(w)) {
                 sliderDialog dialog(sliderWidget, mutexKnobDataP, "slider Increment/Value change", this);
+                connect(this, &CaQtDM_Lib::Signal_Closing, &dialog, &QWidget::close);
                 dialog.exec();
             }
 
         } else if(selectedItem->text().contains(CHANGELIMITS)) {
             limitsDialog dialog(w, mutexKnobDataP, "Limits/Precision change", this);
+            connect(this, &CaQtDM_Lib::Signal_Closing, &dialog, &QWidget::close);
             dialog.exec();
         } else if(selectedItem->text().contains(COPYIMAGE)) {
             if(caCartesianPlot* cartesianplotWidget = qobject_cast<caCartesianPlot *>(w)) {
@@ -8995,7 +9501,8 @@ int CaQtDM_Lib::InitVisibility(QWidget* widget, knobData* kData, QMap<QString, Q
         }
     }
     tooltip.append(ToolTipPostfix);
-    if(nbMon> 0) widget->setToolTip(tooltip);
+    if (!vncServer)
+        if(nbMon> 0) widget->setToolTip(tooltip);
 
     // replace macros for imagecalc
     if (caImage *imageWidget = qobject_cast<caImage *>(widget)) {
@@ -9153,10 +9660,18 @@ void CaQtDM_Lib::ComputeNumericMaxMinPrec(QWidget* widget, const knobData& data)
 
         if(!fixedFormat) {
             if(precMode == caMode) {
+                // the widget decides how many decimals it accepts from the
+                // channel; default 4 keeps existing panels as they were
+                int maxChannelPrec = 4;
+                if (caApplyNumeric *w = qobject_cast<caApplyNumeric *>(widget))    maxChannelPrec = w->getMaxChannelPrecision();
+                else if (caNumeric *w = qobject_cast<caNumeric *>(widget))         maxChannelPrec = w->getMaxChannelPrecision();
+                else if (caSpinbox *w = qobject_cast<caSpinbox *>(widget))         maxChannelPrec = w->getMaxChannelPrecision();
+
                 prec = data.edata.precision;
                 if(prec < 0) prec = 0;
-                if(prec > 4) prec = 4;
+                if(prec > maxChannelPrec) prec = maxChannelPrec;
                 maxAbsHoprLopr= qMax(fabs(maxValue), fabs(minValue));
+                if(qIsFinite(data.edata.rvalue)) maxAbsHoprLopr = qMax(maxAbsHoprLopr, fabs(data.edata.rvalue));
                 if(maxAbsHoprLopr > 1.0) {
                     width = (int)log10(maxAbsHoprLopr) + 2 + prec;
                 } else {
@@ -9165,20 +9680,19 @@ void CaQtDM_Lib::ComputeNumericMaxMinPrec(QWidget* widget, const knobData& data)
 
                 if (caApplyNumeric *applynumericWidget = qobject_cast<caApplyNumeric *>(widget)) {
                     qCDebug(caApplyNumericLog) << width-prec-1 << prec;
-                    applynumericWidget->setIntDigits(width-prec-1);
-                    applynumericWidget->setDecDigits(prec);
+                    applynumericWidget->setDigits(width-prec-1, prec);
                 } else if (caNumeric *numericWidget = qobject_cast<caNumeric *>(widget)) {
                     qCDebug(caNumericLog) << width-prec-1 << prec;
-                    numericWidget->setIntDigits(width-prec-1);
-                    numericWidget->setDecDigits(prec);
+                    numericWidget->setDigits(width-prec-1, prec);
                 } else if (caSpinbox *spinboxWidget = qobject_cast<caSpinbox *>(widget)) {
                     qCDebug(caSpinboxLog) << width-prec-1 << prec;
-                    spinboxWidget->setIntDigits(width-prec-1);
-                    spinboxWidget->setDecDigits(prec);
+                    spinboxWidget->setDigits(width-prec-1, prec);
                 }
 
             } else {
                 maxAbsHoprLopr= qMax(fabs(maxValue), fabs(minValue));
+                // see above: the value may reach beyond the limits
+                if(qIsFinite(data.edata.rvalue)) maxAbsHoprLopr = qMax(maxAbsHoprLopr, fabs(data.edata.rvalue));
 
                 if(maxAbsHoprLopr > 1.0) {
                     width = (int)log10(maxAbsHoprLopr) + 2 ;
