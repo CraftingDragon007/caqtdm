@@ -27,6 +27,8 @@ RUN apk add --no-cache \
     qt6-qtserialbus-dev \
     qt6-qtimageformats \
     qt6-qtimageformats-dev \
+    qt6-qt3d \
+    qt6-qt3d-dev \
     zeromq \
     zeromq-dev \
     python3 \
@@ -100,6 +102,7 @@ RUN apk add --no-cache \
     qt6-qtserialbus \
     qt6-qtimageformats \
     qt6-qwt \
+    qt6-qt3d \
     zeromq \
     python3 \
     ncurses \
