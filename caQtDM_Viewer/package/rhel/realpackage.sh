@@ -20,8 +20,7 @@ fi
 # If you want to compile latest release candidate uncomment this line
 REPOSITORY_NAME=caqtdm
 REPOSITORY=https://github.com/caqtdm/$REPOSITORY_NAME.git
-# BRANCH_OR_TAG=V${CAQTDM_VERSION}
-BRANCH_OR_TAG=Development
+BRANCH_OR_TAG=${CAQTDM_BUILD_REF:-Development}
 
 #### Clone and build caqtdm sources
 git clone $REPOSITORY
