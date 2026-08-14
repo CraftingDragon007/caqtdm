@@ -59,6 +59,15 @@ public:
     bool getFallbackMode() const { return thisFallbackMode; }
     bool getConfigValid() const { return thisConfigValid; }
     const QStringList &getConfigErrors() const { return thisConfigErrors; }
+    const ca3DSceneConfig &sceneConfig() const { return thisConfig; }
+    int currentCameraPreset() const { return thisCameraPreset; }
+    QVector3D currentCameraPosition() const;
+    QVector3D currentCameraViewCenter() const;
+    QVector3D currentCameraUpVector() const;
+    QVector3D currentCameraRotation() const;
+    QVector3D currentObjectPosition(const QString &objectId) const;
+    QVector3D currentObjectRotation(const QString &objectId) const;
+    QVector3D effectiveObjectPosition(const QString &objectId) const;
     QSize sizeHint() const override;
     QSize minimumSizeHint() const override;
     QList<QWidget*> overlayRootWidgets() const;

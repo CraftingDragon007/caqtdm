@@ -10,6 +10,7 @@
 
 #include <QFrame>
 #include <QApplication>
+#include <QContextMenuEvent>
 #include <QFileInfo>
 #include <QGraphicsProxyWidget>
 #include <QGraphicsScene>
@@ -131,6 +132,32 @@ bool bindingIsTranslation(ca3DBindingConfig::BindingTarget target)
            || target == ca3DBindingConfig::TranslationZ;
 }
 
+QPoint globalMousePosition(QMouseEvent *event)
+{
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    return event->globalPosition().toPoint();
+#else
+    return event->globalPos();
+#endif
+}
+
+bool forwardContextMenuTo3DWidget(QWidget *viewport, const QPoint &globalPos)
+{
+    QWidget *owner = viewport;
+    while (owner && !qobject_cast<ca3DWidget *>(owner)) {
+        owner = owner->parentWidget();
+    }
+    if (!owner) {
+        return false;
+    }
+
+    QMetaObject::invokeMethod(owner,
+                              "customContextMenuRequested",
+                              Qt::DirectConnection,
+                              Q_ARG(QPoint, owner->mapFromGlobal(globalPos)));
+    return true;
+}
+
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 class LiveWidgetTextureImage final : public Qt3DRender::QPaintedTextureImage
 {
@@ -194,6 +221,14 @@ public:
 protected:
     bool eventFilter(QObject *watched, QEvent *event) override
     {
+        if (event->type() == QEvent::MouseButtonPress && (watched == thisViewport || watched == thisRenderWindow)) {
+            QMouseEvent *mouseEvent = static_cast<QMouseEvent *>(event);
+            if (mouseEvent->button() == Qt::RightButton && forwardContextMenuTo3DWidget(thisViewport, globalMousePosition(mouseEvent))) {
+                event->accept();
+                return true;
+            }
+        }
+
         if (!thisCamera || !thisOverlayManager || !property("ca3DOverlayActive").toBool()) {
             return QObject::eventFilter(watched, event);
         }
@@ -723,6 +758,116 @@ ca3DWidget::~ca3DWidget()
 {
     clearScene();
     clearFallbackView();
+}
+
+QVector3D ca3DWidget::currentCameraPosition() const
+{
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    if (this3DView && this3DView->camera()) {
+        return this3DView->camera()->position();
+    }
+#endif
+    foreach (const ca3DCameraPresetConfig &preset, thisConfig.cameraPresets) {
+        if (preset.id == thisCameraPreset) {
+            return preset.position;
+        }
+    }
+    return thisConfig.cameraPresets.isEmpty() ? QVector3D() : thisConfig.cameraPresets.first().position;
+}
+
+QVector3D ca3DWidget::currentCameraViewCenter() const
+{
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    if (this3DView && this3DView->camera()) {
+        return this3DView->camera()->viewCenter();
+    }
+#endif
+    foreach (const ca3DCameraPresetConfig &preset, thisConfig.cameraPresets) {
+        if (preset.id == thisCameraPreset) {
+            return preset.hasViewCenter ? preset.viewCenter : preset.position;
+        }
+    }
+    if (!thisConfig.cameraPresets.isEmpty()) {
+        const ca3DCameraPresetConfig &preset = thisConfig.cameraPresets.first();
+        return preset.hasViewCenter ? preset.viewCenter : preset.position;
+    }
+    return QVector3D();
+}
+
+QVector3D ca3DWidget::currentCameraUpVector() const
+{
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    if (this3DView && this3DView->camera()) {
+        return this3DView->camera()->upVector();
+    }
+#endif
+    foreach (const ca3DCameraPresetConfig &preset, thisConfig.cameraPresets) {
+        if (preset.id == thisCameraPreset) {
+            return preset.upVector;
+        }
+    }
+    return thisConfig.cameraPresets.isEmpty() ? QVector3D(0.0f, 1.0f, 0.0f) : thisConfig.cameraPresets.first().upVector;
+}
+
+QVector3D ca3DWidget::currentCameraRotation() const
+{
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    if (this3DView && this3DView->camera()) {
+        const QVector3D forward = this3DView->camera()->viewCenter() - this3DView->camera()->position();
+        return QVector3D(cameraYawDegrees(forward), cameraPitchDegrees(forward), 0.0f);
+    }
+#endif
+    foreach (const ca3DCameraPresetConfig &preset, thisConfig.cameraPresets) {
+        if (preset.id == thisCameraPreset) {
+            return QVector3D(static_cast<float>(preset.yaw), static_cast<float>(preset.pitch), 0.0f);
+        }
+    }
+    if (!thisConfig.cameraPresets.isEmpty()) {
+        const ca3DCameraPresetConfig &preset = thisConfig.cameraPresets.first();
+        return QVector3D(static_cast<float>(preset.yaw), static_cast<float>(preset.pitch), 0.0f);
+    }
+    return QVector3D();
+}
+
+QVector3D ca3DWidget::currentObjectPosition(const QString &objectId) const
+{
+    foreach (const ca3DObjectConfig &object, thisConfig.objects) {
+        if (object.id == objectId) {
+            return object.position
+                   + object.configuredOriginPosition
+                   + thisDynamicTranslations.value(object.id);
+        }
+    }
+    return QVector3D();
+}
+
+QVector3D ca3DWidget::currentObjectRotation(const QString &objectId) const
+{
+    foreach (const ca3DObjectConfig &object, thisConfig.objects) {
+        if (object.id == objectId) {
+            return object.rotation
+                   + object.configuredOriginRotation
+                   + thisDynamicRotations.value(object.id);
+        }
+    }
+    return QVector3D();
+}
+
+QVector3D ca3DWidget::effectiveObjectPosition(const QString &objectId) const
+{
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    foreach (const ca3DObjectConfig &object, thisConfig.objects) {
+        if (object.id == objectId) {
+            QMap<QString, QMatrix4x4> motionCache;
+            QSet<QString> visiting;
+            const QMatrix4x4 matrix = effectiveObjectMotionMatrix(object, &motionCache, &visiting);
+            return matrix.column(3).toVector3D();
+        }
+    }
+#else
+    Q_UNUSED(objectId);
+#endif
+    return QVector3D();
 }
 
 void ca3DWidget::setSceneConfig(const QString &config)
@@ -1282,6 +1427,25 @@ bool ca3DWidget::eventFilter(QObject *watched, QEvent *event)
         thisFallbackSnapshotLabel->setGeometry(thisFallbackView->rect());
         applyFallbackPreset(thisCameraPreset);
     }
+    bool watched3DView = false;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    watched3DView = watched == this3DView;
+#endif
+    if ((watched == thisFallbackView || watched == thisViewContainer || watched3DView)
+            && event->type() == QEvent::MouseButtonPress) {
+        QMouseEvent *mouseEvent = static_cast<QMouseEvent *>(event);
+        if (mouseEvent->button() == Qt::RightButton) {
+            emit customContextMenuRequested(mapFromGlobal(globalMousePosition(mouseEvent)));
+            event->accept();
+            return true;
+        }
+    }
+    if ((watched == thisFallbackView || watched == thisViewContainer) && event->type() == QEvent::ContextMenu) {
+        QContextMenuEvent *contextEvent = static_cast<QContextMenuEvent *>(event);
+        emit customContextMenuRequested(mapFromGlobal(contextEvent->globalPos()));
+        event->accept();
+        return true;
+    }
     return QWidget::eventFilter(watched, event);
 }
 
@@ -1802,6 +1966,8 @@ void ca3DWidget::initialize3DView()
     thisViewContainer->setMinimumSize(QSize(120, 80));
     thisViewContainer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     thisViewContainer->setFocusPolicy(Qt::StrongFocus);
+    thisViewContainer->installEventFilter(this);
+    this3DView->installEventFilter(this);
     if (QVBoxLayout *boxLayout = qobject_cast<QVBoxLayout *>(layout())) {
         boxLayout->addWidget(thisViewContainer, 1);
     } else {

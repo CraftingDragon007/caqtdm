@@ -292,6 +292,191 @@ Q_DECLARE_METATYPE(QTabWidget*)
 Q_DECLARE_METATYPE(QStackedWidget*)
 Q_DECLARE_METATYPE(QtMsgType)
 
+static QString caQtDMHtmlEscaped(const QString &text)
+{
+#if QT_VERSION > 0x050000
+    return text.toHtmlEscaped();
+#else
+    return Qt::escape(text);
+#endif
+}
+
+static QString ca3DVectorInfo(const QVector3D &vector)
+{
+    return QString("(%1, %2, %3)").arg(vector.x()).arg(vector.y()).arg(vector.z());
+}
+
+static QString ca3DBindingTargetInfo(ca3DBindingConfig::BindingTarget target)
+{
+    switch (target) {
+    case ca3DBindingConfig::TranslationX:
+        return QString("translationX");
+    case ca3DBindingConfig::TranslationY:
+        return QString("translationY");
+    case ca3DBindingConfig::TranslationZ:
+        return QString("translationZ");
+    case ca3DBindingConfig::RotationX:
+        return QString("rotationX");
+    case ca3DBindingConfig::RotationY:
+        return QString("rotationY");
+    case ca3DBindingConfig::RotationZ:
+        return QString("rotationZ");
+    case ca3DBindingConfig::InvalidTarget:
+        break;
+    }
+    return QString("invalid");
+}
+
+static QString ca3DBindingModeInfo(ca3DBindingConfig::BindingMode mode)
+{
+    return mode == ca3DBindingConfig::Absolute ? QString("absolute") : QString("relative");
+}
+
+static QString ca3DVisibilityModeInfo(ca3DOverlayConfig::VisibilityMode mode)
+{
+    switch (mode) {
+    case ca3DOverlayConfig::PresetOnly:
+        return QString("presetOnly");
+    case ca3DOverlayConfig::InView:
+        return QString("inView");
+    case ca3DOverlayConfig::AlwaysWhenInView:
+        return QString("alwaysWhenInView");
+    }
+    return QString("presetOnly");
+}
+
+static QString ca3DWidgetInfo(ca3DWidget *widget)
+{
+    if (!widget) {
+        return QString();
+    }
+
+    const ca3DSceneConfig &config = widget->sceneConfig();
+    QString info;
+
+    info.append("<br>3D scene:<br>");
+    info.append(QString("Fallback mode: %1<br>").arg(widget->getFallbackMode() ? QString("yes") : QString("no")));
+    info.append(QString("Config valid: %1<br>").arg(widget->getConfigValid() ? QString("yes") : QString("no")));
+    info.append(QString("Current camera preset: %1<br>").arg(widget->currentCameraPreset()));
+    info.append(QString("Camera position: %1<br>").arg(ca3DVectorInfo(widget->currentCameraPosition())));
+    info.append(QString("Camera rotation: yaw=%1 pitch=%2 roll=%3<br>")
+                .arg(widget->currentCameraRotation().x())
+                .arg(widget->currentCameraRotation().y())
+                .arg(widget->currentCameraRotation().z()));
+    info.append(QString("Camera view center: %1 up vector: %2<br>")
+                .arg(ca3DVectorInfo(widget->currentCameraViewCenter()))
+                .arg(ca3DVectorInfo(widget->currentCameraUpVector())));
+    info.append(QString("Objects: %1  Overlays: %2  Camera presets: %3<br>")
+                .arg(config.objects.count())
+                .arg(config.overlays.count())
+                .arg(config.cameraPresets.count()));
+
+    if (!widget->getConfigErrors().isEmpty()) {
+        info.append("Config messages:<br>");
+        for (const QString &error : widget->getConfigErrors()) {
+            info.append(QString("&nbsp;&nbsp;%1<br>").arg(caQtDMHtmlEscaped(error)));
+        }
+    }
+
+    if (!config.objects.isEmpty()) {
+        info.append("<br>Objects:<br>");
+        for (const ca3DObjectConfig &object : config.objects) {
+            info.append(QString("&nbsp;&nbsp;%1").arg(caQtDMHtmlEscaped(object.id)));
+            if (!object.type.isEmpty()) {
+                info.append(QString(" type=%1").arg(caQtDMHtmlEscaped(object.type)));
+            }
+            if (!object.masterObjectId.isEmpty()) {
+                info.append(QString(" master=%1").arg(caQtDMHtmlEscaped(object.masterObjectId)));
+            }
+            info.append(QString("<br>&nbsp;&nbsp;&nbsp;&nbsp;mesh: %1<br>")
+                        .arg(caQtDMHtmlEscaped(object.meshResolved.isEmpty() ? object.mesh : object.meshResolved)));
+            const QVector3D currentPosition = widget->currentObjectPosition(object.id);
+            const QVector3D currentRotation = widget->currentObjectRotation(object.id);
+            info.append(QString("&nbsp;&nbsp;&nbsp;&nbsp;current position: %1 current rotation: %2 scale: %3<br>")
+                        .arg(ca3DVectorInfo(currentPosition))
+                        .arg(ca3DVectorInfo(currentRotation))
+                        .arg(object.scale));
+            info.append(QString("&nbsp;&nbsp;&nbsp;&nbsp;configured position: %1 configured rotation: %2<br>")
+                        .arg(ca3DVectorInfo(object.position))
+                        .arg(ca3DVectorInfo(object.rotation)));
+            if (!object.configuredOriginPosition.isNull() || !object.configuredOriginRotation.isNull()) {
+                info.append(QString("&nbsp;&nbsp;&nbsp;&nbsp;configured origin position: %1 configured origin rotation: %2<br>")
+                            .arg(ca3DVectorInfo(object.configuredOriginPosition))
+                            .arg(ca3DVectorInfo(object.configuredOriginRotation)));
+            }
+            if (!object.masterObjectId.isEmpty()) {
+                info.append(QString("&nbsp;&nbsp;&nbsp;&nbsp;effective/world position: %1<br>")
+                            .arg(ca3DVectorInfo(widget->effectiveObjectPosition(object.id))));
+            }
+
+            int bindingNumber = 1;
+            for (const ca3DBindingConfig &binding : object.bindings) {
+                info.append(QString("&nbsp;&nbsp;&nbsp;&nbsp;binding %1: %2 -> %3 %4 scale=%5 offset=%6")
+                            .arg(bindingNumber++)
+                            .arg(caQtDMHtmlEscaped(binding.channel))
+                            .arg(caQtDMHtmlEscaped(binding.targetName.isEmpty() ? ca3DBindingTargetInfo(binding.target) : binding.targetName))
+                            .arg(ca3DBindingModeInfo(binding.mode))
+                            .arg(binding.scale)
+                            .arg(binding.offset));
+                if (binding.hasMinimum) {
+                    info.append(QString(" min=%1").arg(binding.minimum));
+                }
+                if (binding.hasMaximum) {
+                    info.append(QString(" max=%1").arg(binding.maximum));
+                }
+                info.append("<br>");
+            }
+        }
+    }
+
+    if (!config.overlays.isEmpty()) {
+        info.append("<br>Overlays:<br>");
+        for (const ca3DOverlayConfig &overlay : config.overlays) {
+            info.append(QString("&nbsp;&nbsp;%1 include=%2 mode=%3 size=(%4, %5)<br>")
+                        .arg(caQtDMHtmlEscaped(overlay.id))
+                        .arg(caQtDMHtmlEscaped(overlay.includeFileResolved.isEmpty() ? overlay.includeFile : overlay.includeFileResolved))
+                        .arg(ca3DVisibilityModeInfo(overlay.visibilityMode))
+                        .arg(overlay.size.width())
+                        .arg(overlay.size.height()));
+            info.append(QString("&nbsp;&nbsp;&nbsp;&nbsp;position: %1 rotation: %2<br>")
+                        .arg(ca3DVectorInfo(overlay.position))
+                        .arg(ca3DVectorInfo(overlay.rotation)));
+            if (overlay.fallbackGeometry.isValid()) {
+                info.append(QString("&nbsp;&nbsp;&nbsp;&nbsp;fallback geometry: x=%1 y=%2 w=%3 h=%4<br>")
+                            .arg(overlay.fallbackGeometry.x())
+                            .arg(overlay.fallbackGeometry.y())
+                            .arg(overlay.fallbackGeometry.width())
+                            .arg(overlay.fallbackGeometry.height()));
+            }
+            if (!overlay.macro.isEmpty()) {
+                info.append(QString("&nbsp;&nbsp;&nbsp;&nbsp;macro: %1<br>").arg(caQtDMHtmlEscaped(overlay.macro)));
+            }
+        }
+    }
+
+    if (!config.cameraPresets.isEmpty()) {
+        info.append("<br>Camera presets:<br>");
+        for (const ca3DCameraPresetConfig &preset : config.cameraPresets) {
+            info.append(QString("&nbsp;&nbsp;%1 %2 position=%3")
+                        .arg(preset.id)
+                        .arg(caQtDMHtmlEscaped(preset.name))
+                        .arg(ca3DVectorInfo(preset.position)));
+            if (preset.hasViewCenter) {
+                info.append(QString(" viewCenter=%1").arg(ca3DVectorInfo(preset.viewCenter)));
+            } else {
+                info.append(QString(" yaw=%1 pitch=%2").arg(preset.yaw).arg(preset.pitch));
+            }
+            info.append(QString(" up=%1 fov=%2").arg(ca3DVectorInfo(preset.upVector)).arg(preset.fov));
+            if (!preset.overlays.isEmpty()) {
+                info.append(QString(" overlays=%1").arg(caQtDMHtmlEscaped(preset.overlays.join(QString(",")))));
+            }
+            info.append("<br>");
+        }
+    }
+
+    return info;
+}
+
 // this sleep will not block the GUI and QThread::msleep is protected in Qt4.8 (so do not use that)
 class Sleep
 {
@@ -2691,16 +2876,27 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         widget3D->setSceneConfig(expandedSceneConfig);
         widget3D->setProperty("Taken", true);
 
-        QList<QVariant> monitorList;
         const QStringList bindingChannels = widget3D->objectBindingChannels();
         for (int i = 0; i < bindingChannels.count(); ++i) {
+            if (bindingChannels.at(i).trimmed().isEmpty()) {
+                continue;
+            }
             specData[0] = i;
             int num = addMonitor(myWidget, &kData, bindingChannels.at(i), w1, specData, map, &pv);
-            monitorList.append(num);
+            integerList.append(num);
+            nbMonitors++;
         }
-        if (!monitorList.isEmpty()) {
-            widget3D->setProperty("MonitorList", monitorList);
-        }
+        integerList.insert(0, nbMonitors);
+        widget3D->setProperty("MonitorList", integerList);
+        widget3D->setContextMenuPolicy(Qt::CustomContextMenu);
+        connect(widget3D, SIGNAL(customContextMenuRequested(const QPoint&)), this, SLOT(ShowContextMenu(const QPoint&)));
+        widget3D->setProperty("Connect", false);
+#ifdef MOBILE
+        widget3D->grabGesture(Qt::TapAndHoldGesture);
+        widget3D->installEventFilter(this);
+#else
+        if(!thisFileFull.contains(POPUPDEFENITION)) widget3D->installEventFilter(this);
+#endif
 
         if (!widget3D->property("ca3DOverlayRuntimeHookInstalled").toBool()) {
             widget3D->setProperty("ca3DOverlayRuntimeHookInstalled", true);
@@ -3982,7 +4178,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
     // make a context menu for object having a monitor
     //if(className.contains("ca") && !className.contains("caRel") && !className.contains("caTable") && !className.contains("caShellCommand") && nbMonitors > 0) {
-    if((className.contains("ca") && !className.contains("caTable") && !className.contains("caShellCommand") && nbMonitors > 0) || className.contains("caRel") ||
+    if((className.contains("ca") && !className.contains("ca3DWidget") && !className.contains("caTable") && !className.contains("caShellCommand") && nbMonitors > 0) || className.contains("caRel") ||
            className.contains("caInclude") || className.contains("caScript")) {
 
         w1->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -8929,6 +9125,10 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
                 info.append(Qt::escape(imageString));
 #endif
                 info.append("<br>");
+            }
+
+            if(ca3DWidget *widget3D = qobject_cast<ca3DWidget *>(w)) {
+                info.append(ca3DWidgetInfo(widget3D));
             }
 
             info.append("<br>! configuration values are only fetched at panel start<br>");
