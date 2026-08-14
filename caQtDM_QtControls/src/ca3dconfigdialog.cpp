@@ -8,6 +8,8 @@
 #include "ca3dwidget.h"
 #include "pvdialog.h"
 
+#include <QApplication>
+#include <QClipboard>
 #include <QComboBox>
 #include <QCheckBox>
 #include <QDialogButtonBox>
@@ -20,6 +22,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QJsonValue>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
@@ -174,6 +177,49 @@ QJsonArray rectArray(const QString &x, const QString &y, const QString &width, c
     return array;
 }
 
+bool jsonNumber(const QJsonValue &value, double *number)
+{
+    if (!value.isDouble() || !number) {
+        return false;
+    }
+    *number = value.toDouble();
+    return true;
+}
+
+bool jsonVector(const QJsonValue &value, QVector3D *vector)
+{
+    if (!vector) {
+        return false;
+    }
+
+    double x = 0.0;
+    double y = 0.0;
+    double z = 0.0;
+    if (value.isObject()) {
+        const QJsonObject object = value.toObject();
+        if (!jsonNumber(object.value(QStringLiteral("x")), &x) ||
+            !jsonNumber(object.value(QStringLiteral("y")), &y) ||
+            !jsonNumber(object.value(QStringLiteral("z")), &z)) {
+            return false;
+        }
+    } else if (value.isArray()) {
+        const QJsonArray array = value.toArray();
+        if (array.size() != 3 ||
+            !jsonNumber(array.at(0), &x) ||
+            !jsonNumber(array.at(1), &y) ||
+            !jsonNumber(array.at(2), &z)) {
+            return false;
+        }
+    } else {
+        return false;
+    }
+
+    *vector = QVector3D(static_cast<float>(x),
+                        static_cast<float>(y),
+                        static_cast<float>(z));
+    return true;
+}
+
 QString safeFileNameComponent(QString value, const QString &fallback)
 {
     static const QRegularExpression invalidFileNameChars(
@@ -232,6 +278,8 @@ ca3DConfigDialog::ca3DConfigDialog(ca3DWidget *widget, QWidget *parent)
     , rawValidationLabel(Q_NULLPTR)
     , errorLabel(Q_NULLPTR)
     , buttonBox(Q_NULLPTR)
+    , clipboardHasPosition(false)
+    , clipboardHasRotation(false)
     , updatingUi(false)
 {
     buildUi();
@@ -261,14 +309,26 @@ void ca3DConfigDialog::buildUi()
     QHBoxLayout *objectsButtons = new QHBoxLayout();
     QPushButton *addObjectButton = new QPushButton(tr("Add Object"), objectsPage);
     QPushButton *removeObjectButton = new QPushButton(tr("Remove Selected"), objectsPage);
+    QPushButton *insertObjectPositionButton = new QPushButton(tr("Insert Position"), objectsPage);
+    QPushButton *insertObjectRotationButton = new QPushButton(tr("Insert Rotation"), objectsPage);
+    QPushButton *insertObjectLocationButton = new QPushButton(tr("Insert Location"), objectsPage);
     objectsButtons->addWidget(addObjectButton);
     objectsButtons->addWidget(removeObjectButton);
+    objectsButtons->addWidget(insertObjectPositionButton);
+    objectsButtons->addWidget(insertObjectRotationButton);
+    objectsButtons->addWidget(insertObjectLocationButton);
     objectsButtons->addStretch();
+    insertPositionButtons.append(insertObjectPositionButton);
+    insertRotationButtons.append(insertObjectRotationButton);
+    insertLocationButtons.append(insertObjectLocationButton);
     objectsLayout->addWidget(objectsTable);
     objectsLayout->addLayout(objectsButtons);
     tabs->addTab(objectsPage, tr("Objects"));
     connect(addObjectButton, SIGNAL(clicked()), this, SLOT(addObjectRow()));
     connect(removeObjectButton, SIGNAL(clicked()), this, SLOT(removeObjectRow()));
+    connect(insertObjectPositionButton, SIGNAL(clicked()), this, SLOT(insertClipboardPosition()));
+    connect(insertObjectRotationButton, SIGNAL(clicked()), this, SLOT(insertClipboardRotation()));
+    connect(insertObjectLocationButton, SIGNAL(clicked()), this, SLOT(insertClipboardLocation()));
 
     QWidget *bindingsPage = new QWidget(tabs);
     QVBoxLayout *bindingsLayout = new QVBoxLayout(bindingsPage);
@@ -309,14 +369,26 @@ void ca3DConfigDialog::buildUi()
     QHBoxLayout *overlaysButtons = new QHBoxLayout();
     QPushButton *addOverlayButton = new QPushButton(tr("Add Overlay"), overlaysPage);
     QPushButton *removeOverlayButton = new QPushButton(tr("Remove Selected"), overlaysPage);
+    QPushButton *insertOverlayPositionButton = new QPushButton(tr("Insert Position"), overlaysPage);
+    QPushButton *insertOverlayRotationButton = new QPushButton(tr("Insert Rotation"), overlaysPage);
+    QPushButton *insertOverlayLocationButton = new QPushButton(tr("Insert Location"), overlaysPage);
     overlaysButtons->addWidget(addOverlayButton);
     overlaysButtons->addWidget(removeOverlayButton);
+    overlaysButtons->addWidget(insertOverlayPositionButton);
+    overlaysButtons->addWidget(insertOverlayRotationButton);
+    overlaysButtons->addWidget(insertOverlayLocationButton);
     overlaysButtons->addStretch();
+    insertPositionButtons.append(insertOverlayPositionButton);
+    insertRotationButtons.append(insertOverlayRotationButton);
+    insertLocationButtons.append(insertOverlayLocationButton);
     overlaysLayout->addWidget(overlaysTable);
     overlaysLayout->addLayout(overlaysButtons);
     tabs->addTab(overlaysPage, tr("Overlays"));
     connect(addOverlayButton, SIGNAL(clicked()), this, SLOT(addOverlayRow()));
     connect(removeOverlayButton, SIGNAL(clicked()), this, SLOT(removeOverlayRow()));
+    connect(insertOverlayPositionButton, SIGNAL(clicked()), this, SLOT(insertClipboardPosition()));
+    connect(insertOverlayRotationButton, SIGNAL(clicked()), this, SLOT(insertClipboardRotation()));
+    connect(insertOverlayLocationButton, SIGNAL(clicked()), this, SLOT(insertClipboardLocation()));
 
     QWidget *presetsPage = new QWidget(tabs);
     QVBoxLayout *presetsLayout = new QVBoxLayout(presetsPage);
@@ -334,14 +406,26 @@ void ca3DConfigDialog::buildUi()
     QHBoxLayout *presetsButtons = new QHBoxLayout();
     QPushButton *addPresetButton = new QPushButton(tr("Add Preset"), presetsPage);
     QPushButton *removePresetButton = new QPushButton(tr("Remove Selected"), presetsPage);
+    QPushButton *insertPresetPositionButton = new QPushButton(tr("Insert Position"), presetsPage);
+    QPushButton *insertPresetRotationButton = new QPushButton(tr("Insert Rotation"), presetsPage);
+    QPushButton *insertPresetLocationButton = new QPushButton(tr("Insert Location"), presetsPage);
     presetsButtons->addWidget(addPresetButton);
     presetsButtons->addWidget(removePresetButton);
+    presetsButtons->addWidget(insertPresetPositionButton);
+    presetsButtons->addWidget(insertPresetRotationButton);
+    presetsButtons->addWidget(insertPresetLocationButton);
     presetsButtons->addStretch();
+    insertPositionButtons.append(insertPresetPositionButton);
+    insertRotationButtons.append(insertPresetRotationButton);
+    insertLocationButtons.append(insertPresetLocationButton);
     presetsLayout->addWidget(presetsTable);
     presetsLayout->addLayout(presetsButtons);
     tabs->addTab(presetsPage, tr("Camera Presets"));
     connect(addPresetButton, SIGNAL(clicked()), this, SLOT(addPresetRow()));
     connect(removePresetButton, SIGNAL(clicked()), this, SLOT(removePresetRow()));
+    connect(insertPresetPositionButton, SIGNAL(clicked()), this, SLOT(insertClipboardPosition()));
+    connect(insertPresetRotationButton, SIGNAL(clicked()), this, SLOT(insertClipboardRotation()));
+    connect(insertPresetLocationButton, SIGNAL(clicked()), this, SLOT(insertClipboardLocation()));
 
     QWidget *previewPage = new QWidget(tabs);
     QVBoxLayout *previewLayout = new QVBoxLayout(previewPage);
@@ -431,6 +515,8 @@ void ca3DConfigDialog::buildUi()
     connect(overlaysTable, SIGNAL(cellChanged(int,int)), this, SLOT(markChanged()));
     connect(presetsTable, SIGNAL(cellChanged(int,int)), this, SLOT(markChanged()));
     connect(rawJsonEdit, SIGNAL(textChanged()), this, SLOT(markChanged()));
+    connect(QApplication::clipboard(), SIGNAL(dataChanged()), this, SLOT(updateClipboardLocationButtons()));
+    updateClipboardLocationButtons();
     buttonBox->button(QDialogButtonBox::Apply)->setEnabled(false);
 }
 
@@ -980,6 +1066,57 @@ void ca3DConfigDialog::validateRawJson()
     }
 }
 
+void ca3DConfigDialog::updateClipboardLocationButtons()
+{
+    clipboardHasPosition = false;
+    clipboardHasRotation = false;
+    clipboardPosition = QVector3D();
+    clipboardRotation = QVector3D();
+
+    QClipboard *clipboard = QApplication::clipboard();
+    const QString text = clipboard ? clipboard->text(QClipboard::Clipboard) : QString();
+    QJsonParseError parseError;
+    const QJsonDocument document = QJsonDocument::fromJson(text.toUtf8(), &parseError);
+    if (parseError.error == QJsonParseError::NoError && document.isObject()) {
+        const QJsonObject object = document.object();
+        clipboardHasPosition = jsonVector(object.value(QStringLiteral("position")),
+                                          &clipboardPosition);
+        clipboardHasRotation = jsonVector(object.value(QStringLiteral("rotation")),
+                                          &clipboardRotation);
+    }
+
+    foreach (QPushButton *button, insertPositionButtons) {
+        if (button) {
+            button->setVisible(clipboardHasPosition);
+        }
+    }
+    foreach (QPushButton *button, insertRotationButtons) {
+        if (button) {
+            button->setVisible(clipboardHasRotation);
+        }
+    }
+    foreach (QPushButton *button, insertLocationButtons) {
+        if (button) {
+            button->setVisible(clipboardHasPosition && clipboardHasRotation);
+        }
+    }
+}
+
+void ca3DConfigDialog::insertClipboardPosition()
+{
+    applyClipboardLocation(true, false);
+}
+
+void ca3DConfigDialog::insertClipboardRotation()
+{
+    applyClipboardLocation(false, true);
+}
+
+void ca3DConfigDialog::insertClipboardLocation()
+{
+    applyClipboardLocation(true, true);
+}
+
 void ca3DConfigDialog::applyChanges()
 {
     const QString json = currentEditorJson();
@@ -1225,6 +1362,64 @@ QStringList ca3DConfigDialog::presetOverlayIds(int row) const
         }
     }
     return result;
+}
+
+void ca3DConfigDialog::applyClipboardLocation(bool applyPosition, bool applyRotation)
+{
+    if ((applyPosition && !clipboardHasPosition) ||
+        (applyRotation && !clipboardHasRotation) ||
+        !tabs) {
+        return;
+    }
+
+    QTableWidget *table = Q_NULLPTR;
+    int positionColumn = -1;
+    int rotationColumn = -1;
+    bool cameraPreset = false;
+    const QWidget *currentPage = tabs->currentWidget();
+
+    if (objectsTable && currentPage == objectsTable->parentWidget()) {
+        table = objectsTable;
+        positionColumn = 4;
+        rotationColumn = 7;
+    } else if (overlaysTable && currentPage == overlaysTable->parentWidget()) {
+        table = overlaysTable;
+        positionColumn = 3;
+        rotationColumn = 6;
+    } else if (presetsTable && currentPage == presetsTable->parentWidget()) {
+        table = presetsTable;
+        positionColumn = 2;
+        cameraPreset = true;
+    } else {
+        return;
+    }
+
+    const int row = table->currentRow();
+    if (row < 0) {
+        return;
+    }
+
+    {
+        QScopedValueRollback<bool> updatingGuard(updatingUi, true);
+        if (applyPosition && positionColumn >= 0) {
+            setTableText(table, row, positionColumn, numberString(clipboardPosition.x()));
+            setTableText(table, row, positionColumn + 1, numberString(clipboardPosition.y()));
+            setTableText(table, row, positionColumn + 2, numberString(clipboardPosition.z()));
+        }
+
+        if (applyRotation) {
+            if (cameraPreset) {
+                setTableText(table, row, 11, numberString(clipboardRotation.x()));
+                setTableText(table, row, 12, numberString(clipboardRotation.y()));
+            } else if (rotationColumn >= 0) {
+                setTableText(table, row, rotationColumn, numberString(clipboardRotation.x()));
+                setTableText(table, row, rotationColumn + 1, numberString(clipboardRotation.y()));
+                setTableText(table, row, rotationColumn + 2, numberString(clipboardRotation.z()));
+            }
+        }
+    }
+
+    markChanged();
 }
 
 void ca3DConfigDialog::showErrors(const QStringList &errors)

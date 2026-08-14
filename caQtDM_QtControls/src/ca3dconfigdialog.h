@@ -6,6 +6,8 @@
 #define CA3DCONFIGDIALOG_H
 
 #include <QDialog>
+#include <QList>
+#include <QVector3D>
 #include <qtcontrols_global.h>
 
 class ca3DWidget;
@@ -42,6 +44,10 @@ private slots:
     void finishSnapshotCapture(const QPixmap &snapshot);
     void failSnapshotCapture(const QString &error);
     void validateRawJson();
+    void updateClipboardLocationButtons();
+    void insertClipboardPosition();
+    void insertClipboardRotation();
+    void insertClipboardLocation();
     void applyChanges();
     void markChanged();
     void accept() override;
@@ -64,6 +70,7 @@ private:
     bool tableCheck(QTableWidget *table, int row, int column) const;
     void setPresetOverlaySelector(int row, const QStringList &selectedOverlayIds);
     QStringList presetOverlayIds(int row) const;
+    void applyClipboardLocation(bool applyPosition, bool applyRotation);
     void showErrors(const QStringList &errors);
 
     ca3DWidget *widget3D;
@@ -82,6 +89,13 @@ private:
     QLabel *rawValidationLabel;
     QLabel *errorLabel;
     QDialogButtonBox *buttonBox;
+    QList<QPushButton*> insertPositionButtons;
+    QList<QPushButton*> insertRotationButtons;
+    QList<QPushButton*> insertLocationButtons;
+    QVector3D clipboardPosition;
+    QVector3D clipboardRotation;
+    bool clipboardHasPosition;
+    bool clipboardHasRotation;
     bool updatingUi;
 };
 
