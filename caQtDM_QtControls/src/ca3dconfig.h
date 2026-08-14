@@ -53,6 +53,7 @@ struct QTCON_EXPORT ca3DBindingConfig
 struct QTCON_EXPORT ca3DObjectConfig
 {
     QString id;
+    QString masterObjectId;
     QString mesh;
     QString meshResolved;
     QString type;

@@ -16,6 +16,7 @@ private slots:
     void initTestCase();
     void cleanupTestCase();
     void appliesStructuredOverlayChanges();
+    void roundTripsObjectMasterLinks();
     void keepsNewRowsWhenValidatingRawJson();
     void allowsApplyingWithMissingOverlayFile();
 

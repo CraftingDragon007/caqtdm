@@ -178,6 +178,40 @@ void TestCa3DConfigDialog::appliesStructuredOverlayChanges()
     QCOMPARE(root.value(QStringLiteral("cameraPresets")).toArray().count(), 1);
 }
 
+void TestCa3DConfigDialog::roundTripsObjectMasterLinks()
+{
+    const QString json = QStringLiteral(R"json({
+        "objects": [
+            { "id": "base", "meshFile": "", "scale": 1.0 },
+            { "id": "child", "masterObject": "base", "meshFile": "", "position": [5, 0, 0], "scale": 1.0 }
+        ]
+    })json");
+
+    ca3DWidget widget;
+    widget.setSceneConfig(json);
+    ca3DConfigDialog dialog(&widget);
+
+    QTableWidget *objectsTable = dialog.findChild<QTableWidget *>(QStringLiteral("objectsTable"));
+    QVERIFY(objectsTable);
+    QCOMPARE(objectsTable->rowCount(), 2);
+    QCOMPARE(objectsTable->item(1, 13)->text(), QStringLiteral("base"));
+
+    objectsTable->item(1, 13)->setText(QStringLiteral(""));
+    QVERIFY(QMetaObject::invokeMethod(&dialog, "applyChanges", Qt::DirectConnection));
+    ca3DSceneConfig config;
+    QStringList errors;
+    QVERIFY2(ca3DConfigParser::parse(widget.getSceneConfig(), &config, &errors),
+             qPrintable(errors.join(QLatin1Char('\n'))));
+    QCOMPARE(config.objects.count(), 2);
+    QCOMPARE(config.objects.at(1).masterObjectId, QString());
+
+    objectsTable->item(1, 13)->setText(QStringLiteral("base"));
+    QVERIFY(QMetaObject::invokeMethod(&dialog, "applyChanges", Qt::DirectConnection));
+    QVERIFY2(ca3DConfigParser::parse(widget.getSceneConfig(), &config, &errors),
+             qPrintable(errors.join(QLatin1Char('\n'))));
+    QCOMPARE(config.objects.at(1).masterObjectId, QStringLiteral("base"));
+}
+
 void TestCa3DConfigDialog::keepsNewRowsWhenValidatingRawJson()
 {
     ca3DWidget widget;

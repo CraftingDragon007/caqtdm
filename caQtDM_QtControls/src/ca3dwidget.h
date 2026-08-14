@@ -8,7 +8,9 @@
 #include <QWidget>
 #include <QList>
 #include <QMap>
+#include <QMatrix4x4>
 #include <QPixmap>
+#include <QSet>
 #include <QString>
 #include <QStringList>
 #include <qtcontrols_global.h>
@@ -132,6 +134,11 @@ protected:
     void apply3DOverlayVisibility(int preset);
     void applyCameraPresetConfig(const ca3DCameraPresetConfig &preset);
     void applyObjectTransform(const QString &objectId);
+    void applyAllObjectTransforms();
+    QMatrix4x4 objectMotionMatrix(const ca3DObjectConfig &object, bool includeDynamic) const;
+    QMatrix4x4 effectiveObjectMotionMatrix(const ca3DObjectConfig &object,
+                                           QMap<QString, QMatrix4x4> *cache,
+                                           QSet<QString> *visiting) const;
     void restoreSnapshotOverlayStates();
 #endif
 

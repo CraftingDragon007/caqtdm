@@ -13,6 +13,7 @@
 #include <QGraphicsView>
 #include <QLabel>
 #include <QLineEdit>
+#include <QMatrix4x4>
 #include <QMouseEvent>
 #include <QPixmap>
 #include <QSignalSpy>
@@ -40,6 +41,7 @@ QString jsonWithFiles(const QString &mesh,
   "objects": [
     {
       "id": "pump",
+      "masterObject": "",
       "meshFile": "%1",
       "textureFile": "%2",
       "materialColor": "#123456",
@@ -175,6 +177,32 @@ QByteArray lineEditChild(const QString &name, const QRect &geometry)
              QString::number(geometry.height()))
         .toUtf8();
 }
+
+QVector3D matrixTranslation(const QMatrix4x4 &matrix)
+{
+    return matrix.column(3).toVector3D();
+}
+
+void compareVector(const QVector3D &actual, const QVector3D &expected)
+{
+    QVERIFY2(qAbs(actual.x() - expected.x()) < 0.001f,
+             qPrintable(QStringLiteral("x: actual %1 expected %2").arg(actual.x()).arg(expected.x())));
+    QVERIFY2(qAbs(actual.y() - expected.y()) < 0.001f,
+             qPrintable(QStringLiteral("y: actual %1 expected %2").arg(actual.y()).arg(expected.y())));
+    QVERIFY2(qAbs(actual.z() - expected.z()) < 0.001f,
+             qPrintable(QStringLiteral("z: actual %1 expected %2").arg(actual.z()).arg(expected.z())));
+}
+
+class TestableCa3DWidget : public ca3DWidget
+{
+public:
+    QMatrix4x4 effectiveObjectMotion(const ca3DObjectConfig &object) const
+    {
+        QMap<QString, QMatrix4x4> cache;
+        QSet<QString> visiting;
+        return effectiveObjectMotionMatrix(object, &cache, &visiting);
+    }
+};
 }
 
 void TestCa3DConfig::parsesSceneConfigUtilityFields()
@@ -201,6 +229,7 @@ void TestCa3DConfig::parsesSceneConfigUtilityFields()
     QCOMPARE(config.objects.count(), 1);
     const ca3DObjectConfig object = config.objects.first();
     QCOMPARE(object.id, QStringLiteral("pump"));
+    QCOMPARE(object.masterObjectId, QString());
     QCOMPARE(object.meshResolved, mesh);
     QCOMPARE(object.textureResolved, texture);
     QCOMPARE(object.type, QStringLiteral("stl"));
@@ -254,6 +283,25 @@ void TestCa3DConfig::parsesSceneConfigUtilityFields()
     QCOMPARE(preset.fov, 35.0);
     QCOMPARE(preset.snapshotResolved, snapshot);
     QCOMPARE(preset.overlays, QStringList() << QStringLiteral("panel"));
+}
+
+void TestCa3DConfig::parsesObjectMasterLinks()
+{
+    const QString json = QStringLiteral(R"json({
+        "objects": [
+            { "id": "base" },
+            { "id": "arm", "masterObject": "base", "position": [10, 0, 0] },
+            { "id": "sensor", "masterObject": "arm", "position": [12, 0, 0] }
+        ]
+    })json");
+
+    ca3DSceneConfig config;
+    QStringList errors;
+    QVERIFY2(ca3DConfigParser::parse(json, &config, &errors), qPrintable(errors.join(QLatin1Char('\n'))));
+    QCOMPARE(config.objects.count(), 3);
+    QCOMPARE(config.objects.at(0).masterObjectId, QString());
+    QCOMPARE(config.objects.at(1).masterObjectId, QStringLiteral("base"));
+    QCOMPARE(config.objects.at(2).masterObjectId, QStringLiteral("arm"));
 }
 
 void TestCa3DConfig::parsesCameraPresetsWithoutOverlays()
@@ -324,6 +372,48 @@ void TestCa3DConfig::rejectsInvalidUtilityFields()
     QVERIFY(errors.contains(QStringLiteral("overlay.fallbackGeometry must contain exactly 4 numbers")));
     QVERIFY(errors.contains(QStringLiteral("cameraPreset.position must contain exactly 3 numbers")));
     QVERIFY(errors.contains(QStringLiteral("Camera preset without positive id")));
+}
+
+void TestCa3DConfig::rejectsInvalidObjectMasterLinks()
+{
+    const QString unknownMasterJson = QStringLiteral(R"json({
+        "objects": [
+            { "id": "child", "masterObject": "missing" }
+        ]
+    })json");
+    ca3DSceneConfig config;
+    QStringList errors;
+    QVERIFY(!ca3DConfigParser::parse(unknownMasterJson, &config, &errors));
+    QVERIFY(errors.contains(QStringLiteral("Object 'child' references unknown masterObject 'missing'")));
+
+    const QString selfLinkJson = QStringLiteral(R"json({
+        "objects": [
+            { "id": "arm", "masterObject": "arm" }
+        ]
+    })json");
+    QVERIFY(!ca3DConfigParser::parse(selfLinkJson, &config, &errors));
+    QVERIFY(errors.contains(QStringLiteral("Object 'arm' cannot use itself as masterObject")));
+
+    const QString duplicateJson = QStringLiteral(R"json({
+        "objects": [
+            { "id": "arm" },
+            { "id": "arm" }
+        ]
+    })json");
+    QVERIFY(!ca3DConfigParser::parse(duplicateJson, &config, &errors));
+    QVERIFY(errors.contains(QStringLiteral("Duplicate object id 'arm'")));
+
+    const QString cycleJson = QStringLiteral(R"json({
+        "objects": [
+            { "id": "a", "masterObject": "b" },
+            { "id": "b", "masterObject": "c" },
+            { "id": "c", "masterObject": "a" }
+        ]
+    })json");
+    QVERIFY(!ca3DConfigParser::parse(cycleJson, &config, &errors));
+    QVERIFY(errors.contains(QStringLiteral("Object link cycle detected at 'a'"))
+            || errors.contains(QStringLiteral("Object link cycle detected at 'b'"))
+            || errors.contains(QStringLiteral("Object link cycle detected at 'c'")));
 }
 
 void TestCa3DConfig::resolvesFilesFromDisplayPath()
@@ -478,6 +568,87 @@ void TestCa3DWidget::ca3DWidgetBuildsForcedFallbackOverlays()
     } else {
         qputenv("CAQTDM_3D_FORCE_FALLBACK", oldForceFallback);
     }
+}
+
+void TestCa3DWidget::linkedObjectFollowsMasterTranslation()
+{
+    const QString json = QStringLiteral(R"json({
+        "objects": [
+            { "id": "base", "position": [10, 0, 0] },
+            { "id": "child", "masterObject": "base", "position": [15, 0, 0] }
+        ]
+    })json");
+    ca3DSceneConfig config;
+    QStringList errors;
+    QVERIFY2(ca3DConfigParser::parse(json, &config, &errors), qPrintable(errors.join(QLatin1Char('\n'))));
+
+    TestableCa3DWidget widget;
+    widget.setSceneConfig(json);
+    widget.setObjectTranslation(QStringLiteral("base"), 5.0, 0.0, 0.0);
+
+    compareVector(matrixTranslation(widget.effectiveObjectMotion(config.objects.at(1))),
+                  QVector3D(20.0f, 0.0f, 0.0f));
+}
+
+void TestCa3DWidget::linkedObjectFollowsMasterRotation()
+{
+    const QString json = QStringLiteral(R"json({
+        "objects": [
+            { "id": "base", "position": [0, 0, 0] },
+            { "id": "child", "masterObject": "base", "position": [1, 0, 0] }
+        ]
+    })json");
+    ca3DSceneConfig config;
+    QStringList errors;
+    QVERIFY2(ca3DConfigParser::parse(json, &config, &errors), qPrintable(errors.join(QLatin1Char('\n'))));
+
+    TestableCa3DWidget widget;
+    widget.setSceneConfig(json);
+    widget.setObjectRotation(QStringLiteral("base"), 0.0, 0.0, 90.0);
+
+    compareVector(matrixTranslation(widget.effectiveObjectMotion(config.objects.at(1))),
+                  QVector3D(0.0f, 1.0f, 0.0f));
+}
+
+void TestCa3DWidget::linkedObjectAppliesOwnDynamicMotionInMasterSpace()
+{
+    const QString json = QStringLiteral(R"json({
+        "objects": [
+            { "id": "base", "position": [0, 0, 0] },
+            { "id": "child", "masterObject": "base", "position": [1, 0, 0] }
+        ]
+    })json");
+    ca3DSceneConfig config;
+    QStringList errors;
+    QVERIFY2(ca3DConfigParser::parse(json, &config, &errors), qPrintable(errors.join(QLatin1Char('\n'))));
+
+    TestableCa3DWidget widget;
+    widget.setSceneConfig(json);
+    widget.setObjectRotation(QStringLiteral("base"), 0.0, 0.0, 90.0);
+    widget.setObjectTranslation(QStringLiteral("child"), 1.0, 0.0, 0.0);
+
+    compareVector(matrixTranslation(widget.effectiveObjectMotion(config.objects.at(1))),
+                  QVector3D(0.0f, 2.0f, 0.0f));
+}
+
+void TestCa3DWidget::linkedObjectDoesNotInheritMasterScale()
+{
+    const QString json = QStringLiteral(R"json({
+        "objects": [
+            { "id": "base", "position": [0, 0, 0], "scale": 5.0 },
+            { "id": "child", "masterObject": "base", "position": [1, 0, 0] }
+        ]
+    })json");
+    ca3DSceneConfig config;
+    QStringList errors;
+    QVERIFY2(ca3DConfigParser::parse(json, &config, &errors), qPrintable(errors.join(QLatin1Char('\n'))));
+
+    TestableCa3DWidget widget;
+    widget.setSceneConfig(json);
+    widget.setObjectTranslation(QStringLiteral("base"), 1.0, 0.0, 0.0);
+
+    compareVector(matrixTranslation(widget.effectiveObjectMotion(config.objects.at(1))),
+                  QVector3D(2.0f, 0.0f, 0.0f));
 }
 
 void TestCa3DOverlayWidgetManager::ca3DOverlayWidgetManagerLoadsRendersAndTracksDirtyState()

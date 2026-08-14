@@ -12,6 +12,8 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonParseError>
+#include <QMap>
+#include <QSet>
 
 namespace
 {
@@ -201,6 +203,76 @@ void appendMissingFileError(const QString &fieldName, const QString &fileName, Q
         errors->append(QStringLiteral("%1 '%2' was not found in CAQTDM_DISPLAY_PATH").arg(fieldName, fileName));
     }
 }
+
+bool hasObjectLinkCycle(const QString &objectId,
+                        const QMap<QString, QString> &mastersByObject,
+                        QSet<QString> *visiting,
+                        QSet<QString> *visited)
+{
+    if (visited->contains(objectId)) {
+        return false;
+    }
+    if (visiting->contains(objectId)) {
+        return true;
+    }
+
+    visiting->insert(objectId);
+    const QString masterId = mastersByObject.value(objectId);
+    if (!masterId.isEmpty() && mastersByObject.contains(masterId)) {
+        if (hasObjectLinkCycle(masterId, mastersByObject, visiting, visited)) {
+            return true;
+        }
+    }
+    visiting->remove(objectId);
+    visited->insert(objectId);
+    return false;
+}
+
+void validateObjectLinks(const QList<ca3DObjectConfig> &objects, QStringList *errors)
+{
+    if (!errors) {
+        return;
+    }
+
+    QSet<QString> seenIds;
+    QSet<QString> duplicateIds;
+    QMap<QString, QString> mastersByObject;
+    for (const ca3DObjectConfig &object : objects) {
+        if (object.id.isEmpty()) {
+            continue;
+        }
+        if (seenIds.contains(object.id)) {
+            duplicateIds.insert(object.id);
+        }
+        seenIds.insert(object.id);
+        mastersByObject.insert(object.id, object.masterObjectId);
+    }
+
+    for (const QString &id : duplicateIds) {
+        errors->append(QStringLiteral("Duplicate object id '%1'").arg(id));
+    }
+
+    for (const ca3DObjectConfig &object : objects) {
+        if (object.masterObjectId.isEmpty()) {
+            continue;
+        }
+        if (object.masterObjectId == object.id) {
+            errors->append(QStringLiteral("Object '%1' cannot use itself as masterObject").arg(object.id));
+        } else if (!seenIds.contains(object.masterObjectId)) {
+            errors->append(QStringLiteral("Object '%1' references unknown masterObject '%2'")
+                               .arg(object.id, object.masterObjectId));
+        }
+    }
+
+    QSet<QString> visiting;
+    QSet<QString> visited;
+    for (const QString &objectId : mastersByObject.keys()) {
+        if (hasObjectLinkCycle(objectId, mastersByObject, &visiting, &visited)) {
+            errors->append(QStringLiteral("Object link cycle detected at '%1'").arg(objectId));
+            return;
+        }
+    }
+}
 }
 
 void ca3DSceneConfig::clear()
@@ -255,6 +327,7 @@ bool ca3DConfigParser::parse(const QString &json, ca3DSceneConfig *config, QStri
         const QJsonObject object = value.toObject();
         ca3DObjectConfig item;
         item.id = stringFromObject(object, QStringLiteral("id"));
+        item.masterObjectId = stringFromObject(object, QStringLiteral("masterObject"));
         item.mesh = object.contains(QStringLiteral("mesh"))
                         ? stringFromObject(object, QStringLiteral("mesh"))
                         : stringFromObject(object, QStringLiteral("meshFile"));
@@ -344,6 +417,8 @@ bool ca3DConfigParser::parse(const QString &json, ca3DSceneConfig *config, QStri
 
         config->objects.append(item);
     }
+
+    validateObjectLinks(config->objects, errors);
 
     const QJsonArray overlays = root.value(QStringLiteral("overlays")).toArray();
     for (const QJsonValue &value : overlays) {

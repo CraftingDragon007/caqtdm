@@ -26,6 +26,7 @@
 #include <QQuaternion>
 #include <QResizeEvent>
 #include <QScreen>
+#include <QSet>
 #include <QTimer>
 #include <QUiLoader>
 #include <QVector4D>
@@ -1527,10 +1528,11 @@ void ca3DWidget::rebuildScene()
         }
 
         Qt3DCore::QTransform *transform = new Qt3DCore::QTransform(entity);
+        transform->setObjectName(QStringLiteral("ca3DObjectTransform_%1").arg(object.id));
         entity->addComponent(transform);
         thisObjectTransforms.insert(object.id, transform);
-        applyObjectTransform(object.id);
     }
+    applyAllObjectTransforms();
 
     rebuild3DOverlays();
 
@@ -2087,26 +2089,81 @@ void ca3DWidget::applyCameraPresetConfig(const ca3DCameraPresetConfig &preset)
 
 void ca3DWidget::applyObjectTransform(const QString &objectId)
 {
-    Qt3DCore::QTransform *transform = thisObjectTransforms.value(objectId, Q_NULLPTR);
-    if (!transform) {
-        return;
-    }
+    Q_UNUSED(objectId);
+    applyAllObjectTransforms();
+}
 
+void ca3DWidget::applyAllObjectTransforms()
+{
+    QMap<QString, QMatrix4x4> motionCache;
     foreach (const ca3DObjectConfig &object, thisConfig.objects) {
-        if (object.id != objectId) {
+        Qt3DCore::QTransform *transform = thisObjectTransforms.value(object.id, Q_NULLPTR);
+        if (!transform) {
             continue;
         }
 
-        const QVector3D translation = object.position
-                                      + object.configuredOriginPosition
-                                      + thisDynamicTranslations.value(objectId);
-        const QVector3D rotation = object.rotation
-                                   + object.configuredOriginRotation
-                                   + thisDynamicRotations.value(objectId);
-        transform->setTranslation(translation);
-        transform->setRotation(rotationFromEuler(rotation));
-        transform->setScale(static_cast<float>(object.scale));
-        return;
+        QSet<QString> visiting;
+        QMatrix4x4 renderMatrix = effectiveObjectMotionMatrix(object, &motionCache, &visiting);
+        renderMatrix.scale(static_cast<float>(object.scale));
+        transform->setMatrix(renderMatrix);
     }
+}
+
+QMatrix4x4 ca3DWidget::objectMotionMatrix(const ca3DObjectConfig &object, bool includeDynamic) const
+{
+    const QVector3D translation = object.position
+                                  + object.configuredOriginPosition
+                                  + (includeDynamic ? thisDynamicTranslations.value(object.id) : QVector3D());
+    const QVector3D rotation = object.rotation
+                               + object.configuredOriginRotation
+                               + (includeDynamic ? thisDynamicRotations.value(object.id) : QVector3D());
+    QMatrix4x4 matrix;
+    matrix.translate(translation);
+    matrix.rotate(rotationFromEuler(rotation));
+    return matrix;
+}
+
+QMatrix4x4 ca3DWidget::effectiveObjectMotionMatrix(const ca3DObjectConfig &object,
+                                                   QMap<QString, QMatrix4x4> *cache,
+                                                   QSet<QString> *visiting) const
+{
+    if (cache && cache->contains(object.id)) {
+        return cache->value(object.id);
+    }
+    if (!visiting || visiting->contains(object.id)) {
+        qCWarning(ca3DWidgetLog) << "effectiveObjectMotionMatrix ignored cyclic object link" << object.id;
+        return objectMotionMatrix(object, true);
+    }
+
+    QMatrix4x4 effective = objectMotionMatrix(object, true);
+    if (!object.masterObjectId.isEmpty()) {
+        visiting->insert(object.id);
+        const ca3DObjectConfig *masterObject = Q_NULLPTR;
+        for (const ca3DObjectConfig &candidate : thisConfig.objects) {
+            if (candidate.id == object.masterObjectId) {
+                masterObject = &candidate;
+                break;
+            }
+        }
+        if (masterObject) {
+            bool invertible = false;
+            const QMatrix4x4 masterZeroInverse = objectMotionMatrix(*masterObject, false).inverted(&invertible);
+            if (invertible) {
+                effective = effectiveObjectMotionMatrix(*masterObject, cache, visiting) * masterZeroInverse * effective;
+            } else {
+                qCWarning(ca3DWidgetLog) << "effectiveObjectMotionMatrix ignored non-invertible master transform"
+                                         << object.id << object.masterObjectId;
+            }
+        } else {
+            qCWarning(ca3DWidgetLog) << "effectiveObjectMotionMatrix ignored unknown masterObject"
+                                     << object.id << object.masterObjectId;
+        }
+        visiting->remove(object.id);
+    }
+
+    if (cache) {
+        cache->insert(object.id, effective);
+    }
+    return effective;
 }
 #endif

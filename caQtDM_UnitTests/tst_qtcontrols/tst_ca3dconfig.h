@@ -13,8 +13,10 @@ class TestCa3DConfig : public QObject
 
 private slots:
     void parsesSceneConfigUtilityFields();
+    void parsesObjectMasterLinks();
     void parsesCameraPresetsWithoutOverlays();
     void rejectsInvalidUtilityFields();
+    void rejectsInvalidObjectMasterLinks();
     void resolvesFilesFromDisplayPath();
 };
 
@@ -24,6 +26,10 @@ class TestCa3DWidget : public QObject
 
 private slots:
     void ca3DWidgetBuildsForcedFallbackOverlays();
+    void linkedObjectFollowsMasterTranslation();
+    void linkedObjectFollowsMasterRotation();
+    void linkedObjectAppliesOwnDynamicMotionInMasterSpace();
+    void linkedObjectDoesNotInheritMasterScale();
 };
 
 class TestCa3DOverlayWidgetManager : public QObject

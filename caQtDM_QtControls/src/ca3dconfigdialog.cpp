@@ -249,13 +249,14 @@ void ca3DConfigDialog::buildUi()
     QWidget *objectsPage = new QWidget(tabs);
     QVBoxLayout *objectsLayout = new QVBoxLayout(objectsPage);
     objectsTable = new QTableWidget(objectsPage);
-    objectsTable->setColumnCount(14);
+    objectsTable->setObjectName(QStringLiteral("objectsTable"));
+    objectsTable->setColumnCount(15);
     objectsTable->setHorizontalHeaderLabels(QStringList()
                                             << tr("id") << tr("meshFile") << tr("textureFile") << tr("materialColor")
                                             << tr("pos x") << tr("pos y") << tr("pos z")
                                             << tr("rot x") << tr("rot y") << tr("rot z")
                                             << tr("origin x") << tr("origin y") << tr("origin z")
-                                            << tr("scale"));
+                                            << tr("masterObject") << tr("scale"));
     objectsTable->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
     QHBoxLayout *objectsButtons = new QHBoxLayout();
     QPushButton *addObjectButton = new QPushButton(tr("Add Object"), objectsPage);
@@ -480,7 +481,8 @@ void ca3DConfigDialog::populateTablesFromJson(const QString &json)
         setTableText(objectsTable, row, 10, numberString(object.configuredOriginPosition.x()));
         setTableText(objectsTable, row, 11, numberString(object.configuredOriginPosition.y()));
         setTableText(objectsTable, row, 12, numberString(object.configuredOriginPosition.z()));
-        setTableText(objectsTable, row, 13, numberString(object.scale));
+        setTableText(objectsTable, row, 13, object.masterObjectId);
+        setTableText(objectsTable, row, 14, numberString(object.scale));
 
         for (const ca3DBindingConfig &binding : object.bindings) {
             const int bindingRow = bindingsTable->rowCount();
@@ -638,7 +640,10 @@ QString ca3DConfigDialog::jsonFromTables() const
         object.insert(QStringLiteral("position"), vectorArray(tableText(objectsTable, row, 4), tableText(objectsTable, row, 5), tableText(objectsTable, row, 6)));
         object.insert(QStringLiteral("rotation"), vectorArray(tableText(objectsTable, row, 7), tableText(objectsTable, row, 8), tableText(objectsTable, row, 9)));
         object.insert(QStringLiteral("configuredOriginPosition"), vectorArray(tableText(objectsTable, row, 10), tableText(objectsTable, row, 11), tableText(objectsTable, row, 12)));
-        object.insert(QStringLiteral("scale"), tableText(objectsTable, row, 13).isEmpty() ? 1.0 : tableText(objectsTable, row, 13).toDouble());
+        if (!tableText(objectsTable, row, 13).isEmpty()) {
+            object.insert(QStringLiteral("masterObject"), tableText(objectsTable, row, 13));
+        }
+        object.insert(QStringLiteral("scale"), tableText(objectsTable, row, 14).isEmpty() ? 1.0 : tableText(objectsTable, row, 14).toDouble());
         if (bindingsByObject.contains(objectId)) {
             object.insert(QStringLiteral("bindings"), bindingsByObject.value(objectId));
         }
@@ -709,7 +714,7 @@ void ca3DConfigDialog::addObjectRow()
     for (int column = 0; column < objectsTable->columnCount(); ++column) {
         setTableText(objectsTable, row, column, QString());
     }
-    setTableText(objectsTable, row, 13, QStringLiteral("1.0"));
+    setTableText(objectsTable, row, 14, QStringLiteral("1.0"));
     markChanged();
 }
 
