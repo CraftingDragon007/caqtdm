@@ -52,14 +52,20 @@
 #include <Qt3DExtras/QTextureMaterial>
 #include <Qt3DExtras/Qt3DWindow>
 #include <Qt3DRender/QCamera>
+#include <Qt3DRender/QCameraSelector>
+#include <Qt3DRender/QClearBuffers>
 #include <Qt3DRender/QFrameGraphNode>
+#include <Qt3DRender/QLayer>
+#include <Qt3DRender/QLayerFilter>
 #include <Qt3DRender/QMesh>
 #include <Qt3DRender/QPaintedTextureImage>
 #include <Qt3DRender/QPointLight>
 #include <Qt3DRender/QRenderCapture>
 #include <Qt3DRender/QRenderCaptureReply>
+#include <Qt3DRender/QRenderSurfaceSelector>
 #include <Qt3DRender/QTexture>
 #include <Qt3DRender/QTextureImage>
+#include <Qt3DRender/QViewport>
 #include <QUrl>
 #endif
 
@@ -424,6 +430,40 @@ int configuredOverlayMaxPixels()
 {
     const int pixels = qEnvironmentVariableIntValue("CAQTDM_3D_OVERLAY_MAX_PIXELS");
     return pixels > 0 ? pixels : kOverlayMaxTexturePixels;
+}
+
+void installLayeredFrameGraph(Qt3DExtras::Qt3DWindow *view,
+                              Qt3DRender::QLayer *sceneLayer,
+                              Qt3DRender::QLayer *overlayLayer,
+                              const QColor &clearColor)
+{
+    if (!view || !sceneLayer || !overlayLayer) {
+        return;
+    }
+
+    Qt3DRender::QRenderSurfaceSelector *surfaceSelector = new Qt3DRender::QRenderSurfaceSelector();
+    surfaceSelector->setSurface(view);
+
+    Qt3DRender::QViewport *viewport = new Qt3DRender::QViewport(surfaceSelector);
+    viewport->setNormalizedRect(QRectF(0.0, 0.0, 1.0, 1.0));
+
+    Qt3DRender::QCameraSelector *cameraSelector = new Qt3DRender::QCameraSelector(viewport);
+    cameraSelector->setCamera(view->camera());
+
+    Qt3DRender::QClearBuffers *sceneClear = new Qt3DRender::QClearBuffers(cameraSelector);
+    sceneClear->setBuffers(Qt3DRender::QClearBuffers::ColorDepthBuffer);
+    sceneClear->setClearColor(clearColor);
+
+    Qt3DRender::QLayerFilter *sceneFilter = new Qt3DRender::QLayerFilter(sceneClear);
+    sceneFilter->addLayer(sceneLayer);
+
+    Qt3DRender::QClearBuffers *overlayDepthClear = new Qt3DRender::QClearBuffers(cameraSelector);
+    overlayDepthClear->setBuffers(Qt3DRender::QClearBuffers::DepthBuffer);
+
+    Qt3DRender::QLayerFilter *overlayFilter = new Qt3DRender::QLayerFilter(overlayDepthClear);
+    overlayFilter->addLayer(overlayLayer);
+
+    view->setActiveFrameGraph(surfaceSelector);
 }
 #endif
 
@@ -1642,7 +1682,11 @@ void ca3DWidget::rebuildScene()
 
     thisStatusLabel->hide();
     thisRootEntity = new Qt3DCore::QEntity();
-    this3DView->defaultFrameGraph()->setClearColor(thisConfig.backgroundColor);
+    Qt3DRender::QLayer *sceneLayer = new Qt3DRender::QLayer(thisRootEntity);
+    sceneLayer->setObjectName(QStringLiteral("ca3DSceneLayer"));
+    Qt3DRender::QLayer *overlayLayer = new Qt3DRender::QLayer(thisRootEntity);
+    overlayLayer->setObjectName(QStringLiteral("ca3DOverlayLayer"));
+    installLayeredFrameGraph(this3DView, sceneLayer, overlayLayer, thisConfig.backgroundColor);
 
     Qt3DCore::QEntity *lightEntity = new Qt3DCore::QEntity(thisRootEntity);
     Qt3DRender::QPointLight *light = new Qt3DRender::QPointLight(lightEntity);
@@ -1652,6 +1696,7 @@ void ca3DWidget::rebuildScene()
     lightTransform->setTranslation(QVector3D(0.0f, 500.0f, 500.0f));
     lightEntity->addComponent(light);
     lightEntity->addComponent(lightTransform);
+    lightEntity->addComponent(sceneLayer);
 
     foreach (const ca3DObjectConfig &object, thisConfig.objects) {
         if (object.meshResolved.isEmpty()) {
@@ -1694,11 +1739,12 @@ void ca3DWidget::rebuildScene()
         Qt3DCore::QTransform *transform = new Qt3DCore::QTransform(entity);
         transform->setObjectName(QStringLiteral("ca3DObjectTransform_%1").arg(object.id));
         entity->addComponent(transform);
+        entity->addComponent(sceneLayer);
         thisObjectTransforms.insert(object.id, transform);
     }
     applyAllObjectTransforms();
 
-    rebuild3DOverlays();
+    rebuild3DOverlays(overlayLayer);
 
     this3DView->setRootEntity(thisRootEntity);
     if (!thisConfig.cameraPresets.isEmpty()) {
@@ -2030,10 +2076,10 @@ bool ca3DWidget::shouldUse2DFallback() const
            || renderer.contains(QStringLiteral("swrast"));
 }
 
-void ca3DWidget::rebuild3DOverlays()
+void ca3DWidget::rebuild3DOverlays(Qt3DRender::QLayer *overlayLayer)
 {
     clear3DOverlays();
-    if (!thisRootEntity || !this3DView || !thisViewContainer) {
+    if (!thisRootEntity || !this3DView || !thisViewContainer || !overlayLayer) {
         return;
     }
 
@@ -2113,6 +2159,7 @@ void ca3DWidget::rebuild3DOverlays()
         overlayEntity->addComponent(plane);
         overlayEntity->addComponent(material);
         overlayEntity->addComponent(transform);
+        overlayEntity->addComponent(overlayLayer);
 
         OverlayInteractionFilter *interactionFilter = new OverlayInteractionFilter(thisViewContainer,
                                                                                    this3DView,

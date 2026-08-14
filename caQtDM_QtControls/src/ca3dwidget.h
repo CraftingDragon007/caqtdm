@@ -35,6 +35,7 @@ class Qt3DWindow;
 }
 
 namespace Qt3DRender {
+class QLayer;
 class QRenderCapture;
 class QRenderCaptureReply;
 }
@@ -138,7 +139,7 @@ protected:
     void initialize3DView();
     void update3DViewGeometry();
     bool shouldUse2DFallback() const;
-    void rebuild3DOverlays();
+    void rebuild3DOverlays(Qt3DRender::QLayer *overlayLayer);
     void clear3DOverlays();
     void apply3DOverlayVisibility(int preset);
     void applyCameraPresetConfig(const ca3DCameraPresetConfig &preset);
