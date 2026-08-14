@@ -4,6 +4,7 @@
 #include <QImage>
 #include <QEvent>
 #include <QPoint>
+#include <QPointF>
 #include <QRect>
 #include <QRegion>
 #include <QVector>
@@ -27,6 +28,8 @@ public:
     QImage renderSnapshot(qreal scale) const;
     bool sendMouseEvent(const QPointF &designPosition, QEvent::Type type, Qt::MouseButton button,
                         Qt::MouseButtons buttons, Qt::KeyboardModifiers modifiers);
+    bool sendContextMenuEvent(const QPointF &designPosition, const QPoint &globalPosition,
+                              Qt::KeyboardModifiers modifiers);
     bool sendKeyEvent(QKeyEvent *event);
     bool hasFocusedTextInput() const;
     bool takeTextureDirty();
@@ -37,6 +40,7 @@ protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
 
 private:
+    QWidget *targetWidgetAt(const QPointF &designPosition) const;
     void installDirtyTracking(QWidget *widget);
 
     QWidget *thisLoadedWidget;

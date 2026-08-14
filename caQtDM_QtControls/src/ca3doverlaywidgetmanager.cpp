@@ -2,6 +2,7 @@
 
 #include <QApplication>
 #include <QChildEvent>
+#include <QContextMenuEvent>
 #include <QFile>
 #include <QFocusEvent>
 #include <QKeyEvent>
@@ -172,16 +173,7 @@ bool ca3DOverlayWidgetManager::sendMouseEvent(const QPointF &designPosition,
     if (thisMouseCaptureWidget && type != QEvent::MouseButtonPress) {
         target = thisMouseCaptureWidget;
     } else {
-        target = thisContentRoot->childAt(designPosition.toPoint());
-        if (!target) {
-            target = thisContentRoot;
-        }
-
-        if (QWidget *scrollBar = scrollBarAncestor(target)) {
-            target = scrollBar;
-        } else if (QWidget *textInput = textInputAncestor(target)) {
-            target = textInput;
-        }
+        target = targetWidgetAt(designPosition);
     }
 
     if (!target) {
@@ -220,6 +212,47 @@ bool ca3DOverlayWidgetManager::sendMouseEvent(const QPointF &designPosition,
     return handled || forwardedEvent.isAccepted();
 }
 
+bool ca3DOverlayWidgetManager::sendContextMenuEvent(const QPointF &designPosition,
+                                                    const QPoint &globalPosition,
+                                                    Qt::KeyboardModifiers modifiers) {
+    if (!thisContentRoot ||
+        !QRectF(QPointF(0.0, 0.0), QSizeF(thisSourceDesignSize))
+             .contains(designPosition)) {
+        return false;
+    }
+
+    QWidget *target = targetWidgetAt(designPosition);
+    if (!target) {
+        return false;
+    }
+
+    const QPoint localPosition =
+        target->mapFrom(thisContentRoot, designPosition.toPoint());
+    for (QWidget *current = target; current; current = current->parentWidget()) {
+        if (current->contextMenuPolicy() == Qt::NoContextMenu) {
+            continue;
+        }
+
+        const QPoint currentPosition =
+            current->mapFrom(target, localPosition);
+        QContextMenuEvent forwardedEvent(QContextMenuEvent::Mouse,
+                                         currentPosition,
+                                         globalPosition,
+                                         modifiers);
+        const bool handled = QApplication::sendEvent(current, &forwardedEvent);
+        if (handled || forwardedEvent.isAccepted()) {
+            markTextureDirty();
+            return true;
+        }
+
+        if (current == thisContentRoot) {
+            break;
+        }
+    }
+
+    return true;
+}
+
 bool ca3DOverlayWidgetManager::sendKeyEvent(QKeyEvent *event) {
     if (!event || !thisFocusedOverlayWidget) {
         return false;
@@ -247,6 +280,25 @@ bool ca3DOverlayWidgetManager::takeTextureDirty() {
 }
 
 void ca3DOverlayWidgetManager::markTextureDirty() { thisTextureDirty = true; }
+
+QWidget *ca3DOverlayWidgetManager::targetWidgetAt(const QPointF &designPosition) const {
+    if (!thisContentRoot) {
+        return Q_NULLPTR;
+    }
+
+    QWidget *target = thisContentRoot->childAt(designPosition.toPoint());
+    if (!target) {
+        target = thisContentRoot;
+    }
+
+    if (QWidget *scrollBar = scrollBarAncestor(target)) {
+        target = scrollBar;
+    } else if (QWidget *textInput = textInputAncestor(target)) {
+        target = textInput;
+    }
+
+    return target;
+}
 
 void ca3DOverlayWidgetManager::installDirtyTracking(QWidget *widget) {
     if (!widget) {

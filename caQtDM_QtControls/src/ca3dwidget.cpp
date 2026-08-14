@@ -147,23 +147,6 @@ QPoint globalMousePosition(QMouseEvent *event)
 #endif
 }
 
-bool forwardContextMenuTo3DWidget(QWidget *viewport, const QPoint &globalPos)
-{
-    QWidget *owner = viewport;
-    while (owner && !qobject_cast<ca3DWidget *>(owner)) {
-        owner = owner->parentWidget();
-    }
-    if (!owner) {
-        return false;
-    }
-
-    QMetaObject::invokeMethod(owner,
-                              "customContextMenuRequested",
-                              Qt::DirectConnection,
-                              Q_ARG(QPoint, owner->mapFromGlobal(globalPos)));
-    return true;
-}
-
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 class LiveWidgetTextureImage final : public Qt3DRender::QPaintedTextureImage
 {
@@ -227,14 +210,6 @@ public:
 protected:
     bool eventFilter(QObject *watched, QEvent *event) override
     {
-        if (event->type() == QEvent::MouseButtonPress && (watched == thisViewport || watched == thisRenderWindow)) {
-            QMouseEvent *mouseEvent = static_cast<QMouseEvent *>(event);
-            if (mouseEvent->button() == Qt::RightButton && forwardContextMenuTo3DWidget(thisViewport, globalMousePosition(mouseEvent))) {
-                event->accept();
-                return true;
-            }
-        }
-
         if (!thisCamera || !thisOverlayManager || !property("ca3DOverlayActive").toBool()) {
             return QObject::eventFilter(watched, event);
         }
@@ -273,6 +248,17 @@ protected:
             }
 
             if (event->type() == QEvent::MouseButtonPress) {
+                if (mouseEvent->button() == Qt::RightButton) {
+                    const bool handled =
+                        thisOverlayManager->sendContextMenuEvent(designPosition,
+                                                                 globalMousePosition(mouseEvent),
+                                                                 mouseEvent->modifiers());
+                    if (handled) {
+                        event->accept();
+                        return true;
+                    }
+                }
+
                 thisOverlayFocused = true;
                 if (thisViewport) {
                     thisViewport->setFocus(Qt::MouseFocusReason);
