@@ -51,6 +51,7 @@
 
 #include <QJsonDocument>
 #include <QJsonArray>
+#include <QJsonObject>
 #include <QToolBar>
 #include <QUuid>
 #include <QHostInfo>
@@ -128,6 +129,10 @@
 #define CHANGEVALUE 	"Change Increment/Value"
 #define CHANGEAXIS      "Change Axis"
 #define RESETZOOM       "Reset Zoom"
+#define COPY3DLOCATION  "Copy 3D Location"
+#define COPY3DPOSITION  "Copy Position"
+#define COPY3DROTATION  "Copy Rotation"
+#define COPY3DBOTH      "Copy Both"
 #define INPUTDIALOG 	"Input Dialog"
 #define FILEDIALOG      "File Dialog"
 #define CHANGELIMITS 	"Change Limits/Precision"
@@ -304,6 +309,99 @@ static QString caQtDMHtmlEscaped(const QString &text)
 static QString ca3DVectorInfo(const QVector3D &vector)
 {
     return QString("(%1, %2, %3)").arg(vector.x()).arg(vector.y()).arg(vector.z());
+}
+
+static QJsonObject ca3DVectorJson(const QVector3D &vector)
+{
+    QJsonObject object;
+    object["x"] = vector.x();
+    object["y"] = vector.y();
+    object["z"] = vector.z();
+    return object;
+}
+
+static QVariant ca3DCopyActionData(const QString &target, const QString &objectId, const QString &mode)
+{
+    QVariantMap data;
+    data["caqtdm3dCopyLocation"] = true;
+    data["target"] = target;
+    data["objectId"] = objectId;
+    data["mode"] = mode;
+    return data;
+}
+
+static void addCa3DCopyActions(QMenu *menu, const QString &target, const QString &objectId)
+{
+    QAction *positionAction = menu->addAction(COPY3DPOSITION);
+    positionAction->setData(ca3DCopyActionData(target, objectId, "position"));
+
+    QAction *rotationAction = menu->addAction(COPY3DROTATION);
+    rotationAction->setData(ca3DCopyActionData(target, objectId, "rotation"));
+
+    QAction *bothAction = menu->addAction(COPY3DBOTH);
+    bothAction->setData(ca3DCopyActionData(target, objectId, "both"));
+}
+
+static void addCa3DCopyLocationMenu(QMenu *menu, ca3DWidget *widget)
+{
+    if (!menu || !widget) {
+        return;
+    }
+
+    QFontMetrics rootMetrics(menu->font());
+    menu->setMinimumWidth(qMax(menu->minimumWidth(), QMETRIC_QT456_FONT_WIDTH(rootMetrics, QString(COPY3DLOCATION)) + 64));
+
+    QMenu *copyMenu = menu->addMenu(COPY3DLOCATION);
+    QMenu *cameraMenu = copyMenu->addMenu("Camera");
+    addCa3DCopyActions(cameraMenu, "camera", QString());
+
+    QFontMetrics metrics(copyMenu->font());
+    int maxLabelWidth = QMETRIC_QT456_FONT_WIDTH(metrics, QString("Camera"));
+    const ca3DSceneConfig &config = widget->sceneConfig();
+    for (const ca3DObjectConfig &object : config.objects) {
+        const QString objectLabel = object.id.isEmpty() ? QString("Object") : object.id;
+        maxLabelWidth = qMax(maxLabelWidth, QMETRIC_QT456_FONT_WIDTH(metrics, objectLabel));
+        QMenu *objectMenu = copyMenu->addMenu(objectLabel);
+        addCa3DCopyActions(objectMenu, "object", object.id);
+    }
+    copyMenu->setMinimumWidth(maxLabelWidth + 64);
+}
+
+static QJsonObject ca3DCopyLocationJson(ca3DWidget *widget, const QVariantMap &data)
+{
+    QJsonObject object;
+    if (!widget) {
+        return object;
+    }
+
+    const QString target = data.value("target").toString();
+    const QString objectId = data.value("objectId").toString();
+    const QString mode = data.value("mode").toString();
+
+    QVector3D position;
+    QVector3D rotation;
+    if (target == "camera") {
+        position = widget->currentCameraPosition();
+        rotation = widget->currentCameraRotation();
+    } else if (target == "object") {
+        position = widget->currentObjectPosition(objectId);
+        rotation = widget->currentObjectRotation(objectId);
+    }
+
+    if (mode == "position" || mode == "both") {
+        object["position"] = ca3DVectorJson(position);
+    }
+    if (mode == "rotation" || mode == "both") {
+        object["rotation"] = ca3DVectorJson(rotation);
+    }
+    return object;
+}
+
+static void copyCa3DLocationToClipboard(ca3DWidget *widget, const QVariantMap &data)
+{
+    const QJsonObject object = ca3DCopyLocationJson(widget, data);
+    const QString text = QString::fromUtf8(QJsonDocument(object).toJson(QJsonDocument::Compact));
+    QApplication::clipboard()->setText(text, QClipboard::Clipboard);
 }
 
 static QString ca3DBindingTargetInfo(ca3DBindingConfig::BindingTarget target)
@@ -8939,6 +9037,10 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
         myMenu.addAction(GETINFO);
     }
 
+    if(ca3DWidget *widget3D = qobject_cast<ca3DWidget *>(w)) {
+        addCa3DCopyLocationMenu(&myMenu, widget3D);
+    }
+
     // for stripplot add one more action
     if(caStripPlot* stripplotWidget = qobject_cast<caStripPlot *>(w)) {
         Q_UNUSED(stripplotWidget);
@@ -8997,7 +9099,11 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
     QAction* selectedItem = myMenu.exec(cursorPos);
 
     if (selectedItem) {
-        if(selectedItem->text().contains(KILLPROCESS)) {
+        const QVariantMap selectedData = selectedItem->data().toMap();
+        if(selectedData.value("caqtdm3dCopyLocation").toBool()) {
+            copyCa3DLocationToClipboard(qobject_cast<ca3DWidget *>(w), selectedData);
+
+        } else if(selectedItem->text().contains(KILLPROCESS)) {
             if(caScriptButton* scriptbuttonWidget =  qobject_cast< caScriptButton *>(w)) {
 #ifndef MOBILE
                 processWindow *t= (processWindow *) scriptbuttonWidget->getProcess();
