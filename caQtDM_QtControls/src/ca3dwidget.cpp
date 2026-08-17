@@ -1057,6 +1057,16 @@ bool ca3DWidget::capture3DSnapshot(bool includeOverlays)
         return false;
     }
 
+    if (!includeOverlays && this3DOverlayEntities.isEmpty()) {
+        const QPixmap snapshot = grab3DSnapshot(false);
+        if (snapshot.isNull()) {
+            emit snapshotCaptureFailed(tr("3D snapshot capture returned an empty image"));
+            return false;
+        }
+        emit snapshotCaptured(snapshot);
+        return true;
+    }
+
     thisSnapshotOverlayStates.clear();
     if (!includeOverlays) {
         for (auto it = this3DOverlayEntities.begin(); it != this3DOverlayEntities.end(); ++it) {
