@@ -2521,12 +2521,23 @@ has no equivalent in MEDM
       Camera orientation in degrees. Pitch is limited to the usable range near
       -89 to +89 degrees. Defaults are ``0``.
 
+      A pitch of exactly ``-90`` or ``+90`` points the camera straight down or
+      up. At either vertical orientation yaw is undefined, so yaw changes have
+      no visible effect and the reported yaw may become ``180`` (or another
+      equivalent angle) because it is reconstructed from the nearly vertical
+      view direction. For a stable interactive top view, use a pitch near
+      ``-89`` instead of ``-90``.
+
    ``viewCenter``
       Optional explicit look-at point as ``[x, y, z]``.
 
    ``upVector``
       Optional camera up direction. The default is ``[0, 1, 0]``. A zero-length
       vector also falls back to this default.
+
+      For a near-vertical camera, use a horizontal up vector so that it is not
+      parallel to the viewing direction. For example, a stable top view can
+      use ``"pitch": -89`` and ``"upVector": [0, 0, -1]``.
 
    ``fov``
       Vertical perspective field of view in degrees. The default is ``45``.
