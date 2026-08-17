@@ -79,6 +79,20 @@ constexpr int kOverlayMaxTexturePixels = 1048576;
 constexpr float kCameraMinPitchDegrees = -89.0f;
 constexpr float kCameraMaxPitchDegrees = 89.0f;
 
+QColor contrastingTextColor(const QColor &background)
+{
+    const auto linearChannel = [](int channel) {
+        const double value = static_cast<double>(channel) / 255.0;
+        return value <= 0.03928 ? value / 12.92 : std::pow((value + 0.055) / 1.055, 2.4);
+    };
+    const double luminance = 0.2126 * linearChannel(background.red())
+                             + 0.7152 * linearChannel(background.green())
+                             + 0.0722 * linearChannel(background.blue());
+    const double whiteContrast = 1.05 / (luminance + 0.05);
+    const double blackContrast = (luminance + 0.05) / 0.05;
+    return whiteContrast >= blackContrast ? QColor(Qt::white) : QColor(Qt::black);
+}
+
 QQuaternion rotationFromEuler(const QVector3D &rotation)
 {
     return QQuaternion::fromEulerAngles(rotation.x(), rotation.y(), rotation.z());
@@ -744,8 +758,9 @@ ca3DWidget::ca3DWidget(QWidget *parent)
     setAutoFillBackground(true);
 
     QPalette pal = palette();
-    pal.setColor(QPalette::Window, QColor(30, 34, 40));
-    pal.setColor(QPalette::WindowText, Qt::white);
+    const QColor defaultBackground(30, 34, 40);
+    pal.setColor(QPalette::Window, defaultBackground);
+    pal.setColor(QPalette::WindowText, contrastingTextColor(defaultBackground));
     setPalette(pal);
 
     thisStatusLabel->setAlignment(Qt::AlignCenter);
@@ -908,6 +923,23 @@ void ca3DWidget::setSceneConfig(const QString &config)
 
     thisSceneConfig = config;
     thisConfigValid = ca3DConfigParser::parse(thisSceneConfig, &thisConfig, &thisConfigErrors);
+    QPalette scenePalette = palette();
+    scenePalette.setColor(QPalette::Window, thisConfig.backgroundColor);
+    const QColor textColor = contrastingTextColor(thisConfig.backgroundColor);
+    scenePalette.setColor(QPalette::WindowText, textColor);
+    scenePalette.setColor(QPalette::Text, textColor);
+    scenePalette.setColor(QPalette::ButtonText, textColor);
+    setPalette(scenePalette);
+    QPalette statusPalette = thisStatusLabel->palette();
+    statusPalette.setColor(QPalette::Window, thisConfig.backgroundColor);
+    statusPalette.setColor(QPalette::WindowText, textColor);
+    statusPalette.setColor(QPalette::Text, textColor);
+    thisStatusLabel->setPalette(statusPalette);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    if (this3DView) {
+        this3DView->defaultFrameGraph()->setClearColor(thisConfig.backgroundColor);
+    }
+#endif
     rebuildObjectLinks();
     thisDynamicTranslations.clear();
     thisDynamicRotations.clear();
@@ -1696,14 +1728,15 @@ void ca3DWidget::rebuildScene()
     sceneLayer->setObjectName(QStringLiteral("ca3DSceneLayer"));
     Qt3DRender::QLayer *overlayLayer = new Qt3DRender::QLayer(thisRootEntity);
     overlayLayer->setObjectName(QStringLiteral("ca3DOverlayLayer"));
+    this3DView->defaultFrameGraph()->setClearColor(thisConfig.backgroundColor);
     installLayeredFrameGraph(this3DView, sceneLayer, overlayLayer, thisConfig.backgroundColor);
 
     Qt3DCore::QEntity *lightEntity = new Qt3DCore::QEntity(thisRootEntity);
     Qt3DRender::QPointLight *light = new Qt3DRender::QPointLight(lightEntity);
-    light->setColor(Qt::white);
-    light->setIntensity(1.0f);
+    light->setColor(thisConfig.pointLight.color);
+    light->setIntensity(static_cast<float>(thisConfig.pointLight.intensity));
     Qt3DCore::QTransform *lightTransform = new Qt3DCore::QTransform(lightEntity);
-    lightTransform->setTranslation(QVector3D(0.0f, 500.0f, 500.0f));
+    lightTransform->setTranslation(thisConfig.pointLight.position);
     lightEntity->addComponent(light);
     lightEntity->addComponent(lightTransform);
     lightEntity->addComponent(sceneLayer);
@@ -1788,6 +1821,10 @@ void ca3DWidget::rebuildFallbackView()
     thisStatusLabel->hide();
     QPalette fallbackPalette = thisFallbackView->palette();
     fallbackPalette.setColor(QPalette::Window, thisConfig.backgroundColor);
+    const QColor textColor = contrastingTextColor(thisConfig.backgroundColor);
+    fallbackPalette.setColor(QPalette::WindowText, textColor);
+    fallbackPalette.setColor(QPalette::Text, textColor);
+    fallbackPalette.setColor(QPalette::ButtonText, textColor);
     thisFallbackView->setAutoFillBackground(true);
     thisFallbackView->setPalette(fallbackPalette);
     thisFallbackSnapshotLabel->setPalette(fallbackPalette);
@@ -2028,7 +2065,7 @@ void ca3DWidget::initialize3DView()
     thisFallbackView->hide();
 
     this3DView = new Qt3DExtras::Qt3DWindow();
-    this3DView->defaultFrameGraph()->setClearColor(QColor(30, 34, 40));
+    this3DView->defaultFrameGraph()->setClearColor(thisConfig.backgroundColor);
     Qt3DRender::QCamera *camera = this3DView->camera();
     connect(camera, &Qt3DRender::QCamera::positionChanged, this, [this](const QVector3D &position) {
         emitCameraPositionSignals(position);

@@ -11,6 +11,7 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDialogButtonBox>
+#include <QDoubleSpinBox>
 #include <QFile>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -20,6 +21,7 @@
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QTableWidget>
+#include <QTabWidget>
 #include <QTemporaryDir>
 #include <QTest>
 
@@ -176,6 +178,63 @@ void TestCa3DConfigDialog::appliesStructuredOverlayChanges()
     const QJsonObject root = QJsonDocument::fromJson(widget.getSceneConfig().toUtf8()).object();
     QCOMPARE(root.value(QStringLiteral("backgroundColor")).toString(), QStringLiteral("#112233"));
     QCOMPARE(root.value(QStringLiteral("cameraPresets")).toArray().count(), 1);
+}
+
+void TestCa3DConfigDialog::editsGeneralSceneSettings()
+{
+    const QString json = QStringLiteral(R"json({
+        "backgroundColor": "#112233",
+        "lighting": {
+            "pointLight": {
+                "color": "#aabbcc",
+                "intensity": 2.5,
+                "position": [10, 20, 30]
+            }
+        },
+        "objects": []
+    })json");
+
+    ca3DWidget widget;
+    widget.setSceneConfig(json);
+    ca3DConfigDialog dialog(&widget);
+
+    QTabWidget *tabs = dialog.findChild<QTabWidget *>();
+    QVERIFY(tabs);
+    QCOMPARE(tabs->tabText(0), QStringLiteral("General"));
+
+    QPushButton *background = dialog.findChild<QPushButton *>(QStringLiteral("backgroundColorButton"));
+    QPushButton *lightColor = dialog.findChild<QPushButton *>(QStringLiteral("pointLightColorButton"));
+    QDoubleSpinBox *intensity = dialog.findChild<QDoubleSpinBox *>(QStringLiteral("pointLightIntensitySpinBox"));
+    QDoubleSpinBox *positionX = dialog.findChild<QDoubleSpinBox *>(QStringLiteral("pointLightPositionXSpinBox"));
+    QDoubleSpinBox *positionY = dialog.findChild<QDoubleSpinBox *>(QStringLiteral("pointLightPositionYSpinBox"));
+    QDoubleSpinBox *positionZ = dialog.findChild<QDoubleSpinBox *>(QStringLiteral("pointLightPositionZSpinBox"));
+    QVERIFY(background);
+    QVERIFY(lightColor);
+    QVERIFY(intensity);
+    QVERIFY(positionX);
+    QVERIFY(positionY);
+    QVERIFY(positionZ);
+    QCOMPARE(background->text(), QStringLiteral("#112233"));
+    QCOMPARE(lightColor->text(), QStringLiteral("#aabbcc"));
+    QCOMPARE(intensity->value(), 2.5);
+    QCOMPARE(positionX->value(), 10.0);
+    QCOMPARE(positionY->value(), 20.0);
+    QCOMPARE(positionZ->value(), 30.0);
+
+    QDialogButtonBox *buttonBox = dialog.findChild<QDialogButtonBox *>();
+    QVERIFY(buttonBox);
+    intensity->setValue(4.5);
+    positionZ->setValue(40.0);
+    QVERIFY(buttonBox->button(QDialogButtonBox::Apply)->isEnabled());
+    QVERIFY(QMetaObject::invokeMethod(&dialog, "applyChanges", Qt::DirectConnection));
+
+    const QJsonObject root = QJsonDocument::fromJson(widget.getSceneConfig().toUtf8()).object();
+    QCOMPARE(root.value(QStringLiteral("backgroundColor")).toString(), QStringLiteral("#112233"));
+    const QJsonObject pointLight = root.value(QStringLiteral("lighting")).toObject()
+                                       .value(QStringLiteral("pointLight")).toObject();
+    QCOMPARE(pointLight.value(QStringLiteral("color")).toString(), QStringLiteral("#aabbcc"));
+    QCOMPARE(pointLight.value(QStringLiteral("intensity")).toDouble(), 4.5);
+    QCOMPARE(pointLight.value(QStringLiteral("position")).toArray().at(2).toDouble(), 40.0);
 }
 
 void TestCa3DConfigDialog::roundTripsObjectMasterLinks()

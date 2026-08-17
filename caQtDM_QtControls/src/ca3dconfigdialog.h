@@ -6,6 +6,7 @@
 #define CA3DCONFIGDIALOG_H
 
 #include <QDialog>
+#include <QColor>
 #include <QList>
 #include <QVector3D>
 #include <qtcontrols_global.h>
@@ -14,6 +15,7 @@ class ca3DWidget;
 class QDialogButtonBox;
 class QComboBox;
 class QCheckBox;
+class QDoubleSpinBox;
 class QLabel;
 class QPlainTextEdit;
 class QPixmap;
@@ -73,6 +75,8 @@ private:
     void applyClipboardLocation(bool applyPosition, bool applyRotation);
     void showSelectionRequired(const QString &itemType);
     void showErrors(const QStringList &errors);
+    void setColorButton(QPushButton *button, const QColor &color);
+    QColor colorButtonValue(QPushButton *button) const;
 
     ca3DWidget *widget3D;
     ca3DWidget *previewWidget;
@@ -82,6 +86,12 @@ private:
     QString pendingSnapshotConfigPath;
     int pendingSnapshotPreset;
     QTabWidget *tabs;
+    QPushButton *backgroundColorButton;
+    QPushButton *pointLightColorButton;
+    QDoubleSpinBox *pointLightIntensitySpinBox;
+    QDoubleSpinBox *pointLightPositionXSpinBox;
+    QDoubleSpinBox *pointLightPositionYSpinBox;
+    QDoubleSpinBox *pointLightPositionZSpinBox;
     QTableWidget *objectsTable;
     QTableWidget *bindingsTable;
     QTableWidget *overlaysTable;

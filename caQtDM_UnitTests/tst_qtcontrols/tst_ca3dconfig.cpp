@@ -285,6 +285,35 @@ void TestCa3DConfig::parsesSceneConfigUtilityFields()
     QCOMPARE(preset.overlays, QStringList() << QStringLiteral("panel"));
 }
 
+void TestCa3DConfig::parsesPointLightConfiguration()
+{
+    const QString json = QStringLiteral(R"json({
+        "backgroundColor": "#102030",
+        "lighting": {
+            "pointLight": {
+                "color": [10, 20, 30],
+                "intensity": 2.5,
+                "position": [1, 2, 3]
+            }
+        }
+    })json");
+
+    ca3DSceneConfig config;
+    QStringList errors;
+    QVERIFY2(ca3DConfigParser::parse(json, &config, &errors), qPrintable(errors.join(QLatin1Char('\n'))));
+    QCOMPARE(config.pointLight.color, QColor(10, 20, 30));
+    QCOMPARE(config.pointLight.intensity, 2.5);
+    QCOMPARE(config.pointLight.position, QVector3D(1.0f, 2.0f, 3.0f));
+
+    ca3DSceneConfig defaults;
+    errors.clear();
+    QVERIFY2(ca3DConfigParser::parse(QStringLiteral("{}"), &defaults, &errors),
+             qPrintable(errors.join(QLatin1Char('\n'))));
+    QCOMPARE(defaults.pointLight.color, QColor(Qt::white));
+    QCOMPARE(defaults.pointLight.intensity, 1.0);
+    QCOMPARE(defaults.pointLight.position, QVector3D(0.0f, 500.0f, 500.0f));
+}
+
 void TestCa3DConfig::parsesObjectMasterLinks()
 {
     const QString json = QStringLiteral(R"json({
@@ -372,6 +401,26 @@ void TestCa3DConfig::rejectsInvalidUtilityFields()
     QVERIFY(errors.contains(QStringLiteral("overlay.fallbackGeometry must contain exactly 4 numbers")));
     QVERIFY(errors.contains(QStringLiteral("cameraPreset.position must contain exactly 3 numbers")));
     QVERIFY(errors.contains(QStringLiteral("Camera preset without positive id")));
+}
+
+void TestCa3DConfig::rejectsInvalidPointLightConfiguration()
+{
+    const QString json = QStringLiteral(R"json({
+        "lighting": {
+            "pointLight": {
+                "color": "not-a-color",
+                "intensity": -1,
+                "position": [1, 2]
+            }
+        }
+    })json");
+
+    ca3DSceneConfig config;
+    QStringList errors;
+    QVERIFY(!ca3DConfigParser::parse(json, &config, &errors));
+    QVERIFY(errors.contains(QStringLiteral("lighting.pointLight.color must be a valid color string or [r,g,b] array")));
+    QVERIFY(errors.contains(QStringLiteral("lighting.pointLight.intensity must not be negative")));
+    QVERIFY(errors.contains(QStringLiteral("lighting.pointLight.position must contain exactly 3 numbers")));
 }
 
 void TestCa3DConfig::rejectsInvalidObjectMasterLinks()

@@ -102,12 +102,20 @@ struct QTCON_EXPORT ca3DCameraPresetConfig
     QStringList overlays;
 };
 
+struct QTCON_EXPORT ca3DPointLightConfig
+{
+    QColor color = Qt::white;
+    double intensity = 1.0;
+    QVector3D position = QVector3D(0.0f, 500.0f, 500.0f);
+};
+
 struct QTCON_EXPORT ca3DSceneConfig
 {
     QList<ca3DObjectConfig> objects;
     QList<ca3DOverlayConfig> overlays;
     QList<ca3DCameraPresetConfig> cameraPresets;
     QColor backgroundColor = QColor(30, 34, 40);
+    ca3DPointLightConfig pointLight;
 
     void clear();
     bool isEmpty() const;

@@ -12,10 +12,13 @@
 #include <QClipboard>
 #include <QComboBox>
 #include <QCheckBox>
+#include <QColorDialog>
 #include <QDialogButtonBox>
 #include <QDir>
+#include <QDoubleSpinBox>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QFormLayout>
 #include <QFontDatabase>
 #include <QHeaderView>
 #include <QHBoxLayout>
@@ -270,6 +273,12 @@ ca3DConfigDialog::ca3DConfigDialog(ca3DWidget *widget, QWidget *parent)
     , captureSnapshotButton(Q_NULLPTR)
     , pendingSnapshotPreset(0)
     , tabs(Q_NULLPTR)
+    , backgroundColorButton(Q_NULLPTR)
+    , pointLightColorButton(Q_NULLPTR)
+    , pointLightIntensitySpinBox(Q_NULLPTR)
+    , pointLightPositionXSpinBox(Q_NULLPTR)
+    , pointLightPositionYSpinBox(Q_NULLPTR)
+    , pointLightPositionZSpinBox(Q_NULLPTR)
     , objectsTable(Q_NULLPTR)
     , bindingsTable(Q_NULLPTR)
     , overlaysTable(Q_NULLPTR)
@@ -293,6 +302,62 @@ void ca3DConfigDialog::buildUi()
 
     QVBoxLayout *layout = new QVBoxLayout(this);
     tabs = new QTabWidget(this);
+
+    QWidget *generalPage = new QWidget(tabs);
+    QFormLayout *generalLayout = new QFormLayout(generalPage);
+    backgroundColorButton = new QPushButton(generalPage);
+    backgroundColorButton->setObjectName(QStringLiteral("backgroundColorButton"));
+    pointLightColorButton = new QPushButton(generalPage);
+    pointLightColorButton->setObjectName(QStringLiteral("pointLightColorButton"));
+    pointLightIntensitySpinBox = new QDoubleSpinBox(generalPage);
+    pointLightIntensitySpinBox->setObjectName(QStringLiteral("pointLightIntensitySpinBox"));
+    pointLightIntensitySpinBox->setRange(0.0, 1000000.0);
+    pointLightIntensitySpinBox->setDecimals(6);
+    pointLightIntensitySpinBox->setSingleStep(0.1);
+    pointLightPositionXSpinBox = new QDoubleSpinBox(generalPage);
+    pointLightPositionYSpinBox = new QDoubleSpinBox(generalPage);
+    pointLightPositionZSpinBox = new QDoubleSpinBox(generalPage);
+    pointLightPositionXSpinBox->setObjectName(QStringLiteral("pointLightPositionXSpinBox"));
+    pointLightPositionYSpinBox->setObjectName(QStringLiteral("pointLightPositionYSpinBox"));
+    pointLightPositionZSpinBox->setObjectName(QStringLiteral("pointLightPositionZSpinBox"));
+    for (QDoubleSpinBox *spinBox : {pointLightPositionXSpinBox, pointLightPositionYSpinBox, pointLightPositionZSpinBox}) {
+        spinBox->setRange(-1000000.0, 1000000.0);
+        spinBox->setDecimals(6);
+        spinBox->setSingleStep(1.0);
+    }
+    QWidget *pointLightPosition = new QWidget(generalPage);
+    QHBoxLayout *pointLightPositionLayout = new QHBoxLayout(pointLightPosition);
+    pointLightPositionLayout->setContentsMargins(0, 0, 0, 0);
+    pointLightPositionLayout->addWidget(new QLabel(tr("X"), pointLightPosition));
+    pointLightPositionLayout->addWidget(pointLightPositionXSpinBox);
+    pointLightPositionLayout->addWidget(new QLabel(tr("Y"), pointLightPosition));
+    pointLightPositionLayout->addWidget(pointLightPositionYSpinBox);
+    pointLightPositionLayout->addWidget(new QLabel(tr("Z"), pointLightPosition));
+    pointLightPositionLayout->addWidget(pointLightPositionZSpinBox);
+    generalLayout->addRow(tr("Background color:"), backgroundColorButton);
+    generalLayout->addRow(tr("Point-light color:"), pointLightColorButton);
+    generalLayout->addRow(tr("Point-light intensity:"), pointLightIntensitySpinBox);
+    generalLayout->addRow(tr("Point-light position:"), pointLightPosition);
+    generalLayout->addItem(new QSpacerItem(0, 0, QSizePolicy::Minimum, QSizePolicy::Expanding));
+    tabs->addTab(generalPage, tr("General"));
+    connect(backgroundColorButton, &QPushButton::clicked, this, [this]() {
+        const QColor color = QColorDialog::getColor(colorButtonValue(backgroundColorButton), this, tr("Select background color"));
+        if (color.isValid()) {
+            setColorButton(backgroundColorButton, color);
+            markChanged();
+        }
+    });
+    connect(pointLightColorButton, &QPushButton::clicked, this, [this]() {
+        const QColor color = QColorDialog::getColor(colorButtonValue(pointLightColorButton), this, tr("Select point-light color"));
+        if (color.isValid()) {
+            setColorButton(pointLightColorButton, color);
+            markChanged();
+        }
+    });
+    connect(pointLightIntensitySpinBox, SIGNAL(valueChanged(double)), this, SLOT(markChanged()));
+    connect(pointLightPositionXSpinBox, SIGNAL(valueChanged(double)), this, SLOT(markChanged()));
+    connect(pointLightPositionYSpinBox, SIGNAL(valueChanged(double)), this, SLOT(markChanged()));
+    connect(pointLightPositionZSpinBox, SIGNAL(valueChanged(double)), this, SLOT(markChanged()));
 
     QWidget *objectsPage = new QWidget(tabs);
     QVBoxLayout *objectsLayout = new QVBoxLayout(objectsPage);
@@ -531,6 +596,25 @@ void ca3DConfigDialog::loadFromWidget()
     buttonBox->button(QDialogButtonBox::Apply)->setEnabled(false);
 }
 
+void ca3DConfigDialog::setColorButton(QPushButton *button, const QColor &color)
+{
+    if (!button) {
+        return;
+    }
+    button->setProperty("color", color);
+    button->setText(color.name());
+    button->setStyleSheet(QStringLiteral("QPushButton { background-color: %1; }").arg(color.name()));
+}
+
+QColor ca3DConfigDialog::colorButtonValue(QPushButton *button) const
+{
+    if (!button) {
+        return QColor();
+    }
+    const QVariant value = button->property("color");
+    return value.canConvert<QColor>() ? value.value<QColor>() : QColor(button->text());
+}
+
 void ca3DConfigDialog::populateTablesFromJson(const QString &json)
 {
     QScopedValueRollback<bool> updatingGuard(updatingUi, true);
@@ -546,6 +630,12 @@ void ca3DConfigDialog::populateTablesFromJson(const QString &json)
     ca3DConfigParser::parse(json, &config, &errors);
 
     showErrors(errors);
+    setColorButton(backgroundColorButton, config.backgroundColor);
+    setColorButton(pointLightColorButton, config.pointLight.color);
+    pointLightIntensitySpinBox->setValue(config.pointLight.intensity);
+    pointLightPositionXSpinBox->setValue(config.pointLight.position.x());
+    pointLightPositionYSpinBox->setValue(config.pointLight.position.y());
+    pointLightPositionZSpinBox->setValue(config.pointLight.position.z());
     objectsTable->setRowCount(0);
     bindingsTable->setRowCount(0);
     overlaysTable->setRowCount(0);
@@ -695,6 +785,17 @@ QString ca3DConfigDialog::jsonFromTables() const
     QJsonArray overlays;
     QJsonArray presets;
     QMap<QString, QJsonArray> bindingsByObject;
+
+    root.insert(QStringLiteral("backgroundColor"), colorButtonValue(backgroundColorButton).name());
+    QJsonObject lighting = root.value(QStringLiteral("lighting")).toObject();
+    QJsonObject pointLight = lighting.value(QStringLiteral("pointLight")).toObject();
+    pointLight.insert(QStringLiteral("color"), colorButtonValue(pointLightColorButton).name());
+    pointLight.insert(QStringLiteral("intensity"), pointLightIntensitySpinBox->value());
+    pointLight.insert(QStringLiteral("position"), vectorArray(numberString(pointLightPositionXSpinBox->value()),
+                                                               numberString(pointLightPositionYSpinBox->value()),
+                                                               numberString(pointLightPositionZSpinBox->value())));
+    lighting.insert(QStringLiteral("pointLight"), pointLight);
+    root.insert(QStringLiteral("lighting"), lighting);
 
     for (int row = 0; row < bindingsTable->rowCount(); ++row) {
         QJsonObject binding;

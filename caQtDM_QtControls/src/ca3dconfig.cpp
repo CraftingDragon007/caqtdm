@@ -281,6 +281,7 @@ void ca3DSceneConfig::clear()
     overlays.clear();
     cameraPresets.clear();
     backgroundColor = QColor(30, 34, 40);
+    pointLight = ca3DPointLightConfig();
 }
 
 bool ca3DSceneConfig::isEmpty() const
@@ -321,6 +322,34 @@ bool ca3DConfigParser::parse(const QString &json, ca3DSceneConfig *config, QStri
                                              config->backgroundColor,
                                              QStringLiteral("backgroundColor"),
                                              errors);
+
+    const QJsonObject lighting = root.value(QStringLiteral("lighting")).toObject();
+    const QJsonObject pointLight = lighting.value(QStringLiteral("pointLight")).toObject();
+    config->pointLight.color = colorFromValue(pointLight.value(QStringLiteral("color")),
+                                              config->pointLight.color,
+                                              QStringLiteral("lighting.pointLight.color"),
+                                              errors);
+    if (pointLight.contains(QStringLiteral("intensity"))) {
+        if (!pointLight.value(QStringLiteral("intensity")).isDouble()) {
+            if (errors) {
+                errors->append(QStringLiteral("lighting.pointLight.intensity must be a number"));
+            }
+        } else {
+            const double intensity = pointLight.value(QStringLiteral("intensity")).toDouble();
+            if (intensity < 0.0) {
+                if (errors) {
+                    errors->append(QStringLiteral("lighting.pointLight.intensity must not be negative"));
+                }
+            } else {
+                config->pointLight.intensity = intensity;
+            }
+        }
+    }
+    if (pointLight.contains(QStringLiteral("position"))) {
+        config->pointLight.position = vectorFromArray(pointLight.value(QStringLiteral("position")),
+                                                       QStringLiteral("lighting.pointLight.position"),
+                                                       errors);
+    }
 
     const QJsonArray objects = root.value(QStringLiteral("objects")).toArray();
     for (const QJsonValue &value : objects) {
