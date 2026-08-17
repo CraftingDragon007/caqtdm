@@ -1638,7 +1638,9 @@ void ca3DWidget::setDynamicBindingComponent(const ca3DObjectConfig &object, cons
 
 void ca3DWidget::updatePlaceholderText()
 {
-    const QString mode = thisFallbackMode ? QStringLiteral("2D fallback") : QStringLiteral("Qt 3D");
+    const QString mode = thisDesignerMode
+                             ? QStringLiteral("Designer")
+                             : (thisFallbackMode ? QStringLiteral("2D fallback") : QStringLiteral("Qt 3D"));
     QString configState;
     if (thisSceneConfig.trimmed().isEmpty()) {
         configState = QStringLiteral("no sceneConfig");
