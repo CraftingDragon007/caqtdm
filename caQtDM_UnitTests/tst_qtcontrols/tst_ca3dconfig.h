@@ -30,6 +30,7 @@ private slots:
     void linkedObjectFollowsMasterRotation();
     void linkedObjectAppliesOwnDynamicMotionInMasterSpace();
     void linkedObjectDoesNotInheritMasterScale();
+    void configuredOriginPositionRotatesWithObject();
 };
 
 class TestCa3DOverlayWidgetManager : public QObject

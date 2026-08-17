@@ -651,6 +651,28 @@ void TestCa3DWidget::linkedObjectDoesNotInheritMasterScale()
                   QVector3D(2.0f, 0.0f, 0.0f));
 }
 
+void TestCa3DWidget::configuredOriginPositionRotatesWithObject()
+{
+    const QString json = QStringLiteral(R"json({
+        "objects": [
+            {
+                "id": "object",
+                "configuredOriginPosition": [1, 0, 0]
+            }
+        ]
+    })json");
+    ca3DSceneConfig config;
+    QStringList errors;
+    QVERIFY2(ca3DConfigParser::parse(json, &config, &errors), qPrintable(errors.join(QLatin1Char('\n'))));
+
+    TestableCa3DWidget widget;
+    widget.setSceneConfig(json);
+    widget.setObjectRotation(QStringLiteral("object"), 0.0, 0.0, 90.0);
+
+    compareVector(matrixTranslation(widget.effectiveObjectMotion(config.objects.first())),
+                  QVector3D(0.0f, 1.0f, 0.0f));
+}
+
 void TestCa3DOverlayWidgetManager::ca3DOverlayWidgetManagerLoadsRendersAndTracksDirtyState()
 {
     QTemporaryDir tempDir;

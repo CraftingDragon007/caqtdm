@@ -859,9 +859,13 @@ QVector3D ca3DWidget::currentObjectPosition(const QString &objectId) const
 {
     foreach (const ca3DObjectConfig &object, thisConfig.objects) {
         if (object.id == objectId) {
+            const QVector3D rotation = object.rotation
+                                       + object.configuredOriginRotation
+                                       + thisDynamicRotations.value(object.id);
+            const QVector3D rotatedOrigin = rotationFromEuler(rotation).rotatedVector(object.configuredOriginPosition);
             return object.position
-                   + object.configuredOriginPosition
-                   + thisDynamicTranslations.value(object.id);
+                   + thisDynamicTranslations.value(object.id)
+                   + rotatedOrigin;
         }
     }
     return QVector3D();
@@ -1622,9 +1626,16 @@ void ca3DWidget::setDynamicBindingComponent(const ca3DObjectConfig &object, cons
                                   ? thisDynamicTranslations.value(object.id)
                                   : thisDynamicRotations.value(object.id);
     if (binding.mode == ca3DBindingConfig::Absolute) {
-        const QVector3D baseVector = isTranslation
-                                         ? object.position + object.configuredOriginPosition
-                                         : object.rotation + object.configuredOriginRotation;
+        QVector3D baseVector;
+        if (isTranslation) {
+            const QVector3D rotation = object.rotation
+                                       + object.configuredOriginRotation
+                                       + thisDynamicRotations.value(object.id);
+            baseVector = object.position
+                         + rotationFromEuler(rotation).rotatedVector(object.configuredOriginPosition);
+        } else {
+            baseVector = object.rotation + object.configuredOriginRotation;
+        }
         mapped -= vectorComponent(baseVector, binding.target);
     }
 
@@ -2323,7 +2334,6 @@ void ca3DWidget::applyAllObjectTransforms()
 QMatrix4x4 ca3DWidget::objectMotionMatrix(const ca3DObjectConfig &object, bool includeDynamic) const
 {
     const QVector3D translation = object.position
-                                  + object.configuredOriginPosition
                                   + (includeDynamic ? thisDynamicTranslations.value(object.id) : QVector3D());
     const QVector3D rotation = object.rotation
                                + object.configuredOriginRotation
@@ -2331,6 +2341,7 @@ QMatrix4x4 ca3DWidget::objectMotionMatrix(const ca3DObjectConfig &object, bool i
     QMatrix4x4 matrix;
     matrix.translate(translation);
     matrix.rotate(rotationFromEuler(rotation));
+    matrix.translate(object.configuredOriginPosition);
     return matrix;
 }
 
