@@ -806,10 +806,14 @@ void ca3DConfigDialog::addObjectRow()
 
 void ca3DConfigDialog::removeObjectRow()
 {
-    if (objectsTable->currentRow() >= 0) {
-        objectsTable->removeRow(objectsTable->currentRow());
-        markChanged();
+    const int row = objectsTable->currentRow();
+    if (row < 0) {
+        showSelectionRequired(tr("an object"));
+        return;
     }
+
+    objectsTable->removeRow(row);
+    markChanged();
 }
 
 void ca3DConfigDialog::addBindingRow()
@@ -830,10 +834,14 @@ void ca3DConfigDialog::addBindingRow()
 
 void ca3DConfigDialog::removeBindingRow()
 {
-    if (bindingsTable->currentRow() >= 0) {
-        bindingsTable->removeRow(bindingsTable->currentRow());
-        markChanged();
+    const int row = bindingsTable->currentRow();
+    if (row < 0) {
+        showSelectionRequired(tr("a binding"));
+        return;
     }
+
+    bindingsTable->removeRow(row);
+    markChanged();
 }
 
 void ca3DConfigDialog::addOverlayRow()
@@ -857,10 +865,14 @@ void ca3DConfigDialog::addOverlayRow()
 
 void ca3DConfigDialog::removeOverlayRow()
 {
-    if (overlaysTable->currentRow() >= 0) {
-        overlaysTable->removeRow(overlaysTable->currentRow());
-        markChanged();
+    const int row = overlaysTable->currentRow();
+    if (row < 0) {
+        showSelectionRequired(tr("an overlay"));
+        return;
     }
+
+    overlaysTable->removeRow(row);
+    markChanged();
 }
 
 void ca3DConfigDialog::addPresetRow()
@@ -891,17 +903,21 @@ void ca3DConfigDialog::addPresetRow()
 
 void ca3DConfigDialog::removePresetRow()
 {
-    if (presetsTable->currentRow() >= 0) {
-        presetsTable->removeRow(presetsTable->currentRow());
-        markChanged();
+    const int row = presetsTable->currentRow();
+    if (row < 0) {
+        showSelectionRequired(tr("a camera preset"));
+        return;
     }
+
+    presetsTable->removeRow(row);
+    markChanged();
 }
 
 void ca3DConfigDialog::editSelectedBindingPv()
 {
     const int row = bindingsTable->currentRow();
     if (row < 0) {
-        showErrors(QStringList() << tr("Select a binding row before editing its PV"));
+        showSelectionRequired(tr("a binding"));
         return;
     }
 
@@ -1396,6 +1412,13 @@ void ca3DConfigDialog::applyClipboardLocation(bool applyPosition, bool applyRota
 
     const int row = table->currentRow();
     if (row < 0) {
+        if (table == objectsTable) {
+            showSelectionRequired(tr("an object"));
+        } else if (table == overlaysTable) {
+            showSelectionRequired(tr("an overlay"));
+        } else {
+            showSelectionRequired(tr("a camera preset"));
+        }
         return;
     }
 
@@ -1420,6 +1443,13 @@ void ca3DConfigDialog::applyClipboardLocation(bool applyPosition, bool applyRota
     }
 
     markChanged();
+}
+
+void ca3DConfigDialog::showSelectionRequired(const QString &itemType)
+{
+    QMessageBox::information(this,
+                             tr("Selection required"),
+                             tr("Please select %1 first.").arg(itemType));
 }
 
 void ca3DConfigDialog::showErrors(const QStringList &errors)

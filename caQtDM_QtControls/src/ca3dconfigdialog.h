@@ -71,6 +71,7 @@ private:
     void setPresetOverlaySelector(int row, const QStringList &selectedOverlayIds);
     QStringList presetOverlayIds(int row) const;
     void applyClipboardLocation(bool applyPosition, bool applyRotation);
+    void showSelectionRequired(const QString &itemType);
     void showErrors(const QStringList &errors);
 
     ca3DWidget *widget3D;
