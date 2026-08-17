@@ -6,6 +6,7 @@
 #define CA3DWIDGET_H
 
 #include <QWidget>
+#include <QHash>
 #include <QList>
 #include <QMap>
 #include <QMatrix4x4>
@@ -128,6 +129,7 @@ private:
     void emitCameraRotationSignals(double yaw, double pitch);
     bool isDesignerMode() const;
     void setDynamicBindingComponent(const ca3DObjectConfig &object, const ca3DBindingConfig &binding, double value);
+    void rebuildObjectLinks();
 
 protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
@@ -170,6 +172,8 @@ protected:
     bool thisSnapshotCapturePending;
     QMap<QString, QVector3D> thisDynamicTranslations;
     QMap<QString, QVector3D> thisDynamicRotations;
+    QHash<QString, int> thisObjectIndexById;
+    QHash<QString, QStringList> thisObjectChildrenById;
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     Qt3DExtras::Qt3DWindow *this3DView;

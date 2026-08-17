@@ -908,6 +908,7 @@ void ca3DWidget::setSceneConfig(const QString &config)
 
     thisSceneConfig = config;
     thisConfigValid = ca3DConfigParser::parse(thisSceneConfig, &thisConfig, &thisConfigErrors);
+    rebuildObjectLinks();
     thisDynamicTranslations.clear();
     thisDynamicRotations.clear();
     rebuildScene();
@@ -1962,6 +1963,25 @@ void ca3DWidget::clearScene()
 #endif
 }
 
+void ca3DWidget::rebuildObjectLinks()
+{
+    thisObjectIndexById.clear();
+    thisObjectChildrenById.clear();
+
+    for (int index = 0; index < thisConfig.objects.size(); ++index) {
+        const ca3DObjectConfig &object = thisConfig.objects.at(index);
+        if (!object.id.isEmpty()) {
+            thisObjectIndexById.insert(object.id, index);
+        }
+    }
+
+    for (const ca3DObjectConfig &object : thisConfig.objects) {
+        if (!object.id.isEmpty() && thisObjectIndexById.contains(object.masterObjectId)) {
+            thisObjectChildrenById[object.masterObjectId].append(object.id);
+        }
+    }
+}
+
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 void ca3DWidget::restoreSnapshotOverlayStates()
 {
@@ -2311,8 +2331,33 @@ void ca3DWidget::applyCameraPresetConfig(const ca3DCameraPresetConfig &preset)
 
 void ca3DWidget::applyObjectTransform(const QString &objectId)
 {
-    Q_UNUSED(objectId);
-    applyAllObjectTransforms();
+    if (!thisObjectIndexById.contains(objectId)) {
+        applyAllObjectTransforms();
+        return;
+    }
+
+    QMap<QString, QMatrix4x4> motionCache;
+    QSet<QString> affected;
+    QList<QString> pending;
+    pending.append(objectId);
+    while (!pending.isEmpty()) {
+        const QString currentId = pending.takeLast();
+        if (affected.contains(currentId)) {
+            continue;
+        }
+        affected.insert(currentId);
+
+        const ca3DObjectConfig &object = thisConfig.objects.at(thisObjectIndexById.value(currentId));
+        Qt3DCore::QTransform *transform = thisObjectTransforms.value(currentId, Q_NULLPTR);
+        if (transform) {
+            QSet<QString> visiting;
+            QMatrix4x4 renderMatrix = effectiveObjectMotionMatrix(object, &motionCache, &visiting);
+            renderMatrix.scale(static_cast<float>(object.scale));
+            transform->setMatrix(renderMatrix);
+        }
+
+        pending.append(thisObjectChildrenById.value(currentId));
+    }
 }
 
 void ca3DWidget::applyAllObjectTransforms()
@@ -2360,14 +2405,9 @@ QMatrix4x4 ca3DWidget::effectiveObjectMotionMatrix(const ca3DObjectConfig &objec
     QMatrix4x4 effective = objectMotionMatrix(object, true);
     if (!object.masterObjectId.isEmpty()) {
         visiting->insert(object.id);
-        const ca3DObjectConfig *masterObject = Q_NULLPTR;
-        for (const ca3DObjectConfig &candidate : thisConfig.objects) {
-            if (candidate.id == object.masterObjectId) {
-                masterObject = &candidate;
-                break;
-            }
-        }
-        if (masterObject) {
+        const int masterIndex = thisObjectIndexById.value(object.masterObjectId, -1);
+        if (masterIndex >= 0) {
+            const ca3DObjectConfig *masterObject = &thisConfig.objects.at(masterIndex);
             bool invertible = false;
             const QMatrix4x4 masterZeroInverse = objectMotionMatrix(*masterObject, false).inverted(&invertible);
             if (invertible) {
