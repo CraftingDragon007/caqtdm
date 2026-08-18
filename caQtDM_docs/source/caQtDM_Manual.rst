@@ -2382,6 +2382,7 @@ has no equivalent in MEDM and is not a controls object.
 
 ``ca3DWidget``
 ~~~~~~~~~~~~~~~
+
 has no equivalent in MEDM
 
    **Description:**
@@ -2390,17 +2391,17 @@ has no equivalent in MEDM
    camera presets and regular caQtDM ``.ui`` displays rendered as overlays in
    the 3D world.
 
-   Qt6 uses Qt3D for the live scene. Qt5, systems without a usable OpenGL
-   context and systems using a software renderer use the 2D fallback. The
-   fallback combines a camera-preset snapshot with the same overlay displays,
-   so a panel remains operational when live 3D rendering is unavailable.
+   Qt6 provides the live 3D scene. Qt5 and systems where live 3D rendering is
+   unavailable use the 2D fallback. The fallback combines a camera-preset
+   snapshot with the same overlay displays, so a panel remains operational.
 
    **Designer workflow:**
 
    #. Place a ca3DWidget on the form.
    #. Open its context menu and select ``Edit 3D Scene...``.
-   #. Configure objects, process-variable bindings, overlays and camera
-      presets in their respective tabs.
+   #. Configure scene-wide settings in the General tab, then configure
+      objects, process-variable bindings, overlays and camera presets in
+      their respective tabs.
    #. Use the Preview tab to inspect the current editor state and create
       fallback snapshots.
    #. Use the Raw JSON tab for direct editing. It provides syntax highlighting,
@@ -2426,6 +2427,20 @@ has no equivalent in MEDM
    ``backgroundColor``
       Scene background as a color string such as ``"#20242a"`` or an RGB array
       such as ``[32, 36, 42]``. The default is a dark gray.
+
+   ``lighting``
+      Scene-wide lighting settings. The General tab currently configures one
+      point light:
+
+      ``lighting.pointLight.color``
+         Point-light color. The default is ``"#ffffff"``.
+
+      ``lighting.pointLight.intensity``
+         Non-negative point-light intensity. The default is ``1.0``.
+
+      ``lighting.pointLight.position``
+         Point-light position as ``[x, y, z]``. The default is
+         ``[0, 500, 500]``.
 
    ``objects``
       Array of 3D object definitions.
@@ -2456,7 +2471,8 @@ has no equivalent in MEDM
       Required unique object identifier.
 
    ``meshFile`` / ``mesh``
-      Mesh file to load. The type is inferred for ``.stl`` and ``.obj`` files.
+      Mesh file to load. ``.stl`` and ``.obj`` files are supported. The
+      optional ``type`` value does not convert unsupported formats.
 
    ``textureFile`` / ``texture``
       Optional texture image.
@@ -2472,8 +2488,16 @@ has no equivalent in MEDM
       Uniform object scale. The default is ``1``.
 
    ``configuredOriginPosition`` and ``configuredOriginRotation``
-      Optional three-number offsets added to the configured position and
-      rotation before dynamic values are applied.
+      Optional three-number offsets applied before dynamic values. The origin
+      position is transformed by the object's combined rotation, so the
+      effective transform is position, rotation, then origin translation.
+
+   ``masterObject``
+      Optional ID of another object. The object's complete transform follows
+      the master's runtime transform while retaining the child's configured
+      placement relative to the master's configured transform. Master links
+      may be chained, but self-links, unknown IDs and cycles make the
+      configuration invalid.
 
    ``axes``
       Optional named movement axes used by ``setObjectAxisValue()``. An axis has
@@ -2593,6 +2617,12 @@ has no equivalent in MEDM
    ``transparentBackground``
       Use a transparent background when rendering the included display.
       The default is ``true``.
+
+   The parser also accepts ``visibility`` as an alias for
+   ``visibilityMode``. For objects, ``mesh`` and ``texture`` are aliases for
+   ``meshFile`` and ``textureFile``. A material color can be supplied either
+   as ``materialColor`` or as ``material.color``; the nested value takes
+   precedence when both are present.
 
    **Example:**
 
@@ -2720,10 +2750,6 @@ has no equivalent in MEDM
    ``cameraPitchChanged(double pitch)`` / ``cameraPitchChanged(int pitch)``
       Camera pitch in degrees. The integer overload is rounded.
 
-   ``overlayWidgetsRebuilt()``
-      Emitted after overlay widgets are recreated. This is primarily used by
-      the caQtDM runtime to discover channels inside overlays.
-
    ``snapshotCaptured(QPixmap pixmap)``
       Emitted after an asynchronous 3D snapshot succeeds.
 
@@ -2741,6 +2767,73 @@ has no equivalent in MEDM
    The environment variable ``CAQTDM_3D_FORCE_FALLBACK=1`` forces fallback mode
    and is useful for testing. ``CAQTDM_3D_OVERLAY_MAX_SCALE`` and
    ``CAQTDM_3D_OVERLAY_MAX_PIXELS`` can limit live overlay texture resolution.
+
+   **Behavior and quirks:**
+
+   * Qt5 and mobile builds use the 2D fallback. Qt6 also uses it when 3D
+     rendering is unavailable or when ``CAQTDM_3D_FORCE_FALLBACK`` is set.
+     The Qt Designer editing surface shows a placeholder/fallback view.
+
+   * An empty ``sceneConfig`` is valid, but displays no scene. Invalid JSON or
+     invalid scene values are reported by the editor and prevent the scene
+     from being built. A missing referenced file is an error even when that
+     file is only needed by the fallback. Files are searched with the normal
+     display path, including ``CAQTDM_DISPLAY_PATH``; an absolute path is
+     accepted but makes the panel non-portable.
+
+   * Every vector must contain exactly three entries. ``size`` contains two
+     entries and ``fallbackGeometry`` contains four integer values. Omitted
+     vectors use zero values; omitted camera ``upVector`` defaults to
+     ``[0, 1, 0]``. A zero-length configured up vector is also replaced by
+     that default at camera setup time.
+
+   * Object binding values are recalculated from the current channel value;
+     they are not accumulated deltas. The mapping is applied in this order:
+     ``value * scale + offset``, then ``min``/``max`` clamping. A relative
+     binding adds the result to the configured transform. An absolute binding
+     subtracts the configured base component first, so the final component is
+     the mapped value. Translation absolutes also account for the rotated
+     configured origin. Multiple bindings targeting the same component share
+     one dynamic component; the most recently processed value wins.
+
+   * ``setObjectAxisValue()`` uses the named axis's ``vector`` (or ``axis``
+     for rotation) multiplied by ``value * factor``. It replaces the object's
+     current dynamic translation or rotation vector. The generic translation
+     and rotation slots likewise replace their complete dynamic vector.
+     These slots do not change a visible scene on the fallback/Qt5
+     implementation. On Qt6 fallback, binding values may still be accepted by
+     the runtime, but there is no 3D transform to display them.
+
+   * Overlay planes can be operated like normal included caQtDM displays only
+     while they are visible and facing the current camera. Text entry and
+     context menus are supported. Press ``Esc`` to leave an overlay text field
+     and return focus to the 3D widget.
+
+   * In live mode, ``presetOnly`` and ``inView`` both require preset membership
+     and that at least one plane corner (or its center) is inside the camera
+     view. ``alwaysWhenInView`` ignores preset membership but still requires
+     the plane to be in view. In fallback mode, only the selected preset's
+     ``overlays`` list controls visibility; the 3D visibility mode and camera
+     frustum are not applied. If no explicit ``fallbackGeometry`` is supplied,
+     geometry is inferred from the included UI size and the available widget
+     area, so it may need manual adjustment.
+
+   * The fallback snapshot is a static background. Camera movement and camera
+     rotation slots have no visible effect there; selecting a preset changes
+     the snapshot and overlay selection. ``setCameraPreset(0)`` resolves to
+     the first preset, while negative or unknown preset IDs are ignored. With
+     no presets, preset selection uses the supplied value and overlays are
+     treated as active by default.
+
+   * ``viewCenter`` takes precedence over ``yaw`` and ``pitch`` when a preset
+     is applied. Camera control slots reset the up vector to ``[0, 1, 0]``;
+     therefore a custom up vector is not preserved after
+     ``setCameraRotation()`` or ``setCameraViewCenter()``. Pitch is clamped
+     to the range just below +/-90 degrees for interactive camera controls.
+
+   * The editor's Capture Snapshot action captures the 3D background without
+     overlay planes and writes the selected preset's ``snapshot`` path into
+     the JSON. The saved image must remain available at runtime.
 
 --------------
 
