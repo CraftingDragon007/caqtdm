@@ -81,10 +81,7 @@
 #endif
 
 #include "caqtdm_lib.h"
-#include "parsepepfile.h"
-#ifdef ADL_EDL_FILES
-#   include "parseotherfile.h"
-#endif
+#include "uiconverter.h"
 #include "fileFunctions.h"
 
 #include "myMessageBox.h"
@@ -687,20 +684,19 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
             }
 #ifdef ADL_EDL_FILES
         } else if(isMedmFile || isEdmFile) {
-            bool ok;
-            QString errorString = "";
-            ParseOtherFile *otherFile = new ParseOtherFile(filename, ok, errorString);
-            if(errorString.length() > 0) postMessage(QtDebugMsg, (char*) qasc(errorString));
-            if(ok) {
-                myWidget = otherFile->load(this);
+            UiConverterInterface *otherFile = UiConverterFactory::create(filename);
+            if(otherFile != (UiConverterInterface *) Q_NULLPTR) {
+                if(otherFile->errorString().length() > 0) postMessage(QtDebugMsg, (char*) qasc(otherFile->errorString()));
+                if(otherFile->ok()) {
+                    myWidget = otherFile->load(this);
+                }
+                delete otherFile;
             }
             if (!myWidget) {
                 QMessageBox::warning(this, tr("caQtDM"), tr("Error loading %1. Use designer to find errors").arg(filename));
                 this->deleteLater();
-                delete otherFile;
                 return;
             }
-            delete otherFile;
 #endif
         } else {
             qCCritical(fileIOLog) << "caQtDM -- internal error with fileName= " << filename;
@@ -2735,7 +2731,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
             openFile = fileName.mid(0, found);
         }
         qCDebug(caIncludeLog) << "use file" << fileName << openFile;
-        ParsePepFile *parseFile = (ParsePepFile *) Q_NULLPTR;
+        UiConverterInterface *parseFile = (UiConverterInterface *) Q_NULLPTR;
 #ifdef ADL_EDL_FILES
         bool isMedmFile = fileName.endsWith (".adl");
         bool isEdmFile = fileName.endsWith (".edl");
@@ -2753,8 +2749,6 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
             }
         }
         delete other_s;
-        ParseOtherFile *otherFile = (ParseOtherFile *) Q_NULLPTR;
-        bool convertOK = false;
 #endif
 
         // ui file or prc file or other file?
@@ -2806,12 +2800,13 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         // special files exist, then parse first time
         QFileInfo fi(fileName);
         if(fi.exists()) {
-            QString errorString = "";
-            if(prcFile) parseFile = new ParsePepFile(fileName, pepPrint);
+            bool useConverter = prcFile;
 #ifdef ADL_EDL_FILES
-            if(isMedmFile || isEdmFile) otherFile = new ParseOtherFile(fileName, convertOK, errorString);
-            if(errorString.length() > 0) postMessage(QtDebugMsg, (char*) qasc(errorString));
+            useConverter = useConverter || isMedmFile || isEdmFile;
 #endif
+            if(useConverter) parseFile = UiConverterFactory::create(fileName, pepPrint);
+            if((parseFile != (UiConverterInterface *) Q_NULLPTR) && (parseFile->errorString().length() > 0))
+                postMessage(QtDebugMsg, (char*) qasc(parseFile->errorString()));
         }
 
         qCDebug(caIncludeLog) << "caInclude Load:" << fileName;
@@ -2850,17 +2845,9 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
             QFileInfo fi(fileName);
             if(fi.exists()) {
                 qint64 diff=0;
-                // load prc or ui file
-                if(prcFile) {
-                    // load new file
-                    thisW = parseFile->load(this);
-
-#ifdef ADL_EDL_FILES
-                } else if(isMedmFile || isEdmFile) {
-                    if(convertOK) {
-                        thisW = otherFile->load(this);
-                    }
-#endif
+                // load converted (prc/adl/edl) or plain ui file
+                if(parseFile != (UiConverterInterface *) Q_NULLPTR) {
+                    if(parseFile->ok()) thisW = parseFile->load(this);
 
                 } else {
 #if !defined(useElapsedTimer)
@@ -3053,16 +3040,12 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
             }
         } // end for
 
-        if(parseFile != (ParsePepFile *) Q_NULLPTR ) {
+        if(parseFile != (UiConverterInterface *) Q_NULLPTR ) {
+            // #!title of the new prc parser: apply to the top level window
+            if(this->prcFile && !parseFile->title().isEmpty()) setWindowTitle(parseFile->title());
             delete parseFile;
-            parseFile = (ParsePepFile *) Q_NULLPTR;
+            parseFile = (UiConverterInterface *) Q_NULLPTR;
         }
-#ifdef ADL_EDL_FILES
-        if(otherFile != (ParseOtherFile *) Q_NULLPTR ) {
-            delete otherFile;
-            otherFile = (ParseOtherFile *) Q_NULLPTR;
-        }
-#endif
 
         // resize the include widget
         if((thisW != (QWidget *) Q_NULLPTR ) && (!prcFile) && includeWidget->getAdjustSize() && includeWidget->getStacking() != caInclude::Positions) {

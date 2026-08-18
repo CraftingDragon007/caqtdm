@@ -28,6 +28,8 @@
 #include <QApplication>
 #include <QFrame>
 #include <QScrollArea>
+#include <QScopedPointer>
+#include <QtUiTools/QUiLoader>
 #include <math.h>
 #include "cainclude.h"
 #include "searchfile.h"
@@ -413,7 +415,8 @@ void caInclude::setFileName(QString const &filename)
                 effectiveSize= tmp->size();
                 // pep file
             } else {
-                ParsePepFile *parsefile = new ParsePepFile(fileNameFound);
+                // scoped pointer also fixes the former leak (incl. early return)
+                QScopedPointer<UiConverterInterface> parsefile(UiConverterFactory::create(fileNameFound));
                 qCInfo(caIncludeLog) << "effective load of file" << fileNameFound << "for widget" << this->objectName();
                 QWidget *tmp= parsefile->load(thisParent);
                 if(tmp == (QWidget*) Q_NULLPTR) return;

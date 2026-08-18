@@ -172,6 +172,7 @@ modules:
         # Create symlinks
         ln -sfv /app/lib/caqtdm/qt6/adl2ui /app/bin/adl2ui
         ln -sfv /app/lib/caqtdm/qt6/edl2ui /app/bin/edl2ui
+        ln -sfv /app/lib/caqtdm/qt6/prc2ui /app/bin/prc2ui
         
         ln -sfv /app/lib/caqtdm/qt6/designer/libqtcontrols_controllers_plugin.so /app/lib/qt6/plugins/designer/
         ln -sfv /app/lib/caqtdm/qt6/designer/libqtcontrols_graphics_plugin.so /app/lib/qt6/plugins/designer/

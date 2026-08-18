@@ -85,6 +85,7 @@ override_dh_auto_install:
 	ln -sfv /opt/caqtdm/lib/qt6/caqtdm debian/caqtdm/usr/bin/caqtdm
 	ln -sfv /opt/caqtdm/lib/qt6/caQtDM debian/caqtdm/usr/bin/caQtDM
 	ln -sfv /opt/caqtdm/lib/qt6/adl2ui debian/caqtdm/usr/bin/adl2ui
+	ln -sfv /opt/caqtdm/lib/qt6/prc2ui debian/caqtdm/usr/bin/prc2ui
 	ln -sfv /opt/caqtdm/lib/qt6/edl2ui debian/caqtdm/usr/bin/edl2ui
 	ln -sfv /opt/caqtdm/lib/qt6/caqtdm_designer debian/caqtdm/usr/bin/caqtdm_designer
 

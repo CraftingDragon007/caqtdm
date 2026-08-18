@@ -2913,6 +2913,175 @@ the directory specified by the environment variable
 CAQTDM_DISPLAY_PATH. The directories are specified with the separator
 ``:`` for linux and ``;`` for microsoft windows.
 
+Besides ``.ui`` files the viewer can also display in-house developed
+``.prc`` files, described in the next chapter (:ref:`prc_files`).
+
+.. _prc_files:
+
+PRC Description Files (pep resource files)
+------------------------------------------------
+
+Overview
+~~~~~~~~
+
+``.prc`` files are simple ASCII descriptions for tabular panels,
+originally used by the PSI TCL/TK tool *pep* written by Werner
+Portmann. One line of text describes one channel with its widget type
+and options; caQtDM converts the file on the fly into a ``.ui``
+description and displays it. This is the fastest way to get a working
+panel for a list of process variables: no editor is needed, any text
+editor will do.
+
+A ``.prc`` file can be used in three ways:
+
+- opened directly in caQtDM (like a ``.ui`` file),
+- referenced by a ``caInclude`` widget (property ``filename``),
+- converted to a ``.ui`` file with the command line tool ``prc2ui``
+  (``prc2ui [--large] [--verify] file.prc [out.ui]``).
+
+File structure
+~~~~~~~~~~~~~~
+
+Every non-comment line has the form::
+
+   channel  type  [options ...]
+
+Text containing blanks can be quoted with ``"..."``, ``'...'`` or
+``{...}``. Macros of the form ``$(NAME)`` are substituted the same way
+as for ``.ui`` files (e.g. via the macro definition of a ``caInclude``
+or the ``-macro`` start option). A conventional header line ``channel
+name  type  args`` is ignored. Lines starting with ``#`` are comments;
+lines starting with ``#!`` are directives (see below).
+
+Example::
+
+   #!title "vacuum overview"
+   #!grid 2
+   #channel name             type      args
+   comment comment -span 2 -fg blue sector 1
+   $(P):PRESSURE             formRead  9.2e -text "pressure"
+   $(P):STATUS               led       -ledstate "0 green 1 red"
+   $(P):I-SET                setRdbk   9.3 9.3
+   $(P):VALVE                binary    -text "valve open"
+
+Directives
+~~~~~~~~~~
+
+===================  ========================================================
+Directive            Meaning
+===================  ========================================================
+``#!grid N``         number of channels placed on the same line
+``#!title "text"``   window title of the panel
+``#!qtbg color``     background color of the panel (Qt color name or #rrggbb)
+``#!tab "label"``    starts a new tab page (caQtDM extension); as soon as
+                     one ``#!tab`` appears, the panel content is placed in
+                     a tab widget - useful for very long panels
+``#!setup file``     accepted and ignored (pep save/restore tooling)
+``#!printvar``       accepted and ignored
+===================  ========================================================
+
+The pep directives ``#!newline``, ``#!bg`` and ``#!ifmacro`` are not
+supported.
+
+Widget types
+~~~~~~~~~~~~
+
+The type keyword is case insensitive. The following types are
+available (the second column shows the caQtDM objects used):
+
+==================  =========================================  ==============================================
+Type                Rendered as                                Remark
+==================  =========================================  ==============================================
+``formRead``        caLabel + caLineEdit                       formatted readback of the channel
+``setRdbk``         caSpinbox, compare sign, caLineEdit,       composite for PSI power supplies; derives
+                    caChoice, caLineEdit                       ``:I-COMP``, ``:I-READ``, ``:ONOFF`` and
+                                                               ``:PS-MODE`` from the ``<device>:I-SET``
+                                                               channel; two formats = set + readback,
+                                                               one format = readback only
+``mactrl``          alias for ``setRdbk``
+``wheelSwitch``     caLabel + caSpinbox                        set value with digits from the format
+``led``             caLabel + caLed (+ alarm ring)             binary status; see ``-ledstate``
+``binary``          caLabel + caLineEdit + caToggleButton      readback and toggle
+``text``            caLabel + caLineEdit + caTextEntry         string readback and entry
+``entry``           caLabel + caTextEntry                      plain entry field
+``menuButton``      caLabel + caMenu                           enum menu
+``choiceButton``    caLabel + caChoice                         enum button row
+``slider``          caLabel + caSlider                         numeric token = step; see ``-trough``
+``bar``             caLabel + caThermo + caLineEdit            horizontal bar with numeric readback
+``compare``         two overlaid caLabels (=, unequal)         alarm colored comparison sign
+``messagebutton``   caLabel + caMessageButton                  writes the remaining line content to the
+                                                               channel on press; label from ``-label``
+``comment``         caLabel                                    free text line, no channel
+``separator``       Line                                       horizontal line
+==================  =========================================  ==============================================
+
+Formats are given as printf-like tokens, e.g. ``9.3`` (decimal),
+``9.2e`` (exponential), ``%8.3f``, ``4.1f`` or ``s`` (string); the
+leading ``%`` and the conversion character are optional (default
+``f``).
+
+Options
+~~~~~~~
+
+=====================  ======================================================
+Option                 Meaning
+=====================  ======================================================
+``-text "label"``      row label (default: the channel name)
+``-notext``            no row label
+``-desc``              row label shows the content of ``<channel>.DESC``
+``-span N``            item spans N grid columns
+``-OPR min max``       user limits for wheelSwitch / slider / bar
+``-visi cond``         widget is only visible when the condition is true,
+                       e.g. ``-visi PV==1`` (operators ==, !=, <, >, <=, >=)
+``-ledstate "list"``   value/color pairs for a led, e.g. ``"0 green 1 red"``;
+                       more than two states are rendered as stacked leds
+``-command "cmd"``     adds a related display button executing the shell
+                       command, labelled with ``-comlab``
+``-comlab "label"``    label for the ``-command`` button
+``-label "text"``      button text of a messagebutton
+``-width N``           entry width in characters
+``-minwidth N``        minimum width of the readback field in pixels
+``-comsize N``         font point size (comments and fields)
+``-fg color``          foreground color
+``-comfg color``       foreground color (comments)
+``-bg color``          background color
+``-comjust j``         comment justification (left, center, right)
+``-height N``          separator thickness
+``-linewidth N``       separator thickness (pep semantics)
+``-sepsize N``         separator thickness override
+``-sepbg color``       separator color
+``-trough [format]``   slider: show an additional numeric readback
+``-printvar format``   numeric format for the bar readback
+``-compact``           binary without readback field
+``-cegu "unit"``       overrides the engineering unit
+``-calc "expr"``       computed readback; the channel value is available
+                       as ``value`` (or ``A``) in the expression
+``-put``               accepted (asynchronous put is always used)
+``-hys``               accepted and ignored (the hysteresis widget of the
+                       old pep tool is not rendered anymore)
+``-confirm``           accepted and ignored (no confirmation dialogs)
+=====================  ======================================================
+
+Runtime switches
+~~~~~~~~~~~~~~~~
+
+With ``CAQTDM_PRC_LARGE_LAYOUT=1`` the panels are rendered with the
+historic (larger) sizes of the previous prc converter; the default is
+a compact, pep-like density. The additional variable
+``CAQTDM_PRC_CONVERTER`` (unset/0 = historic converter, 1 = new
+converter) is a development and testing switch only.
+
+Limitations
+~~~~~~~~~~~
+
+- ``-confirm`` has no equivalent, values are written without a
+  confirmation dialog.
+- ``#!setup`` (save/restore of the pep tool) is not implemented.
+- The historic converter is limited to 50 lines and 20 grid columns
+  and truncates longer panels silently; the new converter has no such
+  limits - for very long panels the ``#!tab`` directive can be used to
+  split the content into tabs.
+
 Connection Problems and Access Rights
 ------------------------------------------------------
 

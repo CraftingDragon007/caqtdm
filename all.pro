@@ -77,10 +77,13 @@ caQtDM_Plugins.depends = caQtDM_Lib
    unix:{
         SUBDIRS += parserEDM
    }
+   SUBDIRS += parserPRC
    parser.file = caQtDM_Viewer/parser/parser.pro
    parser.depends = caQtDM_Parsers
    parserEDM.file = caQtDM_Viewer/parserEDM/parserEDM.pro
    parserEDM.depends = caQtDM_Parsers
+   parserPRC.file = caQtDM_Viewer/parserPRC/parserPRC.pro
+   parserPRC.depends = caQtDM_Parsers
    ADL_EDL_FILES {
       caQtDM_Lib.depends += caQtDM_Parsers
    }

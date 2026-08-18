@@ -47,6 +47,7 @@ INCLUDEPATH += src
 INCLUDEPATH += ../caQtDM_Lib/src
 INCLUDEPATH += ../caQtDM_Parsers/adlParserSrc
 INCLUDEPATH += ../caQtDM_Parsers/edlParserSrc
+INCLUDEPATH += ../caQtDM_Parsers/prcParserSrc
 
 freebsd {
    INCLUDEPATH += /usr/local/include
@@ -126,6 +127,7 @@ SOURCES	+= \
     src/cacalc.cpp \
     src/gensoftpv.cpp \
     src/parsepepfile.cpp \
+    src/uiconverter.cpp \
     src/catogglebutton.cpp \
     src/cascriptbutton.cpp \
     src/cadoubletabwidget.cpp \
@@ -259,6 +261,7 @@ HEADERS	+= \
     src/qtcontrols_global.h \
     src/alarmdefs.h \
     src/parsepepfile.h \
+    src/uiconverter.h \
     src/catogglebutton.h \
     src/cascriptbutton.h \
     src/cadoubletabwidget.h \

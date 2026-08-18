@@ -1,0 +1,91 @@
+# prcSimulation.db -- simulated PSI power supplies for the prc panels
+# (prcshowcase.prc). The prc setRdbk/mactrl composite derives the channels
+# :I-COMP / :I-READ / :ONOFF / :PS-MODE from the device name of the given
+# :I-SET channel; these records provide that family for the simulation:
+# ONOFF gates the readback (OFF -> I-READ falls to 0, I-COMP flags the
+# difference and PS-MODE follows).
+#
+# Load in addition to mySimulation.db, e.g. in st.cmd:
+#   dbLoadDatabase ("prcSimulation.db", "", "")
+
+record(ao, "SIMPS-1:I-SET") {
+	field(DESC, "simulated PS set current")
+	field(EGU,  "A")
+	field(PREC, "3")
+	field(HOPR, "100.0")
+	field(LOPR, "-100.0")
+	field(DRVH, "100.0")
+	field(DRVL, "-100.0")
+}
+
+record(bo, "SIMPS-1:ONOFF") {
+	field(DESC, "simulated PS on/off")
+	field(ZNAM, "OFF")
+	field(ONAM, "ON")
+	field(VAL,  "1")
+	field(PINI, "YES")
+}
+
+record(calc, "SIMPS-1:I-READ") {
+	field(DESC, "simulated PS readback")
+	field(INPA, "SIMPS-1:I-SET MS CP")
+	field(INPB, "SIMPS-1:ONOFF MS CP")
+	field(CALC, "B?A:0")
+	field(EGU,  "A")
+	field(PREC, "3")
+}
+
+record(calc, "SIMPS-1:I-COMP") {
+	field(DESC, "set/readback comparison")
+	field(INPA, "SIMPS-1:I-SET MS CP")
+	field(INPB, "SIMPS-1:I-READ MS CP")
+	field(CALC, "ABS(A-B)>0.001?1:0")
+}
+
+record(mbbi, "SIMPS-1:PS-MODE") {
+	field(DESC, "simulated PS mode")
+	field(INP,  "SIMPS-1:ONOFF MS CP")
+	field(ZRST, "OFF")
+	field(ONST, "ON")
+}
+
+record(ao, "SIMPS-2:I-SET") {
+	field(DESC, "simulated PS set current")
+	field(EGU,  "A")
+	field(PREC, "3")
+	field(HOPR, "100.0")
+	field(LOPR, "-100.0")
+	field(DRVH, "100.0")
+	field(DRVL, "-100.0")
+}
+
+record(bo, "SIMPS-2:ONOFF") {
+	field(DESC, "simulated PS on/off")
+	field(ZNAM, "OFF")
+	field(ONAM, "ON")
+	field(VAL,  "1")
+	field(PINI, "YES")
+}
+
+record(calc, "SIMPS-2:I-READ") {
+	field(DESC, "simulated PS readback")
+	field(INPA, "SIMPS-2:I-SET MS CP")
+	field(INPB, "SIMPS-2:ONOFF MS CP")
+	field(CALC, "B?A:0")
+	field(EGU,  "A")
+	field(PREC, "3")
+}
+
+record(calc, "SIMPS-2:I-COMP") {
+	field(DESC, "set/readback comparison")
+	field(INPA, "SIMPS-2:I-SET MS CP")
+	field(INPB, "SIMPS-2:I-READ MS CP")
+	field(CALC, "ABS(A-B)>0.001?1:0")
+}
+
+record(mbbi, "SIMPS-2:PS-MODE") {
+	field(DESC, "simulated PS mode")
+	field(INP,  "SIMPS-2:ONOFF MS CP")
+	field(ZRST, "OFF")
+	field(ONST, "ON")
+}

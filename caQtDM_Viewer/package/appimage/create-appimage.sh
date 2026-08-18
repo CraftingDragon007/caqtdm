@@ -1053,6 +1053,9 @@ EOF
   if [ -x "$app_lib_dir/edl2ui" ]; then
     ln -sf "../lib/caqtdm/$qt_dir/edl2ui" "$APPDIR/usr/bin/edl2ui"
   fi
+  if [ -x "$app_lib_dir/prc2ui" ]; then
+    ln -sf "../lib/caqtdm/$qt_dir/prc2ui" "$APPDIR/usr/bin/prc2ui"
+  fi
 
   ln -sf usr/bin/caQtDM "$APPDIR/AppRun"
 }

@@ -231,23 +231,32 @@ void ParsePepFile::TreatFile(int &nbRows, int &nbCols, QColor &bgColor, QFile *f
                         qCDebug(parsePepFileLog) << "hys detected";
                     }
 
+                    // bounds checks missing upstream in all argument branches below:
+                    // a trailing option without value (e.g. "formRead 9.2e -text")
+                    // made elements.at(ll) read past the end (sporadic segfault)
                     else if(elements.at(ll).contains("-comlab")) {
                         ll++;
-                        qCDebug(parsePepFileLog) << "comlab detected <" << elements.at(ll) << ">";
-                        gridLayout[actualLine][actualColumn].comlab = qasc(elements.at(ll));
+                        if(ll < elements.count()) {
+                            qCDebug(parsePepFileLog) << "comlab detected <" << elements.at(ll) << ">";
+                            gridLayout[actualLine][actualColumn].comlab = qasc(elements.at(ll));
+                        }
                     }
 
                     else if(elements.at(ll).contains("-command")) {
                         ll++;
-                        qCDebug(parsePepFileLog) << "commmand detected <" << elements.at(ll) << ">";
-                        gridLayout[actualLine][actualColumn].command = qasc(elements.at(ll));
-                        gridLayout[actualLine][actualColumn].command =  gridLayout[actualLine][actualColumn].command.replace("\"", "");
+                        if(ll < elements.count()) {
+                            qCDebug(parsePepFileLog) << "commmand detected <" << elements.at(ll) << ">";
+                            gridLayout[actualLine][actualColumn].command = qasc(elements.at(ll));
+                            gridLayout[actualLine][actualColumn].command =  gridLayout[actualLine][actualColumn].command.replace("\"", "");
+                        }
                     }
 
                     else if(elements.at(ll).contains("-text")) {
                         ll++;
-                        qCDebug(parsePepFileLog) << "text detected <" << elements.at(ll) << ">";
-                        widgetText = elements.at(ll);
+                        if(ll < elements.count()) {
+                            qCDebug(parsePepFileLog) << "text detected <" << elements.at(ll) << ">";
+                            widgetText = elements.at(ll);
+                        }
                         gridLayout[actualLine][actualColumn].textPresent = true;
                     }
 
@@ -263,32 +272,40 @@ void ParsePepFile::TreatFile(int &nbRows, int &nbCols, QColor &bgColor, QFile *f
 
                     else if(elements.at(ll).contains("-height")) {
                         ll++;
-                        qCDebug(parsePepFileLog) << "height detected <" << elements.at(ll) << ">";
-                        widgetHeight = elements.at(ll);
+                        if(ll < elements.count()) {
+                            qCDebug(parsePepFileLog) << "height detected <" << elements.at(ll) << ">";
+                            widgetHeight = elements.at(ll);
+                        }
                     }
 
                     else if(elements.at(ll).contains("-minwidth")) {
                         ll++;
-                        qCDebug(parsePepFileLog) << "minwidth detected <" << elements.at(ll) << ">";
-                        lineWidth = elements.at(ll).toInt();
+                        if(ll < elements.count()) {
+                            qCDebug(parsePepFileLog) << "minwidth detected <" << elements.at(ll) << ">";
+                            lineWidth = elements.at(ll).toInt();
+                        }
                     }
 
                     else if(elements.at(ll).contains("-fg") || elements.at(ll).contains("-comfg")) {
                         QString fgs;
                         ll++;
-                        qCDebug(parsePepFileLog) << "fg or comfg detected <" << elements.at(ll) << ">";
-                        fgs = elements.at(ll);
-                        fgs = fgs.replace("\"", "");
-                        fg = QColor(fgs);
+                        if(ll < elements.count()) {
+                            qCDebug(parsePepFileLog) << "fg or comfg detected <" << elements.at(ll) << ">";
+                            fgs = elements.at(ll);
+                            fgs = fgs.replace("\"", "");
+                            fg = QColor(fgs);
+                        }
                     }
 
                     else if(elements.at(ll).contains("-bg")) {
                         QString bgs;
                         ll++;
-                        qCDebug(parsePepFileLog) << "bg detected <" << elements.at(ll) << ">";
-                        bgs = elements.at(ll);
-                        bgs = bgs.replace("\"", "");
-                        bg = QColor(bgs);
+                        if(ll < elements.count()) {
+                            qCDebug(parsePepFileLog) << "bg detected <" << elements.at(ll) << ">";
+                            bgs = elements.at(ll);
+                            bgs = bgs.replace("\"", "");
+                            bg = QColor(bgs);
+                        }
 
                     } else if(elements.at(ll-1).contains("comment")) {
                         qCDebug(parsePepFileLog) << "comment detected" << elements.at(ll);
@@ -305,7 +322,10 @@ void ParsePepFile::TreatFile(int &nbRows, int &nbCols, QColor &bgColor, QFile *f
                         widgetText.append(elements.at(ll));
                     }
 
-                    if(ok && (widgetType.contains("setrdbk") ||
+                    // bounds check missing upstream: e.g. "wheelswitch 7.4 -OPR -10 10"
+                    // yields 3 float-parsable tokens and overflows formats[2];
+                    // ll may also point past the end after an argument branch
+                    if(ok && (nbFormats < 2) && (ll < elements.count()) && (widgetType.contains("setrdbk") ||
                               widgetType.contains("wheelswitch") ||
                               widgetType.contains("formread")) ) {
                         qCDebug(parsePepFileLog) << "format detected" << elements.at(ll);

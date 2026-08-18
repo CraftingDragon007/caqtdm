@@ -63,6 +63,7 @@ mkdir -p ${PACKAGE_BUILD_BASE}${PACKAGE_INST_BASE}/bin
 cd ${PACKAGE_BUILD_BASE}${PACKAGE_INST_BASE}/bin
 
 ln -s ../lib/adl2ui
+ln -s ../lib/prc2ui
 ln -s ../lib/edl2ui
 
 # Create wrapper for qt designer

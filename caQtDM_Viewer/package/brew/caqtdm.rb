@@ -95,6 +95,8 @@ class Caqtdm < Formula
 
      system "install_name_tool", "-change", "@loader_path/libadlParser.dylib", "#{frameworks}/libadlParser.dylib" , "#{frameworks}/libqtcontrols.dylib" 
      system "install_name_tool", "-change", "@loader_path/libedlParser.dylib", "#{frameworks}/libedlParser.dylib" , "#{frameworks}/libqtcontrols.dylib" 
+ 
+     system "install_name_tool", "-change", "@loader_path/libprcParser.dylib", "#{frameworks}/libprcParser.dylib" , "#{frameworks}/libqtcontrols.dylib" 
 
      system "install_name_tool", "-change", "libqtcontrols.dylib", "@rpath/libqtcontrols.dylib" , "#{design}/libqtcontrols_controllers_plugin.dylib"
      system "install_name_tool", "-change", "libqtcontrols.dylib", "@rpath/libqtcontrols.dylib" , "#{design}/libqtcontrols_graphics_plugin.dylib"

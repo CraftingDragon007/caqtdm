@@ -640,6 +640,7 @@ fi
 ln -t /usr/local/bin -sfv /opt/caqtdm/lib/qt5/caqtdm
 ln -t /usr/local/bin -sfv /opt/caqtdm/lib/qt5/adl2ui
 ln -t /usr/local/bin -sfv /opt/caqtdm/lib/qt5/edl2ui
+ln -t /usr/local/bin -sfv /opt/caqtdm/lib/qt5/prc2ui
 ln -t /usr/local/bin -sfv /opt/caqtdm/lib/qt5/caqtdm_designer
 ln -t /usr/lib64/qt5/plugins/designer -sfv /opt/caqtdm/lib/qt5/designer/libqtcontrols_controllers_plugin.so
 ln -t /usr/lib64/qt5/plugins/designer -sfv /opt/caqtdm/lib/qt5/designer/libqtcontrols_graphics_plugin.so
@@ -678,6 +679,7 @@ fi
 ln -t /usr/local/bin -sfv /opt/caqtdm/lib/qt6/caqtdm
 ln -t /usr/local/bin -sfv /opt/caqtdm/lib/qt6/adl2ui
 ln -t /usr/local/bin -sfv /opt/caqtdm/lib/qt6/edl2ui
+ln -t /usr/local/bin -sfv /opt/caqtdm/lib/qt6/prc2ui
 ln -t /usr/local/bin -sfv /opt/caqtdm/lib/qt6/caqtdm_designer
 ln -t /usr/lib64/qt6/plugins/designer -sfv /opt/caqtdm/lib/qt6/designer/libqtcontrols_controllers_plugin.so
 ln -t /usr/lib64/qt6/plugins/designer -sfv /opt/caqtdm/lib/qt6/designer/libqtcontrols_graphics_plugin.so
@@ -731,6 +733,7 @@ if [ "$1" = "0" ] ; then # last uninstall
 
         %{__rm} -f  /usr/local/bin/adl2ui
         %{__rm} -f  /usr/local/bin/edl2ui
+        %{__rm} -f  /usr/local/bin/prc2ui
         %{__rm} -f  /usr/local/bin/caqtdm
         %{__rm} -f  /usr/local/bin/caQtDM
         %{__rm} -f  /usr/local/bin/caqtdm_designer
@@ -762,6 +765,7 @@ if [ "$1" = "0" ] ; then # last uninstall
 
         %{__rm} -f  /usr/local/bin/adl2ui
         %{__rm} -f  /usr/local/bin/edl2ui
+        %{__rm} -f  /usr/local/bin/prc2ui
         %{__rm} -f  /usr/local/bin/caqtdm
         %{__rm} -f  /usr/local/bin/caQtDM
         %{__rm} -f  /usr/local/bin/caqtdm_designer

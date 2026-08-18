@@ -36,7 +36,7 @@
 #define PRC 1
 
 #ifdef PRC
-   #include "parsepepfile.h"
+   #include "uiconverter.h"
 #endif
 
 class  QTCON_EXPORT caInclude : public QWidget
@@ -243,10 +243,6 @@ private:
     double thisXresizefactor;
     double thisYresizefactor;
     QList<QWidget*> thisChildsList;
-
-#ifdef PRC
-    ParsePepFile *pepfile;
-#endif
 };
 
 #endif
