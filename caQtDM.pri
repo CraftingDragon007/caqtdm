@@ -607,7 +607,9 @@ caQtDM_QtControls {
 		DESTDIR = $$(CAQTDM_COLLECT)
  		INCLUDEPATH += $$(QWTINCLUDE)
                 LIBS += -L$$(QWTLIB) -l$$(QWTLIBNAME)
-                LIBS += -L$$(CAQTDM_COLLECT) -lprcParser
+                # static on purpose: keeps libqtcontrols.so self-contained
+                # (no DT_NEEDED on libprcParser.so, works with CAQTDM_NORPATH)
+                LIBS += $$(CAQTDM_COLLECT)/libprcParser.a
                 caqtdm_rpath {
                     LIBS += -Wl,-rpath,$(QWTLIB)
                 }

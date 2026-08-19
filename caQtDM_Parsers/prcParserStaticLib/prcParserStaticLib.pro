@@ -12,6 +12,8 @@ contains(QT_VER_MAJ, 6) {
 
 TEMPLATE = lib
 CONFIG	+= static
+# the static lib is linked into libqtcontrols.so on linux
+unix:!macx: QMAKE_CXXFLAGS += -fPIC
 
 INCLUDEPATH += .
 INCLUDEPATH += ../prcParserSrc

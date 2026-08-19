@@ -55,6 +55,30 @@ Relevant for work here:
   the collect dir at link time — if missing there, the link fails (see
   Build section).
 
+### Parser linking (INTERIM state — to be resolved)
+
+Two coexisting linking patterns, per parser:
+
+- **prc (new pattern):** `libprcParser.a` is linked **statically into
+  libqtcontrols** on Linux (`caQtDM.pri`, QtControls scope; the static
+  lib builds with `-fPIC` for this). libqtcontrols.so is self-contained —
+  no DT_NEEDED, works with `CAQTDM_NORPATH` packaging, and the
+  UiConverterFactory works everywhere qtcontrols is loaded (viewer,
+  caInclude, Designer). macOS links the dylib with full path, Windows the
+  import lib (prcParser.dll ships in the MSI).
+- **adl/edl (legacy pattern):** their symbols (via `parseotherfile.cpp`
+  in QtControls) stay **unresolved** in libqtcontrols.so; the viewer
+  links `-ladlParser/-ledlParser` on top (`caQtDM.pri` viewer scope).
+  Consequence: every executable must link them itself, and the Designer
+  cannot resolve these paths.
+
+This mixed state is transitional and should be resolved by migrating
+adl/edl to the static pattern (then drop the viewer link lines and the
+macOS dylib special cases; caInclude could then load .adl/.edl in the
+Designer too). Never add a `-l<parser>` line to the QtControls scope
+while both `.a` and `.so` exist in the collect dir — ld picks the `.so`
+and NORPATH package builds break (RPM link failure 2026-08).
+
 ## Build
 
 - qmake project (`all.pro`); entry via `caQtDM_Env`/`caQtDM_BuildAll`
