@@ -94,7 +94,9 @@ static void printStatistics(const ParsePrcFile &parser)
 
 int main(int argc, char *argv[])
 {
-    // QGuiApplication is not enough: the parsers use QFontMetrics
+    // QGuiApplication is not enough: the parser uses QFontMetrics and
+    // --verify loads widgets; run headless (no display) unless overridden
+    if(qgetenv("QT_QPA_PLATFORM").isEmpty()) qputenv("QT_QPA_PLATFORM", "offscreen");
     QApplication app(argc, argv);
 
     bool large = false, verify = false;
