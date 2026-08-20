@@ -79,6 +79,98 @@ Designer too). Never add a `-l<parser>` line to the QtControls scope
 while both `.a` and `.so` exist in the collect dir — ld picks the `.so`
 and NORPATH package builds break (RPM link failure 2026-08).
 
+Runtime converter selection (`caQtDM_QtControls/src/uiconverter.{h,cpp}`,
+`UiConverterFactory`): dispatch by file suffix — `prc` always, `adl`/`edl`
+only under `ADL_EDL_FILES`. For prc, env `CAQTDM_CONVERTER_PRC=new|old`
+(compat alias `CAQTDM_PRC_CONVERTER=1` = new) picks `ParsePrcFile` (new)
+vs `ParsePepFile` (old); PEP panels use the `.prc` extension. Callers:
+caInclude and `caqtdm_lib.cpp`. Note caInclude itself only loads `.ui`
+and `.prc` — any other extension in its file property is replaced by
+`.ui` (`cainclude.cpp`, format switch).
+
+## QtControls: widgets & Designer plugins
+
+- **Four Designer plugin groups** (`caQtDM_QtControls/plugins/`, one .pro
+  each): `qtcontrols_controllers` (caNumeric, caSlider, caMenu,
+  caTextEntry, …), `qtcontrols_graphics` (caFrame, caLabel, caGraphics,
+  caInclude, …), `qtcontrols_monitors` (caLineEdit, caThermo,
+  caCartesianPlot, caCamera, caCalc, genSoftPV, …),
+  `qtcontrols_utilities` (replaceMacro, wmSignalPropagator,
+  caShellCommand, caScriptButton, …). All include `plugins/plugins.pri`
+  (`TEMPLATE = lib` + `CONFIG += plugin`, DESTDIR
+  `$(CAQTDM_COLLECT)/designer`). New widget = widget class +
+  `d_plugins.append(...)` in the matching `*_plugin.cpp` + pixmap +
+  entry in `designerPluginTexts.h`.
+- **designer vs uiplugin:** desktop builds use `QT += designer`,
+  ios/android (MOBILE) `uiplugin` (Qt6 android: neither — plugins are
+  linked statically). The conditions differ slightly between
+  `caQtDM_QtControls.pro` and `plugins/plugins.pri`.
+- **`DESIGNER_TOOLTIP_DESCRIPTIONS`** (qtdefs.pri): enables tooltip
+  descriptions in the widgets' domXml — historically for PSI's patched
+  Qt 4.8.2 designer, also set for Qt 5 (> 5.5), NOT set for Qt 6.
+  Caution (qtdefs.pri): set for a designer that doesn't understand it,
+  the widgets disappear from the Designer entirely.
+- **`caWidgetInterface`** (`src/caWidgetInterface.h`): opt-in abstract
+  interface (caDataUpdate, caActivate, getWidgetInfo, createContextMenu,
+  getDragText) meant to move per-widget special cases out of
+  `caqtdm_lib.cpp` — the dispatcher probes it via `dynamic_cast` and
+  falls back to the classic type checks. So far only `caLineDraw`
+  implements it; it is NOT a repo-wide widget interface.
+- **`wmSignalPropagator`** (utilities group): Designer bridge from panel
+  widgets to window operations of the surrounding main window (close,
+  reload, show*, print, resize; `caqtdm_lib.cpp` collects instances and
+  connects the `wm*` signals). Despite the name it has NO relation to
+  the HMI event bus.
+- `qtdefinitions.h`: small global defines used everywhere, e.g.
+  `qasc(x)` (= `x.toLatin1().constData()`) and `MAX_STRING_LENGTH`.
+
+## caQtDM_Lib: core objects & data flow
+
+- **`knobData`** (`src/knobData.h`, plain C struct, extern "C"): one
+  record per widget-channel connection — pv name, widget pointer
+  (`dispW`), plugin pointer/name, and the embedded **`epicsData edata`**
+  (connection state, fieldtype, status/severity, limits, precision,
+  units, `rvalue`/`ivalue`, vector data `dataB`, `monitorCount` vs
+  `displayCount`, per-channel `repRate`, default 5 Hz).
+- **`MutexKnobData`** (`src/mutexKnobData.{h,cpp}`): thread-safe store
+  of all knobData records + the softPV lists. Control-system plugins
+  deliver updates from their own threads via
+  `SetMutexKnobDataReceived()`; a timer (starts at 10 Hz, adapts to the
+  fastest requested repRate) compares monitorCount/displayCount and
+  triggers the widget repaint in `caqtdm_lib.cpp` — widgets are never
+  updated directly from plugin threads.
+- **C wrappers** for EPICS C callbacks: `mutexKnobDataWrapper.h`
+  (`C_SetMutexKnobDataReceived`, `C_DataLock`, …) and
+  `messageWindowWrapper.h` (`C_postMsgEvent`, see Logging).
+- **`loadPlugins`** (`src/loadPlugins.{h,cpp}`): fills a
+  `QMap<QString, ControlsInterface*>`; `caqtdm_lib.cpp` routes each PV
+  to its plugin by prefix (`epics3://`, `internal://`, …).
+- **`CaQtDM_Lib`** (`src/caqtdm_lib.cpp`): central dispatcher — loads
+  the .ui, replaces macros, creates the monitors per widget type and
+  handles display/write logic (huge file, grep instead of reading).
+  The three key functions:
+  - `scanWidgets(list, macro)`: after loading a panel, walks all child
+    widgets in three passes (primary softPVs working on their own value
+    first, then other softPVs, then everything else) and calls
+    HandleWidget for each.
+  - `HandleWidget(w, macro, firstPass, treatPrimary)`: per-widget setup —
+    reads the channel/property definitions, applies macros, creates the
+    knobData monitors and wires the widget signals.
+  - `Callback_UpdateWidget(indx, w, units, fec, String, data)`: slot for
+    `MutexKnobData::Signal_UpdateWidget` (GUI thread) — the giant
+    per-widget-type switch that pushes new data into the widget.
+- **caInclude special case** (inside `HandleWidget`, caqtdm_lib.cpp
+  ~2639–3100): the included panel is instantiated by the DISPATCHER, not
+  by the widget itself — QUiLoader for `.ui`, UiConverterFactory for
+  `.prc`, placed into a frame/grid layout built at load time. One copy
+  per macro-list entry / item count (`qMax(macroList.count(),
+  getItemCount())`), stacked Row/Column/RowColumn/ColumnRow or free
+  `Positions`; each copy gets its own macro set (`treatMacro`,
+  `savedMacro[level]`). Nested includes recurse depth-first via
+  `scanWidgets()` with a `level`/`cainclude_path` stack, so relative
+  paths resolve against the including file. With `Positions` stacking,
+  `Callback_UpdateWidget` moves/resizes the copies at runtime via PVs.
+
 ## Build
 
 - qmake project (`all.pro`); entry via `caQtDM_Env`/`caQtDM_BuildAll`
@@ -292,10 +384,8 @@ first and may need to be carried back to Development.
   was observed for `2*CLEANUP_INTERVAL_MS +
   slotIndex*4*CLEANUP_GRACE_MS` — staggered per slot so concurrent
   takeovers stay rare; an observed `CleanupStarted` resets the clock.
-  Critical: Release and
-  Development had incompatible bus implementations with an identical SHM
-  key (`caQtDM_HmiSharedEventBus_SharedMem_<uid>`) — mixed builds under
-  one user share an incompatible segment. Locking uses exclusively
+  SHM key: `caQtDM_HmiSharedEventBus_SharedMem_<uid>`. Locking uses
+  exclusively
   `QSharedMemory::lock()` (never mix in QSystemSemaphores!). **No
   layout/key changes without asking** — the user explicitly rejected key
   versioning. When adding event types, update `LAST_EVENT_TYPE`; never
