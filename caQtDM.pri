@@ -1085,7 +1085,7 @@ caQtDM_Viewer {
 
                         LIBS += $$(QWTLIB)/lib$$(QWTLIBNAME)_$${QT_ARCH}.a
                         LIBS += $(CAQTDM_COLLECT)/libqtcontrols_$${QT_ARCH}.a
-                        LIBS += $(CAQTDM_COLLECT)/libprcParser.a
+                        LIBS += $(CAQTDM_COLLECT)/libprcParser_$${QT_ARCH}.a
                         LIBS += $(CAQTDM_COLLECT)/designer/libqtcontrols_controllers_plugin_$${QT_ARCH}.a
                         LIBS += $(CAQTDM_COLLECT)/designer/libqtcontrols_monitors_plugin_$${QT_ARCH}.a
                         LIBS += $(CAQTDM_COLLECT)/designer/libqtcontrols_graphics_plugin_$${QT_ARCH}.a
