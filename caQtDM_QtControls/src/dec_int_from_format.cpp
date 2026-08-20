@@ -35,7 +35,7 @@
 
 #define qstoc(x) ""
 
-Q_LOGGING_CATEGORY(decIntFromFormatLog, "caqtdm.widgdets.decintfromformat")
+Q_LOGGING_CATEGORY(decIntFromFormatLog, "caqtdm.widgets.decintfromformat")
 
 DecIntFromFormat::DecIntFromFormat(QString f)
 {
