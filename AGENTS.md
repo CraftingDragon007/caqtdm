@@ -175,12 +175,28 @@ Two separate levels — do not mix them up:
 
 1. **Developer/operations logging: Qt logging categories.** New code logs
    with `qCDebug/qCInfo/qCWarning(<category>)`, NOT with bare `qDebug()`.
-   Categories are declared in `caQtDM_Lib/src/caQtDM_Lib_global.h`
-   (`Q_DECLARE_LOGGING_CATEGORY`) and defined in the respective module
-   .cpp: `Q_LOGGING_CATEGORY(name, "caqtdm.<area>.<module>")` — naming
-   scheme `caqtdm.lib.*`, `caqtdm.viewer.*`, `caqtdm.web.*`,
-   `caqtdm.extern.c`. For a new module, create its own category following
-   this pattern.
+   There is NO `caQtDM_Log` macro — logging goes exclusively through the
+   `qC*` macros on categories. Categories are declared
+   (`Q_DECLARE_LOGGING_CATEGORY`) in the module's global header and
+   defined in the respective module .cpp:
+   `Q_LOGGING_CATEGORY(name, "caqtdm.<area>.<module>")`.
+   Declaration headers per area:
+   - `caQtDM_Lib/src/caQtDM_Lib_global.h` — lib and web categories
+     (web ones under `#ifdef WEB`)
+   - `caQtDM_QtControls/src/qtcontrols_global.h` — widget categories
+     (largest group, ~67)
+   - `caQtDM_Plugins/caQtDM_Plugins_global.h` — plugin categories
+   - `caQtDM_Viewer/src/loggingcategories.h` — viewer categories
+   - `caQtDM_Parsers/prcParserSrc/prcparserdefs.h` — prc parser
+   Naming scheme: `caqtdm.lib.*`, `caqtdm.widgets.*`, `caqtdm.viewer.*`,
+   `caqtdm.web.*`, `caqtdm.plugins.*`, `caqtdm.parsers.*`,
+   `caqtdm.logging.*` (the log handlers themselves), `caqtdm.extern.c`.
+   For a new module, create its own category following this pattern.
+   Caveat: widget categories used inside `caqtdm_lib.cpp` are defined
+   there a second time (`#ifndef MOBILE` block, separate translation
+   unit) — keep both strings identical when touching one of them.
+   Category strings are user-visible via `QT_LOGGING_RULES` — renaming
+   existing ones breaks users' logging rules (ask first).
 2. **User-facing messages: the MessageWindow**
    (`caQtDM_Lib/src/MessageWindow.*`, dock "caQtDM Messages", max. 400
    lines). Filled thread-safely via `postMsgEvent()` (custom event);
@@ -194,7 +210,8 @@ Central infrastructure (`caQtDM_Viewer/src/logging/`):
 installs the `qInstallMessageHandler` and dispatches every message as a
 structured log record (UTC timestamp in ms, level, message,
 file:function:line, category, PID) to the configured handlers (own
-thread):
+thread). The `CAQTDM_LOGGING_*` env vars below are RUNTIME configuration
+(read at viewer startup) — they are not qtdefs.pri build switches:
 
 - Selection via env `CAQTDM_LOGGING_HANDLERS` (comma-separated):
   `console` (default), `file`, `syslog` (Unix only), `logstash` (HTTP).
@@ -249,14 +266,33 @@ first and may need to be carried back to Development.
   `tst_qtcontrols/tst_numeric_suite.h`. Numeric work only against this
   state, not against Development.
 - **`feature/internalChannel`**: internal plugin with caSTRING support;
-  intended to replace softPVs in the long run.
+  intended to replace softPVs in the long run. Core is already on
+  Development (`caQtDM_Plugins/internal/internal_channel.{h,cpp}`):
+  simulated channels `internal://NAME[.FIELD]`, configured via JSON with
+  EPICS field names (assembled by the genSoftPV widget). Each channel
+  stores its value in a `NativeValue` struct in the channel's native
+  EPICS type — int16/int32/float/double/enum/char, selected by JSON
+  `type` (double/float/int/long/enum/string/char) into `fieldtype`; only
+  the member matching `fieldtype` is used, and writes get the native
+  type's truncation/wraparound (like the epics3 plugin). caSTRING
+  channels generate strings from a regex pattern; `doubleValue` then
+  holds the enumeration index.
 - **Paused:** caCalc `%TimeStamp(A)%` -> string into an internalPV (fully
   planned, not yet implemented). Key decisions: no controlsinterface.h
   change, the calc expression is the routing switch, genSoftPV (dataType
   String) defines the channel, format local ISO 8601.
 - **HMI event bus** (`caQtDM_Lib/src/hmisharedeventbus.*`): hardened
   2026-07 on the Release branch (locked copy-then-emit, 10-minute cleanup
-  with lowest-PID election, slot ownership check). Critical: Release and
+  with lowest-PID election, slot ownership check). Cleanup mechanics
+  (`performCleanupCheck`): every `CLEANUP_INTERVAL_MS` (10 min) the
+  lowest registered pid is elected as cleaner (no OS liveness check); a
+  cleanup announces itself via `CleanupStarted` and waits
+  `CLEANUP_GRACE_MS` (150 ms) so peers can poll it before the ring is
+  wiped. Safety net for a dead cleaner: peers take over once no cleanup
+  was observed for `2*CLEANUP_INTERVAL_MS +
+  slotIndex*4*CLEANUP_GRACE_MS` — staggered per slot so concurrent
+  takeovers stay rare; an observed `CleanupStarted` resets the clock.
+  Critical: Release and
   Development had incompatible bus implementations with an identical SHM
   key (`caQtDM_HmiSharedEventBus_SharedMem_<uid>`) — mixed builds under
   one user share an incompatible segment. Locking uses exclusively
