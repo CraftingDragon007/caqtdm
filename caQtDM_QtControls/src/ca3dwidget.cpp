@@ -2256,11 +2256,20 @@ bool ca3DWidget::shouldUse2DFallback() const
     context.doneCurrent();
     qCDebug(ca3DWidgetLog) << "shouldUse2DFallback OpenGL renderer" << renderer;
 
-    return renderer.isEmpty()
-           || renderer.contains(QStringLiteral("llvmpipe"))
-           || renderer.contains(QStringLiteral("softpipe"))
-           || renderer.contains(QStringLiteral("software"))
-           || renderer.contains(QStringLiteral("swrast"));
+    const bool softwareRenderer = renderer.contains(QStringLiteral("llvmpipe"))
+                                  || renderer.contains(QStringLiteral("softpipe"))
+                                  || renderer.contains(QStringLiteral("software"))
+                                  || renderer.contains(QStringLiteral("swrast"));
+    const bool allowSoftwareRendering =
+        qEnvironmentVariableIntValue("CAQTDM_3D_ALLOW_SOFTWARE_RENDERING") > 0;
+    if (softwareRenderer && allowSoftwareRendering) {
+        qCWarning(ca3DWidgetLog) << "shouldUse2DFallback allowing software OpenGL renderer"
+                                 << "because CAQTDM_3D_ALLOW_SOFTWARE_RENDERING is set; performance may be poor"
+                                 << "and this should only be used when 3D is required";
+        return false;
+    }
+
+    return renderer.isEmpty() || softwareRenderer;
 }
 
 void ca3DWidget::rebuild3DOverlays(Qt3DRender::QLayer *overlayLayer)

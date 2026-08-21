@@ -2777,14 +2777,20 @@ has no equivalent in MEDM
    a portable relative path.
 
    The environment variable ``CAQTDM_3D_FORCE_FALLBACK=1`` forces fallback mode
-   and is useful for testing. ``CAQTDM_3D_OVERLAY_MAX_SCALE`` and
-   ``CAQTDM_3D_OVERLAY_MAX_PIXELS`` can limit live overlay texture resolution.
+   and is useful for testing. Set ``CAQTDM_3D_ALLOW_SOFTWARE_RENDERING=1`` to
+   use the 3D view with a detected software OpenGL renderer. **Warning:**
+   software rendering can result in poor performance and should only be used
+   when hardware rendering is unavailable and the 3D view is genuinely needed.
+   ``CAQTDM_3D_OVERLAY_MAX_SCALE`` and ``CAQTDM_3D_OVERLAY_MAX_PIXELS`` can
+   limit live overlay texture resolution.
 
    **Behavior and quirks:**
 
    * Qt5 and mobile builds use the 2D fallback. Qt6 also uses it when 3D
-     rendering is unavailable or when ``CAQTDM_3D_FORCE_FALLBACK`` is set.
-     The Qt Designer editing surface shows a placeholder/fallback view.
+     rendering is unavailable, a software renderer is detected, or
+     ``CAQTDM_3D_FORCE_FALLBACK`` is set. The software-renderer check can be
+     overridden with ``CAQTDM_3D_ALLOW_SOFTWARE_RENDERING``. The Qt Designer
+     editing surface shows a placeholder/fallback view.
 
    * An empty ``sceneConfig`` is valid, but displays no scene. Invalid JSON or
      invalid scene values are reported by the editor and prevent the scene
