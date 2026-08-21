@@ -13,11 +13,11 @@ class TestCa3DConfig : public QObject
 
 private slots:
     void parsesSceneConfigUtilityFields();
-    void parsesPointLightConfiguration();
+    void parsesLightConfiguration();
     void parsesObjectMasterLinks();
     void parsesCameraPresetsWithoutOverlays();
     void rejectsInvalidUtilityFields();
-    void rejectsInvalidPointLightConfiguration();
+    void rejectsInvalidLightConfiguration();
     void rejectsInvalidObjectMasterLinks();
     void resolvesFilesFromDisplayPath();
 };

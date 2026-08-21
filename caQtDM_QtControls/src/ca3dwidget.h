@@ -129,6 +129,7 @@ private:
     void emitCameraRotationSignals(double yaw, double pitch);
     bool isDesignerMode() const;
     void setDynamicBindingComponent(const ca3DObjectConfig &object, const ca3DBindingConfig &binding, double value);
+    void setLightBindingValue(const ca3DLightConfig &light, const ca3DBindingConfig &binding, double value);
     void rebuildObjectLinks();
 
 protected:
@@ -152,6 +153,7 @@ protected:
                                            QMap<QString, QMatrix4x4> *cache,
                                            QSet<QString> *visiting) const;
     void restoreSnapshotOverlayStates();
+    void applyLight(const QString &lightId);
 #endif
 
     QLabel *thisStatusLabel;
@@ -172,6 +174,10 @@ protected:
     bool thisSnapshotCapturePending;
     QMap<QString, QVector3D> thisDynamicTranslations;
     QMap<QString, QVector3D> thisDynamicRotations;
+    QMap<QString, QVector3D> thisDynamicLightDirections;
+    QMap<QString, QVector3D> thisDynamicLightPositions;
+    QMap<QString, double> thisDynamicLightIntensities;
+    QMap<QString, bool> thisDynamicLightEnabled;
     QHash<QString, int> thisObjectIndexById;
     QHash<QString, QStringList> thisObjectChildrenById;
 
@@ -179,6 +185,8 @@ protected:
     Qt3DExtras::Qt3DWindow *this3DView;
     Qt3DCore::QEntity *thisRootEntity;
     QMap<QString, Qt3DCore::QTransform*> thisObjectTransforms;
+    QMap<QString, QObject*> this3DLightObjects;
+    QMap<QString, Qt3DCore::QTransform*> this3DLightTransforms;
     QMap<QString, Qt3DCore::QEntity*> this3DOverlayEntities;
     QMap<QString, ca3DOverlayWidgetManager*> this3DOverlayManagersById;
     QMap<QString, QObject*> this3DOverlayEventFiltersById;

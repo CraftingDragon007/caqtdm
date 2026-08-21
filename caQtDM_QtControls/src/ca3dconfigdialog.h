@@ -34,6 +34,8 @@ public:
 private slots:
     void addObjectRow();
     void removeObjectRow();
+    void addLightRow();
+    void removeLightRow();
     void addBindingRow();
     void removeBindingRow();
     void addOverlayRow();
@@ -87,11 +89,7 @@ private:
     int pendingSnapshotPreset;
     QTabWidget *tabs;
     QPushButton *backgroundColorButton;
-    QPushButton *pointLightColorButton;
-    QDoubleSpinBox *pointLightIntensitySpinBox;
-    QDoubleSpinBox *pointLightPositionXSpinBox;
-    QDoubleSpinBox *pointLightPositionYSpinBox;
-    QDoubleSpinBox *pointLightPositionZSpinBox;
+    QTableWidget *lightsTable;
     QTableWidget *objectsTable;
     QTableWidget *bindingsTable;
     QTableWidget *overlaysTable;

@@ -14,6 +14,8 @@
 #include <QVector3D>
 #include <qtcontrols_global.h>
 
+QTCON_EXPORT QColor ca3DContrastingTextColor(const QColor &background);
+
 struct QTCON_EXPORT ca3DAxisConfig
 {
     enum AxisType { Translation, Rotation };
@@ -33,6 +35,14 @@ struct QTCON_EXPORT ca3DBindingConfig
         RotationX,
         RotationY,
         RotationZ,
+        LightEnabled,
+        LightIntensity,
+        LightDirectionX,
+        LightDirectionY,
+        LightDirectionZ,
+        LightPositionX,
+        LightPositionY,
+        LightPositionZ,
         InvalidTarget
     };
 
@@ -102,11 +112,28 @@ struct QTCON_EXPORT ca3DCameraPresetConfig
     QStringList overlays;
 };
 
-struct QTCON_EXPORT ca3DPointLightConfig
+struct QTCON_EXPORT ca3DAmbientLightConfig
 {
     QColor color = Qt::white;
+    double intensity = 0.20;
+};
+
+struct QTCON_EXPORT ca3DLightConfig
+{
+    enum LightType { Directional, Point, Spot };
+
+    QString id;
+    LightType type = Directional;
+    bool enabled = true;
+    QColor color = Qt::white;
     double intensity = 1.0;
+    QVector3D direction = QVector3D(-0.4f, -0.8f, -0.6f);
     QVector3D position = QVector3D(0.0f, 500.0f, 500.0f);
+    double cutOffAngle = 30.0;
+    double constantAttenuation = 1.0;
+    double linearAttenuation = 0.0;
+    double quadraticAttenuation = 0.0;
+    QList<ca3DBindingConfig> bindings;
 };
 
 struct QTCON_EXPORT ca3DSceneConfig
@@ -115,7 +142,9 @@ struct QTCON_EXPORT ca3DSceneConfig
     QList<ca3DOverlayConfig> overlays;
     QList<ca3DCameraPresetConfig> cameraPresets;
     QColor backgroundColor = QColor(30, 34, 40);
-    ca3DPointLightConfig pointLight;
+    bool lightingEnabled = true;
+    ca3DAmbientLightConfig ambientLight;
+    QList<ca3DLightConfig> lights;
 
     void clear();
     bool isEmpty() const;

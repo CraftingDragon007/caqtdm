@@ -14,9 +14,13 @@
 #include <QJsonParseError>
 #include <QMap>
 #include <QSet>
+#include <cmath>
+#include <limits>
 
 namespace
 {
+QColor colorFromValue(const QJsonValue &value, const QColor &fallback, const QString &fieldName, QStringList *errors);
+
 QVector3D vectorFromArray(const QJsonValue &value, const QString &fieldName, QStringList *errors)
 {
     if (value.isUndefined() || value.isNull()) {
@@ -34,6 +38,70 @@ QVector3D vectorFromArray(const QJsonValue &value, const QString &fieldName, QSt
     return QVector3D(static_cast<float>(array.at(0).toDouble()),
                      static_cast<float>(array.at(1).toDouble()),
                      static_cast<float>(array.at(2).toDouble()));
+}
+
+bool finiteVectorFromArray(const QJsonValue &value, const QString &fieldName, QVector3D *result, QStringList *errors)
+{
+    if (value.isUndefined() || value.isNull()) {
+        return false;
+    }
+    const QJsonArray array = value.toArray();
+    if (array.size() != 3) {
+        if (errors) {
+            errors->append(QStringLiteral("%1 must contain exactly 3 numbers").arg(fieldName));
+        }
+        return false;
+    }
+    QVector3D vector;
+    for (int index = 0; index < 3; ++index) {
+        if (!array.at(index).isDouble() || !std::isfinite(array.at(index).toDouble())) {
+            if (errors) {
+                errors->append(QStringLiteral("%1 must contain finite numbers").arg(fieldName));
+            }
+            return false;
+        }
+        vector[index] = static_cast<float>(array.at(index).toDouble());
+    }
+    if (result) {
+        *result = vector;
+    }
+    return true;
+}
+
+void parseLightIntensity(const QJsonObject &object, const QString &fieldName, double *intensity, QStringList *errors)
+{
+    if (!object.contains(QStringLiteral("intensity"))) {
+        return;
+    }
+    const QJsonValue value = object.value(QStringLiteral("intensity"));
+    const double parsed = value.toDouble(std::numeric_limits<double>::quiet_NaN());
+    if (!value.isDouble() || !std::isfinite(parsed)) {
+        if (errors) {
+            errors->append(QStringLiteral("%1.intensity must be a number").arg(fieldName));
+        }
+        return;
+    }
+    if (parsed < 0.0) {
+        if (errors) {
+            errors->append(QStringLiteral("%1.intensity must not be negative").arg(fieldName));
+        }
+        return;
+    }
+    *intensity = parsed;
+}
+
+void parseLightEnabled(const QJsonObject &object, const QString &fieldName, bool *enabled, QStringList *errors)
+{
+    if (!object.contains(QStringLiteral("enabled"))) {
+        return;
+    }
+    if (!object.value(QStringLiteral("enabled")).isBool()) {
+        if (errors) {
+            errors->append(QStringLiteral("%1.enabled must be boolean").arg(fieldName));
+        }
+        return;
+    }
+    *enabled = object.value(QStringLiteral("enabled")).toBool();
 }
 
 QRect rectFromArray(const QJsonValue &value, const QString &fieldName, QStringList *errors)
@@ -174,9 +242,17 @@ ca3DBindingConfig::BindingTarget bindingTargetFromString(const QString &value, Q
     if (target == QStringLiteral("rotation.z")) {
         return ca3DBindingConfig::RotationZ;
     }
+    if (target == QStringLiteral("enabled")) return ca3DBindingConfig::LightEnabled;
+    if (target == QStringLiteral("intensity")) return ca3DBindingConfig::LightIntensity;
+    if (target == QStringLiteral("direction.x")) return ca3DBindingConfig::LightDirectionX;
+    if (target == QStringLiteral("direction.y")) return ca3DBindingConfig::LightDirectionY;
+    if (target == QStringLiteral("direction.z")) return ca3DBindingConfig::LightDirectionZ;
+    if (target == QStringLiteral("position.x")) return ca3DBindingConfig::LightPositionX;
+    if (target == QStringLiteral("position.y")) return ca3DBindingConfig::LightPositionY;
+    if (target == QStringLiteral("position.z")) return ca3DBindingConfig::LightPositionZ;
 
     if (errors) {
-        errors->append(QStringLiteral("Unknown object binding target '%1'").arg(value));
+        errors->append(QStringLiteral("Unknown binding target '%1'").arg(value));
     }
     return ca3DBindingConfig::InvalidTarget;
 }
@@ -275,13 +351,43 @@ void validateObjectLinks(const QList<ca3DObjectConfig> &objects, QStringList *er
 }
 }
 
+QColor ca3DContrastingTextColor(const QColor &background)
+{
+    const auto linearChannel = [](int channel) {
+        const double value = static_cast<double>(channel) / 255.0;
+        return value <= 0.03928 ? value / 12.92 : std::pow((value + 0.055) / 1.055, 2.4);
+    };
+    const double luminance = 0.2126 * linearChannel(background.red())
+                             + 0.7152 * linearChannel(background.green())
+                             + 0.0722 * linearChannel(background.blue());
+    const double whiteContrast = 1.05 / (luminance + 0.05);
+    const double blackContrast = (luminance + 0.05) / 0.05;
+    return whiteContrast >= blackContrast ? QColor(Qt::white) : QColor(Qt::black);
+}
+
 void ca3DSceneConfig::clear()
 {
     objects.clear();
     overlays.clear();
     cameraPresets.clear();
     backgroundColor = QColor(30, 34, 40);
-    pointLight = ca3DPointLightConfig();
+    lightingEnabled = true;
+    ambientLight = ca3DAmbientLightConfig();
+    lights.clear();
+    ca3DLightConfig key;
+    key.id = QStringLiteral("directional");
+    key.type = ca3DLightConfig::Directional;
+    lights.append(key);
+    ca3DLightConfig point;
+    point.id = QStringLiteral("point");
+    point.type = ca3DLightConfig::Point;
+    lights.append(point);
+    ca3DLightConfig rim;
+    rim.id = QStringLiteral("fill");
+    rim.type = ca3DLightConfig::Directional;
+    rim.enabled = false;
+    rim.direction = QVector3D(0.4f, 0.8f, 0.6f);
+    lights.append(rim);
 }
 
 bool ca3DSceneConfig::isEmpty() const
@@ -324,31 +430,96 @@ bool ca3DConfigParser::parse(const QString &json, ca3DSceneConfig *config, QStri
                                              errors);
 
     const QJsonObject lighting = root.value(QStringLiteral("lighting")).toObject();
-    const QJsonObject pointLight = lighting.value(QStringLiteral("pointLight")).toObject();
-    config->pointLight.color = colorFromValue(pointLight.value(QStringLiteral("color")),
-                                              config->pointLight.color,
-                                              QStringLiteral("lighting.pointLight.color"),
-                                              errors);
-    if (pointLight.contains(QStringLiteral("intensity"))) {
-        if (!pointLight.value(QStringLiteral("intensity")).isDouble()) {
+    if (lighting.contains(QStringLiteral("enabled"))) {
+        if (!lighting.value(QStringLiteral("enabled")).isBool()) {
             if (errors) {
-                errors->append(QStringLiteral("lighting.pointLight.intensity must be a number"));
+                errors->append(QStringLiteral("lighting.enabled must be boolean"));
             }
         } else {
-            const double intensity = pointLight.value(QStringLiteral("intensity")).toDouble();
-            if (intensity < 0.0) {
-                if (errors) {
-                    errors->append(QStringLiteral("lighting.pointLight.intensity must not be negative"));
-                }
-            } else {
-                config->pointLight.intensity = intensity;
-            }
+            config->lightingEnabled = lighting.value(QStringLiteral("enabled")).toBool();
         }
     }
-    if (pointLight.contains(QStringLiteral("position"))) {
-        config->pointLight.position = vectorFromArray(pointLight.value(QStringLiteral("position")),
-                                                       QStringLiteral("lighting.pointLight.position"),
-                                                       errors);
+    const QJsonObject ambient = lighting.value(QStringLiteral("ambient")).toObject();
+    config->ambientLight.color = colorFromValue(ambient.value(QStringLiteral("color")),
+                                                config->ambientLight.color,
+                                                QStringLiteral("lighting.ambient.color"),
+                                                errors);
+    parseLightIntensity(ambient, QStringLiteral("lighting.ambient"), &config->ambientLight.intensity, errors);
+
+    for (const QString &name : lighting.keys()) {
+        if (name != QStringLiteral("enabled") && name != QStringLiteral("ambient") && name != QStringLiteral("lights")
+            && name.endsWith(QStringLiteral("Light")) && errors) {
+            errors->append(QStringLiteral("lighting.%1 is obsolete; use lighting.lights instead").arg(name));
+        }
+    }
+
+    const QJsonArray lights = lighting.value(QStringLiteral("lights")).toArray();
+    if (lighting.contains(QStringLiteral("lights"))) {
+        config->lights.clear();
+    }
+    QSet<QString> lightIds;
+    for (const QJsonValue &lightValue : lights) {
+        const QJsonObject lightObject = lightValue.toObject();
+        ca3DLightConfig light;
+        light.id = stringFromObject(lightObject, QStringLiteral("id"));
+        const QString type = stringFromObject(lightObject, QStringLiteral("type"));
+        if (type == QStringLiteral("point")) {
+            light.type = ca3DLightConfig::Point;
+        } else if (type == QStringLiteral("spot")) {
+            light.type = ca3DLightConfig::Spot;
+        } else if (type == QStringLiteral("directional") || type.isEmpty()) {
+            light.type = ca3DLightConfig::Directional;
+        } else if (errors) {
+            errors->append(QStringLiteral("Unknown light type '%1' for light '%2'").arg(type, light.id));
+        }
+        if (light.id.isEmpty() && errors) {
+            errors->append(QStringLiteral("Light without id"));
+        } else if (lightIds.contains(light.id) && errors) {
+            errors->append(QStringLiteral("Duplicate light id '%1'").arg(light.id));
+        }
+        lightIds.insert(light.id);
+        const QString field = QStringLiteral("lighting.lights[%1]").arg(config->lights.size());
+        parseLightEnabled(lightObject, field, &light.enabled, errors);
+        light.color = colorFromValue(lightObject.value(QStringLiteral("color")), light.color, field + QStringLiteral(".color"), errors);
+        parseLightIntensity(lightObject, field, &light.intensity, errors);
+        QVector3D vector;
+        if (finiteVectorFromArray(lightObject.value(QStringLiteral("direction")), field + QStringLiteral(".direction"), &vector, errors)) {
+            if (vector.lengthSquared() == 0.0f && light.type != ca3DLightConfig::Point && errors)
+                errors->append(QStringLiteral("%1.direction must not be zero").arg(field));
+            else if (vector.lengthSquared() > 0.0f)
+                light.direction = vector;
+        }
+        if (finiteVectorFromArray(lightObject.value(QStringLiteral("position")), field + QStringLiteral(".position"), &vector, errors))
+            light.position = vector;
+        const auto nonNegative = [lightObject, field, errors](const QString &name, double *target) {
+            if (!lightObject.contains(name)) return;
+            const double value = lightObject.value(name).toDouble(std::numeric_limits<double>::quiet_NaN());
+            if (!std::isfinite(value) || value < 0.0) {
+                if (errors) errors->append(QStringLiteral("%1.%2 must be a non-negative number").arg(field, name));
+            } else *target = value;
+        };
+        nonNegative(QStringLiteral("cutOffAngle"), &light.cutOffAngle);
+        nonNegative(QStringLiteral("constantAttenuation"), &light.constantAttenuation);
+        nonNegative(QStringLiteral("linearAttenuation"), &light.linearAttenuation);
+        nonNegative(QStringLiteral("quadraticAttenuation"), &light.quadraticAttenuation);
+        const QJsonArray bindings = lightObject.value(QStringLiteral("bindings")).toArray();
+        for (const QJsonValue &bindingValue : bindings) {
+            const QJsonObject bindingObject = bindingValue.toObject();
+            ca3DBindingConfig binding;
+            binding.channel = stringFromObject(bindingObject, QStringLiteral("channel"));
+            binding.targetName = stringFromObject(bindingObject, QStringLiteral("target"));
+            binding.target = bindingTargetFromString(binding.targetName, errors);
+            binding.mode = bindingModeFromString(stringFromObject(bindingObject, QStringLiteral("mode")), errors);
+            binding.scale = bindingObject.value(QStringLiteral("scale")).toDouble(1.0);
+            binding.offset = bindingObject.value(QStringLiteral("offset")).toDouble(0.0);
+            if (bindingObject.contains(QStringLiteral("min"))) { binding.minimum = bindingObject.value(QStringLiteral("min")).toDouble(); binding.hasMinimum = true; }
+            if (bindingObject.contains(QStringLiteral("max"))) { binding.maximum = bindingObject.value(QStringLiteral("max")).toDouble(); binding.hasMaximum = true; }
+            if (binding.channel.isEmpty() && errors) errors->append(QStringLiteral("Binding without channel on light '%1'").arg(light.id));
+            if ((binding.target < ca3DBindingConfig::LightEnabled || binding.target == ca3DBindingConfig::InvalidTarget) && errors)
+                errors->append(QStringLiteral("Invalid light binding target '%1'").arg(binding.targetName));
+            light.bindings.append(binding);
+        }
+        config->lights.append(light);
     }
 
     const QJsonArray objects = root.value(QStringLiteral("objects")).toArray();

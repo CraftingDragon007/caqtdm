@@ -35,8 +35,9 @@
 #include <QXmlStreamReader>
 #include <QScrollBar>
 #include <QtMath>
-#include <cmath>
 #include <memory>
+#include <algorithm>
+#include <iterator>
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0) && !defined(MOBILE)
 #include <QtDesigner/QDesignerFormWindowInterface>
@@ -54,12 +55,14 @@
 #include <Qt3DRender/QCamera>
 #include <Qt3DRender/QCameraSelector>
 #include <Qt3DRender/QClearBuffers>
+#include <Qt3DRender/QDirectionalLight>
 #include <Qt3DRender/QFrameGraphNode>
 #include <Qt3DRender/QLayer>
 #include <Qt3DRender/QLayerFilter>
 #include <Qt3DRender/QMesh>
 #include <Qt3DRender/QPaintedTextureImage>
 #include <Qt3DRender/QPointLight>
+#include <Qt3DRender/QSpotLight>
 #include <Qt3DRender/QRenderCapture>
 #include <Qt3DRender/QRenderCaptureReply>
 #include <Qt3DRender/QRenderSurfaceSelector>
@@ -78,20 +81,6 @@ constexpr qreal kOverlayMaxTextureScale = 2.0;
 constexpr int kOverlayMaxTexturePixels = 1048576;
 constexpr float kCameraMinPitchDegrees = -89.0f;
 constexpr float kCameraMaxPitchDegrees = 89.0f;
-
-QColor contrastingTextColor(const QColor &background)
-{
-    const auto linearChannel = [](int channel) {
-        const double value = static_cast<double>(channel) / 255.0;
-        return value <= 0.03928 ? value / 12.92 : std::pow((value + 0.055) / 1.055, 2.4);
-    };
-    const double luminance = 0.2126 * linearChannel(background.red())
-                             + 0.7152 * linearChannel(background.green())
-                             + 0.0722 * linearChannel(background.blue());
-    const double whiteContrast = 1.05 / (luminance + 0.05);
-    const double blackContrast = (luminance + 0.05) / 0.05;
-    return whiteContrast >= blackContrast ? QColor(Qt::white) : QColor(Qt::black);
-}
 
 QQuaternion rotationFromEuler(const QVector3D &rotation)
 {
@@ -122,6 +111,14 @@ void setVectorComponent(QVector3D *vector, ca3DBindingConfig::BindingTarget targ
     case ca3DBindingConfig::RotationZ:
         vector->setZ(value);
         break;
+    case ca3DBindingConfig::LightEnabled:
+    case ca3DBindingConfig::LightIntensity:
+    case ca3DBindingConfig::LightDirectionX:
+    case ca3DBindingConfig::LightDirectionY:
+    case ca3DBindingConfig::LightDirectionZ:
+    case ca3DBindingConfig::LightPositionX:
+    case ca3DBindingConfig::LightPositionY:
+    case ca3DBindingConfig::LightPositionZ:
     case ca3DBindingConfig::InvalidTarget:
         break;
     }
@@ -139,6 +136,14 @@ float vectorComponent(const QVector3D &vector, ca3DBindingConfig::BindingTarget 
     case ca3DBindingConfig::TranslationZ:
     case ca3DBindingConfig::RotationZ:
         return vector.z();
+    case ca3DBindingConfig::LightEnabled:
+    case ca3DBindingConfig::LightIntensity:
+    case ca3DBindingConfig::LightDirectionX:
+    case ca3DBindingConfig::LightDirectionY:
+    case ca3DBindingConfig::LightDirectionZ:
+    case ca3DBindingConfig::LightPositionX:
+    case ca3DBindingConfig::LightPositionY:
+    case ca3DBindingConfig::LightPositionZ:
     case ca3DBindingConfig::InvalidTarget:
         return 0.0f;
     }
@@ -760,7 +765,7 @@ ca3DWidget::ca3DWidget(QWidget *parent)
     QPalette pal = palette();
     const QColor defaultBackground(30, 34, 40);
     pal.setColor(QPalette::Window, defaultBackground);
-    pal.setColor(QPalette::WindowText, contrastingTextColor(defaultBackground));
+    pal.setColor(QPalette::WindowText, ca3DContrastingTextColor(defaultBackground));
     setPalette(pal);
 
     thisStatusLabel->setAlignment(Qt::AlignCenter);
@@ -925,7 +930,7 @@ void ca3DWidget::setSceneConfig(const QString &config)
     thisConfigValid = ca3DConfigParser::parse(thisSceneConfig, &thisConfig, &thisConfigErrors);
     QPalette scenePalette = palette();
     scenePalette.setColor(QPalette::Window, thisConfig.backgroundColor);
-    const QColor textColor = contrastingTextColor(thisConfig.backgroundColor);
+    const QColor textColor = ca3DContrastingTextColor(thisConfig.backgroundColor);
     scenePalette.setColor(QPalette::WindowText, textColor);
     scenePalette.setColor(QPalette::Text, textColor);
     scenePalette.setColor(QPalette::ButtonText, textColor);
@@ -943,6 +948,10 @@ void ca3DWidget::setSceneConfig(const QString &config)
     rebuildObjectLinks();
     thisDynamicTranslations.clear();
     thisDynamicRotations.clear();
+    thisDynamicLightDirections.clear();
+    thisDynamicLightPositions.clear();
+    thisDynamicLightIntensities.clear();
+    thisDynamicLightEnabled.clear();
     rebuildScene();
     updatePlaceholderText();
 }
@@ -1024,6 +1033,11 @@ QStringList ca3DWidget::objectBindingChannels() const
     QStringList channels;
     for (const ca3DObjectConfig &object : thisConfig.objects) {
         for (const ca3DBindingConfig &binding : object.bindings) {
+            channels.append(binding.channel);
+        }
+    }
+    for (const ca3DLightConfig &light : thisConfig.lights) {
+        for (const ca3DBindingConfig &binding : light.bindings) {
             channels.append(binding.channel);
         }
     }
@@ -1576,12 +1590,35 @@ void ca3DWidget::setObjectAxisValue(const QString &objectId, const QString &axis
             return;
         }
     }
+
     qCWarning(ca3DWidgetLog) << "setObjectAxisValue ignored unknown object/axis" << objectId << axisId;
 #else
     Q_UNUSED(objectId);
     Q_UNUSED(axisId);
     Q_UNUSED(value);
 #endif
+}
+
+void ca3DWidget::setLightBindingValue(const ca3DLightConfig &light,
+                                      const ca3DBindingConfig &binding,
+                                      double value)
+{
+    double mapped = value * binding.scale + binding.offset;
+    if (binding.hasMinimum) mapped = qMax(mapped, binding.minimum);
+    if (binding.hasMaximum) mapped = qMin(mapped, binding.maximum);
+    if (binding.target == ca3DBindingConfig::LightEnabled) {
+        thisDynamicLightEnabled[light.id] = mapped > 0.0;
+    } else if (binding.target == ca3DBindingConfig::LightIntensity) {
+        thisDynamicLightIntensities[light.id] = qMax(0.0, mapped);
+    } else if (binding.target >= ca3DBindingConfig::LightDirectionX && binding.target <= ca3DBindingConfig::LightDirectionZ) {
+        QVector3D direction = thisDynamicLightDirections.value(light.id, light.direction);
+        setVectorComponent(&direction, static_cast<ca3DBindingConfig::BindingTarget>(binding.target - ca3DBindingConfig::LightDirectionX + ca3DBindingConfig::TranslationX), static_cast<float>(mapped));
+        thisDynamicLightDirections[light.id] = direction;
+    } else if (binding.target >= ca3DBindingConfig::LightPositionX && binding.target <= ca3DBindingConfig::LightPositionZ) {
+        QVector3D position = thisDynamicLightPositions.value(light.id, light.position);
+        setVectorComponent(&position, static_cast<ca3DBindingConfig::BindingTarget>(binding.target - ca3DBindingConfig::LightPositionX + ca3DBindingConfig::TranslationX), static_cast<float>(mapped));
+        thisDynamicLightPositions[light.id] = position;
+    }
 }
 
 void ca3DWidget::setObjectTranslation(const QString &objectId, double x, double y, double z)
@@ -1631,6 +1668,20 @@ void ca3DWidget::setObjectBindingValue(int bindingIndex, double value)
                 applyObjectTransform(object.id);
 #endif
                 qCDebug(ca3DWidgetLog) << "setObjectBindingValue applied" << bindingIndex << object.id << binding.targetName << value;
+                return;
+            }
+            currentIndex++;
+        }
+    }
+
+    foreach (const ca3DLightConfig &light, thisConfig.lights) {
+        foreach (const ca3DBindingConfig &binding, light.bindings) {
+            if (currentIndex == bindingIndex) {
+                setLightBindingValue(light, binding, value);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+                applyLight(light.id);
+#endif
+                qCDebug(ca3DWidgetLog) << "setObjectBindingValue applied light" << bindingIndex << light.id << binding.targetName << value;
                 return;
             }
             currentIndex++;
@@ -1731,15 +1782,58 @@ void ca3DWidget::rebuildScene()
     this3DView->defaultFrameGraph()->setClearColor(thisConfig.backgroundColor);
     installLayeredFrameGraph(this3DView, sceneLayer, overlayLayer, thisConfig.backgroundColor);
 
-    Qt3DCore::QEntity *lightEntity = new Qt3DCore::QEntity(thisRootEntity);
-    Qt3DRender::QPointLight *light = new Qt3DRender::QPointLight(lightEntity);
-    light->setColor(thisConfig.pointLight.color);
-    light->setIntensity(static_cast<float>(thisConfig.pointLight.intensity));
-    Qt3DCore::QTransform *lightTransform = new Qt3DCore::QTransform(lightEntity);
-    lightTransform->setTranslation(thisConfig.pointLight.position);
-    lightEntity->addComponent(light);
-    lightEntity->addComponent(lightTransform);
-    lightEntity->addComponent(sceneLayer);
+    const auto materialAmbientColor = [this](const QColor &objectColor) {
+        const QColor ambient = thisConfig.ambientLight.color;
+        const double intensity = thisConfig.ambientLight.intensity;
+        const auto component = [intensity](int sceneComponent, int objectComponent) {
+            const double value = static_cast<double>(sceneComponent) * intensity * objectComponent / 255.0;
+            return qRound(qBound(0.0, value, 255.0));
+        };
+        return QColor(component(ambient.red(), objectColor.red()),
+                      component(ambient.green(), objectColor.green()),
+                      component(ambient.blue(), objectColor.blue()));
+    };
+
+    if (thisConfig.lightingEnabled) {
+        for (const ca3DLightConfig &lightConfig : thisConfig.lights) {
+            Qt3DCore::QEntity *lightEntity = new Qt3DCore::QEntity(thisRootEntity);
+            QObject *lightObject = Q_NULLPTR;
+            if (lightConfig.type == ca3DLightConfig::Directional) {
+                Qt3DRender::QDirectionalLight *light = new Qt3DRender::QDirectionalLight(lightEntity);
+                lightObject = light;
+                light->setColor(lightConfig.color);
+                light->setIntensity(static_cast<float>(lightConfig.intensity));
+                light->setWorldDirection(lightConfig.direction);
+                lightEntity->addComponent(light);
+            } else if (lightConfig.type == ca3DLightConfig::Point) {
+                Qt3DRender::QPointLight *light = new Qt3DRender::QPointLight(lightEntity);
+                lightObject = light;
+                light->setColor(lightConfig.color);
+                light->setIntensity(static_cast<float>(lightConfig.intensity));
+                lightEntity->addComponent(light);
+            } else {
+                Qt3DRender::QSpotLight *light = new Qt3DRender::QSpotLight(lightEntity);
+                lightObject = light;
+                light->setColor(lightConfig.color);
+                light->setIntensity(static_cast<float>(lightConfig.intensity));
+                light->setLocalDirection(lightConfig.direction);
+                light->setCutOffAngle(static_cast<float>(lightConfig.cutOffAngle));
+                light->setConstantAttenuation(static_cast<float>(lightConfig.constantAttenuation));
+                light->setLinearAttenuation(static_cast<float>(lightConfig.linearAttenuation));
+                light->setQuadraticAttenuation(static_cast<float>(lightConfig.quadraticAttenuation));
+                lightEntity->addComponent(light);
+            }
+            lightEntity->addComponent(sceneLayer);
+            this3DLightObjects.insert(lightConfig.id, lightObject);
+            if (lightConfig.type != ca3DLightConfig::Directional) {
+                Qt3DCore::QTransform *transform = new Qt3DCore::QTransform(lightEntity);
+                transform->setTranslation(lightConfig.position);
+                lightEntity->addComponent(transform);
+                this3DLightTransforms.insert(lightConfig.id, transform);
+            }
+            applyLight(lightConfig.id);
+        }
+    }
 
     foreach (const ca3DObjectConfig &object, thisConfig.objects) {
         if (object.meshResolved.isEmpty()) {
@@ -1766,14 +1860,13 @@ void ca3DWidget::rebuildScene()
 
             Qt3DExtras::QDiffuseMapMaterial *material = new Qt3DExtras::QDiffuseMapMaterial(entity);
             material->setDiffuse(texture);
-            if (object.hasMaterialColor) {
-                material->setAmbient(object.materialColor);
-            }
+            material->setAmbient(materialAmbientColor(object.hasMaterialColor ? object.materialColor : QColor(Qt::white)));
             entity->addComponent(material);
         } else {
             Qt3DExtras::QPhongMaterial *material = new Qt3DExtras::QPhongMaterial(entity);
+            const QColor materialColor = object.hasMaterialColor ? object.materialColor : QColor(Qt::white);
+            material->setAmbient(materialAmbientColor(materialColor));
             if (object.hasMaterialColor) {
-                material->setAmbient(object.materialColor);
                 material->setDiffuse(object.materialColor);
             }
             entity->addComponent(material);
@@ -1821,7 +1914,7 @@ void ca3DWidget::rebuildFallbackView()
     thisStatusLabel->hide();
     QPalette fallbackPalette = thisFallbackView->palette();
     fallbackPalette.setColor(QPalette::Window, thisConfig.backgroundColor);
-    const QColor textColor = contrastingTextColor(thisConfig.backgroundColor);
+    const QColor textColor = ca3DContrastingTextColor(thisConfig.backgroundColor);
     fallbackPalette.setColor(QPalette::WindowText, textColor);
     fallbackPalette.setColor(QPalette::Text, textColor);
     fallbackPalette.setColor(QPalette::ButtonText, textColor);
@@ -1985,11 +2078,39 @@ bool ca3DWidget::isDesignerMode() const
 #endif
 }
 
+void ca3DWidget::applyLight(const QString &lightId)
+{
+    const int index = std::distance(thisConfig.lights.begin(), std::find_if(thisConfig.lights.begin(), thisConfig.lights.end(),
+        [&lightId](const ca3DLightConfig &light) { return light.id == lightId; }));
+    if (index < 0 || index >= thisConfig.lights.size()) return;
+    const ca3DLightConfig &config = thisConfig.lights.at(index);
+    QObject *object = this3DLightObjects.value(lightId, Q_NULLPTR);
+    if (!object) return;
+    const bool enabled = thisConfig.lightingEnabled && thisDynamicLightEnabled.value(lightId, config.enabled);
+    object->setProperty("enabled", enabled);
+    const double intensity = thisDynamicLightIntensities.value(lightId, config.intensity);
+    const QVector3D direction = thisDynamicLightDirections.value(lightId, config.direction);
+    const QVector3D position = thisDynamicLightPositions.value(lightId, config.position);
+    if (Qt3DRender::QDirectionalLight *light = qobject_cast<Qt3DRender::QDirectionalLight *>(object)) {
+        light->setIntensity(static_cast<float>(intensity));
+        light->setWorldDirection(direction);
+    } else if (Qt3DRender::QSpotLight *light = qobject_cast<Qt3DRender::QSpotLight *>(object)) {
+        light->setIntensity(static_cast<float>(intensity));
+        light->setLocalDirection(direction);
+    } else if (Qt3DRender::QPointLight *light = qobject_cast<Qt3DRender::QPointLight *>(object)) {
+        light->setIntensity(static_cast<float>(intensity));
+    }
+    if (Qt3DCore::QTransform *transform = this3DLightTransforms.value(lightId, Q_NULLPTR))
+        transform->setTranslation(position);
+}
+
 void ca3DWidget::clearScene()
 {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     clear3DOverlays();
     thisObjectTransforms.clear();
+    this3DLightObjects.clear();
+    this3DLightTransforms.clear();
     if (this3DView) {
         this3DView->setRootEntity(Q_NULLPTR);
     }
@@ -2012,7 +2133,7 @@ void ca3DWidget::rebuildObjectLinks()
         }
     }
 
-    for (const ca3DObjectConfig &object : thisConfig.objects) {
+    foreach (const ca3DObjectConfig &object, thisConfig.objects) {
         if (!object.id.isEmpty() && thisObjectIndexById.contains(object.masterObjectId)) {
             thisObjectChildrenById[object.masterObjectId].append(object.id);
         }

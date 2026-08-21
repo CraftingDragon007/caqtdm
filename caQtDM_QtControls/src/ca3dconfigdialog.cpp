@@ -20,6 +20,7 @@
 #include <QFileInfo>
 #include <QFormLayout>
 #include <QFontDatabase>
+#include <QGroupBox>
 #include <QHeaderView>
 #include <QHBoxLayout>
 #include <QJsonArray>
@@ -274,11 +275,7 @@ ca3DConfigDialog::ca3DConfigDialog(ca3DWidget *widget, QWidget *parent)
     , pendingSnapshotPreset(0)
     , tabs(Q_NULLPTR)
     , backgroundColorButton(Q_NULLPTR)
-    , pointLightColorButton(Q_NULLPTR)
-    , pointLightIntensitySpinBox(Q_NULLPTR)
-    , pointLightPositionXSpinBox(Q_NULLPTR)
-    , pointLightPositionYSpinBox(Q_NULLPTR)
-    , pointLightPositionZSpinBox(Q_NULLPTR)
+    , lightsTable(Q_NULLPTR)
     , objectsTable(Q_NULLPTR)
     , bindingsTable(Q_NULLPTR)
     , overlaysTable(Q_NULLPTR)
@@ -307,37 +304,20 @@ void ca3DConfigDialog::buildUi()
     QFormLayout *generalLayout = new QFormLayout(generalPage);
     backgroundColorButton = new QPushButton(generalPage);
     backgroundColorButton->setObjectName(QStringLiteral("backgroundColorButton"));
-    pointLightColorButton = new QPushButton(generalPage);
-    pointLightColorButton->setObjectName(QStringLiteral("pointLightColorButton"));
-    pointLightIntensitySpinBox = new QDoubleSpinBox(generalPage);
-    pointLightIntensitySpinBox->setObjectName(QStringLiteral("pointLightIntensitySpinBox"));
-    pointLightIntensitySpinBox->setRange(0.0, 1000000.0);
-    pointLightIntensitySpinBox->setDecimals(6);
-    pointLightIntensitySpinBox->setSingleStep(0.1);
-    pointLightPositionXSpinBox = new QDoubleSpinBox(generalPage);
-    pointLightPositionYSpinBox = new QDoubleSpinBox(generalPage);
-    pointLightPositionZSpinBox = new QDoubleSpinBox(generalPage);
-    pointLightPositionXSpinBox->setObjectName(QStringLiteral("pointLightPositionXSpinBox"));
-    pointLightPositionYSpinBox->setObjectName(QStringLiteral("pointLightPositionYSpinBox"));
-    pointLightPositionZSpinBox->setObjectName(QStringLiteral("pointLightPositionZSpinBox"));
-    for (QDoubleSpinBox *spinBox : {pointLightPositionXSpinBox, pointLightPositionYSpinBox, pointLightPositionZSpinBox}) {
-        spinBox->setRange(-1000000.0, 1000000.0);
-        spinBox->setDecimals(6);
-        spinBox->setSingleStep(1.0);
-    }
-    QWidget *pointLightPosition = new QWidget(generalPage);
-    QHBoxLayout *pointLightPositionLayout = new QHBoxLayout(pointLightPosition);
-    pointLightPositionLayout->setContentsMargins(0, 0, 0, 0);
-    pointLightPositionLayout->addWidget(new QLabel(tr("X"), pointLightPosition));
-    pointLightPositionLayout->addWidget(pointLightPositionXSpinBox);
-    pointLightPositionLayout->addWidget(new QLabel(tr("Y"), pointLightPosition));
-    pointLightPositionLayout->addWidget(pointLightPositionYSpinBox);
-    pointLightPositionLayout->addWidget(new QLabel(tr("Z"), pointLightPosition));
-    pointLightPositionLayout->addWidget(pointLightPositionZSpinBox);
     generalLayout->addRow(tr("Background color:"), backgroundColorButton);
-    generalLayout->addRow(tr("Point-light color:"), pointLightColorButton);
-    generalLayout->addRow(tr("Point-light intensity:"), pointLightIntensitySpinBox);
-    generalLayout->addRow(tr("Point-light position:"), pointLightPosition);
+
+    QGroupBox *ambientGroup = new QGroupBox(tr("Ambient light"), generalPage);
+    QFormLayout *ambientLayout = new QFormLayout(ambientGroup);
+    QPushButton *ambientColorButton = new QPushButton(ambientGroup);
+    ambientColorButton->setObjectName(QStringLiteral("ambientLightColorButton"));
+    QDoubleSpinBox *ambientIntensitySpinBox = new QDoubleSpinBox(ambientGroup);
+    ambientIntensitySpinBox->setObjectName(QStringLiteral("ambientLightIntensitySpinBox"));
+    ambientIntensitySpinBox->setRange(0.0, 1000000.0);
+    ambientIntensitySpinBox->setDecimals(6);
+    ambientIntensitySpinBox->setSingleStep(0.1);
+    ambientLayout->addRow(tr("Color:"), ambientColorButton);
+    ambientLayout->addRow(tr("Intensity:"), ambientIntensitySpinBox);
+    generalLayout->addRow(ambientGroup);
     generalLayout->addItem(new QSpacerItem(0, 0, QSizePolicy::Minimum, QSizePolicy::Expanding));
     tabs->addTab(generalPage, tr("General"));
     connect(backgroundColorButton, &QPushButton::clicked, this, [this]() {
@@ -347,17 +327,45 @@ void ca3DConfigDialog::buildUi()
             markChanged();
         }
     });
-    connect(pointLightColorButton, &QPushButton::clicked, this, [this]() {
-        const QColor color = QColorDialog::getColor(colorButtonValue(pointLightColorButton), this, tr("Select point-light color"));
-        if (color.isValid()) {
-            setColorButton(pointLightColorButton, color);
-            markChanged();
-        }
-    });
-    connect(pointLightIntensitySpinBox, SIGNAL(valueChanged(double)), this, SLOT(markChanged()));
-    connect(pointLightPositionXSpinBox, SIGNAL(valueChanged(double)), this, SLOT(markChanged()));
-    connect(pointLightPositionYSpinBox, SIGNAL(valueChanged(double)), this, SLOT(markChanged()));
-    connect(pointLightPositionZSpinBox, SIGNAL(valueChanged(double)), this, SLOT(markChanged()));
+    for (QDoubleSpinBox *spinBox : generalPage->findChildren<QDoubleSpinBox*>()) {
+        connect(spinBox, SIGNAL(valueChanged(double)), this, SLOT(markChanged()));
+    }
+    for (QPushButton *button : {ambientColorButton}) {
+        connect(button, &QPushButton::clicked, this, [this, button]() {
+            const QColor color = QColorDialog::getColor(colorButtonValue(button), this, tr("Select light color"));
+            if (color.isValid()) {
+                setColorButton(button, color);
+                markChanged();
+            }
+        });
+    }
+
+    QWidget *lightsPage = new QWidget(tabs);
+    QVBoxLayout *lightsLayout = new QVBoxLayout(lightsPage);
+    QCheckBox *lightingEnabledCheckBox = new QCheckBox(tr("Enable scene lighting"), lightsPage);
+    lightingEnabledCheckBox->setObjectName(QStringLiteral("lightingEnabledCheckBox"));
+    lightsLayout->addWidget(lightingEnabledCheckBox);
+    lightsTable = new QTableWidget(lightsPage);
+    lightsTable->setObjectName(QStringLiteral("lightsTable"));
+    lightsTable->setColumnCount(15);
+    lightsTable->setHorizontalHeaderLabels(QStringList() << tr("id") << tr("type") << tr("enabled") << tr("color") << tr("intensity")
+                                            << tr("position x") << tr("position y") << tr("position z")
+                                            << tr("direction x") << tr("direction y") << tr("direction z")
+                                            << tr("cutoff") << tr("constant") << tr("linear") << tr("quadratic"));
+    lightsTable->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    lightsLayout->addWidget(lightsTable);
+    QHBoxLayout *lightsButtons = new QHBoxLayout();
+    QPushButton *addLightButton = new QPushButton(tr("Add Light"), lightsPage);
+    QPushButton *removeLightButton = new QPushButton(tr("Remove Selected"), lightsPage);
+    lightsButtons->addWidget(addLightButton);
+    lightsButtons->addWidget(removeLightButton);
+    lightsButtons->addStretch();
+    lightsLayout->addLayout(lightsButtons);
+    tabs->addTab(lightsPage, tr("Lights"));
+    connect(addLightButton, SIGNAL(clicked()), this, SLOT(addLightRow()));
+    connect(removeLightButton, SIGNAL(clicked()), this, SLOT(removeLightRow()));
+    connect(lightingEnabledCheckBox, SIGNAL(toggled(bool)), this, SLOT(markChanged()));
+    connect(lightingEnabledCheckBox, &QCheckBox::toggled, lightsTable, &QWidget::setEnabled);
 
     QWidget *objectsPage = new QWidget(tabs);
     QVBoxLayout *objectsLayout = new QVBoxLayout(objectsPage);
@@ -400,7 +408,7 @@ void ca3DConfigDialog::buildUi()
     bindingsTable = new QTableWidget(bindingsPage);
     bindingsTable->setColumnCount(8);
     bindingsTable->setHorizontalHeaderLabels(QStringList()
-                                             << tr("object id") << tr("channel") << tr("target") << tr("scale")
+                                             << tr("owner (object id or light:id)") << tr("channel") << tr("target") << tr("scale")
                                              << tr("offset") << tr("mode") << tr("min") << tr("max"));
     bindingsTable->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
     QHBoxLayout *bindingsButtons = new QHBoxLayout();
@@ -576,6 +584,7 @@ void ca3DConfigDialog::buildUi()
     connect(buttonBox, SIGNAL(accepted()), this, SLOT(accept()));
     connect(buttonBox, SIGNAL(rejected()), this, SLOT(reject()));
     connect(objectsTable, SIGNAL(cellChanged(int,int)), this, SLOT(markChanged()));
+    connect(lightsTable, SIGNAL(cellChanged(int,int)), this, SLOT(markChanged()));
     connect(bindingsTable, SIGNAL(cellChanged(int,int)), this, SLOT(markChanged()));
     connect(overlaysTable, SIGNAL(cellChanged(int,int)), this, SLOT(markChanged()));
     connect(presetsTable, SIGNAL(cellChanged(int,int)), this, SLOT(markChanged()));
@@ -603,7 +612,8 @@ void ca3DConfigDialog::setColorButton(QPushButton *button, const QColor &color)
     }
     button->setProperty("color", color);
     button->setText(color.name());
-    button->setStyleSheet(QStringLiteral("QPushButton { background-color: %1; }").arg(color.name()));
+    button->setStyleSheet(QStringLiteral("QPushButton { background-color: %1; color: %2; }")
+                              .arg(color.name(), ca3DContrastingTextColor(color).name()));
 }
 
 QColor ca3DConfigDialog::colorButtonValue(QPushButton *button) const
@@ -631,15 +641,41 @@ void ca3DConfigDialog::populateTablesFromJson(const QString &json)
 
     showErrors(errors);
     setColorButton(backgroundColorButton, config.backgroundColor);
-    setColorButton(pointLightColorButton, config.pointLight.color);
-    pointLightIntensitySpinBox->setValue(config.pointLight.intensity);
-    pointLightPositionXSpinBox->setValue(config.pointLight.position.x());
-    pointLightPositionYSpinBox->setValue(config.pointLight.position.y());
-    pointLightPositionZSpinBox->setValue(config.pointLight.position.z());
+    if (QCheckBox *checkBox = findChild<QCheckBox *>(QStringLiteral("lightingEnabledCheckBox"))) {
+        checkBox->setChecked(config.lightingEnabled);
+    }
+    if (QPushButton *button = findChild<QPushButton *>(QStringLiteral("ambientLightColorButton"))) {
+        setColorButton(button, config.ambientLight.color);
+    }
+    if (QDoubleSpinBox *spinBox = findChild<QDoubleSpinBox *>(QStringLiteral("ambientLightIntensitySpinBox"))) {
+        spinBox->setValue(config.ambientLight.intensity);
+    }
     objectsTable->setRowCount(0);
+    lightsTable->setRowCount(0);
     bindingsTable->setRowCount(0);
     overlaysTable->setRowCount(0);
     presetsTable->setRowCount(0);
+
+    for (const ca3DLightConfig &light : config.lights) {
+        const int row = lightsTable->rowCount();
+        lightsTable->insertRow(row);
+        setTableText(lightsTable, row, 0, light.id);
+        setTableCombo(lightsTable, row, 1, QStringList() << QStringLiteral("directional") << QStringLiteral("point") << QStringLiteral("spot"),
+                      light.type == ca3DLightConfig::Point ? QStringLiteral("point") : light.type == ca3DLightConfig::Spot ? QStringLiteral("spot") : QStringLiteral("directional"));
+        setTableCheck(lightsTable, row, 2, light.enabled);
+        setTableText(lightsTable, row, 3, light.color.name());
+        setTableText(lightsTable, row, 4, numberString(light.intensity));
+        setTableText(lightsTable, row, 5, numberString(light.position.x()));
+        setTableText(lightsTable, row, 6, numberString(light.position.y()));
+        setTableText(lightsTable, row, 7, numberString(light.position.z()));
+        setTableText(lightsTable, row, 8, numberString(light.direction.x()));
+        setTableText(lightsTable, row, 9, numberString(light.direction.y()));
+        setTableText(lightsTable, row, 10, numberString(light.direction.z()));
+        setTableText(lightsTable, row, 11, numberString(light.cutOffAngle));
+        setTableText(lightsTable, row, 12, numberString(light.constantAttenuation));
+        setTableText(lightsTable, row, 13, numberString(light.linearAttenuation));
+        setTableText(lightsTable, row, 14, numberString(light.quadraticAttenuation));
+    }
 
     foreach (const ca3DObjectConfig &object, config.objects) {
         const int row = objectsTable->rowCount();
@@ -668,6 +704,24 @@ void ca3DConfigDialog::populateTablesFromJson(const QString &json)
             setTableCombo(bindingsTable, bindingRow, 2, QStringList()
                           << QStringLiteral("translation.x") << QStringLiteral("translation.y") << QStringLiteral("translation.z")
                           << QStringLiteral("rotation.x") << QStringLiteral("rotation.y") << QStringLiteral("rotation.z"), binding.targetName);
+            setTableText(bindingsTable, bindingRow, 3, numberString(binding.scale));
+            setTableText(bindingsTable, bindingRow, 4, numberString(binding.offset));
+            setTableCombo(bindingsTable, bindingRow, 5, QStringList() << QStringLiteral("relative") << QStringLiteral("absolute"),
+                          binding.mode == ca3DBindingConfig::Absolute ? QStringLiteral("absolute") : QStringLiteral("relative"));
+            setTableText(bindingsTable, bindingRow, 6, binding.hasMinimum ? numberString(binding.minimum) : QString());
+            setTableText(bindingsTable, bindingRow, 7, binding.hasMaximum ? numberString(binding.maximum) : QString());
+        }
+    }
+
+    for (const ca3DLightConfig &light : config.lights) {
+        for (const ca3DBindingConfig &binding : light.bindings) {
+            const int bindingRow = bindingsTable->rowCount();
+            bindingsTable->insertRow(bindingRow);
+            setTableText(bindingsTable, bindingRow, 0, QStringLiteral("light:") + light.id);
+            setTableText(bindingsTable, bindingRow, 1, binding.channel);
+            setTableCombo(bindingsTable, bindingRow, 2, QStringList() << QStringLiteral("enabled") << QStringLiteral("intensity")
+                          << QStringLiteral("direction.x") << QStringLiteral("direction.y") << QStringLiteral("direction.z")
+                          << QStringLiteral("position.x") << QStringLiteral("position.y") << QStringLiteral("position.z"), binding.targetName);
             setTableText(bindingsTable, bindingRow, 3, numberString(binding.scale));
             setTableText(bindingsTable, bindingRow, 4, numberString(binding.offset));
             setTableCombo(bindingsTable, bindingRow, 5, QStringList() << QStringLiteral("relative") << QStringLiteral("absolute"),
@@ -784,18 +838,18 @@ QString ca3DConfigDialog::jsonFromTables() const
     QJsonArray objects;
     QJsonArray overlays;
     QJsonArray presets;
-    QMap<QString, QJsonArray> bindingsByObject;
+    QJsonArray lights;
+    QMap<QString, QJsonArray> bindingsByOwner;
 
     root.insert(QStringLiteral("backgroundColor"), colorButtonValue(backgroundColorButton).name());
     QJsonObject lighting = root.value(QStringLiteral("lighting")).toObject();
-    QJsonObject pointLight = lighting.value(QStringLiteral("pointLight")).toObject();
-    pointLight.insert(QStringLiteral("color"), colorButtonValue(pointLightColorButton).name());
-    pointLight.insert(QStringLiteral("intensity"), pointLightIntensitySpinBox->value());
-    pointLight.insert(QStringLiteral("position"), vectorArray(numberString(pointLightPositionXSpinBox->value()),
-                                                               numberString(pointLightPositionYSpinBox->value()),
-                                                               numberString(pointLightPositionZSpinBox->value())));
-    lighting.insert(QStringLiteral("pointLight"), pointLight);
-    root.insert(QStringLiteral("lighting"), lighting);
+    const QCheckBox *lightingEnabled = findChild<QCheckBox *>(QStringLiteral("lightingEnabledCheckBox"));
+    lighting.insert(QStringLiteral("enabled"), lightingEnabled ? lightingEnabled->isChecked() : true);
+
+    QJsonObject ambient;
+    ambient.insert(QStringLiteral("color"), colorButtonValue(findChild<QPushButton *>(QStringLiteral("ambientLightColorButton"))).name());
+    ambient.insert(QStringLiteral("intensity"), findChild<QDoubleSpinBox *>(QStringLiteral("ambientLightIntensitySpinBox"))->value());
+    lighting.insert(QStringLiteral("ambient"), ambient);
 
     for (int row = 0; row < bindingsTable->rowCount(); ++row) {
         QJsonObject binding;
@@ -810,8 +864,28 @@ QString ca3DConfigDialog::jsonFromTables() const
         if (!tableText(bindingsTable, row, 7).isEmpty()) {
             binding.insert(QStringLiteral("max"), tableText(bindingsTable, row, 7).toDouble());
         }
-        bindingsByObject[tableText(bindingsTable, row, 0)].append(binding);
+        bindingsByOwner[tableText(bindingsTable, row, 0)].append(binding);
     }
+
+    for (int row = 0; row < lightsTable->rowCount(); ++row) {
+        QJsonObject light;
+        light.insert(QStringLiteral("id"), tableText(lightsTable, row, 0));
+        light.insert(QStringLiteral("type"), tableComboText(lightsTable, row, 1));
+        light.insert(QStringLiteral("enabled"), tableCheck(lightsTable, row, 2));
+        light.insert(QStringLiteral("color"), tableText(lightsTable, row, 3));
+        light.insert(QStringLiteral("intensity"), tableText(lightsTable, row, 4).toDouble());
+        light.insert(QStringLiteral("position"), vectorArray(tableText(lightsTable, row, 5), tableText(lightsTable, row, 6), tableText(lightsTable, row, 7)));
+        light.insert(QStringLiteral("direction"), vectorArray(tableText(lightsTable, row, 8), tableText(lightsTable, row, 9), tableText(lightsTable, row, 10)));
+        light.insert(QStringLiteral("cutOffAngle"), tableText(lightsTable, row, 11).toDouble());
+        light.insert(QStringLiteral("constantAttenuation"), tableText(lightsTable, row, 12).toDouble());
+        light.insert(QStringLiteral("linearAttenuation"), tableText(lightsTable, row, 13).toDouble());
+        light.insert(QStringLiteral("quadraticAttenuation"), tableText(lightsTable, row, 14).toDouble());
+        const QString owner = QStringLiteral("light:") + tableText(lightsTable, row, 0);
+        if (bindingsByOwner.contains(owner)) light.insert(QStringLiteral("bindings"), bindingsByOwner.value(owner));
+        lights.append(light);
+    }
+    lighting.insert(QStringLiteral("lights"), lights);
+    root.insert(QStringLiteral("lighting"), lighting);
 
     for (int row = 0; row < objectsTable->rowCount(); ++row) {
         QJsonObject object;
@@ -831,8 +905,8 @@ QString ca3DConfigDialog::jsonFromTables() const
             object.insert(QStringLiteral("masterObject"), tableText(objectsTable, row, 13));
         }
         object.insert(QStringLiteral("scale"), tableText(objectsTable, row, 14).isEmpty() ? 1.0 : tableText(objectsTable, row, 14).toDouble());
-        if (bindingsByObject.contains(objectId)) {
-            object.insert(QStringLiteral("bindings"), bindingsByObject.value(objectId));
+        if (bindingsByOwner.contains(objectId)) {
+            object.insert(QStringLiteral("bindings"), bindingsByOwner.value(objectId));
         }
         objects.append(object);
     }
@@ -914,6 +988,39 @@ void ca3DConfigDialog::removeObjectRow()
     }
 
     objectsTable->removeRow(row);
+    markChanged();
+}
+
+void ca3DConfigDialog::addLightRow()
+{
+    const int row = lightsTable->rowCount();
+    lightsTable->insertRow(row);
+    setTableText(lightsTable, row, 0, QStringLiteral("light%1").arg(row + 1));
+    setTableCombo(lightsTable, row, 1, QStringList() << QStringLiteral("directional") << QStringLiteral("point") << QStringLiteral("spot"), QStringLiteral("directional"));
+    setTableCheck(lightsTable, row, 2, true);
+    setTableText(lightsTable, row, 3, QStringLiteral("#ffffff"));
+    setTableText(lightsTable, row, 4, QStringLiteral("1.0"));
+    setTableText(lightsTable, row, 5, QStringLiteral("0.0"));
+    setTableText(lightsTable, row, 6, QStringLiteral("500.0"));
+    setTableText(lightsTable, row, 7, QStringLiteral("500.0"));
+    setTableText(lightsTable, row, 8, QStringLiteral("-0.4"));
+    setTableText(lightsTable, row, 9, QStringLiteral("-0.8"));
+    setTableText(lightsTable, row, 10, QStringLiteral("-0.6"));
+    setTableText(lightsTable, row, 11, QStringLiteral("30.0"));
+    setTableText(lightsTable, row, 12, QStringLiteral("1.0"));
+    setTableText(lightsTable, row, 13, QStringLiteral("0.0"));
+    setTableText(lightsTable, row, 14, QStringLiteral("0.0"));
+    markChanged();
+}
+
+void ca3DConfigDialog::removeLightRow()
+{
+    const int row = lightsTable->currentRow();
+    if (row < 0) {
+        showSelectionRequired(tr("a light"));
+        return;
+    }
+    lightsTable->removeRow(row);
     markChanged();
 }
 

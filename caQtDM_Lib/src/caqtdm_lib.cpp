@@ -419,6 +419,22 @@ static QString ca3DBindingTargetInfo(ca3DBindingConfig::BindingTarget target)
         return QString("rotationY");
     case ca3DBindingConfig::RotationZ:
         return QString("rotationZ");
+    case ca3DBindingConfig::LightEnabled:
+        return QString("enabled");
+    case ca3DBindingConfig::LightIntensity:
+        return QString("intensity");
+    case ca3DBindingConfig::LightDirectionX:
+        return QString("directionX");
+    case ca3DBindingConfig::LightDirectionY:
+        return QString("directionY");
+    case ca3DBindingConfig::LightDirectionZ:
+        return QString("directionZ");
+    case ca3DBindingConfig::LightPositionX:
+        return QString("positionX");
+    case ca3DBindingConfig::LightPositionY:
+        return QString("positionY");
+    case ca3DBindingConfig::LightPositionZ:
+        return QString("positionZ");
     case ca3DBindingConfig::InvalidTarget:
         break;
     }

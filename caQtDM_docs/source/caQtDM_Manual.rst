@@ -2429,18 +2429,30 @@ has no equivalent in MEDM
       such as ``[32, 36, 42]``. The default is a dark gray.
 
    ``lighting``
-      Scene-wide lighting settings. The General tab currently configures one
-      point light:
+      Scene-wide lighting settings. The General tab configures only ambient
+      light. The Lights tab configures the global switch and a list of lights:
 
-      ``lighting.pointLight.color``
-         Point-light color. The default is ``"#ffffff"``.
+      ``lighting.enabled``
+         Enables or disables the complete lighting rig. The default is
+         ``true``.
 
-      ``lighting.pointLight.intensity``
-         Non-negative point-light intensity. The default is ``1.0``.
+      ``lighting.ambient``
+         Ambient material contribution. It contains ``color`` (default
+         ``"#ffffff"``) and non-negative ``intensity`` (default ``0.2``).
 
-      ``lighting.pointLight.position``
-         Point-light position as ``[x, y, z]``. The default is
-         ``[0, 500, 500]``.
+      ``lighting.lights``
+         Array of independently configurable lights. Each light requires a
+         unique ``id`` and a ``type`` of ``"directional"``, ``"point"`` or
+         ``"spot"``. All lights support ``enabled``, ``color`` and
+         non-negative ``intensity``. Directional and spot lights use a
+         non-zero ``direction``; point and spot lights use ``position``.
+         Spot lights additionally support ``cutOffAngle`` and constant,
+         linear and quadratic attenuation fields.
+
+         Each light may contain a ``bindings`` array. Binding targets are
+         ``enabled``, ``intensity``, ``direction.x/y/z`` and
+         ``position.x/y/z``. The Bindings tab edits both object and light
+         bindings; light owners are written as ``"light:<id>"``.
 
    ``objects``
       Array of 3D object definitions.

@@ -285,33 +285,78 @@ void TestCa3DConfig::parsesSceneConfigUtilityFields()
     QCOMPARE(preset.overlays, QStringList() << QStringLiteral("panel"));
 }
 
-void TestCa3DConfig::parsesPointLightConfiguration()
+void TestCa3DConfig::parsesLightConfiguration()
 {
+    QCOMPARE(ca3DContrastingTextColor(QColor(Qt::white)), QColor(Qt::black));
+    QCOMPARE(ca3DContrastingTextColor(QColor(30, 34, 40)), QColor(Qt::white));
+
     const QString json = QStringLiteral(R"json({
         "backgroundColor": "#102030",
         "lighting": {
-            "pointLight": {
+            "enabled": false,
+            "ambient": {
+                "color": "#203040",
+                "intensity": 0.25
+            },
+            "lights": [
+              {
+                "id": "directional",
+                "type": "directional",
+                "enabled": true,
+                "color": "#405060",
+                "intensity": 3.5,
+                "direction": [-1, 0, 1]
+              },
+              {
+                "id": "point",
+                "type": "point",
+                "enabled": false,
                 "color": [10, 20, 30],
                 "intensity": 2.5,
                 "position": [1, 2, 3]
-            }
+              },
+              {
+                "id": "fill",
+                "type": "spot",
+                "enabled": true,
+                "color": "#a0b0c0",
+                "intensity": 0.75,
+                "direction": [1, 0.5, -1],
+                "position": [4, 5, 6],
+                "cutOffAngle": 20
+              }
+            ]
         }
     })json");
 
     ca3DSceneConfig config;
     QStringList errors;
     QVERIFY2(ca3DConfigParser::parse(json, &config, &errors), qPrintable(errors.join(QLatin1Char('\n'))));
-    QCOMPARE(config.pointLight.color, QColor(10, 20, 30));
-    QCOMPARE(config.pointLight.intensity, 2.5);
-    QCOMPARE(config.pointLight.position, QVector3D(1.0f, 2.0f, 3.0f));
+    QCOMPARE(config.lightingEnabled, false);
+    QCOMPARE(config.ambientLight.color, QColor(32, 48, 64));
+    QCOMPARE(config.ambientLight.intensity, 0.25);
+    QCOMPARE(config.lights.count(), 3);
+    QCOMPARE(config.lights.at(0).color, QColor(64, 80, 96));
+    QCOMPARE(config.lights.at(0).intensity, 3.5);
+    QCOMPARE(config.lights.at(0).direction, QVector3D(-1.0f, 0.0f, 1.0f));
+    QCOMPARE(config.lights.at(1).enabled, false);
+    QCOMPARE(config.lights.at(1).color, QColor(10, 20, 30));
+    QCOMPARE(config.lights.at(1).intensity, 2.5);
+    QCOMPARE(config.lights.at(1).position, QVector3D(1.0f, 2.0f, 3.0f));
+    QCOMPARE(config.lights.at(2).type, ca3DLightConfig::Spot);
+    QCOMPARE(config.lights.at(2).cutOffAngle, 20.0);
 
     ca3DSceneConfig defaults;
     errors.clear();
     QVERIFY2(ca3DConfigParser::parse(QStringLiteral("{}"), &defaults, &errors),
              qPrintable(errors.join(QLatin1Char('\n'))));
-    QCOMPARE(defaults.pointLight.color, QColor(Qt::white));
-    QCOMPARE(defaults.pointLight.intensity, 1.0);
-    QCOMPARE(defaults.pointLight.position, QVector3D(0.0f, 500.0f, 500.0f));
+    QCOMPARE(defaults.lights.count(), 3);
+    QCOMPARE(defaults.lightingEnabled, true);
+    QCOMPARE(defaults.ambientLight.intensity, 0.20);
+    QCOMPARE(defaults.lights.at(0).enabled, true);
+    QCOMPARE(defaults.lights.at(2).enabled, false);
+    QCOMPARE(defaults.lights.at(1).intensity, 1.0);
+    QCOMPARE(defaults.lights.at(1).position, QVector3D(0.0f, 500.0f, 500.0f));
 }
 
 void TestCa3DConfig::parsesObjectMasterLinks()
@@ -392,7 +437,7 @@ void TestCa3DConfig::rejectsInvalidUtilityFields()
     QVERIFY(errors.contains(QStringLiteral("backgroundColor must be a valid color string or [r,g,b] array")));
     QVERIFY(errors.contains(QStringLiteral("object.position must contain exactly 3 numbers")));
     QVERIFY(errors.contains(QStringLiteral("Object without id")));
-    QVERIFY(errors.contains(QStringLiteral("Unknown object binding target 'translation.bad'")));
+    QVERIFY(errors.contains(QStringLiteral("Unknown binding target 'translation.bad'")));
     QVERIFY(errors.contains(QStringLiteral("Unknown object binding mode 'sideways'")));
     QVERIFY(errors.contains(QStringLiteral("Binding without channel on object ''")));
     QVERIFY(errors.contains(QStringLiteral("Binding without valid target on object ''")));
@@ -403,24 +448,28 @@ void TestCa3DConfig::rejectsInvalidUtilityFields()
     QVERIFY(errors.contains(QStringLiteral("Camera preset without positive id")));
 }
 
-void TestCa3DConfig::rejectsInvalidPointLightConfiguration()
+void TestCa3DConfig::rejectsInvalidLightConfiguration()
 {
     const QString json = QStringLiteral(R"json({
         "lighting": {
-            "pointLight": {
+            "enabled": "yes",
+            "lights": [{
+                "id": "invalid",
+                "type": "point",
                 "color": "not-a-color",
                 "intensity": -1,
                 "position": [1, 2]
-            }
+            }]
         }
     })json");
 
     ca3DSceneConfig config;
     QStringList errors;
     QVERIFY(!ca3DConfigParser::parse(json, &config, &errors));
-    QVERIFY(errors.contains(QStringLiteral("lighting.pointLight.color must be a valid color string or [r,g,b] array")));
-    QVERIFY(errors.contains(QStringLiteral("lighting.pointLight.intensity must not be negative")));
-    QVERIFY(errors.contains(QStringLiteral("lighting.pointLight.position must contain exactly 3 numbers")));
+    QVERIFY(errors.contains(QStringLiteral("lighting.lights[0].color must be a valid color string or [r,g,b] array")));
+    QVERIFY(errors.contains(QStringLiteral("lighting.lights[0].intensity must not be negative")));
+    QVERIFY(errors.contains(QStringLiteral("lighting.lights[0].position must contain exactly 3 numbers")));
+    QVERIFY(errors.contains(QStringLiteral("lighting.enabled must be boolean")));
 }
 
 void TestCa3DConfig::rejectsInvalidObjectMasterLinks()

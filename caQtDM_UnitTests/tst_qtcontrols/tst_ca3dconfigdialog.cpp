@@ -185,11 +185,33 @@ void TestCa3DConfigDialog::editsGeneralSceneSettings()
     const QString json = QStringLiteral(R"json({
         "backgroundColor": "#112233",
         "lighting": {
-            "pointLight": {
+            "enabled": true,
+            "ambient": {
+                "color": "#101820",
+                "intensity": 0.2
+            },
+            "lights": [{
+                "id": "directional",
+                "type": "directional",
+                "enabled": true,
+                "color": "#304050",
+                "intensity": 1.5,
+                "direction": [-1, -1, 0]
+            }, {
+                "id": "point",
+                "type": "point",
+                "enabled": true,
                 "color": "#aabbcc",
                 "intensity": 2.5,
                 "position": [10, 20, 30]
-            }
+            }, {
+                "id": "fill",
+                "type": "directional",
+                "enabled": false,
+                "color": "#506070",
+                "intensity": 0.5,
+                "direction": [1, 0, 1]
+            }]
         },
         "objects": []
     })json");
@@ -203,38 +225,36 @@ void TestCa3DConfigDialog::editsGeneralSceneSettings()
     QCOMPARE(tabs->tabText(0), QStringLiteral("General"));
 
     QPushButton *background = dialog.findChild<QPushButton *>(QStringLiteral("backgroundColorButton"));
-    QPushButton *lightColor = dialog.findChild<QPushButton *>(QStringLiteral("pointLightColorButton"));
-    QDoubleSpinBox *intensity = dialog.findChild<QDoubleSpinBox *>(QStringLiteral("pointLightIntensitySpinBox"));
-    QDoubleSpinBox *positionX = dialog.findChild<QDoubleSpinBox *>(QStringLiteral("pointLightPositionXSpinBox"));
-    QDoubleSpinBox *positionY = dialog.findChild<QDoubleSpinBox *>(QStringLiteral("pointLightPositionYSpinBox"));
-    QDoubleSpinBox *positionZ = dialog.findChild<QDoubleSpinBox *>(QStringLiteral("pointLightPositionZSpinBox"));
+    QPushButton *ambientColor = dialog.findChild<QPushButton *>(QStringLiteral("ambientLightColorButton"));
+    QDoubleSpinBox *ambientIntensity = dialog.findChild<QDoubleSpinBox *>(QStringLiteral("ambientLightIntensitySpinBox"));
+    QTableWidget *lights = dialog.findChild<QTableWidget *>(QStringLiteral("lightsTable"));
     QVERIFY(background);
-    QVERIFY(lightColor);
-    QVERIFY(intensity);
-    QVERIFY(positionX);
-    QVERIFY(positionY);
-    QVERIFY(positionZ);
+    QVERIFY(ambientColor);
+    QVERIFY(ambientIntensity);
+    QVERIFY(lights);
+    QCOMPARE(lights->rowCount(), 3);
     QCOMPARE(background->text(), QStringLiteral("#112233"));
-    QCOMPARE(lightColor->text(), QStringLiteral("#aabbcc"));
-    QCOMPARE(intensity->value(), 2.5);
-    QCOMPARE(positionX->value(), 10.0);
-    QCOMPARE(positionY->value(), 20.0);
-    QCOMPARE(positionZ->value(), 30.0);
+    QVERIFY(ambientColor->styleSheet().contains(QStringLiteral("color: #ffffff")));
+    QCOMPARE(ambientIntensity->value(), 0.2);
 
     QDialogButtonBox *buttonBox = dialog.findChild<QDialogButtonBox *>();
     QVERIFY(buttonBox);
-    intensity->setValue(4.5);
-    positionZ->setValue(40.0);
+    lights->item(1, 4)->setText(QStringLiteral("4.5"));
+    lights->item(1, 7)->setText(QStringLiteral("40.0"));
+    ambientIntensity->setValue(0.35);
+    qobject_cast<QCheckBox *>(lights->cellWidget(2, 2))->setChecked(true);
     QVERIFY(buttonBox->button(QDialogButtonBox::Apply)->isEnabled());
     QVERIFY(QMetaObject::invokeMethod(&dialog, "applyChanges", Qt::DirectConnection));
 
     const QJsonObject root = QJsonDocument::fromJson(widget.getSceneConfig().toUtf8()).object();
     QCOMPARE(root.value(QStringLiteral("backgroundColor")).toString(), QStringLiteral("#112233"));
-    const QJsonObject pointLight = root.value(QStringLiteral("lighting")).toObject()
-                                       .value(QStringLiteral("pointLight")).toObject();
-    QCOMPARE(pointLight.value(QStringLiteral("color")).toString(), QStringLiteral("#aabbcc"));
-    QCOMPARE(pointLight.value(QStringLiteral("intensity")).toDouble(), 4.5);
-    QCOMPARE(pointLight.value(QStringLiteral("position")).toArray().at(2).toDouble(), 40.0);
+    const QJsonObject lighting = root.value(QStringLiteral("lighting")).toObject();
+    QCOMPARE(lighting.value(QStringLiteral("enabled")).toBool(), true);
+    QCOMPARE(lighting.value(QStringLiteral("ambient")).toObject().value(QStringLiteral("intensity")).toDouble(), 0.35);
+    const QJsonArray serializedLights = lighting.value(QStringLiteral("lights")).toArray();
+    QCOMPARE(serializedLights.at(1).toObject().value(QStringLiteral("intensity")).toDouble(), 4.5);
+    QCOMPARE(serializedLights.at(1).toObject().value(QStringLiteral("position")).toArray().at(2).toDouble(), 40.0);
+    QCOMPARE(serializedLights.at(2).toObject().value(QStringLiteral("enabled")).toBool(), true);
 }
 
 void TestCa3DConfigDialog::roundTripsObjectMasterLinks()
