@@ -1,3 +1,5 @@
+#pragma once
+
 #ifdef XDR_HACK
 #if defined XDR_LE || defined XDR_BE
 

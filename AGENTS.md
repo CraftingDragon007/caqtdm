@@ -182,6 +182,40 @@ and `.prc` — any other extension in its file property is replaced by
 - GitHub CI (`.github/workflows/`) is the reference for reproducible
   per-platform builds, especially `build-rpm-package.yml` (RHEL/Alma).
 
+### CMake build (parallel to qmake, Qt6 only)
+
+- Entry: root `CMakeLists.txt` + `CMakePresets.json`; shared logic in
+  `cmake/` (`caQtDMConfig.cmake` options/detection, `caQtDMHelpers.cmake`,
+  `FindQwt.cmake`, `FindEpics.cmake`, `caQtDMVersion.cmake`). The qmake
+  files remain the reference; both build systems coexist — keep feature
+  changes in sync on BOTH sides (`qtdefs.pri` + `cmake/caQtDMConfig.cmake`).
+- Configure/build/test:
+  `cmake --preset linux-release -DCAQTDM_EPICS_BASE=<base>` then
+  `cmake --build --preset linux-release` and `ctest --preset linux-release`
+  (presets use Ninja, out-of-source under `../caqtdm-build/<preset>`,
+  GPS/MODBUS/OPCUA preset ON like the PSI env).
+- Configuration is pure CMake cache variables, NO environment-variable
+  fallback: `CAQTDM_EPICS_BASE` (+ optional `CAQTDM_EPICS_HOST_ARCH`),
+  `CAQTDM_QWT_*`, `CAQTDM_ZMQ_*`, `CAQTDM_PYTHON_*`, `CAQTDM_COLLECT`.
+  Feature switches mirror the qmake ones: `CAQTDM_BUILD_GPS/MODBUS/OPCUA`,
+  `CAQTDM_ADL_EDL`, `CAQTDM_PYTHONCALC`, `CAQTDM_WEB`, `CAQTDM_WITH_TESTS`,
+  `CAQTDM_NORPATH`, `CAQTDM_NO_CUSTOM_LOGHANDLER`. Auto-detections as in
+  qtdefs.pri: epics7 via `$EPICSINCLUDE/pv/pvAccess.h`, bsread via zmq.h,
+  OPC UA X509 via QOpcUaX509 header.
+- Output layout equals qmake's collect dir: everything into
+  `$CAQTDM_COLLECT`, control-system plugins into
+  `$CAQTDM_COLLECT/controlsystems`, designer plugins into
+  `$CAQTDM_COLLECT/designer`. Version comes from `qtdefs.pri`
+  (`cmake/caQtDMVersion.cmake` parses it — single source of truth).
+- Linking parity notes: libqtcontrols.so statically embeds ALL THREE
+  parsers (adl/edl/prc static libs) and stays self-contained (no
+  DT_NEEDED on parser .so) — matches the current qmake link line;
+  `CAQTDM_NORPATH=ON` produces binaries without any rpath (RPM parity).
+- Verified on Linux/Qt6 (build + all 6 CTest tests green). macOS bundle,
+  Windows (MSVC/RC/ZMQ naming) and mobile (static plugins, MOBILE defines)
+  are implemented but NOT yet verified locally. Packaging scripts
+  (RPM spec/WiX/AppImage/brew) still call qmake.
+
 ### Environment variables
 
 Mandatory — `all.pro` aborts with `error()` otherwise:
