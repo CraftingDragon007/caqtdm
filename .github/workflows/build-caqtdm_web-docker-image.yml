@@ -47,7 +47,7 @@ jobs:
       - name: Build and push Docker image
         id: push
         if: env.IS_PR == 'false'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./caQtDM_Web/docker/caqtdm/Dockerfile
@@ -65,7 +65,7 @@ jobs:
 
       - name: Build Docker image for PR artifact
         if: env.IS_PR == 'true'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./caQtDM_Web/docker/caqtdm/Dockerfile
@@ -117,7 +117,7 @@ jobs:
       - name: Build and push NGINX Docker image
         id: push-nginx
         if: env.IS_PR == 'false'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./caQtDM_Web
           file: ./caQtDM_Web/docker/nginx/Dockerfile
@@ -135,7 +135,7 @@ jobs:
 
       - name: Build NGINX Docker image for PR artifact
         if: env.IS_PR == 'true'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./caQtDM_Web
           file: ./caQtDM_Web/docker/nginx/Dockerfile
