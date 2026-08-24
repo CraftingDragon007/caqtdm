@@ -75,7 +75,7 @@ jobs:
 
       - name: Upload Docker image as build artifact
         if: env.IS_PR == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: caqtdm_web-image-pr-${{ github.event.pull_request.number }}
           path: ${{ runner.temp }}/caqtdm_web-image.tar
@@ -145,7 +145,7 @@ jobs:
 
       - name: Upload NGINX Docker image as build artifact
         if: env.IS_PR == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: caqtdm_nginx-image-pr-${{ github.event.pull_request.number }}
           path: ${{ runner.temp }}/caqtdm_nginx-image.tar
