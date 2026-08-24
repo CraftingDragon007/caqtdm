@@ -73,11 +73,12 @@ endif()
 # Feature-switch plugins
 # --------------------------------------------------------------------------------------------------
 if(CAQTDM_BUILD_MODBUS)
+    # uses calcPerform/postfix from EPICS base (in Com)
     caqtdm_add_cs_plugin(modbus_plugin
         SOURCES modbus/modbus_Plugin.cpp modbus/modbus_decode.cpp modbus/modbus_channeldata.cpp
         HEADERS modbus/modbus_plugin.h modbus/modbus_decode.h modbus/modbus_channeldata.h
             controlsinterface.h caQtDM_Plugins_global.h
-        LINKS Qt6::SerialBus Qt6::Concurrent)
+        LINKS Qt6::SerialBus Qt6::Concurrent Epics::Com)
 endif()
 
 if(CAQTDM_BUILD_GPS)

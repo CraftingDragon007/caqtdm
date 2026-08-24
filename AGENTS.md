@@ -211,10 +211,17 @@ and `.prc` — any other extension in its file property is replaced by
   parsers (adl/edl/prc static libs) and stays self-contained (no
   DT_NEEDED on parser .so) — matches the current qmake link line;
   `CAQTDM_NORPATH=ON` produces binaries without any rpath (RPM parity).
-- Verified on Linux/Qt6 (build + all 6 CTest tests green). macOS bundle,
-  Windows (MSVC/RC/ZMQ naming) and mobile (static plugins, MOBILE defines)
-  are implemented but NOT yet verified locally. Packaging scripts
-  (RPM spec/WiX/AppImage/brew) still call qmake.
+- Verified on Linux/Qt6 (build + all 6 CTest tests green) and on
+  Windows/Qt6 MSVC x64 (build + all 5 CTest tests green; EPICS base and Qwt
+  built from source, no Qt OPC UA in the kit so OPCUA off). Windows notes:
+  EPICS pvAccess needs `/Zc:twoPhase- -Zc:referenceBinding` AFTER Qt's
+  `-permissive-` — implemented by appending to `Qt6::Platform`'s interface
+  options (target_compile_options would come too early); modbus links
+  Epics::Com (calcPerform/postfix, undefined symbols not allowed in DLLs);
+  the WIN32 test PATH property must escape ALL semicolons (`\;`),
+  including those of the configure shell's PATH. macOS bundle and mobile
+  (static plugins, MOBILE defines) are implemented but NOT yet verified
+  locally. Packaging scripts (RPM spec/WiX/AppImage/brew) still call qmake.
 
 ### Environment variables
 

@@ -76,6 +76,15 @@ message(STATUS "caQtDM version: ${CAQTDM_VERSION_STR}")
 find_package(Qt6 6.2 REQUIRED COMPONENTS Core Gui Widgets Network Xml OpenGL Concurrent UiTools PrintSupport Svg Designer Test)
 find_package(Qt6 QUIET COMPONENTS Positioning SerialBus OpcUa WebSockets)
 
+if(MSVC)
+    # The EPICS pvAccess headers need /Zc:twoPhase- to compile under the
+    # -permissive- conformance mode that the Qt6 kits enable. The option
+    # must appear AFTER -permissive- on the command line, so it is appended
+    # to the interface options of Qt6::Platform instead of the targets.
+    set_property(TARGET Qt6::Platform APPEND PROPERTY INTERFACE_COMPILE_OPTIONS
+        "/Zc:twoPhase-;-Zc:referenceBinding")
+endif()
+
 if(CAQTDM_BUILD_GPS AND NOT TARGET Qt6::Positioning)
     message(FATAL_ERROR "CAQTDM_BUILD_GPS requires the Qt6 Positioning module")
 endif()
@@ -152,17 +161,17 @@ if(CAQTDM_PYTHONCALC AND NOT CAQTDM_MOBILE)
         if(CAQTDM_PYTHON_ROOT)
             list(PREPEND CMAKE_PREFIX_PATH "${CAQTDM_PYTHON_ROOT}")
         endif()
-        find_program(CAQTDM_PYTHON_INTERPRETER NAMES python3
+        find_program(CAQTDM_PYTHON_INTERPRETER NAMES python3 python
             HINTS "${CAQTDM_PYTHON_ROOT}/bin")
         if(CAQTDM_PYTHON_INTERPRETER)
             execute_process(COMMAND ${CAQTDM_PYTHON_INTERPRETER} -c
                 "import sysconfig; print(sysconfig.get_paths()['include'])"
                 OUTPUT_VARIABLE _py_include OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
             execute_process(COMMAND ${CAQTDM_PYTHON_INTERPRETER} -c
-                "import sysconfig; v = sysconfig.get_config_var('LDVERSION'); print('python' + v if v else 'python{}.{}'.format(*sys.version_info[:2]))"
+                "import sysconfig; v = sysconfig.get_config_var('LDVERSION') or '{}.{}'.format(*sys.version_info[:2]); print('python' + v.replace('.', '') if sys.platform == 'win32' else 'python' + v)"
                 OUTPUT_VARIABLE _py_ldversion OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
             execute_process(COMMAND ${CAQTDM_PYTHON_INTERPRETER} -c
-                "import sysconfig; print(sysconfig.get_config_var('LIBDIR'))"
+                "import sysconfig, os; print(os.path.join(os.path.dirname(sys.executable), 'libs'))"
                 OUTPUT_VARIABLE _py_libdir OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
             find_library(CAQTDM_PYTHON_LIBFILE NAMES ${_py_ldversion} HINTS ${_py_libdir})
             if(CAQTDM_PYTHON_LIBFILE)
@@ -217,6 +226,9 @@ add_compile_definitions(
     "TARGET_COPYRIGHT=\"Copyright (C) 2012-2025 Paul Scherrer Institut\""
     "TARGET_INTERNALNAME=\"caqtdm\""
     "TARGET_VERSION_STR=\"${CAQTDM_VERSION_STR}\""
+    TARGET_VER_MAJ=${PROJECT_VERSION_MAJOR}
+    TARGET_VER_MIN=${PROJECT_VERSION_MINOR}
+    TARGET_VER_BUILD=${PROJECT_VERSION_PATCH}
 )
 if(CAQTDM_ADL_EDL)
     add_compile_definitions(ADL_EDL_FILES)

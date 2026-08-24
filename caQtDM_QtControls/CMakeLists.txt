@@ -261,7 +261,7 @@ if(NOT CAQTDM_MOBILE)
     target_link_libraries(qtcontrols PRIVATE Qt6::Designer)
 endif()
 
-if(APPLE OR WIN32)
+if(APPLE)
     find_package(ZLIB REQUIRED)
     target_link_libraries(qtcontrols PRIVATE ZLIB::ZLIB)
 endif()
@@ -270,7 +270,8 @@ target_compile_definitions(qtcontrols PRIVATE QT_DISABLE_DEPRECATED_BEFORE=0x050
 
 if(MSVC)
     target_compile_definitions(qtcontrols PRIVATE QTCON_MAKEDLL _CRT_SECURE_NO_WARNINGS)
-    target_sources(qtcontrols PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/qtcontrols.rc")
+    caqtdm_add_version_rc(qtcontrols
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/qtcontrols.rc" "Widgets for Display Manager" "qtcontrols.dll")
 endif()
 
 caqtdm_set_output_dir(qtcontrols)

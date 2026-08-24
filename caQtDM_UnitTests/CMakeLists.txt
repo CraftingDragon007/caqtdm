@@ -248,10 +248,40 @@ if(TARGET tst_bsread)
     list(APPEND _all_tests tst_bsread)
 endif()
 
+if(WIN32)
+    # ctest's ENVIRONMENT property replaces the variable, and ';' inside a
+    # value must be escaped — otherwise the PATH falls apart. Compose a
+    # complete PATH: collect dirs, Qt bin, Qwt lib, EPICS bin, then whatever
+    # PATH the configure shell had.
+    get_filename_component(_qt_bin_dir "${Qt6_DIR}/../../../bin" ABSOLUTE)
+    set(_path "${CAQTDM_COLLECT}\\;${CAQTDM_COLLECT}/designer\\;${CAQTDM_COLLECT}/controlsystems\\;${_qt_bin_dir}")
+    if(TARGET Qwt::Qwt)
+        get_target_property(_qwt_location Qwt::Qwt IMPORTED_LOCATION_RELEASE)
+        if(NOT _qwt_location)
+            get_target_property(_qwt_location Qwt::Qwt IMPORTED_LOCATION)
+        endif()
+        if(_qwt_location)
+            get_filename_component(_qwt_dir "${_qwt_location}" DIRECTORY)
+            string(APPEND _path "\\;${_qwt_dir}")
+        endif()
+        unset(_qwt_location)
+    endif()
+    if(CAQTDM_EPICS_HOST_ARCH)
+        string(APPEND _path "\\;${CAQTDM_EPICS_BASE}/bin/${CAQTDM_EPICS_HOST_ARCH}")
+    endif()
+    # the configure shell's PATH must be escaped as well, or ctest splits the
+    # ENVIRONMENT list at its semicolons and truncates PATH
+    string(REPLACE ";" "\\;" _env_path "$ENV{PATH}")
+    string(APPEND _path "\\;${_env_path}")
+    set(_test_env "QT_QPA_PLATFORM=offscreen;PATH=${_path}")
+else()
+    set(_test_env "QT_QPA_PLATFORM=offscreen;LD_LIBRARY_PATH=${CAQTDM_COLLECT}:${CAQTDM_COLLECT}/designer:${CAQTDM_COLLECT}/controlsystems")
+endif()
+
 foreach(_test ${_all_tests})
     add_test(NAME ${_test} COMMAND ${_test})
     set_tests_properties(${_test} PROPERTIES
-        ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+        ENVIRONMENT "${_test_env}")
 endforeach()
 
 caqtdm_apply_rpath(tst_viewer)

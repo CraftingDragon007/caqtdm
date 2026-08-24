@@ -50,6 +50,27 @@ function(caqtdm_common_includes target)
         "${PROJECT_SOURCE_DIR}/caQtDM_Parsers/prcParserSrc")
 endfunction()
 
+# Per-target version info resource for Windows (mirrors the per-project
+# TARGET_PRODUCT / TARGET_FILENAME values of the qmake .pro files).
+# The .rc compiler does not receive target compile definitions, so each
+# target gets its own copy of the .rc with the definitions attached as
+# source-file compile definitions.
+function(caqtdm_add_version_rc target rcfile product filename)
+    if(NOT WIN32)
+        return()
+    endif()
+    set(_rc_copy "${CMAKE_CURRENT_BINARY_DIR}/${target}_version.rc")
+    configure_file("${rcfile}" "${_rc_copy}" COPYONLY)
+    cmake_path(GET rcfile PARENT_PATH _rc_dir)
+    file(GLOB _rc_icons LIST_DIRECTORIES false "${_rc_dir}/*.ico")
+    foreach(_icon ${_rc_icons})
+        configure_file("${_icon}" "${CMAKE_CURRENT_BINARY_DIR}/" COPYONLY)
+    endforeach()
+    set_source_files_properties("${_rc_copy}" PROPERTIES
+        COMPILE_DEFINITIONS "TARGET_VER_MAJ=${PROJECT_VERSION_MAJOR};TARGET_VER_MIN=${PROJECT_VERSION_MINOR};TARGET_VER_BUILD=${PROJECT_VERSION_PATCH};TARGET_COMPANY=\"Paul Scherrer Institut\";TARGET_DESCRIPTION=\"Channel Access Qt Display Manager\";TARGET_COPYRIGHT=\"Copyright (C) 2012-2025 Paul Scherrer Institut\";TARGET_INTERNALNAME=\"caqtdm\";TARGET_VERSION_STR=\"${CAQTDM_VERSION_STR}\";TARGET_PRODUCT=\"${product}\";TARGET_FILENAME=\"${filename}\"")
+    target_sources(${target} PRIVATE "${_rc_copy}")
+endfunction()
+
 # Creates one control-system plugin below <collect>/controlsystems.
 # A shared MODULE on desktop platforms, a STATIC library on mobile
 # (mirrors CONFIG += staticlib in caQtDM.pri). All plugins link against

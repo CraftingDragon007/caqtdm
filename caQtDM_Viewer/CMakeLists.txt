@@ -109,11 +109,11 @@ list(APPEND _caqtdm_viewer_defs
 target_compile_definitions(caQtDM PRIVATE ${_caqtdm_viewer_defs})
 
 if(MSVC)
-    target_sources(caQtDM PRIVATE "${_src}/caQtDM.rc")
+    caqtdm_add_version_rc(caQtDM "${_src}/caQtDM.rc" "Display Manager" "caqtdm.exe")
     target_link_options(caQtDM PRIVATE /entry:mainCRTStartup /STACK:32000000)
 endif()
 
-if(WIN32)
+if(APPLE)
     find_package(ZLIB REQUIRED)
     target_link_libraries(caQtDM PRIVATE ZLIB::ZLIB)
 endif()
@@ -160,7 +160,12 @@ install(TARGETS caQtDM
 # Converter tools
 # --------------------------------------------------------------------------------------------------
 add_subdirectory(parser)
-add_subdirectory(parserEDM)
+if(UNIX)
+    add_subdirectory(parserEDM)
+endif()
 add_subdirectory(parserPRC)
 
-install(TARGETS adl2ui edl2ui prc2ui RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(TARGETS adl2ui prc2ui RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+if(UNIX)
+    install(TARGETS edl2ui RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+endif()

@@ -38,7 +38,7 @@ public:
     static int setupHandlers();
 
 private:
-#ifndef _MSC_VER
+#if !defined(_MSC_VER) && !defined(Q_MOC_RUN)
     static int signalSocketPair[2];
     static void posixSignalHandler(int sig);
     QSocketNotifier *socketNotifier;

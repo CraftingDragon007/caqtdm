@@ -116,7 +116,8 @@ target_compile_definitions(caQtDM_Lib PRIVATE QT_DISABLE_DEPRECATED_BEFORE=0x050
 
 if(MSVC)
     target_compile_definitions(caQtDM_Lib PRIVATE CAQTDM_LIB_LIBRARY _CRT_SECURE_NO_WARNINGS)
-    target_sources(caQtDM_Lib PRIVATE "${_src}/caQtDM_Lib.rc")
+    caqtdm_add_version_rc(caQtDM_Lib
+        "${_src}/caQtDM_Lib.rc" "Library for Display Manager" "caQtDM_Lib.dll")
 elseif(WIN32)
     target_link_libraries(caQtDM_Lib PRIVATE advapi32)
 endif()

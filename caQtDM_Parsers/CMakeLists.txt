@@ -39,7 +39,8 @@ target_link_libraries(adlParser PUBLIC Qt6::Widgets)
 set_target_properties(adlParser PROPERTIES OUTPUT_NAME adlParser)
 
 if(WIN32)
-    target_sources(adlParser PRIVATE "${PROJECT_SOURCE_DIR}/caQtDM_Viewer/src/caQtDM.rc")
+    caqtdm_add_version_rc(adlParser
+        "${PROJECT_SOURCE_DIR}/caQtDM_Viewer/src/caQtDM.rc" "ADL converter library for Display Manager" "adlParser.dll")
 endif()
 
 # --------------------------------------------------------------------------------------------------
@@ -103,7 +104,15 @@ target_compile_definitions(prcParser PRIVATE PRCPARSER_MAKEDLL)
 set_target_properties(prcParser PROPERTIES OUTPUT_NAME prcParser)
 
 if(WIN32)
-    target_sources(prcParser PRIVATE "${PROJECT_SOURCE_DIR}/caQtDM_Viewer/src/caQtDM.rc")
+    caqtdm_add_version_rc(prcParser
+        "${PROJECT_SOURCE_DIR}/caQtDM_Viewer/src/caQtDM.rc" "PRC converter library for Display Manager" "prcParser.dll")
+endif()
+
+# On Windows the import lib of a shared target and a static library with
+# the same name collide in one directory - give the statics a suffix there.
+if(WIN32)
+    set_target_properties(adlParserStatic PROPERTIES OUTPUT_NAME adlParser_static)
+    set_target_properties(prcParserStatic PROPERTIES OUTPUT_NAME prcParser_static)
 endif()
 
 foreach(_tgt adlParserStatic adlParser prcParserStatic prcParser)
