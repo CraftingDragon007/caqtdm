@@ -97,7 +97,7 @@ jobs:
             echo "::group::pkgctl version upgrade ${pkg}"
             pkgctl version upgrade
             echo "::endgroup::"
-            makepkg --printsrcinfo | awk "\$1 == \"pkgver\" {print \"${pkg}=\" \$3; exit}" >> "$VERSIONS_FILE"
+            makepkg --printsrcinfo | awk "\$1 == \"pkgver\" {print \"${pkg}=\" \$3}" >> "$VERSIONS_FILE"
           done
         '
 
