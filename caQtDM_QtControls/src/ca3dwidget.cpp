@@ -437,13 +437,14 @@ int configuredOverlayMaxPixels()
     return pixels > 0 ? pixels : kOverlayMaxTexturePixels;
 }
 
-void installLayeredFrameGraph(Qt3DExtras::Qt3DWindow *view,
-                              Qt3DRender::QLayer *sceneLayer,
-                              Qt3DRender::QLayer *overlayLayer,
-                              const QColor &clearColor)
+Qt3DRender::QRenderCapture *installLayeredFrameGraph(Qt3DExtras::Qt3DWindow *view,
+                                                      Qt3DRender::QLayer *sceneLayer,
+                                                      Qt3DRender::QLayer *overlayLayer,
+                                                      const QColor &clearColor,
+                                                      bool addRenderCapture)
 {
     if (!view || !sceneLayer || !overlayLayer) {
-        return;
+        return Q_NULLPTR;
     }
 
     Qt3DRender::QRenderSurfaceSelector *surfaceSelector = new Qt3DRender::QRenderSurfaceSelector();
@@ -455,20 +456,26 @@ void installLayeredFrameGraph(Qt3DExtras::Qt3DWindow *view,
     Qt3DRender::QCameraSelector *cameraSelector = new Qt3DRender::QCameraSelector(viewport);
     cameraSelector->setCamera(view->camera());
 
-    Qt3DRender::QClearBuffers *sceneClear = new Qt3DRender::QClearBuffers(cameraSelector);
+    Qt3DRender::QRenderCapture *renderCapture = addRenderCapture
+        ? new Qt3DRender::QRenderCapture(cameraSelector) : Q_NULLPTR;
+    Qt3DCore::QNode *renderParent = renderCapture
+        ? static_cast<Qt3DCore::QNode *>(renderCapture) : static_cast<Qt3DCore::QNode *>(cameraSelector);
+
+    Qt3DRender::QClearBuffers *sceneClear = new Qt3DRender::QClearBuffers(renderParent);
     sceneClear->setBuffers(Qt3DRender::QClearBuffers::ColorDepthBuffer);
     sceneClear->setClearColor(clearColor);
 
     Qt3DRender::QLayerFilter *sceneFilter = new Qt3DRender::QLayerFilter(sceneClear);
     sceneFilter->addLayer(sceneLayer);
 
-    Qt3DRender::QClearBuffers *overlayDepthClear = new Qt3DRender::QClearBuffers(cameraSelector);
+    Qt3DRender::QClearBuffers *overlayDepthClear = new Qt3DRender::QClearBuffers(renderParent);
     overlayDepthClear->setBuffers(Qt3DRender::QClearBuffers::DepthBuffer);
 
     Qt3DRender::QLayerFilter *overlayFilter = new Qt3DRender::QLayerFilter(overlayDepthClear);
     overlayFilter->addLayer(overlayLayer);
 
     view->setActiveFrameGraph(surfaceSelector);
+    return renderCapture;
 }
 #endif
 
@@ -1099,7 +1106,7 @@ QPixmap ca3DWidget::grab3DSnapshot(bool includeOverlays)
 bool ca3DWidget::capture3DSnapshot(bool includeOverlays)
 {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-    if (!this3DView || !this3DView->activeFrameGraph()) {
+    if (!this3DView || !thisRenderCapture) {
         emit snapshotCaptureFailed(tr("3D preview is not available"));
         return false;
     }
@@ -1108,45 +1115,27 @@ bool ca3DWidget::capture3DSnapshot(bool includeOverlays)
         return false;
     }
 
-    if (!includeOverlays && this3DOverlayEntities.isEmpty()) {
-        const QPixmap snapshot = grab3DSnapshot(false);
-        if (snapshot.isNull()) {
-            emit snapshotCaptureFailed(tr("3D snapshot capture returned an empty image"));
-            return false;
-        }
-        emit snapshotCaptured(snapshot);
-        return true;
-    }
-
-    thisSnapshotOverlayStates.clear();
+    QMap<QString, bool> overlayStates;
     if (!includeOverlays) {
         for (auto it = this3DOverlayEntities.begin(); it != this3DOverlayEntities.end(); ++it) {
             if (it.value()) {
-                thisSnapshotOverlayStates.insert(it.key(), it.value()->isEnabled());
+                overlayStates.insert(it.key(), it.value()->isEnabled());
                 it.value()->setEnabled(false);
             }
         }
     }
 
-    if (!thisRenderCapture) {
-        thisRenderCapture = new Qt3DRender::QRenderCapture();
-        Qt3DRender::QFrameGraphNode *activeFrameGraph = this3DView->activeFrameGraph();
-        if (activeFrameGraph) {
-            activeFrameGraph->setParent(thisRenderCapture);
-        }
-        this3DView->setActiveFrameGraph(thisRenderCapture);
-    }
-
-    const QSize captureSize = thisViewContainer ? thisViewContainer->size() : size();
-    thisPendingCaptureReply = captureSize.isValid()
-                                  ? thisRenderCapture->requestCapture(QRect(QPoint(0, 0), captureSize))
-                                  : thisRenderCapture->requestCapture();
+    thisPendingCaptureReply = thisRenderCapture->requestCapture();
     if (!thisPendingCaptureReply) {
-        restoreSnapshotOverlayStates();
+        for (auto it = overlayStates.begin(); it != overlayStates.end(); ++it) {
+            Qt3DCore::QEntity *entity = this3DOverlayEntities.value(it.key(), Q_NULLPTR);
+            if (entity) entity->setEnabled(it.value());
+        }
+        apply3DOverlayVisibility(thisCameraPreset);
         emit snapshotCaptureFailed(tr("Could not start 3D snapshot capture"));
         return false;
     }
-
+    thisSnapshotOverlayStates = overlayStates;
     thisSnapshotCapturePending = true;
     connect(thisPendingCaptureReply, SIGNAL(completed()), this, SLOT(handleSnapshotCaptureCompleted()));
     QTimer::singleShot(3000, this, SLOT(handleSnapshotCaptureTimeout()));
@@ -1780,7 +1769,8 @@ void ca3DWidget::rebuildScene()
     Qt3DRender::QLayer *overlayLayer = new Qt3DRender::QLayer(thisRootEntity);
     overlayLayer->setObjectName(QStringLiteral("ca3DOverlayLayer"));
     this3DView->defaultFrameGraph()->setClearColor(thisConfig.backgroundColor);
-    installLayeredFrameGraph(this3DView, sceneLayer, overlayLayer, thisConfig.backgroundColor);
+    thisRenderCapture = installLayeredFrameGraph(this3DView, sceneLayer, overlayLayer,
+                                                   thisConfig.backgroundColor, thisForce3DPreview);
 
     const auto materialAmbientColor = [this](const QColor &objectColor) {
         const QColor ambient = thisConfig.ambientLight.color;
@@ -2078,6 +2068,39 @@ bool ca3DWidget::isDesignerMode() const
 #endif
 }
 
+void ca3DWidget::clearScene()
+{
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    thisRenderCapture = Q_NULLPTR;
+    clear3DOverlays();
+    thisObjectTransforms.clear();
+    this3DLightObjects.clear();
+    this3DLightTransforms.clear();
+    if (this3DView) {
+        this3DView->setRootEntity(Q_NULLPTR);
+    }
+    if (thisRootEntity) {
+        thisRootEntity->deleteLater();
+    }
+    thisRootEntity = Q_NULLPTR;
+#endif
+}
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+void ca3DWidget::restoreSnapshotOverlayStates()
+{
+    for (auto it = thisSnapshotOverlayStates.begin(); it != thisSnapshotOverlayStates.end(); ++it) {
+        Qt3DCore::QEntity *entity = this3DOverlayEntities.value(it.key(), Q_NULLPTR);
+        if (entity) {
+            entity->setEnabled(it.value());
+        }
+    }
+    if (!thisSnapshotOverlayStates.isEmpty()) {
+        apply3DOverlayVisibility(thisCameraPreset);
+    }
+    thisSnapshotOverlayStates.clear();
+}
+
 void ca3DWidget::applyLight(const QString &lightId)
 {
     const int index = std::distance(thisConfig.lights.begin(), std::find_if(thisConfig.lights.begin(), thisConfig.lights.end(),
@@ -2103,23 +2126,7 @@ void ca3DWidget::applyLight(const QString &lightId)
     if (Qt3DCore::QTransform *transform = this3DLightTransforms.value(lightId, Q_NULLPTR))
         transform->setTranslation(position);
 }
-
-void ca3DWidget::clearScene()
-{
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-    clear3DOverlays();
-    thisObjectTransforms.clear();
-    this3DLightObjects.clear();
-    this3DLightTransforms.clear();
-    if (this3DView) {
-        this3DView->setRootEntity(Q_NULLPTR);
-    }
-    if (thisRootEntity) {
-        thisRootEntity->deleteLater();
-    }
-    thisRootEntity = Q_NULLPTR;
 #endif
-}
 
 void ca3DWidget::rebuildObjectLinks()
 {
@@ -2141,20 +2148,6 @@ void ca3DWidget::rebuildObjectLinks()
 }
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-void ca3DWidget::restoreSnapshotOverlayStates()
-{
-    for (auto it = thisSnapshotOverlayStates.begin(); it != thisSnapshotOverlayStates.end(); ++it) {
-        Qt3DCore::QEntity *entity = this3DOverlayEntities.value(it.key(), Q_NULLPTR);
-        if (entity) {
-            entity->setEnabled(it.value());
-        }
-    }
-    if (!thisSnapshotOverlayStates.isEmpty()) {
-        apply3DOverlayVisibility(thisCameraPreset);
-    }
-    thisSnapshotOverlayStates.clear();
-}
-
 void ca3DWidget::maybeInitialize3DView()
 {
     thisDesignerMode = isDesignerMode();
