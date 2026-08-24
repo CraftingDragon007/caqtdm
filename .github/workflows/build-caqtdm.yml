@@ -90,6 +90,7 @@ jobs:
 
         sudo -u builder env WORKSPACE_DIR="$WORKSPACE_DIR" VERSIONS_FILE="$VERSIONS_FILE" bash -lc '
           set -euo pipefail
+          export TERM=xterm
           ARCH_DIR="$WORKSPACE_DIR/caQtDM_Viewer/package/archlinux"
           for pkg in qt6-opcua epics-base; do
             cd "$ARCH_DIR/$pkg"
