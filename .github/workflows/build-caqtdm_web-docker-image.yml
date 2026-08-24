@@ -10,6 +10,7 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}_web
   NGINX_IMAGE_NAME: ${{ github.repository }}_nginx
+  IS_PR: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build-and-push-image:
@@ -26,6 +27,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Log in to GitHub Container Registry
+        if: env.IS_PR == 'false'
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -33,6 +35,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Extract metadata for image tagging
+        if: env.IS_PR == 'false'
         id: meta
         uses: docker/metadata-action@v5
         with:
@@ -40,6 +43,7 @@ jobs:
 
       - name: Build and push Docker image
         id: push
+        if: env.IS_PR == 'false'
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -49,11 +53,30 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
 
       - name: Generate artifact attestation
+        if: env.IS_PR == 'false'
         uses: actions/attest-build-provenance@v3
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true
+
+      - name: Build Docker image for PR artifact
+        if: env.IS_PR == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./caQtDM_Web/docker/caqtdm/Dockerfile
+          push: false
+          outputs: type=docker,dest=${{ runner.temp }}/caqtdm_web-image.tar
+          tags: caqtdm-web:pr-${{ github.event.pull_request.number }}
+
+      - name: Upload Docker image as build artifact
+        if: env.IS_PR == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: caqtdm_web-image-pr-${{ github.event.pull_request.number }}
+          path: ${{ runner.temp }}/caqtdm_web-image.tar
+          retention-days: 7
 
 
   build-and-push-nginx-image:
@@ -71,6 +94,7 @@ jobs:
           submodules: recursive
 
       - name: Log in to GitHub Container Registry
+        if: env.IS_PR == 'false'
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -78,6 +102,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Extract metadata for NGINX image tagging
+        if: env.IS_PR == 'false'
         id: meta-nginx
         uses: docker/metadata-action@v5
         with:
@@ -85,6 +110,7 @@ jobs:
 
       - name: Build and push NGINX Docker image
         id: push-nginx
+        if: env.IS_PR == 'false'
         uses: docker/build-push-action@v6
         with:
           context: ./caQtDM_Web
@@ -94,9 +120,27 @@ jobs:
           labels: ${{ steps.meta-nginx.outputs.labels }}
 
       - name: Generate NGINX artifact attestation
+        if: env.IS_PR == 'false'
         uses: actions/attest-build-provenance@v3
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.NGINX_IMAGE_NAME }}
           subject-digest: ${{ steps.push-nginx.outputs.digest }}
           push-to-registry: true
 
+      - name: Build NGINX Docker image for PR artifact
+        if: env.IS_PR == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: ./caQtDM_Web
+          file: ./caQtDM_Web/docker/nginx/Dockerfile
+          push: false
+          outputs: type=docker,dest=${{ runner.temp }}/caqtdm_nginx-image.tar
+          tags: caqtdm-nginx:pr-${{ github.event.pull_request.number }}
+
+      - name: Upload NGINX Docker image as build artifact
+        if: env.IS_PR == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: caqtdm_nginx-image-pr-${{ github.event.pull_request.number }}
+          path: ${{ runner.temp }}/caqtdm_nginx-image.tar
+          retention-days: 7
