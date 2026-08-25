@@ -40,7 +40,7 @@ class QTCON_EXPORT ca3DWidgetTaskMenuFactory : public QExtensionFactory
     Q_OBJECT
 
 public:
-    ca3DWidgetTaskMenuFactory(QExtensionManager *parent = 0);
+    explicit ca3DWidgetTaskMenuFactory(QExtensionManager *parent = nullptr);
 
 protected:
     QObject *createExtension(QObject *object, const QString &iid, QObject *parent) const;

@@ -16,6 +16,7 @@
 #include <QColorDialog>
 #include <QDialogButtonBox>
 #include <QDir>
+#include <algorithm>
 #include <QDoubleSpinBox>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -82,7 +83,7 @@ private:
         QRegularExpressionMatchIterator matches = expression.globalMatch(text);
         while (matches.hasNext()) {
             const QRegularExpressionMatch match = matches.next();
-            setFormat(match.capturedStart(), match.capturedLength(), format);
+            setFormat(int(match.capturedStart()), int(match.capturedLength()), format);
         }
     }
 };
@@ -90,7 +91,7 @@ private:
 void markJsonError(QPlainTextEdit *editor, const QString &json, int byteOffset)
 {
     const QByteArray bytes = json.toUtf8();
-    const int position = QString::fromUtf8(bytes.left(qBound(0, byteOffset, bytes.size()))).size();
+    const int position = int(QString::fromUtf8(bytes.left(std::clamp(byteOffset, 0, int(bytes.size())))).size());
     QTextCursor cursor(editor->document());
     cursor.setPosition(qMin(position, qMax(0, editor->document()->characterCount() - 1)));
     cursor.select(QTextCursor::LineUnderCursor);
@@ -119,17 +120,17 @@ void markJsonConfigErrors(QPlainTextEdit *editor, const QString &json, const QSt
     QList<QTextEdit::ExtraSelection> selections;
     for (const QString &needle : needles) {
         int position = 0;
-        while ((position = json.indexOf(needle, position)) >= 0) {
+        while ((position = int(json.indexOf(needle, position))) >= 0) {
             QTextEdit::ExtraSelection selection;
             selection.cursor = QTextCursor(editor->document());
             selection.cursor.setPosition(position);
-            selection.cursor.setPosition(position + needle.size(), QTextCursor::KeepAnchor);
+            selection.cursor.setPosition(position + int(needle.size()), QTextCursor::KeepAnchor);
             selection.format.setForeground(QColor(QStringLiteral("#ef6c00")));
             selection.format.setBackground(QColor(239, 108, 0, 35));
             selection.format.setUnderlineColor(QColor(QStringLiteral("#ef6c00")));
             selection.format.setUnderlineStyle(QTextCharFormat::SingleUnderline);
             selections.append(selection);
-            position += needle.size();
+            position += int(needle.size());
         }
     }
     editor->setExtraSelections(selections);
@@ -329,7 +330,7 @@ void ca3DConfigDialog::buildUi()
             markChanged();
         }
     });
-    for (QDoubleSpinBox *spinBox : generalPage->findChildren<QDoubleSpinBox*>()) {
+    foreach (QDoubleSpinBox *spinBox, generalPage->findChildren<QDoubleSpinBox*>()) {
         connect(spinBox, SIGNAL(valueChanged(double)), this, SLOT(markChanged()));
     }
     for (QPushButton *button : {ambientColorButton}) {
@@ -673,7 +674,7 @@ void ca3DConfigDialog::populateTablesFromJson(const QString &json)
     overlaysTable->setRowCount(0);
     presetsTable->setRowCount(0);
 
-    for (const ca3DLightConfig &light : config.lights) {
+    foreach (const ca3DLightConfig &light, config.lights) {
         const int row = lightsTable->rowCount();
         lightsTable->insertRow(row);
         setTableText(lightsTable, row, 0, light.id);
@@ -730,7 +731,7 @@ void ca3DConfigDialog::populateTablesFromJson(const QString &json)
         }
     }
 
-    for (const ca3DLightConfig &light : config.lights) {
+    foreach (const ca3DLightConfig &light, config.lights) {
         for (const ca3DBindingConfig &binding : light.bindings) {
             const int bindingRow = bindingsTable->rowCount();
             bindingsTable->insertRow(bindingRow);
@@ -1190,7 +1191,6 @@ void ca3DConfigDialog::captureSnapshot()
                                      ? QDir::currentPath()
                                      : formFileInfo.absolutePath();
 
-    const QString displayPath = QString::fromLocal8Bit(qgetenv("CAQTDM_DISPLAY_PATH"));
     const QString fileName = QFileDialog::getSaveFileName(this,
                                                           tr("Save 3D Snapshot"),
                                                           QDir(initialDirectory).filePath(defaultName),
@@ -1451,7 +1451,7 @@ bool ca3DConfigDialog::validateJsonSyntax(const QString &json, QStringList *erro
             const QByteArray utf8 = json.toUtf8();
             int line = 1;
             int column = 1;
-            const int boundedOffset = qBound(0, parseError.offset, utf8.size());
+            const int boundedOffset = std::clamp(parseError.offset, 0, int(utf8.size()));
             for (int i = 0; i < boundedOffset; ++i) {
                 if (utf8.at(i) == '\n') {
                     ++line;

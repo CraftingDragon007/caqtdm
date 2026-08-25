@@ -14,6 +14,7 @@
 #include <QJsonParseError>
 #include <QMap>
 #include <QSet>
+#include <algorithm>
 #include <cmath>
 #include <limits>
 
@@ -147,14 +148,14 @@ QPair<int, int> lineAndColumnForOffset(const QString &text, int offset)
 {
     int line = 1;
     int column = 1;
-    const int boundedOffset = qBound(0, offset, text.toUtf8().size());
+    const int boundedOffset = std::clamp(offset, 0, int(text.toUtf8().size()));
     int byteOffset = 0;
 
     for (const QChar &character : text) {
         if (byteOffset >= boundedOffset) {
             break;
         }
-        byteOffset += QString(character).toUtf8().size();
+        byteOffset += int(QString(character).toUtf8().size());
         if (character == QLatin1Char('\n')) {
             line++;
             column = 1;
@@ -168,7 +169,7 @@ QPair<int, int> lineAndColumnForOffset(const QString &text, int offset)
 
 QString inferMeshType(const QString &mesh)
 {
-    const QString suffix = QFileInfo(mesh).suffix().toLower();
+    QString suffix = QFileInfo(mesh).suffix().toLower();
     if (suffix == QStringLiteral("stl") || suffix == QStringLiteral("obj")) {
         return suffix;
     }
@@ -458,7 +459,7 @@ bool ca3DConfigParser::parse(const QString &json, ca3DSceneConfig *config, QStri
         config->lights.clear();
     }
     QSet<QString> lightIds;
-    for (const QJsonValue &lightValue : lights) {
+    for (const auto &lightValue : lights) {
         const QJsonObject lightObject = lightValue.toObject();
         ca3DLightConfig light;
         light.id = stringFromObject(lightObject, QStringLiteral("id"));
@@ -503,7 +504,7 @@ bool ca3DConfigParser::parse(const QString &json, ca3DSceneConfig *config, QStri
         nonNegative(QStringLiteral("linearAttenuation"), &light.linearAttenuation);
         nonNegative(QStringLiteral("quadraticAttenuation"), &light.quadraticAttenuation);
         const QJsonArray bindings = lightObject.value(QStringLiteral("bindings")).toArray();
-        for (const QJsonValue &bindingValue : bindings) {
+        for (const auto &bindingValue : bindings) {
             const QJsonObject bindingObject = bindingValue.toObject();
             ca3DBindingConfig binding;
             binding.channel = stringFromObject(bindingObject, QStringLiteral("channel"));
@@ -523,7 +524,7 @@ bool ca3DConfigParser::parse(const QString &json, ca3DSceneConfig *config, QStri
     }
 
     const QJsonArray objects = root.value(QStringLiteral("objects")).toArray();
-    for (const QJsonValue &value : objects) {
+    for (const auto &value : objects) {
         const QJsonObject object = value.toObject();
         ca3DObjectConfig item;
         item.id = stringFromObject(object, QStringLiteral("id"));
@@ -572,7 +573,7 @@ bool ca3DConfigParser::parse(const QString &json, ca3DSceneConfig *config, QStri
         }
 
         const QJsonArray axes = object.value(QStringLiteral("axes")).toArray();
-        for (const QJsonValue &axisValue : axes) {
+        for (const auto &axisValue : axes) {
             const QJsonObject axisObject = axisValue.toObject();
             ca3DAxisConfig axis;
             axis.id = stringFromObject(axisObject, QStringLiteral("id"));
@@ -589,7 +590,7 @@ bool ca3DConfigParser::parse(const QString &json, ca3DSceneConfig *config, QStri
         }
 
         const QJsonArray bindings = object.value(QStringLiteral("bindings")).toArray();
-        for (const QJsonValue &bindingValue : bindings) {
+        for (const auto &bindingValue : bindings) {
             const QJsonObject bindingObject = bindingValue.toObject();
             ca3DBindingConfig binding;
             binding.channel = stringFromObject(bindingObject, QStringLiteral("channel"));
@@ -621,7 +622,7 @@ bool ca3DConfigParser::parse(const QString &json, ca3DSceneConfig *config, QStri
     validateObjectLinks(config->objects, errors);
 
     const QJsonArray overlays = root.value(QStringLiteral("overlays")).toArray();
-    for (const QJsonValue &value : overlays) {
+    for (const auto &value : overlays) {
         const QJsonObject object = value.toObject();
         ca3DOverlayConfig item;
         item.id = stringFromObject(object, QStringLiteral("id"));
@@ -649,7 +650,7 @@ bool ca3DConfigParser::parse(const QString &json, ca3DSceneConfig *config, QStri
     }
 
     const QJsonArray presets = root.value(QStringLiteral("cameraPresets")).toArray();
-    for (const QJsonValue &value : presets) {
+    for (const auto &value : presets) {
         const QJsonObject object = value.toObject();
         ca3DCameraPresetConfig item;
         item.id = object.value(QStringLiteral("id")).toInt(0);
@@ -667,7 +668,7 @@ bool ca3DConfigParser::parse(const QString &json, ca3DSceneConfig *config, QStri
         item.snapshotResolved = resolveDisplayFile(item.snapshot);
 
         const QJsonArray overlayIds = object.value(QStringLiteral("overlays")).toArray();
-        for (const QJsonValue &overlayId : overlayIds) {
+        for (const auto &overlayId : overlayIds) {
             item.overlays.append(overlayId.toString());
         }
 

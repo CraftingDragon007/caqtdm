@@ -41,12 +41,12 @@ ca3DWidgetTaskMenuFactory::ca3DWidgetTaskMenuFactory(QExtensionManager *parent)
 QObject *ca3DWidgetTaskMenuFactory::createExtension(QObject *object, const QString &iid, QObject *parent) const
 {
     if (iid != Q_TYPEID(QDesignerTaskMenuExtension)) {
-        return 0;
+        return nullptr;
     }
 
     if (ca3DWidget *widget = qobject_cast<ca3DWidget *>(object)) {
         return new ca3DWidgetTaskMenu(widget, parent);
     }
 
-    return 0;
+    return nullptr;
 }

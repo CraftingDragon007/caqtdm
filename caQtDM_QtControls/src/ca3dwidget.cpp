@@ -38,6 +38,7 @@
 #include <memory>
 #include <algorithm>
 #include <iterator>
+#include <utility>
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0) && !defined(MOBILE)
 #include <QtDesigner/QDesignerFormWindowInterface>
@@ -173,9 +174,9 @@ QPoint globalMousePosition(QMouseEvent *event)
 class LiveWidgetTextureImage final : public Qt3DRender::QPaintedTextureImage
 {
 public:
-    LiveWidgetTextureImage(const QImage &image, Qt3DCore::QNode *parent)
+    LiveWidgetTextureImage(QImage image, Qt3DCore::QNode *parent)
         : Qt3DRender::QPaintedTextureImage(parent)
-        , thisImage(image)
+        , thisImage(std::move(image))
     {
         setSize(thisImage.size().expandedTo(QSize(1, 1)));
     }
@@ -588,7 +589,7 @@ void markFallbackOverlayOwner(QWidget *rootWidget, QObject *owner)
     }
 }
 
-void applyFallbackWidgetScale(QGraphicsView *view, QWidget *rootWidget, const ca3DOverlayConfig &overlay, const QRect &geometry)
+void applyFallbackWidgetScale(QGraphicsView *view, const QWidget *rootWidget, const ca3DOverlayConfig &overlay, const QRect &geometry)
 {
     if (!view || !rootWidget || geometry.isEmpty()) {
         return;
@@ -1005,7 +1006,7 @@ QString ca3DWidget::overlayMacro(QWidget *rootWidget) const
 {
     if (thisFallbackMode) {
         for (const ca3DOverlayConfig &overlay : thisConfig.overlays) {
-            QWidget *widget = thisFallbackOverlayRootWidgets.value(overlay.id, Q_NULLPTR);
+            const QWidget *widget = thisFallbackOverlayRootWidgets.value(overlay.id, Q_NULLPTR);
             if (widget == rootWidget) {
                 return overlay.macro;
             }
@@ -1027,7 +1028,7 @@ QString ca3DWidget::overlayIncludePath(QWidget *rootWidget) const
 {
     if (thisFallbackMode) {
         for (const ca3DOverlayConfig &overlay : thisConfig.overlays) {
-            QWidget *widget = thisFallbackOverlayRootWidgets.value(overlay.id, Q_NULLPTR);
+            const QWidget *widget = thisFallbackOverlayRootWidgets.value(overlay.id, Q_NULLPTR);
             if (widget == rootWidget) {
                 const QFileInfo fileInfo(overlay.includeFileResolved.isEmpty() ? overlay.includeFile : overlay.includeFileResolved);
                 if (!fileInfo.path().isEmpty()) {
@@ -1202,7 +1203,11 @@ void ca3DWidget::handleSnapshotCaptureCompleted()
     setContinuousRendering(this3DView, false);
     QImage image = reply->image();
     if (QOpenGLContext::openGLModuleType() == QOpenGLContext::LibGL) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+        image = image.flipped(Qt::Vertical);
+#else
         image = image.mirrored(false, true);
+#endif
     }
     reply->deleteLater();
     restoreSnapshotOverlayStates();
@@ -1848,7 +1853,7 @@ void ca3DWidget::rebuildScene()
     };
 
     if (thisConfig.lightingEnabled) {
-        for (const ca3DLightConfig &lightConfig : thisConfig.lights) {
+        foreach (const ca3DLightConfig &lightConfig, thisConfig.lights) {
             Qt3DCore::QEntity *lightEntity = new Qt3DCore::QEntity(thisRootEntity);
             QObject *lightObject = Q_NULLPTR;
             if (lightConfig.type == ca3DLightConfig::Directional) {
@@ -2165,8 +2170,8 @@ void ca3DWidget::restoreSnapshotOverlayStates()
 
 void ca3DWidget::applyLight(const QString &lightId)
 {
-    const int index = std::distance(thisConfig.lights.begin(), std::find_if(thisConfig.lights.begin(), thisConfig.lights.end(),
-        [&lightId](const ca3DLightConfig &light) { return light.id == lightId; }));
+    const int index = int(std::distance(thisConfig.lights.begin(), std::find_if(thisConfig.lights.begin(), thisConfig.lights.end(),
+        [&lightId](const ca3DLightConfig &light) { return light.id == lightId; })));
     if (index < 0 || index >= thisConfig.lights.size()) return;
     const ca3DLightConfig &config = thisConfig.lights.at(index);
     QObject *object = this3DLightObjects.value(lightId, Q_NULLPTR);
@@ -2497,8 +2502,6 @@ void ca3DWidget::apply3DOverlayVisibility(int preset)
         bool visible = false;
         if (overlay.visibilityMode == ca3DOverlayConfig::AlwaysWhenInView) {
             visible = inView;
-        } else if (overlay.visibilityMode == ca3DOverlayConfig::InView) {
-            visible = (thisConfig.cameraPresets.isEmpty() || presetMatches) && inView;
         } else {
             visible = (thisConfig.cameraPresets.isEmpty() || presetMatches) && inView;
         }
