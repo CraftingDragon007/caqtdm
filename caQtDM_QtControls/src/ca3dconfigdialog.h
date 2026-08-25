@@ -53,8 +53,12 @@ private slots:
     void insertClipboardRotation();
     void insertClipboardLocation();
     void applyChanges();
+    void updatePreviewBusyState();
     void markChanged();
     void accept() override;
+
+protected:
+    void closeEvent(QCloseEvent *event) override;
 
 private:
     void buildUi();
@@ -83,10 +87,12 @@ private:
     ca3DWidget *widget3D;
     ca3DWidget *previewWidget;
     QComboBox *previewPresetCombo;
+    QPushButton *refreshPreviewButton;
     QPushButton *captureSnapshotButton;
     QString pendingSnapshotFileName;
     QString pendingSnapshotConfigPath;
     int pendingSnapshotPreset;
+    QString thisLastPreviewJson;
     QTabWidget *tabs;
     QPushButton *backgroundColorButton;
     QTableWidget *lightsTable;

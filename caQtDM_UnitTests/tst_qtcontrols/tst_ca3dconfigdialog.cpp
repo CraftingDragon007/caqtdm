@@ -9,6 +9,7 @@
 #include "ca3dwidget.h"
 
 #include <QCheckBox>
+#include <QCloseEvent>
 #include <QComboBox>
 #include <QDialogButtonBox>
 #include <QDoubleSpinBox>
@@ -24,6 +25,12 @@
 #include <QTabWidget>
 #include <QTemporaryDir>
 #include <QTest>
+
+static ca3DWidget *previewWidgetFor(QObject &dialog)
+{
+    QList<ca3DWidget *> widgets = dialog.findChildren<ca3DWidget *>();
+    return widgets.isEmpty() ? nullptr : widgets.first();
+}
 
 void TestCa3DConfigDialog::initTestCase()
 {
@@ -370,4 +377,51 @@ void TestCa3DConfigDialog::allowsApplyingWithMissingOverlayFile()
     QCOMPARE(config.cameraPresets.first().id, 1);
     QCOMPARE(config.cameraPresets.first().position, QVector3D(0.0f, 0.0f, 10.0f));
     QVERIFY(errorLabel->text().contains(QStringLiteral("includeFile 'does_not_exist.ui' was not found")));
+}
+
+void TestCa3DConfigDialog::blocksPreviewChangesWhileSnapshotCapturePending()
+{
+    const QString json = QStringLiteral(R"json({
+        "backgroundColor": "#112233",
+        "objects": [],
+        "overlays": [],
+        "cameraPresets": [{
+            "id": 1,
+            "name": "Overview",
+            "position": [0, 0, 10],
+            "viewCenter": [0, 0, 0]
+        }]
+    })json");
+
+    ca3DWidget widget;
+    widget.setSceneConfig(json);
+    ca3DConfigDialog dialog(&widget);
+    QComboBox *presetCombo = dialog.findChild<QComboBox *>(QStringLiteral("previewPresetCombo"));
+    QPushButton *refreshButton = dialog.findChild<QPushButton *>();
+    QList<QPushButton *> buttons = dialog.findChildren<QPushButton *>();
+    for (QPushButton *button : buttons) {
+        if (button->text() == QStringLiteral("Refresh Preview")) {
+            refreshButton = button;
+        }
+    }
+    QPushButton *captureButton = nullptr;
+    for (QPushButton *button : buttons) {
+        if (button->text() == QStringLiteral("Capture Snapshot...")) {
+            captureButton = button;
+        }
+    }
+    QVERIFY(presetCombo);
+    QVERIFY(refreshButton);
+    QVERIFY(captureButton);
+
+    QVERIFY(QMetaObject::invokeMethod(&dialog, "refreshPreview", Qt::DirectConnection));
+    QCOMPARE(presetCombo->currentData().toInt(), 1);
+
+    QVERIFY(previewWidgetFor(dialog)->capture3DSnapshot(false));
+    QVERIFY(!refreshButton->isEnabled());
+    QVERIFY(!presetCombo->isEnabled());
+    QVERIFY(!captureButton->isEnabled());
+
+    QVERIFY(dialog.close());
+    QVERIFY(!dialog.isVisible());
 }

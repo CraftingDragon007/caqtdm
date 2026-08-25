@@ -116,7 +116,7 @@ signals:
 
 private slots:
     void handleSnapshotCaptureCompleted();
-    void handleSnapshotCaptureTimeout();
+    void handleSnapshotCaptureTimeout(quint64 captureToken);
 
 private:
     void updatePlaceholderText();
@@ -154,6 +154,7 @@ protected:
                                            QSet<QString> *visiting) const;
     void restoreSnapshotOverlayStates();
     void applyLight(const QString &lightId);
+    void issueCaptureRequest(quint64 captureToken);
 #endif
 
     QLabel *thisStatusLabel;
@@ -172,6 +173,7 @@ protected:
     bool thisDesignerMode;
     bool thisForce3DPreview;
     bool thisSnapshotCapturePending;
+    quint64 thisSnapshotCaptureToken;
     QMap<QString, QVector3D> thisDynamicTranslations;
     QMap<QString, QVector3D> thisDynamicRotations;
     QMap<QString, QVector3D> thisDynamicLightDirections;

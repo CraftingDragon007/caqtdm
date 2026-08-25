@@ -10,6 +10,7 @@
 
 #include <QApplication>
 #include <QClipboard>
+#include <QCloseEvent>
 #include <QComboBox>
 #include <QCheckBox>
 #include <QColorDialog>
@@ -271,6 +272,7 @@ ca3DConfigDialog::ca3DConfigDialog(ca3DWidget *widget, QWidget *parent)
     , widget3D(widget)
     , previewWidget(Q_NULLPTR)
     , previewPresetCombo(Q_NULLPTR)
+    , refreshPreviewButton(Q_NULLPTR)
     , captureSnapshotButton(Q_NULLPTR)
     , pendingSnapshotPreset(0)
     , tabs(Q_NULLPTR)
@@ -504,7 +506,7 @@ void ca3DConfigDialog::buildUi()
     QVBoxLayout *previewLayout = new QVBoxLayout(previewPage);
     QHBoxLayout *previewButtons = new QHBoxLayout();
     previewPresetCombo = new QComboBox(previewPage);
-    QPushButton *refreshPreviewButton = new QPushButton(tr("Refresh Preview"), previewPage);
+    refreshPreviewButton = new QPushButton(tr("Refresh Preview"), previewPage);
     captureSnapshotButton = new QPushButton(tr("Capture Snapshot..."), previewPage);
     previewButtons->addWidget(new QLabel(tr("Camera preset:"), previewPage));
     previewButtons->addWidget(previewPresetCombo);
@@ -522,11 +524,13 @@ void ca3DConfigDialog::buildUi()
     connect(previewWidget, SIGNAL(snapshotCaptured(QPixmap)), this, SLOT(finishSnapshotCapture(QPixmap)));
     connect(previewWidget, SIGNAL(snapshotCaptureFailed(QString)), this, SLOT(failSnapshotCapture(QString)));
     connect(tabs, &QTabWidget::currentChanged, this, [this, previewPage](int) {
+        if (!pendingSnapshotFileName.isEmpty() && tabs && tabs->currentWidget() == previewPage) {
+            return;
+        }
         if (tabs && tabs->currentWidget() == previewPage) {
             refreshPreview();
         }
     });
-
     QWidget *rawPage = new QWidget(tabs);
     QVBoxLayout *rawLayout = new QVBoxLayout(rawPage);
     rawJsonEdit = new QPlainTextEdit(rawPage);
@@ -592,6 +596,19 @@ void ca3DConfigDialog::buildUi()
     connect(QApplication::clipboard(), SIGNAL(dataChanged()), this, SLOT(updateClipboardLocationButtons()));
     updateClipboardLocationButtons();
     buttonBox->button(QDialogButtonBox::Apply)->setEnabled(false);
+    updatePreviewBusyState();
+}
+
+void ca3DConfigDialog::closeEvent(QCloseEvent *event)
+{
+    if (pendingSnapshotFileName.isEmpty()) {
+        QDialog::closeEvent(event);
+        return;
+    }
+    QMessageBox::warning(this,
+                         tr("Capture In Progress"),
+                         tr("Please wait for the 3D snapshot capture to finish."));
+    event->ignore();
 }
 
 void ca3DConfigDialog::loadFromWidget()
@@ -1152,6 +1169,7 @@ void ca3DConfigDialog::refreshPreview()
 
     previewWidget->setForce3DPreview(true);
     previewWidget->setSceneConfig(json);
+    thisLastPreviewJson = json;
     populatePresetSelector(json);
     const int preset = previewPresetCombo ? previewPresetCombo->currentData().toInt() : 0;
     if (preset > 0) {
@@ -1162,7 +1180,6 @@ void ca3DConfigDialog::refreshPreview()
 
 void ca3DConfigDialog::captureSnapshot()
 {
-    refreshPreview();
     const int preset = previewPresetCombo ? previewPresetCombo->currentData().toInt() : 0;
     const QString formFileName = panelFileName(widget3D);
     const QFileInfo formFileInfo(formFileName);
@@ -1174,12 +1191,6 @@ void ca3DConfigDialog::captureSnapshot()
                                      : formFileInfo.absolutePath();
 
     const QString displayPath = QString::fromLocal8Bit(qgetenv("CAQTDM_DISPLAY_PATH"));
-    QMessageBox::information(this,
-                             tr("Snapshot Location"),
-                             tr("Save the snapshot in a directory listed in CAQTDM_DISPLAY_PATH or in the panel's runtime working directory. "
-                                "This allows sceneConfig to use a portable relative path instead of an absolute path.\n\n"
-                                "Current working directory: %1\nCAQTDM_DISPLAY_PATH: %2")
-                             .arg(QDir::currentPath(), displayPath.isEmpty() ? tr("not set") : displayPath));
     const QString fileName = QFileDialog::getSaveFileName(this,
                                                           tr("Save 3D Snapshot"),
                                                           QDir(initialDirectory).filePath(defaultName),
@@ -1188,20 +1199,36 @@ void ca3DConfigDialog::captureSnapshot()
         return;
     }
 
+    const QString editorJson = currentEditorJson();
+    if (editorJson != thisLastPreviewJson) {
+        refreshPreview();
+    }
+    updatePreviewBusyState();
+
     pendingSnapshotFileName = fileName;
     pendingSnapshotConfigPath = relativeSnapshotPath(fileName, formFileInfo.absolutePath());
     pendingSnapshotPreset = preset;
-    if (captureSnapshotButton) {
-        captureSnapshotButton->setEnabled(false);
-    }
+    updatePreviewBusyState();
     showErrors(QStringList() << tr("Capturing 3D background snapshot without overlays..."));
     if (!previewWidget || !previewWidget->capture3DSnapshot(false)) {
-        if (captureSnapshotButton) {
-            captureSnapshotButton->setEnabled(true);
-        }
         pendingSnapshotFileName.clear();
         pendingSnapshotConfigPath.clear();
         pendingSnapshotPreset = 0;
+        updatePreviewBusyState();
+    }
+}
+
+void ca3DConfigDialog::updatePreviewBusyState()
+{
+    const bool capturePending = !pendingSnapshotFileName.isEmpty();
+    if (refreshPreviewButton) {
+        refreshPreviewButton->setEnabled(!capturePending);
+    }
+    if (previewPresetCombo) {
+        previewPresetCombo->setEnabled(!capturePending);
+    }
+    if (captureSnapshotButton) {
+        captureSnapshotButton->setEnabled(!capturePending);
     }
 }
 
@@ -1213,9 +1240,7 @@ void ca3DConfigDialog::finishSnapshotCapture(const QPixmap &snapshot)
     pendingSnapshotFileName.clear();
     pendingSnapshotConfigPath.clear();
     pendingSnapshotPreset = 0;
-    if (captureSnapshotButton) {
-        captureSnapshotButton->setEnabled(true);
-    }
+    updatePreviewBusyState();
 
     if (snapshot.isNull() || !snapshot.save(fileName, "PNG")) {
         showErrors(QStringList() << tr("Could not save snapshot '%1'").arg(fileName));
@@ -1251,9 +1276,7 @@ void ca3DConfigDialog::failSnapshotCapture(const QString &error)
     pendingSnapshotFileName.clear();
     pendingSnapshotConfigPath.clear();
     pendingSnapshotPreset = 0;
-    if (captureSnapshotButton) {
-        captureSnapshotButton->setEnabled(true);
-    }
+    updatePreviewBusyState();
     showErrors(QStringList() << error);
 }
 

@@ -20,6 +20,7 @@ private slots:
     void roundTripsObjectMasterLinks();
     void keepsNewRowsWhenValidatingRawJson();
     void allowsApplyingWithMissingOverlayFile();
+    void blocksPreviewChangesWhileSnapshotCapturePending();
 
 private:
     QByteArray previousForceFallbackValue;

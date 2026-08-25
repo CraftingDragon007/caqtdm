@@ -17,7 +17,7 @@ ca3DWidgetTaskMenu::ca3DWidgetTaskMenu(ca3DWidget *widget, QObject *parent)
 
 void ca3DWidgetTaskMenu::editScene()
 {
-    ca3DConfigDialog dialog(widget3D);
+    ca3DConfigDialog dialog(widget3D, Q_NULLPTR);
     dialog.exec();
 }
 

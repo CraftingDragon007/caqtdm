@@ -65,6 +65,7 @@
 #include <Qt3DRender/QSpotLight>
 #include <Qt3DRender/QRenderCapture>
 #include <Qt3DRender/QRenderCaptureReply>
+#include <Qt3DRender/QRenderSettings>
 #include <Qt3DRender/QRenderSurfaceSelector>
 #include <Qt3DRender/QTexture>
 #include <Qt3DRender/QTextureImage>
@@ -79,6 +80,8 @@ namespace
 constexpr qreal kOverlayMinTextureScale = 0.75;
 constexpr qreal kOverlayMaxTextureScale = 2.0;
 constexpr int kOverlayMaxTexturePixels = 1048576;
+constexpr int kCaptureSettleDelayMs = 50;
+constexpr int kCaptureTotalTimeoutMs = 3000;
 constexpr float kCameraMinPitchDegrees = -89.0f;
 constexpr float kCameraMaxPitchDegrees = 89.0f;
 
@@ -437,11 +440,22 @@ int configuredOverlayMaxPixels()
     return pixels > 0 ? pixels : kOverlayMaxTexturePixels;
 }
 
+void setContinuousRendering(Qt3DExtras::Qt3DWindow *view, bool continuous)
+{
+    if (!view || !view->renderSettings()) {
+        return;
+    }
+    view->renderSettings()->setRenderPolicy(continuous
+                                            ? Qt3DRender::QRenderSettings::Always
+                                            : Qt3DRender::QRenderSettings::OnDemand);
+}
+
 Qt3DRender::QRenderCapture *installLayeredFrameGraph(Qt3DExtras::Qt3DWindow *view,
                                                       Qt3DRender::QLayer *sceneLayer,
                                                       Qt3DRender::QLayer *overlayLayer,
                                                       const QColor &clearColor,
-                                                      bool addRenderCapture)
+                                                      bool addRenderCapture,
+                                                      Qt3DRender::QRenderCapture *previousCapture)
 {
     if (!view || !sceneLayer || !overlayLayer) {
         return Q_NULLPTR;
@@ -456,8 +470,11 @@ Qt3DRender::QRenderCapture *installLayeredFrameGraph(Qt3DExtras::Qt3DWindow *vie
     Qt3DRender::QCameraSelector *cameraSelector = new Qt3DRender::QCameraSelector(viewport);
     cameraSelector->setCamera(view->camera());
 
-    Qt3DRender::QRenderCapture *renderCapture = addRenderCapture
-        ? new Qt3DRender::QRenderCapture(cameraSelector) : Q_NULLPTR;
+    Qt3DRender::QRenderCapture *renderCapture = Q_NULLPTR;
+    if (addRenderCapture) {
+        renderCapture = previousCapture ? previousCapture : new Qt3DRender::QRenderCapture();
+        renderCapture->setParent(cameraSelector);
+    }
     Qt3DCore::QNode *renderParent = renderCapture
         ? static_cast<Qt3DCore::QNode *>(renderCapture) : static_cast<Qt3DCore::QNode *>(cameraSelector);
 
@@ -468,7 +485,7 @@ Qt3DRender::QRenderCapture *installLayeredFrameGraph(Qt3DExtras::Qt3DWindow *vie
     Qt3DRender::QLayerFilter *sceneFilter = new Qt3DRender::QLayerFilter(sceneClear);
     sceneFilter->addLayer(sceneLayer);
 
-    Qt3DRender::QClearBuffers *overlayDepthClear = new Qt3DRender::QClearBuffers(renderParent);
+    Qt3DRender::QClearBuffers *overlayDepthClear = new Qt3DRender::QClearBuffers(cameraSelector);
     overlayDepthClear->setBuffers(Qt3DRender::QClearBuffers::DepthBuffer);
 
     Qt3DRender::QLayerFilter *overlayFilter = new Qt3DRender::QLayerFilter(overlayDepthClear);
@@ -758,6 +775,7 @@ ca3DWidget::ca3DWidget(QWidget *parent)
     , thisDesignerMode(false)
     , thisForce3DPreview(false)
     , thisSnapshotCapturePending(false)
+    , thisSnapshotCaptureToken(0)
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     , this3DView(Q_NULLPTR)
     , thisRootEntity(Q_NULLPTR)
@@ -1125,20 +1143,17 @@ bool ca3DWidget::capture3DSnapshot(bool includeOverlays)
         }
     }
 
-    thisPendingCaptureReply = thisRenderCapture->requestCapture();
-    if (!thisPendingCaptureReply) {
-        for (auto it = overlayStates.begin(); it != overlayStates.end(); ++it) {
-            Qt3DCore::QEntity *entity = this3DOverlayEntities.value(it.key(), Q_NULLPTR);
-            if (entity) entity->setEnabled(it.value());
-        }
-        apply3DOverlayVisibility(thisCameraPreset);
-        emit snapshotCaptureFailed(tr("Could not start 3D snapshot capture"));
-        return false;
-    }
+    const quint64 captureToken = ++thisSnapshotCaptureToken;
     thisSnapshotOverlayStates = overlayStates;
     thisSnapshotCapturePending = true;
-    connect(thisPendingCaptureReply, SIGNAL(completed()), this, SLOT(handleSnapshotCaptureCompleted()));
-    QTimer::singleShot(3000, this, SLOT(handleSnapshotCaptureTimeout()));
+    setContinuousRendering(this3DView, true);
+    qCDebug(ca3DWidgetLog) << "3D snapshot capture requested, rendering continuously until completed";
+    QTimer::singleShot(kCaptureSettleDelayMs, this, [this, captureToken]() {
+        issueCaptureRequest(captureToken);
+    });
+    QTimer::singleShot(kCaptureTotalTimeoutMs, this, [this, captureToken]() {
+        handleSnapshotCaptureTimeout(captureToken);
+    });
     return true;
 #else
     Q_UNUSED(includeOverlays);
@@ -1147,17 +1162,48 @@ bool ca3DWidget::capture3DSnapshot(bool includeOverlays)
 #endif
 }
 
+void ca3DWidget::issueCaptureRequest(quint64 captureToken)
+{
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    if (!thisSnapshotCapturePending || captureToken != thisSnapshotCaptureToken) {
+        return;
+    }
+    if (!thisRenderCapture || !this3DView || thisPendingCaptureReply) {
+        return;
+    }
+
+    thisPendingCaptureReply = thisRenderCapture->requestCapture();
+    if (!thisPendingCaptureReply) {
+        thisSnapshotCapturePending = false;
+        setContinuousRendering(this3DView, false);
+        restoreSnapshotOverlayStates();
+        emit snapshotCaptureFailed(tr("Could not start 3D snapshot capture"));
+        return;
+    }
+    connect(thisPendingCaptureReply, SIGNAL(completed()), this, SLOT(handleSnapshotCaptureCompleted()));
+#endif
+}
+
 void ca3DWidget::handleSnapshotCaptureCompleted()
 {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-    if (!thisSnapshotCapturePending || !thisPendingCaptureReply) {
+    auto *replyFromSignal = qobject_cast<Qt3DRender::QRenderCaptureReply *>(sender());
+    if (!thisSnapshotCapturePending || !thisPendingCaptureReply || replyFromSignal != thisPendingCaptureReply) {
+        if (replyFromSignal && replyFromSignal != thisPendingCaptureReply) {
+            qCDebug(ca3DWidgetLog) << "discarding late 3D snapshot capture reply";
+            replyFromSignal->deleteLater();
+        }
         return;
     }
 
     Qt3DRender::QRenderCaptureReply *reply = thisPendingCaptureReply;
     thisPendingCaptureReply = Q_NULLPTR;
     thisSnapshotCapturePending = false;
-    const QImage image = reply->image();
+    setContinuousRendering(this3DView, false);
+    QImage image = reply->image();
+    if (QOpenGLContext::openGLModuleType() == QOpenGLContext::LibGL) {
+        image = image.mirrored(false, true);
+    }
     reply->deleteLater();
     restoreSnapshotOverlayStates();
 
@@ -1165,14 +1211,18 @@ void ca3DWidget::handleSnapshotCaptureCompleted()
         emit snapshotCaptureFailed(tr("3D snapshot capture returned an empty image"));
         return;
     }
-    emit snapshotCaptured(QPixmap::fromImage(image));
+    const QPixmap pixmap = QPixmap::fromImage(image);
+    QTimer::singleShot(0, this, [this, pixmap]() {
+        qCDebug(ca3DWidgetLog) << "3D snapshot capture completed";
+        emit snapshotCaptured(pixmap);
+    });
 #endif
 }
 
-void ca3DWidget::handleSnapshotCaptureTimeout()
+void ca3DWidget::handleSnapshotCaptureTimeout(quint64 captureToken)
 {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-    if (!thisSnapshotCapturePending) {
+    if (!thisSnapshotCapturePending || captureToken != thisSnapshotCaptureToken) {
         return;
     }
 
@@ -1181,7 +1231,19 @@ void ca3DWidget::handleSnapshotCaptureTimeout()
         thisPendingCaptureReply = Q_NULLPTR;
     }
     thisSnapshotCapturePending = false;
+    setContinuousRendering(this3DView, false);
+    qCDebug(ca3DWidgetLog) << "3D snapshot capture timed out";
     restoreSnapshotOverlayStates();
+    QTimer::singleShot(0, this, [this]() {
+        if (!thisFallbackMode && !thisDesignerMode && this3DView) {
+            qCDebug(ca3DWidgetLog) << "rebuilding 3D scene after snapshot capture timeout";
+            if (thisRenderCapture) {
+                thisRenderCapture->deleteLater();
+                thisRenderCapture = Q_NULLPTR;
+            }
+            rebuildScene();
+        }
+    });
     emit snapshotCaptureFailed(tr("3D snapshot capture timed out"));
 #endif
 }
@@ -1770,7 +1832,8 @@ void ca3DWidget::rebuildScene()
     overlayLayer->setObjectName(QStringLiteral("ca3DOverlayLayer"));
     this3DView->defaultFrameGraph()->setClearColor(thisConfig.backgroundColor);
     thisRenderCapture = installLayeredFrameGraph(this3DView, sceneLayer, overlayLayer,
-                                                   thisConfig.backgroundColor, thisForce3DPreview);
+                                                  thisConfig.backgroundColor, thisForce3DPreview,
+                                                  thisForce3DPreview ? thisRenderCapture : Q_NULLPTR);
 
     const auto materialAmbientColor = [this](const QColor &objectColor) {
         const QColor ambient = thisConfig.ambientLight.color;
@@ -2071,7 +2134,6 @@ bool ca3DWidget::isDesignerMode() const
 void ca3DWidget::clearScene()
 {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-    thisRenderCapture = Q_NULLPTR;
     clear3DOverlays();
     thisObjectTransforms.clear();
     this3DLightObjects.clear();
@@ -2181,6 +2243,9 @@ void ca3DWidget::initialize3DView()
     this3DView = new Qt3DExtras::Qt3DWindow();
     this3DView->defaultFrameGraph()->setClearColor(thisConfig.backgroundColor);
     Qt3DRender::QCamera *camera = this3DView->camera();
+    camera->setPosition(QVector3D(0.0f, 0.0f, 1000.0f));
+    camera->setViewCenter(QVector3D(0.0f, 0.0f, 0.0f));
+    camera->setUpVector(QVector3D(0.0f, 1.0f, 0.0f));
     connect(camera, &Qt3DRender::QCamera::positionChanged, this, [this](const QVector3D &position) {
         emitCameraPositionSignals(position);
     });
