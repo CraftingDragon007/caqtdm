@@ -12,11 +12,16 @@ on:
 jobs:
   build:
     name: Build DEB package
-    runs-on: ${{ matrix.ubuntu-version }}
+    runs-on: ubuntu-latest
+    container: ${{ matrix.container-image }}
     strategy:
       fail-fast: false
       matrix:
-        ubuntu-version: [ubuntu-22.04, ubuntu-24.04, ubuntu-latest]
+        include:
+          - container-image: debian:12
+            artifact_name: debian-12
+          - container-image: ubuntu:22.04
+            artifact_name: ubuntu-22.04
 
     permissions:
       contents: read
@@ -28,12 +33,12 @@ jobs:
 
     - name: Set up build environment
       run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential devscripts dh-make debhelper
+        apt-get update
+        apt-get install -y build-essential devscripts dh-make debhelper
     
     - name: Install dependencies
       run: |
-        sudo apt-get install -y \
+        apt-get install -y \
           libssl-dev libmbedtls-dev \
           libncurses-dev libreadline-dev \
           qtbase5-dev qtbase5-private-dev qt5-qmake libqwt-qt5-dev python3-dev qttools5-dev qttools5-dev libqt5svg5-dev libqt5designer5 libqt5svg5 libqt5x11extras5-dev libzmq3-dev libqt5serialbus5-dev qtpositioning5-dev libqt5positioning5-plugins libqt5location5
@@ -44,14 +49,14 @@ jobs:
         cd caQtDM_Viewer/package/debian/qtopcua
         chmod +x ./create-deb.sh
         ./create-deb.sh
-        sudo dpkg -i *.deb
+        dpkg -i *.deb
 
     - name: Build and install epics-base
       run: |
         cd caQtDM_Viewer/package/debian/epics-base
         chmod +x ./create-deb.sh
         ./create-deb.sh
-        sudo dpkg -i *.deb
+        dpkg -i *.deb
 
     - name: Build DEB package
       run: |
@@ -63,24 +68,24 @@ jobs:
     - name: Install DEB package
       run: |
         cd caQtDM_Viewer/package/debian/caqtdm_qt5
-        sudo dpkg -i *.deb
+        dpkg -i *.deb
 
     - name: Upload Qt OPC UA package as artifact
       uses: actions/upload-artifact@v7
       with:
-        name: qtopcua_deb-package-${{ matrix.ubuntu-version }}
+        name: qtopcua_deb-package-${{ matrix.artifact_name }}
         path: caQtDM_Viewer/package/debian/qtopcua/*.deb
 
     - name: Upload epics-base package as artifact
       uses: actions/upload-artifact@v7
       with:
-        name: epics-base_deb-package-${{ matrix.ubuntu-version }}
+        name: epics-base_deb-package-${{ matrix.artifact_name }}
         path: caQtDM_Viewer/package/debian/epics-base/*.deb
 
     - name: Upload DEB package as artifact
       uses: actions/upload-artifact@v7
       with:
-        name: caqtdm_deb-package-${{ matrix.ubuntu-version }}
+        name: caqtdm_deb-package-${{ matrix.artifact_name }}
         path: caQtDM_Viewer/package/debian/caqtdm_qt5/*.deb
 
     - name: Verify caQtDM installation
