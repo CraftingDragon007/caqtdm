@@ -864,6 +864,10 @@ int ca3DWidget::detectRenderTier() const
 
     const bool forceFallback = qEnvironmentVariableIntValue("CAQTDM_3D_FORCE_FALLBACK") > 0;
     const bool allowSoftware = qEnvironmentVariableIntValue("CAQTDM_3D_ALLOW_SOFTWARE_RENDERING") > 0;
+    if (forceFallback) {
+        qCWarning(ca3DWidgetLog) << "detectRenderTier fallback forced by CAQTDM_3D_FORCE_FALLBACK";
+        return RenderTierFallback;
+    }
 
     QOpenGLContext context;
     if (!context.create()) {
@@ -890,10 +894,6 @@ int ca3DWidget::detectRenderTier() const
                                   || renderer.contains(QStringLiteral("software"))
                                   || renderer.contains(QStringLiteral("swrast"));
 
-    if (forceFallback) {
-        qCWarning(ca3DWidgetLog) << "detectRenderTier fallback forced by CAQTDM_3D_FORCE_FALLBACK";
-        return RenderTierFallback;
-    }
     if (softwareRenderer) {
         if (allowSoftware) {
             qCWarning(ca3DWidgetLog) << "detectRenderTier software tier selected"
@@ -1248,7 +1248,6 @@ void ca3DWidget::setForce3DPreview(bool enabled)
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     if (enabled) {
         thisDesignerMode = false;
-        thisFallbackMode = false;
         maybeInitialize3DView();
     }
 #else
@@ -2411,9 +2410,7 @@ void ca3DWidget::maybeInitialize3DView()
         return;
     }
 
-    if (thisForce3DPreview) {
-        thisRenderTier = RenderTierHardware;
-    } else if (!thisRenderTierOverridden) {
+    if (!thisRenderTierOverridden) {
         thisRenderTier = detectRenderTier();
     }
     if (thisRenderTier == RenderTierFallback) {
