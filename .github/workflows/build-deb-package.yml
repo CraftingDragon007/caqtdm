@@ -27,6 +27,10 @@ jobs:
       contents: read
       actions: write
 
+    env:
+      LOGNAME: runner
+      USER: runner
+
     steps:
     - name: Set up build environment
       run: |
