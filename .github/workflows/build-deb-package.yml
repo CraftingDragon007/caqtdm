@@ -46,7 +46,7 @@ jobs:
     - name: Set up build environment
       run: |
         apt-get update
-        apt-get install -y git build-essential devscripts dh-make debhelper
+        apt-get install -y git build-essential devscripts dh-make debhelper gnupg
         useradd --comment "caQtDM package builder" --create-home --shell /bin/bash builder
 
     - name: Checkout repository
@@ -87,6 +87,16 @@ jobs:
       with:
         path: /tmp/qwt-build/*_qt6_${{ matrix.artifact_name }}.deb
         key: qwt-deb-6.3.0-4-${{ matrix.artifact_name }}-${{ hashFiles('.github/workflows/build-deb-package.yml') }}
+
+    - name: Import Debian archive signing key
+      if: matrix.qt-version == '6' && steps.cache-qwt.outputs.cache-hit != 'true'
+      run: |
+        install -d -m 0700 -o builder -g builder /home/builder/.gnupg
+        curl --fail --location --retry 3 \
+          https://ftp-master.debian.org/keys/archive-key-13.asc \
+          --output /tmp/archive-key-13.asc
+        echo '6f1d277429dd7ffedcc6f8688a7ad9a458859b1139ffa026d1eeaadcbffb0da7  /tmp/archive-key-13.asc' | sha256sum --check
+        runuser -u builder -- env HOME=/home/builder gpg --batch --import /tmp/archive-key-13.asc
 
     - name: Build Qt 6 Qwt DEBs
       if: matrix.qt-version == '6' && steps.cache-qwt.outputs.cache-hit != 'true'
