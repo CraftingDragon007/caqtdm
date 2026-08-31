@@ -523,6 +523,9 @@ void ca3DConfigDialog::buildUi()
     tabs->addTab(previewPage, tr("Preview"));
     connect(refreshPreviewButton, SIGNAL(clicked()), this, SLOT(refreshPreview()));
     connect(captureSnapshotButton, SIGNAL(clicked()), this, SLOT(captureSnapshot()));
+    connect(previewWidget, &ca3DWidget::snapshotCaptureStarted, this, [this]() {
+        updatePreviewBusyState();
+    });
     connect(previewWidget, SIGNAL(snapshotCaptured(QPixmap)), this, SLOT(finishSnapshotCapture(QPixmap)));
     connect(previewWidget, SIGNAL(snapshotCaptureFailed(QString)), this, SLOT(failSnapshotCapture(QString)));
     connect(tabs, &QTabWidget::currentChanged, this, [this, previewPage](int) {
@@ -1221,7 +1224,8 @@ void ca3DConfigDialog::captureSnapshot()
 
 void ca3DConfigDialog::updatePreviewBusyState()
 {
-    const bool capturePending = !pendingSnapshotFileName.isEmpty();
+    const bool capturePending = !pendingSnapshotFileName.isEmpty()
+                                || (previewWidget && previewWidget->isSnapshotCapturePending());
     if (refreshPreviewButton) {
         refreshPreviewButton->setEnabled(!capturePending);
     }
@@ -1235,6 +1239,10 @@ void ca3DConfigDialog::updatePreviewBusyState()
 
 void ca3DConfigDialog::finishSnapshotCapture(const QPixmap &snapshot)
 {
+    if (pendingSnapshotFileName.isEmpty()) {
+        updatePreviewBusyState();
+        return;
+    }
     const QString fileName = pendingSnapshotFileName;
     const QString configPath = pendingSnapshotConfigPath;
     const int preset = pendingSnapshotPreset;
@@ -1274,6 +1282,10 @@ void ca3DConfigDialog::finishSnapshotCapture(const QPixmap &snapshot)
 
 void ca3DConfigDialog::failSnapshotCapture(const QString &error)
 {
+    if (pendingSnapshotFileName.isEmpty()) {
+        updatePreviewBusyState();
+        return;
+    }
     pendingSnapshotFileName.clear();
     pendingSnapshotConfigPath.clear();
     pendingSnapshotPreset = 0;

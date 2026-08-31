@@ -1319,6 +1319,7 @@ bool ca3DWidget::capture3DSnapshot(bool includeOverlays)
     const quint64 captureToken = ++thisSnapshotCaptureToken;
     thisSnapshotOverlayStates = overlayStates;
     thisSnapshotCapturePending = true;
+    emit snapshotCaptureStarted();
     setContinuousRendering(this3DView, true);
     qCDebug(ca3DWidgetLog) << "3D snapshot capture requested, rendering continuously until completed";
     QTimer::singleShot(kCaptureSettleDelayMs, this, [this, captureToken]() {
@@ -1333,6 +1334,11 @@ bool ca3DWidget::capture3DSnapshot(bool includeOverlays)
     emit snapshotCaptured(grab());
     return true;
 #endif
+}
+
+bool ca3DWidget::isSnapshotCapturePending() const
+{
+    return thisSnapshotCapturePending;
 }
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)

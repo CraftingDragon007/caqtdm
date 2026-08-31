@@ -87,6 +87,7 @@ public:
     int getRenderTier() const { return thisRenderTier; }
     QPixmap grab3DSnapshot(bool includeOverlays = false);
     bool capture3DSnapshot(bool includeOverlays = false);
+    bool isSnapshotCapturePending() const;
 
 public slots:
     void setRenderTier(int tier);
@@ -122,6 +123,7 @@ signals:
     void overlayWidgetsRebuilt();
     void snapshotCaptured(const QPixmap &pixmap);
     void snapshotCaptureFailed(const QString &error);
+    void snapshotCaptureStarted();
 
 private slots:
     void handleSnapshotCaptureCompleted();
