@@ -28,7 +28,9 @@ jobs:
       actions: write
 
     env:
+      DEBIAN_FRONTEND: noninteractive
       LOGNAME: runner
+      TZ: Europe/Zurich
       USER: runner
 
     steps:
