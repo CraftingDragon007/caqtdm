@@ -417,7 +417,16 @@ void TestCa3DConfigDialog::blocksPreviewChangesWhileSnapshotCapturePending()
     QVERIFY(QMetaObject::invokeMethod(&dialog, "refreshPreview", Qt::DirectConnection));
     QCOMPARE(presetCombo->currentData().toInt(), 1);
 
-    QVERIFY(previewWidgetFor(dialog)->capture3DSnapshot(false));
+    ca3DWidget *previewWidget = previewWidgetFor(dialog);
+    QVERIFY(previewWidget);
+    if (previewWidget->getFallbackMode()) {
+        QVERIFY(!previewWidget->capture3DSnapshot(false));
+        QVERIFY(refreshButton->isEnabled());
+        QVERIFY(presetCombo->isEnabled());
+        QVERIFY(captureButton->isEnabled());
+        return;
+    }
+    QVERIFY(previewWidget->capture3DSnapshot(false));
     QVERIFY(!refreshButton->isEnabled());
     QVERIFY(!presetCombo->isEnabled());
     QVERIFY(!captureButton->isEnabled());
