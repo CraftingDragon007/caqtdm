@@ -29,18 +29,22 @@ jobs:
 
     env:
       DEBIAN_FRONTEND: noninteractive
-      LOGNAME: runner
       TZ: Europe/Zurich
-      USER: runner
 
     steps:
     - name: Set up build environment
       run: |
         apt-get update
         apt-get install -y git build-essential devscripts dh-make debhelper
+        useradd --comment "caQtDM package builder" --create-home --shell /bin/bash builder
 
     - name: Checkout repository
       uses: actions/checkout@v6
+
+    - name: Prepare unprivileged package build
+      run: |
+        chown -R builder:builder "$GITHUB_WORKSPACE"
+        chown builder:builder "$GITHUB_ENV"
     
     - name: Install dependencies
       run: |
@@ -54,21 +58,21 @@ jobs:
         set -e
         cd caQtDM_Viewer/package/debian/qtopcua
         chmod +x ./create-deb.sh
-        ./create-deb.sh
+        runuser -u builder -- ./create-deb.sh
         dpkg -i *.deb
 
     - name: Build and install epics-base
       run: |
         cd caQtDM_Viewer/package/debian/epics-base
         chmod +x ./create-deb.sh
-        ./create-deb.sh
+        runuser -u builder -- ./create-deb.sh
         dpkg -i *.deb
 
     - name: Build DEB package
       run: |
         cd caQtDM_Viewer/package/debian/caqtdm_qt5
         chmod +x ./create-deb.sh
-        ./create-deb.sh --no-checkout
+        runuser -u builder -- ./create-deb.sh --no-checkout
         ls -l *.deb
 
     - name: Install DEB package
