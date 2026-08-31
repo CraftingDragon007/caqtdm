@@ -6,6 +6,7 @@
 #define TST_CA3DCONFIG_H
 
 #include <QObject>
+#include <QStringList>
 
 class TestCa3DConfig : public QObject
 {
@@ -27,12 +28,17 @@ class TestCa3DWidget : public QObject
     Q_OBJECT
 
 private slots:
+    void initTestCase();
+    void cleanupTestCase();
     void ca3DWidgetBuildsForcedFallbackOverlays();
     void linkedObjectFollowsMasterTranslation();
     void linkedObjectFollowsMasterRotation();
     void linkedObjectAppliesOwnDynamicMotionInMasterSpace();
     void linkedObjectDoesNotInheritMasterScale();
     void configuredOriginPositionRotatesWithObject();
+
+private:
+    QStringList thisLibraryPaths;
 };
 
 class TestCa3DOverlayWidgetManager : public QObject
@@ -40,8 +46,13 @@ class TestCa3DOverlayWidgetManager : public QObject
     Q_OBJECT
 
 private slots:
+    void initTestCase();
+    void cleanupTestCase();
     void ca3DOverlayWidgetManagerLoadsRendersAndTracksDirtyState();
     void ca3DOverlayWidgetManagerForwardsInput();
+
+private:
+    QStringList thisLibraryPaths;
 };
 
 #endif

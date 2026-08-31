@@ -9,6 +9,7 @@
 #include "ca3dwidget.h"
 
 #include <QColor>
+#include <QCoreApplication>
 #include <QFile>
 #include <QGraphicsView>
 #include <QLabel>
@@ -549,6 +550,17 @@ void TestCa3DConfig::resolvesFilesFromDisplayPath()
     }
 }
 
+void TestCa3DWidget::initTestCase()
+{
+    thisLibraryPaths = QCoreApplication::libraryPaths();
+    QCoreApplication::setLibraryPaths(QStringList());
+}
+
+void TestCa3DWidget::cleanupTestCase()
+{
+    QCoreApplication::setLibraryPaths(thisLibraryPaths);
+}
+
 void TestCa3DWidget::ca3DWidgetBuildsForcedFallbackOverlays()
 {
     QTemporaryDir tempDir;
@@ -769,6 +781,17 @@ void TestCa3DWidget::configuredOriginPositionRotatesWithObject()
 
     compareVector(matrixTranslation(widget.effectiveObjectMotion(config.objects.first())),
                   QVector3D(0.0f, 1.0f, 0.0f));
+}
+
+void TestCa3DOverlayWidgetManager::initTestCase()
+{
+    thisLibraryPaths = QCoreApplication::libraryPaths();
+    QCoreApplication::setLibraryPaths(QStringList());
+}
+
+void TestCa3DOverlayWidgetManager::cleanupTestCase()
+{
+    QCoreApplication::setLibraryPaths(thisLibraryPaths);
 }
 
 void TestCa3DOverlayWidgetManager::ca3DOverlayWidgetManagerLoadsRendersAndTracksDirtyState()
