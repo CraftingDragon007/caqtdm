@@ -133,7 +133,7 @@ jobs:
       uses: actions/cache@v5
       with:
         path: caQtDM_Viewer/package/debian/qtopcua/*.deb
-        key: qtopcua-deb-qt5-${{ matrix.artifact_name }}-${{ hashFiles('caQtDM_Viewer/package/debian/qtopcua/**') }}
+        key: qtopcua-deb-qt5-${{ matrix.artifact_name }}-${{ hashFiles('caQtDM_Viewer/package/debian/qtopcua/create-deb.sh', 'caQtDM_Viewer/package/debian/qtopcua/DEBIAN/control', 'caQtDM_Viewer/package/debian/qtopcua/DEBIAN/postinst', 'caQtDM_Viewer/package/debian/qtopcua/DEBIAN/shlibs') }}
 
     - name: Build Qt OPC UA DEBs
       if: matrix.qt-version == '5' && steps.cache-qtopcua.outputs.cache-hit != 'true'
@@ -154,7 +154,7 @@ jobs:
       uses: actions/cache@v5
       with:
         path: caQtDM_Viewer/package/debian/qtopcua_qt6/*_qt6_${{ matrix.artifact_name }}.deb
-        key: qtopcua-deb-qt6-${{ steps.qt6-version.outputs.version }}-${{ matrix.artifact_name }}-${{ hashFiles('caQtDM_Viewer/package/debian/qtopcua_qt6/**') }}
+        key: qtopcua-deb-qt6-${{ steps.qt6-version.outputs.version }}-${{ matrix.artifact_name }}-${{ hashFiles('caQtDM_Viewer/package/debian/qtopcua_qt6/create-deb.sh', 'caQtDM_Viewer/package/debian/qtopcua_qt6/DEBIAN/control', 'caQtDM_Viewer/package/debian/qtopcua_qt6/DEBIAN/postinst', 'caQtDM_Viewer/package/debian/qtopcua_qt6/DEBIAN/shlibs') }}
 
     - name: Build Qt 6 OPC UA DEB
       if: matrix.qt-version == '6' && steps.cache-qt6opcua.outputs.cache-hit != 'true'
@@ -173,7 +173,7 @@ jobs:
       uses: actions/cache@v5
       with:
         path: caQtDM_Viewer/package/debian/epics-base/*.deb
-        key: epics-base-deb-7.0.10-${{ matrix.artifact_name }}-${{ hashFiles('caQtDM_Viewer/package/debian/epics-base/**') }}
+        key: epics-base-deb-7.0.10-${{ matrix.artifact_name }}-${{ hashFiles('caQtDM_Viewer/package/debian/epics-base/create-deb.sh', 'caQtDM_Viewer/package/debian/epics-base/clean.sh', 'caQtDM_Viewer/package/debian/epics-base/install-dependencies.sh', 'caQtDM_Viewer/package/debian/epics-base/debian/control', 'caQtDM_Viewer/package/debian/epics-base/debian/copyright', 'caQtDM_Viewer/package/debian/epics-base/debian/rules') }}
 
     - name: Build epics-base DEBs
       if: steps.cache-epics-base.outputs.cache-hit != 'true'
