@@ -81,6 +81,11 @@ namespace
 constexpr qreal kOverlayMinTextureScale = 0.75;
 constexpr qreal kOverlayMaxTextureScale = 2.0;
 constexpr int kOverlayMaxTexturePixels = 1048576;
+constexpr qreal kOverlaySoftwareMaxTextureScale = 1.0;
+constexpr int kOverlaySoftwareMaxTexturePixels = 262144;
+constexpr int kOverlayHardwareTimerMs = 100;
+constexpr int kOverlaySoftwareTimerMs = 250;
+constexpr int kSoftwareTierMaxActiveLights = 2;
 constexpr int kCaptureSettleDelayMs = 50;
 constexpr int kCaptureTotalTimeoutMs = 3000;
 constexpr float kCameraMinPitchDegrees = -89.0f;
@@ -90,6 +95,28 @@ QQuaternion rotationFromEuler(const QVector3D &rotation)
 {
     return QQuaternion::fromEulerAngles(rotation.x(), rotation.y(), rotation.z());
 }
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+struct ca3DRenderQuality
+{
+    qreal overlayMaxScale = kOverlayMaxTextureScale;
+    int overlayMaxPixels = kOverlayMaxTexturePixels;
+    int overlayTimerMs = kOverlayHardwareTimerMs;
+    int maxActiveLights = 0; // 0 = unlimited
+};
+
+ca3DRenderQuality qualityForTier(int tier)
+{
+    ca3DRenderQuality quality;
+    if (tier == ca3DWidget::RenderTierSoftware) {
+        quality.overlayMaxScale = kOverlaySoftwareMaxTextureScale;
+        quality.overlayMaxPixels = kOverlaySoftwareMaxTexturePixels;
+        quality.overlayTimerMs = kOverlaySoftwareTimerMs;
+        quality.maxActiveLights = kSoftwareTierMaxActiveLights;
+    }
+    return quality;
+}
+#endif
 
 QVector3D normalizedOrFallback(const QVector3D &vector, const QVector3D &fallback)
 {
@@ -637,7 +664,8 @@ bool projectToSurface(const QMatrix4x4 &viewProjection,
 qreal overlayTextureScale(Qt3DRender::QCamera *camera,
                           const ca3DOverlayConfig &overlay,
                           const QSize &designSize,
-                          const QSize &surfaceSize)
+                          const QSize &surfaceSize,
+                          int renderTier)
 {
     if (!camera || designSize.isEmpty() || surfaceSize.isEmpty()) {
         return 1.0;
@@ -683,8 +711,10 @@ qreal overlayTextureScale(Qt3DRender::QCamera *camera,
 
     const qreal projectedScale = qMax((maxX - minX) / designSize.width(),
                                       (maxY - minY) / designSize.height());
-    qreal scale = qBound(kOverlayMinTextureScale, projectedScale, configuredOverlayMaxScale());
-    const int maxPixels = configuredOverlayMaxPixels();
+    const ca3DRenderQuality quality = qualityForTier(renderTier);
+    const qreal maxScale = qMin(quality.overlayMaxScale, configuredOverlayMaxScale());
+    const int maxPixels = qMin(quality.overlayMaxPixels, configuredOverlayMaxPixels());
+    qreal scale = qBound(kOverlayMinTextureScale, projectedScale, maxScale);
     const qreal scaledPixels = designSize.width() * scale * designSize.height() * scale;
     if (scaledPixels > maxPixels) {
         scale *= qSqrt(maxPixels / scaledPixels);
@@ -775,6 +805,8 @@ ca3DWidget::ca3DWidget(QWidget *parent)
     , thisConfigValid(true)
     , thisDesignerMode(false)
     , thisForce3DPreview(false)
+    , thisRenderTier(ca3DWidget::RenderTierHardware)
+    , thisRenderTierOverridden(false)
     , thisSnapshotCapturePending(false)
     , thisSnapshotCaptureToken(0)
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
@@ -815,6 +847,146 @@ ca3DWidget::ca3DWidget(QWidget *parent)
 
     updatePlaceholderText();
 }
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+int ca3DWidget::detectRenderTier() const
+{
+    const QString tierEnv = qEnvironmentVariable("CAQTDM_3D_RENDER_TIER").trimmed().toLower();
+    if (tierEnv == QStringLiteral("hardware")) {
+        return RenderTierHardware;
+    }
+    if (tierEnv == QStringLiteral("software")) {
+        return RenderTierSoftware;
+    }
+    if (tierEnv == QStringLiteral("fallback")) {
+        return RenderTierFallback;
+    }
+
+    const bool forceFallback = qEnvironmentVariableIntValue("CAQTDM_3D_FORCE_FALLBACK") > 0;
+    const bool allowSoftware = qEnvironmentVariableIntValue("CAQTDM_3D_ALLOW_SOFTWARE_RENDERING") > 0;
+
+    QOpenGLContext context;
+    if (!context.create()) {
+        qCWarning(ca3DWidgetLog) << "detectRenderTier no OpenGL context";
+        return allowSoftware ? RenderTierSoftware : RenderTierFallback;
+    }
+
+    QOffscreenSurface surface;
+    surface.setFormat(context.format());
+    surface.create();
+    if (!surface.isValid() || !context.makeCurrent(&surface)) {
+        qCWarning(ca3DWidgetLog) << "detectRenderTier invalid offscreen OpenGL surface";
+        return allowSoftware ? RenderTierSoftware : RenderTierFallback;
+    }
+
+    QOpenGLFunctions *functions = context.functions();
+    const char *rendererRaw = reinterpret_cast<const char *>(functions->glGetString(GL_RENDERER));
+    const QString renderer = rendererRaw ? QString::fromLatin1(rendererRaw).toLower() : QString();
+    context.doneCurrent();
+    qCDebug(ca3DWidgetLog) << "detectRenderTier OpenGL renderer" << renderer;
+
+    const bool softwareRenderer = renderer.contains(QStringLiteral("llvmpipe"))
+                                  || renderer.contains(QStringLiteral("softpipe"))
+                                  || renderer.contains(QStringLiteral("software"))
+                                  || renderer.contains(QStringLiteral("swrast"));
+
+    if (forceFallback) {
+        qCWarning(ca3DWidgetLog) << "detectRenderTier fallback forced by CAQTDM_3D_FORCE_FALLBACK";
+        return RenderTierFallback;
+    }
+    if (softwareRenderer) {
+        if (allowSoftware) {
+            qCWarning(ca3DWidgetLog) << "detectRenderTier software tier selected"
+                                     << "because CAQTDM_3D_ALLOW_SOFTWARE_RENDERING is set;"
+                                     << "performance may be reduced";
+            return RenderTierSoftware;
+        }
+        return RenderTierFallback;
+    }
+    return RenderTierHardware;
+}
+
+void ca3DWidget::setRenderTier(int tier)
+{
+    if (tier < RenderTierHardware || tier > RenderTierFallback) {
+        return;
+    }
+    if (tier == thisRenderTier) {
+        return;
+    }
+
+    const int previousPreset = currentCameraPreset();
+    const QVector3D cameraPosition = currentCameraPosition();
+    const QVector3D viewCenter = currentCameraViewCenter();
+
+    // Tear down the existing view entirely and rebuild for the new tier.
+    if (thisRootEntity) {
+        delete thisRootEntity;
+        thisRootEntity = Q_NULLPTR;
+    }
+    if (thisPendingCaptureReply) {
+        thisPendingCaptureReply->deleteLater();
+        thisPendingCaptureReply = Q_NULLPTR;
+    }
+    if (thisRenderCapture) {
+        thisRenderCapture->deleteLater();
+        thisRenderCapture = Q_NULLPTR;
+    }
+    if (this3DView) {
+        this3DView->setRootEntity(Q_NULLPTR);
+        delete thisViewContainer;
+        thisViewContainer = Q_NULLPTR;
+        delete this3DView;
+        this3DView = Q_NULLPTR;
+    }
+    clearFallbackView();
+
+    thisRenderTier = tier;
+    thisRenderTierOverridden = true;
+    thisObjectTransforms.clear();
+    this3DLightObjects.clear();
+    this3DLightTransforms.clear();
+    this3DOverlayEntities.clear();
+    for (ca3DOverlayWidgetManager *manager : this3DOverlayManagers) {
+        manager->deleteLater();
+    }
+    this3DOverlayManagers.clear();
+    for (QObject *filter : this3DOverlayEventFilters) {
+        filter->deleteLater();
+    }
+    this3DOverlayEventFilters.clear();
+
+    if (tier == RenderTierFallback) {
+        thisFallbackMode = true;
+        rebuildFallbackView();
+        updatePlaceholderText();
+    } else {
+        thisFallbackMode = false;
+        initialize3DView();
+        rebuildScene();
+        if (!thisFallbackMode && thisCameraPreset != previousPreset && previousPreset > 0) {
+            setCameraPreset(previousPreset);
+        }
+        if (!thisConfig.cameraPresets.isEmpty() && !cameraPosition.isNull()) {
+            Qt3DRender::QCamera *camera = this3DView ? this3DView->camera() : Q_NULLPTR;
+            if (camera) {
+                camera->setPosition(cameraPosition);
+                camera->setViewCenter(viewCenter);
+            }
+        }
+    }
+}
+#else
+void ca3DWidget::setRenderTier(int tier)
+{
+    Q_UNUSED(tier);
+    thisRenderTier = RenderTierFallback;
+    thisRenderTierOverridden = true;
+    thisFallbackMode = true;
+    rebuildFallbackView();
+    updatePlaceholderText();
+}
+#endif
 
 QSize ca3DWidget::sizeHint() const
 {
@@ -1163,9 +1335,9 @@ bool ca3DWidget::capture3DSnapshot(bool includeOverlays)
 #endif
 }
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 void ca3DWidget::issueCaptureRequest(quint64 captureToken)
 {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     if (!thisSnapshotCapturePending || captureToken != thisSnapshotCaptureToken) {
         return;
     }
@@ -1182,8 +1354,8 @@ void ca3DWidget::issueCaptureRequest(quint64 captureToken)
         return;
     }
     connect(thisPendingCaptureReply, SIGNAL(completed()), this, SLOT(handleSnapshotCaptureCompleted()));
-#endif
 }
+#endif
 
 void ca3DWidget::handleSnapshotCaptureCompleted()
 {
@@ -1853,7 +2025,15 @@ void ca3DWidget::rebuildScene()
     };
 
     if (thisConfig.lightingEnabled) {
+        const ca3DRenderQuality quality = qualityForTier(thisRenderTier);
+        int activeLightCount = 0;
         foreach (const ca3DLightConfig &lightConfig, thisConfig.lights) {
+            if (quality.maxActiveLights > 0 && activeLightCount >= quality.maxActiveLights) {
+                qCDebug(ca3DWidgetLog) << "rebuildScene skipping light for tier" << thisRenderTier
+                                       << lightConfig.id;
+                continue;
+            }
+            ++activeLightCount;
             Qt3DCore::QEntity *lightEntity = new Qt3DCore::QEntity(thisRootEntity);
             QObject *lightObject = Q_NULLPTR;
             if (lightConfig.type == ca3DLightConfig::Directional) {
@@ -2225,12 +2405,21 @@ void ca3DWidget::maybeInitialize3DView()
         return;
     }
 
-    if (shouldUse2DFallback()) {
-        qCWarning(ca3DWidgetLog) << "maybeInitialize3DView using 2D fallback: OpenGL unavailable or software renderer detected";
+    if (thisForce3DPreview) {
+        thisRenderTier = RenderTierHardware;
+    } else if (!thisRenderTierOverridden) {
+        thisRenderTier = detectRenderTier();
+    }
+    if (thisRenderTier == RenderTierFallback) {
+        qCWarning(ca3DWidgetLog) << "maybeInitialize3DView using 2D fallback: OpenGL unavailable or fallback tier selected";
         thisFallbackMode = true;
         rebuildFallbackView();
         updatePlaceholderText();
         return;
+    }
+
+    if (thisRenderTier == RenderTierSoftware) {
+        qCInfo(ca3DWidgetLog) << "using 3D with reduced quality settings for weak GPU / software renderer";
     }
 
     if (!this3DView) {
@@ -2288,53 +2477,6 @@ void ca3DWidget::update3DViewGeometry()
     }
 }
 
-bool ca3DWidget::shouldUse2DFallback() const
-{
-    if (qEnvironmentVariableIntValue("CAQTDM_3D_FORCE_FALLBACK") > 0) {
-        qCWarning(ca3DWidgetLog) << "shouldUse2DFallback forced by CAQTDM_3D_FORCE_FALLBACK";
-        return true;
-    }
-
-    if (thisForce3DPreview) {
-        return false;
-    }
-
-    QOpenGLContext context;
-    if (!context.create()) {
-        qCWarning(ca3DWidgetLog) << "shouldUse2DFallback no OpenGL context";
-        return true;
-    }
-
-    QOffscreenSurface surface;
-    surface.setFormat(context.format());
-    surface.create();
-    if (!surface.isValid() || !context.makeCurrent(&surface)) {
-        qCWarning(ca3DWidgetLog) << "shouldUse2DFallback invalid offscreen OpenGL surface";
-        return true;
-    }
-
-    QOpenGLFunctions *functions = context.functions();
-    const char *rendererRaw = reinterpret_cast<const char *>(functions->glGetString(GL_RENDERER));
-    const QString renderer = rendererRaw ? QString::fromLatin1(rendererRaw).toLower() : QString();
-    context.doneCurrent();
-    qCDebug(ca3DWidgetLog) << "shouldUse2DFallback OpenGL renderer" << renderer;
-
-    const bool softwareRenderer = renderer.contains(QStringLiteral("llvmpipe"))
-                                  || renderer.contains(QStringLiteral("softpipe"))
-                                  || renderer.contains(QStringLiteral("software"))
-                                  || renderer.contains(QStringLiteral("swrast"));
-    const bool allowSoftwareRendering =
-        qEnvironmentVariableIntValue("CAQTDM_3D_ALLOW_SOFTWARE_RENDERING") > 0;
-    if (softwareRenderer && allowSoftwareRendering) {
-        qCWarning(ca3DWidgetLog) << "shouldUse2DFallback allowing software OpenGL renderer"
-                                 << "because CAQTDM_3D_ALLOW_SOFTWARE_RENDERING is set; performance may be poor"
-                                 << "and this should only be used when 3D is required";
-        return false;
-    }
-
-    return renderer.isEmpty() || softwareRenderer;
-}
-
 void ca3DWidget::rebuild3DOverlays(Qt3DRender::QLayer *overlayLayer)
 {
     clear3DOverlays();
@@ -2388,7 +2530,8 @@ void ca3DWidget::rebuild3DOverlays(Qt3DRender::QLayer *overlayLayer)
         liveTextureTimer->setTimerType(Qt::CoarseTimer);
         const std::shared_ptr<int> textureTimerTick(new int(0));
         connect(liveTextureTimer, &QTimer::timeout, overlayManager,
-                [overlayManager, textureImage, textureTimerTick, renderWindow = this3DView, overlay, designSize]() {
+                [overlayManager, textureImage, textureTimerTick, renderWindow = this3DView, overlay, designSize,
+                 renderTier = thisRenderTier]() {
                     if (!overlayManager->property("ca3DOverlayActive").toBool()) {
                         return;
                     }
@@ -2402,10 +2545,11 @@ void ca3DWidget::rebuild3DOverlays(Qt3DRender::QLayer *overlayLayer)
                     const qreal scale = overlayTextureScale(renderWindow ? renderWindow->camera() : Q_NULLPTR,
                                                             overlay,
                                                             designSize,
-                                                            surfaceSize);
+                                                            surfaceSize,
+                                                            renderTier);
                     textureImage->setImage(overlayManager->renderSnapshot(scale).flipped(Qt::Vertical));
                 });
-        liveTextureTimer->start(100);
+        liveTextureTimer->start(qualityForTier(thisRenderTier).overlayTimerMs);
 
         Qt3DExtras::QTextureMaterial *material = new Qt3DExtras::QTextureMaterial(overlayEntity);
         material->setTexture(texture);

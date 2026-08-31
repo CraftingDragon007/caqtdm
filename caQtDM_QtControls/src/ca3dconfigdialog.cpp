@@ -507,6 +507,7 @@ void ca3DConfigDialog::buildUi()
     QVBoxLayout *previewLayout = new QVBoxLayout(previewPage);
     QHBoxLayout *previewButtons = new QHBoxLayout();
     previewPresetCombo = new QComboBox(previewPage);
+    previewPresetCombo->setObjectName(QStringLiteral("previewPresetCombo"));
     refreshPreviewButton = new QPushButton(tr("Refresh Preview"), previewPage);
     captureSnapshotButton = new QPushButton(tr("Capture Snapshot..."), previewPage);
     previewButtons->addWidget(new QLabel(tr("Camera preset:"), previewPage));

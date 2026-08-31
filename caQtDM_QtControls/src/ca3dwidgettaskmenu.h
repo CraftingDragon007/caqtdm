@@ -13,6 +13,7 @@
 QT_BEGIN_NAMESPACE
 class QAction;
 class QExtensionManager;
+class QMenu;
 QT_END_NAMESPACE
 class ca3DWidget;
 
@@ -32,6 +33,8 @@ private slots:
 
 private:
     QAction *editSceneAction;
+    QAction *renderTierAction;
+    QMenu *renderTierMenu;
     ca3DWidget *widget3D;
 };
 

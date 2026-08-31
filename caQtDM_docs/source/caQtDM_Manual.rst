@@ -2776,11 +2776,25 @@ has no equivalent in MEDM
    directory or in a directory from ``CAQTDM_DISPLAY_PATH`` so the JSON can use
    a portable relative path.
 
-   The environment variable ``CAQTDM_3D_FORCE_FALLBACK=1`` forces fallback mode
-   and is useful for testing. Set ``CAQTDM_3D_ALLOW_SOFTWARE_RENDERING=1`` to
-   use the 3D view with a detected software OpenGL renderer. **Warning:**
-   software rendering can result in poor performance and should only be used
-   when hardware rendering is unavailable and the 3D view is genuinely needed.
+   The environment variable ``CAQTDM_3D_RENDER_TIER`` selects the rendering
+   tier explicitly and accepts ``hardware``, ``software``, or ``fallback``
+   (case-insensitive). It takes precedence over all other 3D environment
+   variables. ``CAQTDM_3D_ALLOW_SOFTWARE_RENDERING=1`` remains supported as an
+   alias for selecting the software tier when a software renderer is detected;
+   it now enables reduced-quality rendering (lower overlay resolution, slower
+   overlay refresh, at most two active lights) rather than full-quality live
+   3D. ``CAQTDM_3D_FORCE_FALLBACK=1`` is an alias for
+   ``CAQTDM_3D_RENDER_TIER=fallback``.
+
+   The rendering quality can also be changed at runtime via the widget's
+   public slot ``setRenderTier(int)`` with values ``ca3DWidget::RenderTierHardware``
+   (0), ``RenderTierSoftware`` (1), or ``RenderTierFallback`` (2). The getter
+   ``getRenderTier()`` reports the currently active tier.
+
+   On the software tier, overlay textures are capped at 1× design size and
+   approximately 262144 pixels, the live overlay refresh timer runs at 250 ms
+   instead of 100 ms, and at most two lights from the configuration are active.
+   Ambient light is always applied regardless of tier.
    ``CAQTDM_3D_OVERLAY_MAX_SCALE`` and ``CAQTDM_3D_OVERLAY_MAX_PIXELS`` can
    limit live overlay texture resolution.
 

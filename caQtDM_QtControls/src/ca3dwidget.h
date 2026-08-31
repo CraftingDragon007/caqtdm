@@ -55,6 +55,13 @@ public:
     explicit ca3DWidget(QWidget *parent = 0);
     ~ca3DWidget();
 
+    enum RenderTier {
+        RenderTierHardware = 0,
+        RenderTierSoftware = 1,
+        RenderTierFallback = 2
+    };
+    Q_ENUM(RenderTier)
+
     const QString &getSceneConfig() const { return thisSceneConfig; }
     void setSceneConfig(const QString &config);
 
@@ -77,10 +84,12 @@ public:
     QString overlayIncludePath(QWidget *rootWidget) const;
     QStringList objectBindingChannels() const;
     void setForce3DPreview(bool enabled);
+    int getRenderTier() const { return thisRenderTier; }
     QPixmap grab3DSnapshot(bool includeOverlays = false);
     bool capture3DSnapshot(bool includeOverlays = false);
 
 public slots:
+    void setRenderTier(int tier);
     void setCameraPreset(int preset);
     void setCameraPosition(double x, double y, double z);
     void moveCamera(double dx, double dy, double dz);
@@ -138,10 +147,10 @@ protected:
     void showEvent(QShowEvent *event) override;
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    int detectRenderTier() const;
     void maybeInitialize3DView();
     void initialize3DView();
     void update3DViewGeometry();
-    bool shouldUse2DFallback() const;
     void rebuild3DOverlays(Qt3DRender::QLayer *overlayLayer);
     void clear3DOverlays();
     void apply3DOverlayVisibility(int preset);
@@ -172,6 +181,8 @@ protected:
     bool thisConfigValid;
     bool thisDesignerMode;
     bool thisForce3DPreview;
+    int thisRenderTier;
+    bool thisRenderTierOverridden;
     bool thisSnapshotCapturePending;
     quint64 thisSnapshotCaptureToken;
     QMap<QString, QVector3D> thisDynamicTranslations;
