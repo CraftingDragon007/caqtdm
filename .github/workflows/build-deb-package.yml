@@ -108,7 +108,13 @@ jobs:
         chown builder:builder /tmp/qwt-build
         runuser -u builder -- env HOME=/home/builder bash -c '
           cd /tmp/qwt-build
-          dget -x https://deb.debian.org/debian/pool/main/q/qwt/qwt_6.3.0-4.dsc
+          dget --download-only https://deb.debian.org/debian/pool/main/q/qwt/qwt_6.3.0-4.dsc
+          dscverify --no-default-keyrings \
+            --keyring /home/builder/.gnupg/trustedkeys.gpg \
+            qwt_6.3.0-4.dsc
+          dpkg-source --require-valid-signature \
+            --signer-cert /home/builder/.gnupg/trustedkeys.gpg \
+            -x qwt_6.3.0-4.dsc
           cd qwt-6.3.0
           dpkg-buildpackage -b -uc -us
         '
