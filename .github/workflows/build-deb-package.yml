@@ -70,7 +70,32 @@ jobs:
         apt-get install -y \
           libssl-dev libmbedtls-dev \
           libncurses-dev libreadline-dev \
-          qt6-base-dev qt6-tools-dev qt6-svg-dev qt6-positioning-dev qt6-serialbus-dev qt6-5compat-dev libqwt-qt6-dev python3-dev libzmq3-dev
+          libqt5opengl5-dev libqt5svg5-dev qtbase5-dev qttools5-dev \
+          pkg-kde-tools qt6-base-dev qt6-base-dev-tools qt6-tools-dev qt6-svg-dev qt6-positioning-dev qt6-serialbus-dev qt6-5compat-dev python3-dev libzmq3-dev
+
+    - name: Build and install Qt 6 Qwt DEBs
+      if: matrix.qt-version == '6'
+      run: |
+        mkdir -p /tmp/qwt-build
+        chown builder:builder /tmp/qwt-build
+        runuser -u builder -- env HOME=/home/builder bash -c '
+          cd /tmp/qwt-build
+          dget -x https://deb.debian.org/debian/pool/main/q/qwt/qwt_6.3.0-4.dsc
+          cd qwt-6.3.0
+          dpkg-buildpackage -b -uc -us
+        '
+        apt-get install -y \
+          /tmp/qwt-build/libqwt-headers_*.deb \
+          /tmp/qwt-build/libqwt-qt6-6.3_*.deb \
+          /tmp/qwt-build/libqwt-qt6-dev_*.deb
+
+    - name: Name Qt 6 Qwt DEB files by build target
+      if: matrix.qt-version == '6'
+      shell: bash
+      run: |
+        for package in /tmp/qwt-build/libqwt-headers_*.deb /tmp/qwt-build/libqwt-qt6-6.3_*.deb /tmp/qwt-build/libqwt-qt6-dev_*.deb; do
+          mv "$package" "${package%.deb}_qt6_${{ matrix.artifact_name }}.deb"
+        done
     
     - name: Build and install Qt OPC UA DEB
       if: matrix.qt-version == '5'
@@ -110,6 +135,13 @@ jobs:
       with:
         name: qtopcua_deb-package-${{ matrix.artifact_name }}
         path: caQtDM_Viewer/package/debian/qtopcua/*.deb
+
+    - name: Upload Qt 6 Qwt packages as artifact
+      if: matrix.qt-version == '6'
+      uses: actions/upload-artifact@v7
+      with:
+        name: qwt_qt6_deb-package-${{ matrix.artifact_name }}
+        path: /tmp/qwt-build/*_qt6_${{ matrix.artifact_name }}.deb
 
     - name: Upload epics-base package as artifact
       uses: actions/upload-artifact@v7
