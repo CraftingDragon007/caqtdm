@@ -43,7 +43,7 @@ jobs:
 
     - name: Prepare unprivileged package build
       run: |
-        chmod -R a+rwX "$GITHUB_WORKSPACE" "$RUNNER_TEMP"
+        chown -R builder:builder "$GITHUB_WORKSPACE"
     
     - name: Install dependencies
       run: |
