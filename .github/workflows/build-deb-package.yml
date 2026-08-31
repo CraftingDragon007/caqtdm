@@ -88,16 +88,18 @@ jobs:
         path: /tmp/qwt-build/*_qt6_${{ matrix.artifact_name }}.deb
         key: qwt-deb-6.3.0-4-${{ matrix.artifact_name }}-${{ hashFiles('.github/workflows/build-deb-package.yml') }}
 
-    - name: Import Debian archive signing key
+    - name: Import Debian source-package signing key
       if: matrix.qt-version == '6' && steps.cache-qwt.outputs.cache-hit != 'true'
       run: |
         install -d -m 0700 -o builder -g builder /home/builder/.gnupg
-        curl --fail --location --retry 3 \
-          https://ftp-master.debian.org/keys/archive-key-13.asc \
-          --output /tmp/archive-key-13.asc
-        echo '6f1d277429dd7ffedcc6f8688a7ad9a458859b1139ffa026d1eeaadcbffb0da7  /tmp/archive-key-13.asc' | sha256sum --check
-        runuser -u builder -- env HOME=/home/builder gpg --batch --no-default-keyring \
-          --keyring /home/builder/.gnupg/trustedkeys.gpg --import /tmp/archive-key-13.asc
+        runuser -u builder -- env HOME=/home/builder bash -c '
+          curl --fail --location --retry 3 \
+            "https://keyring.debian.org/pks/lookup?op=get&search=0xB7CA87DDC4C2B06240B6B1745041F1891F44E090" \
+            --output /tmp/qwt-signer.asc
+          gpg --batch --dearmor \
+            --output /home/builder/.gnupg/trustedkeys.gpg \
+            /tmp/qwt-signer.asc
+        '
 
     - name: Build Qt 6 Qwt DEBs
       if: matrix.qt-version == '6' && steps.cache-qwt.outputs.cache-hit != 'true'
