@@ -75,7 +75,10 @@ else
   currentdir=$(pwd)
   cd ../../../../
   if [ "$NO_PARENT_ORIG" -eq 1 ]; then
-    tar -czf "${currentdir}/caqtdm_${PACKAGE_VERSION}.orig.tar.gz" --exclude=.git .
+    tar -czf "${currentdir}/caqtdm_${PACKAGE_VERSION}.orig.tar.gz" \
+      --exclude=.git \
+      --exclude="./caQtDM_Viewer/package/debian/caqtdm_qt5/caqtdm_${PACKAGE_VERSION}.orig.tar.gz" \
+      .
   else
     tar -czf ../caqtdm_${PACKAGE_VERSION}.orig.tar.gz --exclude=.git .
     mv ../caqtdm_${PACKAGE_VERSION}.orig.tar.gz "${currentdir}/caqtdm_${PACKAGE_VERSION}.orig.tar.gz"
