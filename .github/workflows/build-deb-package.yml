@@ -20,8 +20,19 @@ jobs:
         include:
           - container-image: debian:12
             artifact_name: debian-12
+            qt-version: "5"
           - container-image: ubuntu:22.04
             artifact_name: ubuntu-22.04
+            qt-version: "5"
+          - container-image: ubuntu:24.04
+            artifact_name: ubuntu-24.04
+            qt-version: "5"
+          - container-image: debian:13
+            artifact_name: debian-13
+            qt-version: "6"
+          - container-image: ubuntu:26.04
+            artifact_name: ubuntu-26.04
+            qt-version: "6"
 
     permissions:
       contents: read
@@ -45,14 +56,24 @@ jobs:
       run: |
         chown -R builder:builder "$GITHUB_WORKSPACE"
     
-    - name: Install dependencies
+    - name: Install Qt 5 dependencies
+      if: matrix.qt-version == '5'
       run: |
         apt-get install -y \
           libssl-dev libmbedtls-dev \
           libncurses-dev libreadline-dev \
           qtbase5-dev qtbase5-private-dev qt5-qmake libqwt-qt5-dev python3-dev qttools5-dev qttools5-dev libqt5svg5-dev libqt5designer5 libqt5svg5 libqt5x11extras5-dev libzmq3-dev libqt5serialbus5-dev qtpositioning5-dev libqt5positioning5-plugins libqt5location5
+
+    - name: Install Qt 6 dependencies
+      if: matrix.qt-version == '6'
+      run: |
+        apt-get install -y \
+          libssl-dev libmbedtls-dev \
+          libncurses-dev libreadline-dev \
+          qt6-base-dev qt6-tools-dev qt6-svg-dev qt6-positioning-dev qt6-serialbus-dev qt6-5compat-dev libqwt-qt6-dev python3-dev libzmq3-dev
     
     - name: Build and install Qt OPC UA DEB
+      if: matrix.qt-version == '5'
       run: |
         set -e
         cd caQtDM_Viewer/package/debian/qtopcua
@@ -67,16 +88,24 @@ jobs:
 
     - name: Build DEB package
       run: |
-        cd caQtDM_Viewer/package/debian/caqtdm_qt5
+        cd caQtDM_Viewer/package/debian/caqtdm_qt${{ matrix.qt-version }}
         runuser -u builder -- ./create-deb.sh --no-checkout --no-parent-orig
         ls -l *.deb
 
     - name: Install DEB package
       run: |
-        cd caQtDM_Viewer/package/debian/caqtdm_qt5
+        cd caQtDM_Viewer/package/debian/caqtdm_qt${{ matrix.qt-version }}
         dpkg -i *.deb
 
+    - name: Name DEB files by build target
+      shell: bash
+      run: |
+        find caQtDM_Viewer/package/debian -maxdepth 2 -type f -name '*.deb' -print0 | while IFS= read -r -d '' package; do
+          mv "$package" "${package%.deb}_qt${{ matrix.qt-version }}_${{ matrix.artifact_name }}.deb"
+        done
+
     - name: Upload Qt OPC UA package as artifact
+      if: matrix.qt-version == '5'
       uses: actions/upload-artifact@v7
       with:
         name: qtopcua_deb-package-${{ matrix.artifact_name }}
@@ -91,8 +120,8 @@ jobs:
     - name: Upload DEB package as artifact
       uses: actions/upload-artifact@v7
       with:
-        name: caqtdm_deb-package-${{ matrix.artifact_name }}
-        path: caQtDM_Viewer/package/debian/caqtdm_qt5/*.deb
+        name: caqtdm_deb-package-qt${{ matrix.qt-version }}-${{ matrix.artifact_name }}
+        path: caQtDM_Viewer/package/debian/caqtdm_qt${{ matrix.qt-version }}/*.deb
 
     - name: Verify caQtDM installation
       run: |
