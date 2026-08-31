@@ -71,10 +71,25 @@ jobs:
           libssl-dev libmbedtls-dev \
           libncurses-dev libreadline-dev \
           libqt5opengl5-dev libqt5svg5-dev qtbase5-dev qttools5-dev \
-          pkg-kde-tools qt6-base-dev qt6-base-dev-tools qt6-tools-dev qt6-svg-dev qt6-positioning-dev qt6-serialbus-dev qt6-5compat-dev python3-dev libzmq3-dev
+          cmake curl ninja-build pkg-kde-tools qt6-base-dev qt6-base-dev-tools qt6-tools-dev qt6-declarative-dev qt6-svg-dev qt6-positioning-dev qt6-serialbus-dev qt6-5compat-dev python3-dev libzmq3-dev
 
-    - name: Build and install Qt 6 Qwt DEBs
+    - name: Query installed Qt 6 version
       if: matrix.qt-version == '6'
+      id: qt6-version
+      shell: bash
+      run: |
+        echo "version=$(qmake6 -query QT_VERSION)" >> "$GITHUB_OUTPUT"
+
+    - name: Cache Qt 6 Qwt DEBs
+      if: matrix.qt-version == '6'
+      id: cache-qwt
+      uses: actions/cache@v5
+      with:
+        path: /tmp/qwt-build/*_qt6_${{ matrix.artifact_name }}.deb
+        key: qwt-deb-6.3.0-4-${{ matrix.artifact_name }}-${{ hashFiles('.github/workflows/build-deb-package.yml') }}
+
+    - name: Build Qt 6 Qwt DEBs
+      if: matrix.qt-version == '6' && steps.cache-qwt.outputs.cache-hit != 'true'
       run: |
         mkdir -p /tmp/qwt-build
         chown builder:builder /tmp/qwt-build
@@ -84,31 +99,80 @@ jobs:
           cd qwt-6.3.0
           dpkg-buildpackage -b -uc -us
         '
-        apt-get install -y \
-          /tmp/qwt-build/libqwt-headers_*.deb \
-          /tmp/qwt-build/libqwt-qt6-6.3_*.deb \
-          /tmp/qwt-build/libqwt-qt6-dev_*.deb
 
     - name: Name Qt 6 Qwt DEB files by build target
-      if: matrix.qt-version == '6'
+      if: matrix.qt-version == '6' && steps.cache-qwt.outputs.cache-hit != 'true'
       shell: bash
       run: |
         for package in /tmp/qwt-build/libqwt-headers_*.deb /tmp/qwt-build/libqwt-qt6-6.3_*.deb /tmp/qwt-build/libqwt-qt6-dev_*.deb; do
           mv "$package" "${package%.deb}_qt6_${{ matrix.artifact_name }}.deb"
         done
-    
-    - name: Build and install Qt OPC UA DEB
+
+    - name: Install Qt 6 Qwt DEBs
+      if: matrix.qt-version == '6'
+      run: |
+        apt-get install -y \
+          /tmp/qwt-build/libqwt-headers_*_qt6_${{ matrix.artifact_name }}.deb \
+          /tmp/qwt-build/libqwt-qt6-6.3_*_qt6_${{ matrix.artifact_name }}.deb \
+          /tmp/qwt-build/libqwt-qt6-dev_*_qt6_${{ matrix.artifact_name }}.deb
+
+    - name: Cache Qt OPC UA DEBs
       if: matrix.qt-version == '5'
+      id: cache-qtopcua
+      uses: actions/cache@v5
+      with:
+        path: caQtDM_Viewer/package/debian/qtopcua/*.deb
+        key: qtopcua-deb-qt5-${{ matrix.artifact_name }}-${{ hashFiles('caQtDM_Viewer/package/debian/qtopcua/**') }}
+
+    - name: Build Qt OPC UA DEBs
+      if: matrix.qt-version == '5' && steps.cache-qtopcua.outputs.cache-hit != 'true'
       run: |
         set -e
         cd caQtDM_Viewer/package/debian/qtopcua
         runuser -u builder -- ./create-deb.sh
+
+    - name: Install Qt OPC UA DEBs
+      if: matrix.qt-version == '5'
+      run: |
+        cd caQtDM_Viewer/package/debian/qtopcua
         dpkg -i *.deb
 
-    - name: Build and install epics-base
+    - name: Cache Qt 6 OPC UA DEB
+      if: matrix.qt-version == '6'
+      id: cache-qt6opcua
+      uses: actions/cache@v5
+      with:
+        path: caQtDM_Viewer/package/debian/qtopcua_qt6/*_qt6_${{ matrix.artifact_name }}.deb
+        key: qtopcua-deb-qt6-${{ steps.qt6-version.outputs.version }}-${{ matrix.artifact_name }}-${{ hashFiles('caQtDM_Viewer/package/debian/qtopcua_qt6/**') }}
+
+    - name: Build Qt 6 OPC UA DEB
+      if: matrix.qt-version == '6' && steps.cache-qt6opcua.outputs.cache-hit != 'true'
+      run: |
+        cd caQtDM_Viewer/package/debian/qtopcua_qt6
+        runuser -u builder -- ./create-deb.sh --version "${{ steps.qt6-version.outputs.version }}"
+
+    - name: Install Qt 6 OPC UA DEB
+      if: matrix.qt-version == '6'
+      run: |
+        cd caQtDM_Viewer/package/debian/qtopcua_qt6
+        dpkg -i *.deb
+
+    - name: Cache epics-base DEBs
+      id: cache-epics-base
+      uses: actions/cache@v5
+      with:
+        path: caQtDM_Viewer/package/debian/epics-base/*.deb
+        key: epics-base-deb-7.0.10-${{ matrix.artifact_name }}-${{ hashFiles('caQtDM_Viewer/package/debian/epics-base/**') }}
+
+    - name: Build epics-base DEBs
+      if: steps.cache-epics-base.outputs.cache-hit != 'true'
       run: |
         cd caQtDM_Viewer/package/debian/epics-base
         runuser -u builder -- ./create-deb.sh
+
+    - name: Install epics-base DEBs
+      run: |
+        cd caQtDM_Viewer/package/debian/epics-base
         dpkg -i *.deb
 
     - name: Build DEB package
@@ -135,6 +199,13 @@ jobs:
       with:
         name: qtopcua_deb-package-${{ matrix.artifact_name }}
         path: caQtDM_Viewer/package/debian/qtopcua/*.deb
+
+    - name: Upload Qt 6 OPC UA package as artifact
+      if: matrix.qt-version == '6'
+      uses: actions/upload-artifact@v7
+      with:
+        name: qtopcua_qt6_deb-package-${{ matrix.artifact_name }}
+        path: caQtDM_Viewer/package/debian/qtopcua_qt6/*_qt6_${{ matrix.artifact_name }}.deb
 
     - name: Upload Qt 6 Qwt packages as artifact
       if: matrix.qt-version == '6'
