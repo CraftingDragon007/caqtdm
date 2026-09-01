@@ -32,6 +32,7 @@ cmake -B "$BUILD_DIR/build" -S "$BUILD_DIR/qtopcua-${QTOPCUA_VERSION}" -G Ninja 
     -DQT_BUILD_EXAMPLES=OFF
 cmake --build "$BUILD_DIR/build" --parallel "$(nproc)"
 
+mkdir -p "$STAGING_DIR"
 cp -a "$SCRIPT_DIR/DEBIAN" "$STAGING_DIR/DEBIAN"
 DESTDIR="$STAGING_DIR" cmake --install "$BUILD_DIR/build" --prefix /usr
 sed -i "s/^Version: .*/Version: ${QTOPCUA_VERSION}/" "$STAGING_DIR/DEBIAN/control"
