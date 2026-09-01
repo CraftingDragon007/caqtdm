@@ -197,7 +197,7 @@ jobs:
     - name: Build DEB package
       run: |
         cd caQtDM_Viewer/package/debian/caqtdm_qt${{ matrix.qt-version }}
-        runuser -u builder -- ./create-deb.sh --no-checkout --no-parent-orig
+        runuser -u builder -- env CAQTDM_OPCUA=1 ./create-deb.sh --no-checkout --no-parent-orig
         ls -l *.deb
 
     - name: Install DEB package
