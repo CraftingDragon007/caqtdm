@@ -113,7 +113,7 @@ jobs:
             --keyring /home/builder/.gnupg/trustedkeys.gpg \
             qwt_6.3.0-4.dsc
           dpkg-source --require-valid-signature \
-            --signer-cert /home/builder/.gnupg/trustedkeys.gpg \
+            --signer-certs=/home/builder/.gnupg/trustedkeys.gpg \
             -x qwt_6.3.0-4.dsc
           cd qwt-6.3.0
           dpkg-buildpackage -b -uc -us
