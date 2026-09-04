@@ -343,14 +343,15 @@ void validateObjectLinks(const QList<ca3DObjectConfig> &objects, QStringList *er
 
     QSet<QString> visiting;
     QSet<QString> visited;
-    for (const QString &objectId : mastersByObject.keys()) {
-        if (hasObjectLinkCycle(objectId, mastersByObject, &visiting, &visited)) {
-            errors->append(QStringLiteral("Object link cycle detected at '%1'").arg(objectId));
+    for (auto it = mastersByObject.cbegin(); it != mastersByObject.cend(); ++it) {
+        if (hasObjectLinkCycle(it.key(), mastersByObject, &visiting, &visited)) {
+            errors->append(QStringLiteral("Object link cycle detected at '%1'").arg(it.key()));
             return;
         }
     }
 }
-}
+
+} // namespace
 
 QColor ca3DContrastingTextColor(const QColor &background)
 {
@@ -447,7 +448,8 @@ bool ca3DConfigParser::parse(const QString &json, ca3DSceneConfig *config, QStri
                                                 errors);
     parseLightIntensity(ambient, QStringLiteral("lighting.ambient"), &config->ambientLight.intensity, errors);
 
-    for (const QString &name : lighting.keys()) {
+    for (auto it = lighting.constBegin(); it != lighting.constEnd(); ++it) {
+        const QString &name = it.key();
         if (name != QStringLiteral("enabled") && name != QStringLiteral("ambient") && name != QStringLiteral("lights")
             && name.endsWith(QStringLiteral("Light")) && errors) {
             errors->append(QStringLiteral("lighting.%1 is obsolete; use lighting.lights instead").arg(name));

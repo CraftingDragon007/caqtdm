@@ -2036,9 +2036,16 @@ void ca3DWidget::rebuildScene()
     Qt3DRender::QLayer *overlayLayer = new Qt3DRender::QLayer(thisRootEntity);
     overlayLayer->setObjectName(QStringLiteral("ca3DOverlayLayer"));
     this3DView->defaultFrameGraph()->setClearColor(thisConfig.backgroundColor);
-    thisRenderCapture = installLayeredFrameGraph(this3DView, sceneLayer, overlayLayer,
-                                                  thisConfig.backgroundColor, thisForce3DPreview,
-                                                  thisForce3DPreview ? thisRenderCapture : Q_NULLPTR);
+    if (thisRenderTier == RenderTierSoftware) {
+        // llvmpipe does not reliably clear a custom layered frame graph.
+        // The default forward renderer clears colour and depth every frame.
+        this3DView->setActiveFrameGraph(this3DView->defaultFrameGraph());
+        thisRenderCapture = Q_NULLPTR;
+    } else {
+        thisRenderCapture = installLayeredFrameGraph(this3DView, sceneLayer, overlayLayer,
+                                                      thisConfig.backgroundColor, thisForce3DPreview,
+                                                      thisForce3DPreview ? thisRenderCapture : Q_NULLPTR);
+    }
 
     const auto materialAmbientColor = [this](const QColor &objectColor) {
         const QColor ambient = thisConfig.ambientLight.color;
