@@ -584,9 +584,21 @@ QSize uiRootDesignSize(const QString &uiFilePath)
     return QSize();
 }
 
-QRect fallbackOverlayGeometry(QWidget *fallbackView, const ca3DOverlayConfig &overlay)
+QRect fallbackOverlayGeometry(QWidget *fallbackView, const ca3DOverlayConfig &overlay,
+                              const QSize &snapshotSize = QSize())
 {
     if (!overlay.fallbackGeometry.isEmpty()) {
+        // Snapshots are stretched to the fallback widget.  Keep explicit
+        // overlay coordinates in the same (snapshot) coordinate system.
+        if (fallbackView && !snapshotSize.isEmpty()) {
+            const QSize fallbackSize = fallbackView->size();
+            const qreal scaleX = static_cast<qreal>(fallbackSize.width()) / snapshotSize.width();
+            const qreal scaleY = static_cast<qreal>(fallbackSize.height()) / snapshotSize.height();
+            return QRect(qRound(overlay.fallbackGeometry.x() * scaleX),
+                         qRound(overlay.fallbackGeometry.y() * scaleY),
+                         qRound(overlay.fallbackGeometry.width() * scaleX),
+                         qRound(overlay.fallbackGeometry.height() * scaleY));
+        }
         return overlay.fallbackGeometry;
     }
 
@@ -601,6 +613,17 @@ QRect fallbackOverlayGeometry(QWidget *fallbackView, const ca3DOverlayConfig &ov
     const QPoint topLeft((fallbackSize.width() - fittedSize.width()) / 2,
                          (fallbackSize.height() - fittedSize.height()) / 2);
     return QRect(topLeft, fittedSize);
+}
+
+QSize snapshotLogicalSize(const QPixmap &snapshot)
+{
+    if (snapshot.isNull()) {
+        return QSize();
+    }
+
+    const qreal devicePixelRatio = snapshot.devicePixelRatio();
+    return QSize(qRound(snapshot.width() / devicePixelRatio),
+                 qRound(snapshot.height() / devicePixelRatio));
 }
 
 void markFallbackOverlayOwner(QWidget *rootWidget, QObject *owner)
@@ -2295,7 +2318,8 @@ void ca3DWidget::applyFallbackPreset(int preset)
         }
 
         if (visible) {
-            const QRect geometry = fallbackOverlayGeometry(thisFallbackView, overlay);
+            const QRect geometry = fallbackOverlayGeometry(thisFallbackView, overlay,
+                                                           snapshotLogicalSize(thisFallbackSnapshotPixmap));
             widget->setGeometry(geometry);
             if (QGraphicsView *view = qobject_cast<QGraphicsView *>(widget)) {
                 applyFallbackWidgetScale(view, thisFallbackOverlayRootWidgets.value(overlay.id, Q_NULLPTR), overlay, geometry);

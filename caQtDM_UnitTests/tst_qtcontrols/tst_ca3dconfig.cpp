@@ -575,7 +575,7 @@ void TestCa3DWidget::ca3DWidgetBuildsForcedFallbackOverlays()
                                                QStringLiteral("Overlay"),
                                                QRect(5, 5, 80, 30))));
 
-    QPixmap snapshot(160, 90);
+    QPixmap snapshot(640, 400);
     snapshot.fill(Qt::red);
     QVERIFY(snapshot.save(snapshotPath, "PNG"));
 
@@ -668,6 +668,10 @@ void TestCa3DWidget::ca3DWidgetBuildsForcedFallbackOverlays()
     QCOMPARE(overlayViews.count(), 1);
     QVERIFY(overlayViews.first()->isVisible());
     QCOMPARE(overlayViews.first()->geometry(), QRect(10, 20, 320, 200));
+
+    widget.resize(320, 200);
+    QTest::qWait(20);
+    QCOMPARE(overlayViews.first()->geometry(), QRect(5, 10, 160, 100));
 
     widget.setCameraPreset(2);
     QTest::qWait(20);

@@ -2624,7 +2624,10 @@ has no equivalent in MEDM
         independently of preset membership.
 
    ``fallbackGeometry``
-      Optional fallback rectangle ``[x, y, width, height]`` in widget pixels.
+      Optional fallback rectangle ``[x, y, width, height]`` in snapshot
+      pixels. When the fallback widget is resized, its coordinates and size
+      scale with the selected snapshot. Without a snapshot, the values are
+      interpreted as fallback-widget pixels.
 
    ``transparentBackground``
       Use a transparent background when rendering the included display.
