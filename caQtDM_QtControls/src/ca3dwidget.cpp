@@ -2246,6 +2246,14 @@ void ca3DWidget::rebuildFallbackView()
                            ? thisCameraPreset
                            : thisConfig.cameraPresets.first().id;
     applyFallbackPreset(preset);
+    // A .ui loader can set sceneConfig before its containing layout has made
+    // the fallback view its final size.  Repeat the initial placement after
+    // that layout pass, just as selecting a preset does later.
+    QTimer::singleShot(0, this, [this]() {
+        if (thisFallbackMode && thisFallbackView && thisFallbackView->isVisible()) {
+            applyFallbackPreset(thisCameraPreset);
+        }
+    });
     emit overlayWidgetsRebuilt();
 }
 
