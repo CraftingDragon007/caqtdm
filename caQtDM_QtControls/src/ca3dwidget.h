@@ -37,6 +37,7 @@ class Qt3DWindow;
 
 namespace Qt3DRender {
 class QLayer;
+class QFrameGraphNode;
 class QRenderCapture;
 class QRenderCaptureReply;
 }
@@ -164,6 +165,7 @@ protected:
                                            QMap<QString, QMatrix4x4> *cache,
                                            QSet<QString> *visiting) const;
     void restoreSnapshotOverlayStates();
+    void cancelSnapshotCapture(bool notifyFailure = true);
     void applyLight(const QString &lightId);
     void issueCaptureRequest(quint64 captureToken);
 #endif
@@ -189,6 +191,8 @@ protected:
     quint64 thisSnapshotCaptureToken;
     QMap<QString, QVector3D> thisDynamicTranslations;
     QMap<QString, QVector3D> thisDynamicRotations;
+    QMap<QString, QMap<QString, QVector3D> > thisAxisTranslations;
+    QMap<QString, QMap<QString, QVector3D> > thisAxisRotations;
     QMap<QString, QVector3D> thisDynamicLightDirections;
     QMap<QString, QVector3D> thisDynamicLightPositions;
     QMap<QString, double> thisDynamicLightIntensities;
@@ -210,6 +214,7 @@ protected:
     QMap<QString, bool> thisSnapshotOverlayStates;
     Qt3DRender::QRenderCapture *thisRenderCapture;
     Qt3DRender::QRenderCaptureReply *thisPendingCaptureReply;
+    Qt3DRender::QFrameGraphNode *thisCustomFrameGraph;
 #endif
 };
 

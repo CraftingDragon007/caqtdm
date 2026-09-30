@@ -13,6 +13,7 @@
 #include <QScrollBar>
 #include <QTextEdit>
 #include <QUiLoader>
+#include <QWheelEvent>
 
 namespace {
 QWidget *textInputAncestor(QWidget *widget) {
@@ -263,6 +264,28 @@ bool ca3DOverlayWidgetManager::sendKeyEvent(QKeyEvent *event) {
                              event->count());
     const bool handled =
         QApplication::sendEvent(thisFocusedOverlayWidget, &forwardedEvent);
+    if (handled || forwardedEvent.isAccepted()) {
+        markTextureDirty();
+    }
+    return handled || forwardedEvent.isAccepted();
+}
+
+bool ca3DOverlayWidgetManager::sendWheelEvent(const QPointF &designPosition, QWheelEvent *event) {
+    if (!event || !thisContentRoot ||
+        !QRectF(QPointF(0.0, 0.0), QSizeF(thisSourceDesignSize)).contains(designPosition)) {
+        return false;
+    }
+
+    QWidget *target = targetWidgetAt(designPosition);
+    if (!target) {
+        return false;
+    }
+    const QPointF localPosition = target->mapFrom(thisContentRoot, designPosition.toPoint());
+    QWheelEvent forwardedEvent(localPosition, target->mapToGlobal(localPosition.toPoint()),
+                               event->pixelDelta(), event->angleDelta(), event->buttons(),
+                               event->modifiers(), event->phase(), event->inverted(),
+                               event->source());
+    const bool handled = QApplication::sendEvent(target, &forwardedEvent);
     if (handled || forwardedEvent.isAccepted()) {
         markTextureDirty();
     }

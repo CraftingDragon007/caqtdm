@@ -20,6 +20,7 @@ private slots:
     void rejectsInvalidUtilityFields();
     void rejectsInvalidLightConfiguration();
     void rejectsInvalidObjectMasterLinks();
+    void rejectsDuplicateAndInvalidSceneReferences();
     void resolvesFilesFromDisplayPath();
 };
 
@@ -36,6 +37,7 @@ private slots:
     void linkedObjectAppliesOwnDynamicMotionInMasterSpace();
     void linkedObjectDoesNotInheritMasterScale();
     void configuredOriginPositionRotatesWithObject();
+    void objectAxesComposeWithDirectMotion();
 
 private:
     QStringList thisLibraryPaths;

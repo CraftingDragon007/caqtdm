@@ -18,6 +18,7 @@ private slots:
     void appliesStructuredOverlayChanges();
     void editsGeneralSceneSettings();
     void roundTripsObjectMasterLinks();
+    void roundTripsObjectAxesAndOriginRotation();
     void keepsNewRowsWhenValidatingRawJson();
     void allowsApplyingWithMissingOverlayFile();
     void blocksPreviewChangesWhileSnapshotCapturePending();

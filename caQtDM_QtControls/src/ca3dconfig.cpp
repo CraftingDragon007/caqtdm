@@ -29,16 +29,24 @@ QVector3D vectorFromArray(const QJsonValue &value, const QString &fieldName, QSt
     }
 
     const QJsonArray array = value.toArray();
-    if (array.size() != 3) {
+    if (!value.isArray() || array.size() != 3) {
         if (errors) {
             errors->append(QStringLiteral("%1 must contain exactly 3 numbers").arg(fieldName));
         }
         return QVector3D();
     }
 
-    return QVector3D(static_cast<float>(array.at(0).toDouble()),
-                     static_cast<float>(array.at(1).toDouble()),
-                     static_cast<float>(array.at(2).toDouble()));
+    QVector3D vector;
+    for (int index = 0; index < 3; ++index) {
+        const double number = array.at(index).toDouble(std::numeric_limits<double>::quiet_NaN());
+        if (!array.at(index).isDouble() || !std::isfinite(number)
+            || std::abs(number) > std::numeric_limits<float>::max()) {
+            if (errors) errors->append(QStringLiteral("%1 must contain finite representable numbers").arg(fieldName));
+            return QVector3D();
+        }
+        vector[index] = static_cast<float>(number);
+    }
+    return vector;
 }
 
 bool finiteVectorFromArray(const QJsonValue &value, const QString &fieldName, QVector3D *result, QStringList *errors)
@@ -61,7 +69,12 @@ bool finiteVectorFromArray(const QJsonValue &value, const QString &fieldName, QV
             }
             return false;
         }
-        vector[index] = static_cast<float>(array.at(index).toDouble());
+        const double number = array.at(index).toDouble();
+        if (std::abs(number) > std::numeric_limits<float>::max()) {
+            if (errors) errors->append(QStringLiteral("%1 values are outside the supported range").arg(fieldName));
+            return false;
+        }
+        vector[index] = static_cast<float>(number);
     }
     if (result) {
         *result = vector;
@@ -112,14 +125,25 @@ QRect rectFromArray(const QJsonValue &value, const QString &fieldName, QStringLi
     }
 
     const QJsonArray array = value.toArray();
-    if (array.size() != 4) {
+    if (!value.isArray() || array.size() != 4) {
         if (errors) {
             errors->append(QStringLiteral("%1 must contain exactly 4 numbers").arg(fieldName));
         }
         return QRect();
     }
 
-    return QRect(array.at(0).toInt(), array.at(1).toInt(), array.at(2).toInt(), array.at(3).toInt());
+    for (const QJsonValue &item : array) {
+        if (!item.isDouble() || !std::isfinite(item.toDouble())) {
+            if (errors) errors->append(QStringLiteral("%1 must contain finite numbers").arg(fieldName));
+            return QRect();
+        }
+    }
+    const QRect rect(array.at(0).toInt(), array.at(1).toInt(), array.at(2).toInt(), array.at(3).toInt());
+    if (rect.width() < 0 || rect.height() < 0) {
+        if (errors) errors->append(QStringLiteral("%1 width and height must not be negative").arg(fieldName));
+        return QRect();
+    }
+    return rect;
 }
 
 QSizeF sizeFromArray(const QJsonValue &value, const QString &fieldName, QStringList *errors)
@@ -129,14 +153,21 @@ QSizeF sizeFromArray(const QJsonValue &value, const QString &fieldName, QStringL
     }
 
     const QJsonArray array = value.toArray();
-    if (array.size() != 2) {
+    if (!value.isArray() || array.size() != 2) {
         if (errors) {
             errors->append(QStringLiteral("%1 must contain exactly 2 numbers").arg(fieldName));
         }
         return QSizeF();
     }
 
-    return QSizeF(array.at(0).toDouble(), array.at(1).toDouble());
+    const double width = array.at(0).toDouble(std::numeric_limits<double>::quiet_NaN());
+    const double height = array.at(1).toDouble(std::numeric_limits<double>::quiet_NaN());
+    if (!array.at(0).isDouble() || !array.at(1).isDouble() || !std::isfinite(width)
+        || !std::isfinite(height) || width <= 0.0 || height <= 0.0) {
+        if (errors) errors->append(QStringLiteral("%1 must contain two positive finite numbers").arg(fieldName));
+        return QSizeF();
+    }
+    return QSizeF(width, height);
 }
 
 QString stringFromObject(const QJsonObject &object, const QString &name)
@@ -563,7 +594,15 @@ bool ca3DConfigParser::parse(const QString &json, ca3DSceneConfig *config, QStri
         }
         item.position = vectorFromArray(object.value(QStringLiteral("position")), QStringLiteral("object.position"), errors);
         item.rotation = vectorFromArray(object.value(QStringLiteral("rotation")), QStringLiteral("object.rotation"), errors);
-        item.scale = object.value(QStringLiteral("scale")).toDouble(1.0);
+        if (object.contains(QStringLiteral("scale"))) {
+            const QJsonValue scaleValue = object.value(QStringLiteral("scale"));
+            const double scale = scaleValue.toDouble(std::numeric_limits<double>::quiet_NaN());
+            if (!scaleValue.isDouble() || !std::isfinite(scale) || scale <= 0.0) {
+                if (errors) errors->append(QStringLiteral("object.scale must be a positive finite number"));
+            } else {
+                item.scale = scale;
+            }
+        }
         item.configuredOriginPosition = vectorFromArray(object.value(QStringLiteral("configuredOriginPosition")), QStringLiteral("object.configuredOriginPosition"), errors);
         item.configuredOriginRotation = vectorFromArray(object.value(QStringLiteral("configuredOriginRotation")), QStringLiteral("object.configuredOriginRotation"), errors);
 
@@ -575,6 +614,7 @@ bool ca3DConfigParser::parse(const QString &json, ca3DSceneConfig *config, QStri
         }
 
         const QJsonArray axes = object.value(QStringLiteral("axes")).toArray();
+        QSet<QString> axisIds;
         for (const auto &axisValue : axes) {
             const QJsonObject axisObject = axisValue.toObject();
             ca3DAxisConfig axis;
@@ -587,6 +627,16 @@ bool ca3DConfigParser::parse(const QString &json, ca3DSceneConfig *config, QStri
             axis.factor = axisObject.value(QStringLiteral("factor")).toDouble(1.0);
             if (axis.id.isEmpty() && errors) {
                 errors->append(QStringLiteral("Axis without id on object '%1'").arg(item.id));
+            } else if (axisIds.contains(axis.id) && errors) {
+                errors->append(QStringLiteral("Duplicate axis id '%1' on object '%2'").arg(axis.id, item.id));
+            }
+            axisIds.insert(axis.id);
+            if (!std::isfinite(axis.factor)) {
+                if (errors) errors->append(QStringLiteral("Axis '%1' on object '%2' has an invalid factor").arg(axis.id, item.id));
+                axis.factor = 1.0;
+            }
+            if (axis.vector.lengthSquared() == 0.0f && errors) {
+                errors->append(QStringLiteral("Axis '%1' on object '%2' must not be zero").arg(axis.id, item.id));
             }
             item.axes.append(axis);
         }
@@ -612,8 +662,13 @@ bool ca3DConfigParser::parse(const QString &json, ca3DSceneConfig *config, QStri
             if (binding.channel.isEmpty() && errors) {
                 errors->append(QStringLiteral("Binding without channel on object '%1'").arg(item.id));
             }
-            if (binding.target == ca3DBindingConfig::InvalidTarget && errors) {
-                errors->append(QStringLiteral("Binding without valid target on object '%1'").arg(item.id));
+            if (binding.target < ca3DBindingConfig::TranslationX
+                || binding.target > ca3DBindingConfig::RotationZ) {
+                if (errors) {
+                    errors->append(QStringLiteral("Binding without valid target on object '%1'").arg(item.id));
+                    errors->append(QStringLiteral("Invalid object binding target '%1' on object '%2'")
+                                   .arg(binding.targetName, item.id));
+                }
             }
             item.bindings.append(binding);
         }
@@ -623,6 +678,7 @@ bool ca3DConfigParser::parse(const QString &json, ca3DSceneConfig *config, QStri
 
     validateObjectLinks(config->objects, errors);
 
+    QSet<QString> overlayIds;
     const QJsonArray overlays = root.value(QStringLiteral("overlays")).toArray();
     for (const auto &value : overlays) {
         const QJsonObject object = value.toObject();
@@ -643,7 +699,10 @@ bool ca3DConfigParser::parse(const QString &json, ca3DSceneConfig *config, QStri
 
         if (item.id.isEmpty() && errors) {
             errors->append(QStringLiteral("Overlay without id"));
+        } else if (overlayIds.contains(item.id) && errors) {
+            errors->append(QStringLiteral("Duplicate overlay id '%1'").arg(item.id));
         }
+        overlayIds.insert(item.id);
         if (item.includeFileResolved.isEmpty()) {
             appendMissingFileError(QStringLiteral("includeFile"), item.includeFile, errors);
         }
@@ -651,6 +710,7 @@ bool ca3DConfigParser::parse(const QString &json, ca3DSceneConfig *config, QStri
         config->overlays.append(item);
     }
 
+    QSet<int> presetIds;
     const QJsonArray presets = root.value(QStringLiteral("cameraPresets")).toArray();
     for (const auto &value : presets) {
         const QJsonObject object = value.toObject();
@@ -669,13 +729,25 @@ bool ca3DConfigParser::parse(const QString &json, ca3DSceneConfig *config, QStri
         item.snapshot = stringFromObject(object, QStringLiteral("snapshot"));
         item.snapshotResolved = resolveDisplayFile(item.snapshot);
 
-        const QJsonArray overlayIds = object.value(QStringLiteral("overlays")).toArray();
-        for (const auto &overlayId : overlayIds) {
+        const QJsonArray presetOverlayIds = object.value(QStringLiteral("overlays")).toArray();
+        for (const auto &overlayId : presetOverlayIds) {
             item.overlays.append(overlayId.toString());
         }
 
         if (item.id <= 0 && errors) {
             errors->append(QStringLiteral("Camera preset without positive id"));
+        } else if (presetIds.contains(item.id) && errors) {
+            errors->append(QStringLiteral("Duplicate camera preset id '%1'").arg(item.id));
+        }
+        presetIds.insert(item.id);
+        if (!std::isfinite(item.fov) || item.fov <= 0.0 || item.fov >= 180.0) {
+            if (errors) errors->append(QStringLiteral("Camera preset %1 fov must be between 0 and 180").arg(item.id));
+        }
+        for (const QString &overlayId : item.overlays) {
+            if (!overlayIds.contains(overlayId) && errors) {
+                errors->append(QStringLiteral("Camera preset %1 references unknown overlay '%2'")
+                               .arg(item.id).arg(overlayId));
+            }
         }
         if (item.snapshotResolved.isEmpty()) {
             appendMissingFileError(QStringLiteral("snapshot"), item.snapshot, errors);

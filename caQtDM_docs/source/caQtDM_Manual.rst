@@ -2618,7 +2618,8 @@ has no equivalent in MEDM
    ``visibilityMode``
       Overlay visibility rule:
 
-      - ``presetOnly`` — enabled for presets that list the overlay.
+      - ``presetOnly`` — enabled for presets that list the overlay, regardless
+        of camera frustum.
       - ``inView`` — enabled for listed presets while the plane is in view.
       - ``alwaysWhenInView`` — enabled whenever the plane is in view,
         independently of preset membership.
@@ -2832,9 +2833,10 @@ has no equivalent in MEDM
      one dynamic component; the most recently processed value wins.
 
    * ``setObjectAxisValue()`` uses the named axis's ``vector`` (or ``axis``
-     for rotation) multiplied by ``value * factor``. It replaces the object's
-     current dynamic translation or rotation vector. The generic translation
-     and rotation slots likewise replace their complete dynamic vector.
+     for rotation) multiplied by ``value * factor``. Contributions from all
+     named axes are summed and then added to the object's direct dynamic
+     translation or rotation. The generic translation and rotation slots
+     replace only their respective direct dynamic vector.
      These slots do not change a visible scene on the fallback/Qt5
      implementation. On Qt6 fallback, binding values may still be accepted by
      the runtime, but there is no 3D transform to display them.
@@ -2844,10 +2846,10 @@ has no equivalent in MEDM
      context menus are supported. Press ``Esc`` to leave an overlay text field
      and return focus to the 3D widget.
 
-   * In live mode, ``presetOnly`` and ``inView`` both require preset membership
-     and that at least one plane corner (or its center) is inside the camera
-     view. ``alwaysWhenInView`` ignores preset membership but still requires
-     the plane to be in view. In fallback mode, only the selected preset's
+   * In live mode, ``presetOnly`` requires only preset membership; ``inView``
+     also requires that at least one plane corner (or its center) is inside the
+     camera view. ``alwaysWhenInView`` ignores preset membership but still
+     requires the plane to be in view. In fallback mode, only the selected preset's
      ``overlays`` list controls visibility; the 3D visibility mode and camera
      frustum are not applied. If no explicit ``fallbackGeometry`` is supplied,
      geometry is inferred from the included UI size and the available widget

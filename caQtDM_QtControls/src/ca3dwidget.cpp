@@ -32,6 +32,7 @@
 #include <QUiLoader>
 #include <QVector4D>
 #include <QVBoxLayout>
+#include <QWheelEvent>
 #include <QXmlStreamReader>
 #include <QScrollBar>
 #include <QtMath>
@@ -267,13 +268,14 @@ protected:
         const bool isMouseEvent = event->type() == QEvent::MouseButtonPress ||
                                   event->type() == QEvent::MouseButtonRelease ||
                                   event->type() == QEvent::MouseMove;
+        const bool isWheelEvent = event->type() == QEvent::Wheel;
         const bool isKeyEvent = event->type() == QEvent::KeyPress || event->type() == QEvent::KeyRelease;
         const bool isShortcutOverride = event->type() == QEvent::ShortcutOverride;
 
         if (thisForwardingKeyEvent && isKeyEvent) {
             return QObject::eventFilter(watched, event);
         }
-        if (isMouseEvent && watched != thisViewport && watched != thisRenderWindow) {
+        if ((isMouseEvent || isWheelEvent) && watched != thisViewport && watched != thisRenderWindow) {
             return QObject::eventFilter(watched, event);
         }
         if (isKeyEvent && !thisOverlayFocused) {
@@ -320,6 +322,15 @@ protected:
                                                       mouseEvent->button(),
                                                       mouseEvent->buttons(),
                                                       mouseEvent->modifiers());
+        }
+
+        if (isWheelEvent) {
+            QWheelEvent *wheelEvent = static_cast<QWheelEvent *>(event);
+            QPointF designPosition;
+            if (!designPositionFromMouse(wheelEvent->position(), &designPosition)) {
+                return QObject::eventFilter(watched, event);
+            }
+            return thisOverlayManager->sendWheelEvent(designPosition, wheelEvent);
         }
 
         if (isKeyEvent) {
@@ -837,6 +848,7 @@ ca3DWidget::ca3DWidget(QWidget *parent)
     , thisRootEntity(Q_NULLPTR)
     , thisRenderCapture(Q_NULLPTR)
     , thisPendingCaptureReply(Q_NULLPTR)
+    , thisCustomFrameGraph(Q_NULLPTR)
 #endif
 {
     setMinimumSize(120, 80);
@@ -943,42 +955,20 @@ void ca3DWidget::setRenderTier(int tier)
     const QVector3D viewCenter = currentCameraViewCenter();
 
     // Tear down the existing view entirely and rebuild for the new tier.
-    if (thisRootEntity) {
-        delete thisRootEntity;
-        thisRootEntity = Q_NULLPTR;
-    }
-    if (thisPendingCaptureReply) {
-        thisPendingCaptureReply->deleteLater();
-        thisPendingCaptureReply = Q_NULLPTR;
-    }
-    if (thisRenderCapture) {
-        thisRenderCapture->deleteLater();
-        thisRenderCapture = Q_NULLPTR;
-    }
+    clearScene();
     if (this3DView) {
-        this3DView->setRootEntity(Q_NULLPTR);
-        delete thisViewContainer;
-        thisViewContainer = Q_NULLPTR;
-        delete this3DView;
+        if (thisViewContainer) {
+            delete thisViewContainer;
+            thisViewContainer = Q_NULLPTR;
+        } else {
+            delete this3DView;
+        }
         this3DView = Q_NULLPTR;
     }
     clearFallbackView();
 
     thisRenderTier = tier;
     thisRenderTierOverridden = true;
-    thisObjectTransforms.clear();
-    this3DLightObjects.clear();
-    this3DLightTransforms.clear();
-    this3DOverlayEntities.clear();
-    for (ca3DOverlayWidgetManager *manager : this3DOverlayManagers) {
-        manager->deleteLater();
-    }
-    this3DOverlayManagers.clear();
-    for (QObject *filter : this3DOverlayEventFilters) {
-        filter->deleteLater();
-    }
-    this3DOverlayEventFilters.clear();
-
     if (tier == RenderTierFallback) {
         thisFallbackMode = true;
         rebuildFallbackView();
@@ -1100,11 +1090,17 @@ QVector3D ca3DWidget::currentObjectPosition(const QString &objectId) const
 {
     foreach (const ca3DObjectConfig &object, thisConfig.objects) {
         if (object.id == objectId) {
+            QVector3D axisTranslation;
+            QVector3D axisRotation;
+            foreach (const QVector3D &contribution, thisAxisTranslations.value(object.id)) axisTranslation += contribution;
+            foreach (const QVector3D &contribution, thisAxisRotations.value(object.id)) axisRotation += contribution;
             const QVector3D rotation = object.rotation
                                        + object.configuredOriginRotation
+                                       + axisRotation
                                        + thisDynamicRotations.value(object.id);
             const QVector3D rotatedOrigin = rotationFromEuler(rotation).rotatedVector(object.configuredOriginPosition);
             return object.position
+                   + axisTranslation
                    + thisDynamicTranslations.value(object.id)
                    + rotatedOrigin;
         }
@@ -1116,8 +1112,11 @@ QVector3D ca3DWidget::currentObjectRotation(const QString &objectId) const
 {
     foreach (const ca3DObjectConfig &object, thisConfig.objects) {
         if (object.id == objectId) {
+            QVector3D axisRotation;
+            foreach (const QVector3D &contribution, thisAxisRotations.value(object.id)) axisRotation += contribution;
             return object.rotation
                    + object.configuredOriginRotation
+                   + axisRotation
                    + thisDynamicRotations.value(object.id);
         }
     }
@@ -1169,6 +1168,8 @@ void ca3DWidget::setSceneConfig(const QString &config)
     rebuildObjectLinks();
     thisDynamicTranslations.clear();
     thisDynamicRotations.clear();
+    thisAxisTranslations.clear();
+    thisAxisRotations.clear();
     thisDynamicLightDirections.clear();
     thisDynamicLightPositions.clear();
     thisDynamicLightIntensities.clear();
@@ -1431,21 +1432,11 @@ void ca3DWidget::handleSnapshotCaptureTimeout(quint64 captureToken)
         return;
     }
 
-    if (thisPendingCaptureReply) {
-        thisPendingCaptureReply->deleteLater();
-        thisPendingCaptureReply = Q_NULLPTR;
-    }
-    thisSnapshotCapturePending = false;
-    setContinuousRendering(this3DView, false);
+    cancelSnapshotCapture(false);
     qCDebug(ca3DWidgetLog) << "3D snapshot capture timed out";
-    restoreSnapshotOverlayStates();
     QTimer::singleShot(0, this, [this]() {
         if (!thisFallbackMode && !thisDesignerMode && this3DView) {
             qCDebug(ca3DWidgetLog) << "rebuilding 3D scene after snapshot capture timeout";
-            if (thisRenderCapture) {
-                thisRenderCapture->deleteLater();
-                thisRenderCapture = Q_NULLPTR;
-            }
             rebuildScene();
         }
     });
@@ -1837,9 +1828,9 @@ void ca3DWidget::setObjectAxisValue(const QString &objectId, const QString &axis
             }
 
             if (axis.type == ca3DAxisConfig::Rotation) {
-                thisDynamicRotations[objectId] = axis.vector * static_cast<float>(value * axis.factor);
+                thisAxisRotations[objectId][axisId] = axis.vector * static_cast<float>(value * axis.factor);
             } else {
-                thisDynamicTranslations[objectId] = axis.vector * static_cast<float>(value * axis.factor);
+                thisAxisTranslations[objectId][axisId] = axis.vector * static_cast<float>(value * axis.factor);
             }
             applyObjectTransform(objectId);
             qCDebug(ca3DWidgetLog) << "setObjectAxisValue applied" << objectId << axisId << value;
@@ -2041,10 +2032,12 @@ void ca3DWidget::rebuildScene()
         // The default forward renderer clears colour and depth every frame.
         this3DView->setActiveFrameGraph(this3DView->defaultFrameGraph());
         thisRenderCapture = Q_NULLPTR;
+        thisCustomFrameGraph = Q_NULLPTR;
     } else {
         thisRenderCapture = installLayeredFrameGraph(this3DView, sceneLayer, overlayLayer,
                                                       thisConfig.backgroundColor, thisForce3DPreview,
-                                                      thisForce3DPreview ? thisRenderCapture : Q_NULLPTR);
+                                                      Q_NULLPTR);
+        thisCustomFrameGraph = this3DView->activeFrameGraph();
     }
 
     const auto materialAmbientColor = [this](const QColor &objectColor) {
@@ -2363,21 +2356,50 @@ bool ca3DWidget::isDesignerMode() const
 void ca3DWidget::clearScene()
 {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    cancelSnapshotCapture();
     clear3DOverlays();
     thisObjectTransforms.clear();
     this3DLightObjects.clear();
     this3DLightTransforms.clear();
     if (this3DView) {
+        if (thisCustomFrameGraph) {
+            this3DView->setActiveFrameGraph(this3DView->defaultFrameGraph());
+        }
         this3DView->setRootEntity(Q_NULLPTR);
     }
+    if (thisCustomFrameGraph) {
+        delete thisCustomFrameGraph;
+    }
+    thisCustomFrameGraph = Q_NULLPTR;
+    thisRenderCapture = Q_NULLPTR;
     if (thisRootEntity) {
-        thisRootEntity->deleteLater();
+        delete thisRootEntity;
     }
     thisRootEntity = Q_NULLPTR;
 #endif
 }
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+void ca3DWidget::cancelSnapshotCapture(bool notifyFailure)
+{
+    if (!thisSnapshotCapturePending && !thisPendingCaptureReply) {
+        return;
+    }
+    const bool wasPending = thisSnapshotCapturePending;
+    ++thisSnapshotCaptureToken;
+    thisSnapshotCapturePending = false;
+    setContinuousRendering(this3DView, false);
+    if (thisPendingCaptureReply) {
+        thisPendingCaptureReply->disconnect(this);
+        thisPendingCaptureReply->deleteLater();
+        thisPendingCaptureReply = Q_NULLPTR;
+    }
+    restoreSnapshotOverlayStates();
+    if (notifyFailure && wasPending) {
+        emit snapshotCaptureFailed(tr("3D scene changed during snapshot capture"));
+    }
+}
+
 void ca3DWidget::restoreSnapshotOverlayStates()
 {
     for (auto it = thisSnapshotOverlayStates.begin(); it != thisSnapshotOverlayStates.end(); ++it) {
@@ -2618,7 +2640,6 @@ void ca3DWidget::rebuild3DOverlays(Qt3DRender::QLayer *overlayLayer)
                                                                                    this);
         thisViewContainer->installEventFilter(interactionFilter);
         this3DView->installEventFilter(interactionFilter);
-        qApp->installEventFilter(interactionFilter);
 
         this3DOverlayManagers.append(overlayManager);
         this3DOverlayEventFilters.append(interactionFilter);
@@ -2643,7 +2664,6 @@ void ca3DWidget::clear3DOverlays()
             if (this3DView) {
                 this3DView->removeEventFilter(filter);
             }
-            qApp->removeEventFilter(filter);
             delete filter;
         }
     }
@@ -2686,10 +2706,16 @@ void ca3DWidget::apply3DOverlayVisibility(int preset)
         const bool inView = overlayIsInCameraView(this3DView ? this3DView->camera() : Q_NULLPTR, overlay);
 
         bool visible = false;
-        if (overlay.visibilityMode == ca3DOverlayConfig::AlwaysWhenInView) {
-            visible = inView;
-        } else {
+        switch (overlay.visibilityMode) {
+        case ca3DOverlayConfig::PresetOnly:
+            visible = thisConfig.cameraPresets.isEmpty() || presetMatches;
+            break;
+        case ca3DOverlayConfig::InView:
             visible = (thisConfig.cameraPresets.isEmpty() || presetMatches) && inView;
+            break;
+        case ca3DOverlayConfig::AlwaysWhenInView:
+            visible = inView;
+            break;
         }
         entity->setEnabled(visible);
         qCDebug(ca3DWidgetLog) << "apply3DOverlayVisibility" << overlay.id
@@ -2792,10 +2818,21 @@ void ca3DWidget::applyAllObjectTransforms()
 
 QMatrix4x4 ca3DWidget::objectMotionMatrix(const ca3DObjectConfig &object, bool includeDynamic) const
 {
-    const QVector3D translation = object.position
+    QVector3D axisTranslation;
+    QVector3D axisRotation;
+    if (includeDynamic) {
+        foreach (const QVector3D &contribution, thisAxisTranslations.value(object.id)) {
+            axisTranslation += contribution;
+        }
+        foreach (const QVector3D &contribution, thisAxisRotations.value(object.id)) {
+            axisRotation += contribution;
+        }
+    }
+    const QVector3D translation = object.position + axisTranslation
                                   + (includeDynamic ? thisDynamicTranslations.value(object.id) : QVector3D());
     const QVector3D rotation = object.rotation
                                + object.configuredOriginRotation
+                               + axisRotation
                                + (includeDynamic ? thisDynamicRotations.value(object.id) : QVector3D());
     QMatrix4x4 matrix;
     matrix.translate(translation);

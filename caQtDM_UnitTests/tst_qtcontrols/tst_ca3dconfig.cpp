@@ -515,6 +515,27 @@ void TestCa3DConfig::rejectsInvalidObjectMasterLinks()
             || errors.contains(QStringLiteral("Object link cycle detected at 'c'")));
 }
 
+void TestCa3DConfig::rejectsDuplicateAndInvalidSceneReferences()
+{
+    const QString json = QStringLiteral(R"json({
+        "objects": [{"id":"object", "axes":[
+            {"id":"x", "vector":[1,0,0]},
+            {"id":"x", "vector":[0,1,0]}
+        ], "bindings":[{"channel":"PV", "target":"intensity"}]}],
+        "overlays": [{"id":"panel", "size":[1,1]}, {"id":"panel", "size":[1,1]}],
+        "cameraPresets": [{"id":1, "fov":180, "overlays":["missing"]}, {"id":1}]
+    })json");
+    ca3DSceneConfig config;
+    QStringList errors;
+    QVERIFY(!ca3DConfigParser::parse(json, &config, &errors));
+    QVERIFY(errors.contains(QStringLiteral("Duplicate axis id 'x' on object 'object'")));
+    QVERIFY(errors.contains(QStringLiteral("Invalid object binding target 'intensity' on object 'object'")));
+    QVERIFY(errors.contains(QStringLiteral("Duplicate overlay id 'panel'")));
+    QVERIFY(errors.contains(QStringLiteral("Camera preset 1 fov must be between 0 and 180")));
+    QVERIFY(errors.contains(QStringLiteral("Camera preset 1 references unknown overlay 'missing'")));
+    QVERIFY(errors.contains(QStringLiteral("Duplicate camera preset id '1'")));
+}
+
 void TestCa3DConfig::resolvesFilesFromDisplayPath()
 {
     QTemporaryDir tempDir;
@@ -785,6 +806,25 @@ void TestCa3DWidget::configuredOriginPositionRotatesWithObject()
 
     compareVector(matrixTranslation(widget.effectiveObjectMotion(config.objects.first())),
                   QVector3D(0.0f, 1.0f, 0.0f));
+}
+
+void TestCa3DWidget::objectAxesComposeWithDirectMotion()
+{
+    TestableCa3DWidget widget;
+    widget.setSceneConfig(QStringLiteral(R"json({"objects":[{
+        "id":"arm", "axes":[
+            {"id":"slide", "type":"translation", "vector":[1,0,0], "factor":2},
+            {"id":"lift", "type":"translation", "vector":[0,1,0], "factor":3},
+            {"id":"turn", "type":"rotation", "axis":[0,0,1], "factor":4}
+        ]
+    }]})json"));
+    widget.setObjectTranslation(QStringLiteral("arm"), 10, 20, 30);
+    widget.setObjectRotation(QStringLiteral("arm"), 1, 2, 3);
+    widget.setObjectAxisValue(QStringLiteral("arm"), QStringLiteral("slide"), 5);
+    widget.setObjectAxisValue(QStringLiteral("arm"), QStringLiteral("lift"), 7);
+    widget.setObjectAxisValue(QStringLiteral("arm"), QStringLiteral("turn"), 2);
+    compareVector(widget.currentObjectPosition(QStringLiteral("arm")), QVector3D(20, 41, 30));
+    compareVector(widget.currentObjectRotation(QStringLiteral("arm")), QVector3D(1, 2, 11));
 }
 
 void TestCa3DOverlayWidgetManager::initTestCase()

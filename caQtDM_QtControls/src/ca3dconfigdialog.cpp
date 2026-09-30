@@ -280,6 +280,7 @@ ca3DConfigDialog::ca3DConfigDialog(ca3DWidget *widget, QWidget *parent)
     , backgroundColorButton(Q_NULLPTR)
     , lightsTable(Q_NULLPTR)
     , objectsTable(Q_NULLPTR)
+    , axesTable(Q_NULLPTR)
     , bindingsTable(Q_NULLPTR)
     , overlaysTable(Q_NULLPTR)
     , presetsTable(Q_NULLPTR)
@@ -374,12 +375,13 @@ void ca3DConfigDialog::buildUi()
     QVBoxLayout *objectsLayout = new QVBoxLayout(objectsPage);
     objectsTable = new QTableWidget(objectsPage);
     objectsTable->setObjectName(QStringLiteral("objectsTable"));
-    objectsTable->setColumnCount(15);
+    objectsTable->setColumnCount(18);
     objectsTable->setHorizontalHeaderLabels(QStringList()
                                             << tr("id") << tr("meshFile") << tr("textureFile") << tr("materialColor")
                                             << tr("pos x") << tr("pos y") << tr("pos z")
                                             << tr("rot x") << tr("rot y") << tr("rot z")
                                             << tr("origin x") << tr("origin y") << tr("origin z")
+                                            << tr("origin rot x") << tr("origin rot y") << tr("origin rot z")
                                             << tr("masterObject") << tr("scale"));
     objectsTable->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
     QHBoxLayout *objectsButtons = new QHBoxLayout();
@@ -405,6 +407,26 @@ void ca3DConfigDialog::buildUi()
     connect(insertObjectPositionButton, SIGNAL(clicked()), this, SLOT(insertClipboardPosition()));
     connect(insertObjectRotationButton, SIGNAL(clicked()), this, SLOT(insertClipboardRotation()));
     connect(insertObjectLocationButton, SIGNAL(clicked()), this, SLOT(insertClipboardLocation()));
+
+    QWidget *axesPage = new QWidget(tabs);
+    QVBoxLayout *axesLayout = new QVBoxLayout(axesPage);
+    axesTable = new QTableWidget(axesPage);
+    axesTable->setObjectName(QStringLiteral("axesTable"));
+    axesTable->setColumnCount(7);
+    axesTable->setHorizontalHeaderLabels(QStringList() << tr("object id") << tr("axis id") << tr("type")
+                                               << tr("x") << tr("y") << tr("z") << tr("factor"));
+    axesTable->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    axesLayout->addWidget(axesTable);
+    QHBoxLayout *axesButtons = new QHBoxLayout();
+    QPushButton *addAxisButton = new QPushButton(tr("Add Axis"), axesPage);
+    QPushButton *removeAxisButton = new QPushButton(tr("Remove Selected"), axesPage);
+    axesButtons->addWidget(addAxisButton);
+    axesButtons->addWidget(removeAxisButton);
+    axesButtons->addStretch();
+    axesLayout->addLayout(axesButtons);
+    tabs->addTab(axesPage, tr("Axes"));
+    connect(addAxisButton, SIGNAL(clicked()), this, SLOT(addAxisRow()));
+    connect(removeAxisButton, SIGNAL(clicked()), this, SLOT(removeAxisRow()));
 
     QWidget *bindingsPage = new QWidget(tabs);
     QVBoxLayout *bindingsLayout = new QVBoxLayout(bindingsPage);
@@ -593,6 +615,7 @@ void ca3DConfigDialog::buildUi()
     connect(buttonBox, SIGNAL(accepted()), this, SLOT(accept()));
     connect(buttonBox, SIGNAL(rejected()), this, SLOT(reject()));
     connect(objectsTable, SIGNAL(cellChanged(int,int)), this, SLOT(markChanged()));
+    connect(axesTable, SIGNAL(cellChanged(int,int)), this, SLOT(markChanged()));
     connect(lightsTable, SIGNAL(cellChanged(int,int)), this, SLOT(markChanged()));
     connect(bindingsTable, SIGNAL(cellChanged(int,int)), this, SLOT(markChanged()));
     connect(overlaysTable, SIGNAL(cellChanged(int,int)), this, SLOT(markChanged()));
@@ -673,6 +696,7 @@ void ca3DConfigDialog::populateTablesFromJson(const QString &json)
         spinBox->setValue(config.ambientLight.intensity);
     }
     objectsTable->setRowCount(0);
+    axesTable->setRowCount(0);
     lightsTable->setRowCount(0);
     bindingsTable->setRowCount(0);
     overlaysTable->setRowCount(0);
@@ -715,8 +739,24 @@ void ca3DConfigDialog::populateTablesFromJson(const QString &json)
         setTableText(objectsTable, row, 10, numberString(object.configuredOriginPosition.x()));
         setTableText(objectsTable, row, 11, numberString(object.configuredOriginPosition.y()));
         setTableText(objectsTable, row, 12, numberString(object.configuredOriginPosition.z()));
-        setTableText(objectsTable, row, 13, object.masterObjectId);
-        setTableText(objectsTable, row, 14, numberString(object.scale));
+        setTableText(objectsTable, row, 13, numberString(object.configuredOriginRotation.x()));
+        setTableText(objectsTable, row, 14, numberString(object.configuredOriginRotation.y()));
+        setTableText(objectsTable, row, 15, numberString(object.configuredOriginRotation.z()));
+        setTableText(objectsTable, row, 16, object.masterObjectId);
+        setTableText(objectsTable, row, 17, numberString(object.scale));
+
+        for (const ca3DAxisConfig &axis : object.axes) {
+            const int axisRow = axesTable->rowCount();
+            axesTable->insertRow(axisRow);
+            setTableText(axesTable, axisRow, 0, object.id);
+            setTableText(axesTable, axisRow, 1, axis.id);
+            setTableCombo(axesTable, axisRow, 2, QStringList() << QStringLiteral("translation") << QStringLiteral("rotation"),
+                          axis.type == ca3DAxisConfig::Rotation ? QStringLiteral("rotation") : QStringLiteral("translation"));
+            setTableText(axesTable, axisRow, 3, numberString(axis.vector.x()));
+            setTableText(axesTable, axisRow, 4, numberString(axis.vector.y()));
+            setTableText(axesTable, axisRow, 5, numberString(axis.vector.z()));
+            setTableText(axesTable, axisRow, 6, numberString(axis.factor));
+        }
 
         for (const ca3DBindingConfig &binding : object.bindings) {
             const int bindingRow = bindingsTable->rowCount();
@@ -862,6 +902,15 @@ QString ca3DConfigDialog::jsonFromTables() const
     QJsonArray presets;
     QJsonArray lights;
     QMap<QString, QJsonArray> bindingsByOwner;
+    QMap<QString, QJsonArray> axesByObject;
+    const QJsonArray sourceObjects = root.value(QStringLiteral("objects")).toArray();
+    const auto sourceObjectById = [](const QJsonArray &source, const QString &id) {
+        for (const QJsonValue &value : source) {
+            const QJsonObject candidate = value.toObject();
+            if (candidate.value(QStringLiteral("id")).toString() == id) return candidate;
+        }
+        return QJsonObject();
+    };
 
     root.insert(QStringLiteral("backgroundColor"), colorButtonValue(backgroundColorButton).name());
     QJsonObject lighting = root.value(QStringLiteral("lighting")).toObject();
@@ -888,6 +937,16 @@ QString ca3DConfigDialog::jsonFromTables() const
         }
         bindingsByOwner[tableText(bindingsTable, row, 0)].append(binding);
     }
+    for (int row = 0; row < axesTable->rowCount(); ++row) {
+        QJsonObject axis;
+        axis.insert(QStringLiteral("id"), tableText(axesTable, row, 1));
+        const QString type = tableComboText(axesTable, row, 2);
+        axis.insert(QStringLiteral("type"), type);
+        axis.insert(type == QStringLiteral("rotation") ? QStringLiteral("axis") : QStringLiteral("vector"),
+                    vectorArray(tableText(axesTable, row, 3), tableText(axesTable, row, 4), tableText(axesTable, row, 5)));
+        axis.insert(QStringLiteral("factor"), tableText(axesTable, row, 6).isEmpty() ? 1.0 : tableText(axesTable, row, 6).toDouble());
+        axesByObject[tableText(axesTable, row, 0)].append(axis);
+    }
 
     for (int row = 0; row < lightsTable->rowCount(); ++row) {
         QJsonObject light;
@@ -910,8 +969,15 @@ QString ca3DConfigDialog::jsonFromTables() const
     root.insert(QStringLiteral("lighting"), lighting);
 
     for (int row = 0; row < objectsTable->rowCount(); ++row) {
-        QJsonObject object;
         const QString objectId = tableText(objectsTable, row, 0);
+        QJsonObject object = sourceObjectById(sourceObjects, objectId);
+        object.remove(QStringLiteral("mesh"));
+        object.remove(QStringLiteral("texture"));
+        object.remove(QStringLiteral("material"));
+        object.remove(QStringLiteral("textureFile"));
+        object.remove(QStringLiteral("materialColor"));
+        object.remove(QStringLiteral("bindings"));
+        object.remove(QStringLiteral("axes"));
         object.insert(QStringLiteral("id"), objectId);
         object.insert(QStringLiteral("meshFile"), tableText(objectsTable, row, 1));
         if (!tableText(objectsTable, row, 2).isEmpty()) {
@@ -923,10 +989,16 @@ QString ca3DConfigDialog::jsonFromTables() const
         object.insert(QStringLiteral("position"), vectorArray(tableText(objectsTable, row, 4), tableText(objectsTable, row, 5), tableText(objectsTable, row, 6)));
         object.insert(QStringLiteral("rotation"), vectorArray(tableText(objectsTable, row, 7), tableText(objectsTable, row, 8), tableText(objectsTable, row, 9)));
         object.insert(QStringLiteral("configuredOriginPosition"), vectorArray(tableText(objectsTable, row, 10), tableText(objectsTable, row, 11), tableText(objectsTable, row, 12)));
-        if (!tableText(objectsTable, row, 13).isEmpty()) {
-            object.insert(QStringLiteral("masterObject"), tableText(objectsTable, row, 13));
+        object.insert(QStringLiteral("configuredOriginRotation"), vectorArray(tableText(objectsTable, row, 13), tableText(objectsTable, row, 14), tableText(objectsTable, row, 15)));
+        if (!tableText(objectsTable, row, 16).isEmpty()) {
+            object.insert(QStringLiteral("masterObject"), tableText(objectsTable, row, 16));
+        } else {
+            object.remove(QStringLiteral("masterObject"));
         }
-        object.insert(QStringLiteral("scale"), tableText(objectsTable, row, 14).isEmpty() ? 1.0 : tableText(objectsTable, row, 14).toDouble());
+        object.insert(QStringLiteral("scale"), tableText(objectsTable, row, 17).isEmpty() ? 1.0 : tableText(objectsTable, row, 17).toDouble());
+        if (axesByObject.contains(objectId)) {
+            object.insert(QStringLiteral("axes"), axesByObject.value(objectId));
+        }
         if (bindingsByOwner.contains(objectId)) {
             object.insert(QStringLiteral("bindings"), bindingsByOwner.value(objectId));
         }
@@ -997,7 +1069,32 @@ void ca3DConfigDialog::addObjectRow()
     for (int column = 0; column < objectsTable->columnCount(); ++column) {
         setTableText(objectsTable, row, column, QString());
     }
-    setTableText(objectsTable, row, 14, QStringLiteral("1.0"));
+    setTableText(objectsTable, row, 17, QStringLiteral("1.0"));
+    markChanged();
+}
+
+void ca3DConfigDialog::addAxisRow()
+{
+    const int row = axesTable->rowCount();
+    axesTable->insertRow(row);
+    setTableText(axesTable, row, 0, objectsTable->currentRow() >= 0 ? tableText(objectsTable, objectsTable->currentRow(), 0) : QString());
+    setTableText(axesTable, row, 1, QStringLiteral("axis%1").arg(row + 1));
+    setTableCombo(axesTable, row, 2, QStringList() << QStringLiteral("translation") << QStringLiteral("rotation"), QStringLiteral("translation"));
+    setTableText(axesTable, row, 3, QStringLiteral("1"));
+    setTableText(axesTable, row, 4, QStringLiteral("0"));
+    setTableText(axesTable, row, 5, QStringLiteral("0"));
+    setTableText(axesTable, row, 6, QStringLiteral("1"));
+    markChanged();
+}
+
+void ca3DConfigDialog::removeAxisRow()
+{
+    const int row = axesTable->currentRow();
+    if (row < 0) {
+        showSelectionRequired(tr("an axis"));
+        return;
+    }
+    axesTable->removeRow(row);
     markChanged();
 }
 

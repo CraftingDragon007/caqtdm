@@ -162,8 +162,8 @@ void TestCa3DConfigDialog::appliesStructuredOverlayChanges()
 
     ca3DSceneConfig config;
     QStringList errors;
-    QVERIFY2(ca3DConfigParser::parse(widget.getSceneConfig(), &config, &errors),
-             qPrintable(errors.join(QLatin1Char('\n'))));
+    QVERIFY(!ca3DConfigParser::parse(widget.getSceneConfig(), &config, &errors));
+    QVERIFY(errors.contains(QStringLiteral("Camera preset 1 references unknown overlay 'secondary'")));
     QCOMPARE(config.overlays.count(), 1);
     const ca3DOverlayConfig overlay = config.overlays.first();
     QCOMPARE(overlay.macro, QStringLiteral("P=TEST"));
@@ -280,9 +280,9 @@ void TestCa3DConfigDialog::roundTripsObjectMasterLinks()
     QTableWidget *objectsTable = dialog.findChild<QTableWidget *>(QStringLiteral("objectsTable"));
     QVERIFY(objectsTable);
     QCOMPARE(objectsTable->rowCount(), 2);
-    QCOMPARE(objectsTable->item(1, 13)->text(), QStringLiteral("base"));
+    QCOMPARE(objectsTable->item(1, 16)->text(), QStringLiteral("base"));
 
-    objectsTable->item(1, 13)->setText(QStringLiteral(""));
+    objectsTable->item(1, 16)->setText(QStringLiteral(""));
     QVERIFY(QMetaObject::invokeMethod(&dialog, "applyChanges", Qt::DirectConnection));
     ca3DSceneConfig config;
     QStringList errors;
@@ -291,11 +291,40 @@ void TestCa3DConfigDialog::roundTripsObjectMasterLinks()
     QCOMPARE(config.objects.count(), 2);
     QCOMPARE(config.objects.at(1).masterObjectId, QString());
 
-    objectsTable->item(1, 13)->setText(QStringLiteral("base"));
+    objectsTable->item(1, 16)->setText(QStringLiteral("base"));
     QVERIFY(QMetaObject::invokeMethod(&dialog, "applyChanges", Qt::DirectConnection));
     QVERIFY2(ca3DConfigParser::parse(widget.getSceneConfig(), &config, &errors),
              qPrintable(errors.join(QLatin1Char('\n'))));
     QCOMPARE(config.objects.at(1).masterObjectId, QStringLiteral("base"));
+}
+
+void TestCa3DConfigDialog::roundTripsObjectAxesAndOriginRotation()
+{
+    ca3DWidget widget;
+    widget.setSceneConfig(QStringLiteral(R"json({"objects":[{
+        "id":"arm", "meshFile":"", "configuredOriginRotation":[1,2,3],
+        "axes":[{"id":"slide", "type":"translation", "vector":[1,0,0], "factor":2}],
+        "extension":{"keep":true}
+    }]})json"));
+    ca3DConfigDialog dialog(&widget);
+    QTableWidget *objects = dialog.findChild<QTableWidget *>(QStringLiteral("objectsTable"));
+    QTableWidget *axes = dialog.findChild<QTableWidget *>(QStringLiteral("axesTable"));
+    QVERIFY(objects);
+    QVERIFY(axes);
+    QCOMPARE(objects->item(0, 13)->text(), QStringLiteral("1"));
+    QCOMPARE(axes->rowCount(), 1);
+    QCOMPARE(axes->item(0, 1)->text(), QStringLiteral("slide"));
+
+    objects->item(0, 14)->setText(QStringLiteral("20"));
+    axes->item(0, 6)->setText(QStringLiteral("4"));
+    QVERIFY(QMetaObject::invokeMethod(&dialog, "applyChanges", Qt::DirectConnection));
+
+    const QJsonObject object = QJsonDocument::fromJson(widget.getSceneConfig().toUtf8())
+                                    .object().value(QStringLiteral("objects")).toArray().first().toObject();
+    QCOMPARE(object.value(QStringLiteral("configuredOriginRotation")).toArray().at(1).toDouble(), 20.0);
+    QCOMPARE(object.value(QStringLiteral("axes")).toArray().first().toObject()
+                 .value(QStringLiteral("factor")).toDouble(), 4.0);
+    QVERIFY(object.value(QStringLiteral("extension")).toObject().value(QStringLiteral("keep")).toBool());
 }
 
 void TestCa3DConfigDialog::keepsNewRowsWhenValidatingRawJson()

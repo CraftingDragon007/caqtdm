@@ -34,6 +34,8 @@ public:
 private slots:
     void addObjectRow();
     void removeObjectRow();
+    void addAxisRow();
+    void removeAxisRow();
     void addLightRow();
     void removeLightRow();
     void addBindingRow();
@@ -97,6 +99,7 @@ private:
     QPushButton *backgroundColorButton;
     QTableWidget *lightsTable;
     QTableWidget *objectsTable;
+    QTableWidget *axesTable;
     QTableWidget *bindingsTable;
     QTableWidget *overlaysTable;
     QTableWidget *presetsTable;

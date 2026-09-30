@@ -13,6 +13,7 @@
 #include <qtcontrols_global.h>
 
 class QKeyEvent;
+class QWheelEvent;
 
 class QTCON_EXPORT ca3DOverlayWidgetManager : public QWidget
 {
@@ -31,6 +32,7 @@ public:
     bool sendContextMenuEvent(const QPointF &designPosition, const QPoint &globalPosition,
                               Qt::KeyboardModifiers modifiers);
     bool sendKeyEvent(QKeyEvent *event);
+    bool sendWheelEvent(const QPointF &designPosition, QWheelEvent *event);
     bool hasFocusedTextInput() const;
     bool takeTextureDirty();
     void markTextureDirty();
