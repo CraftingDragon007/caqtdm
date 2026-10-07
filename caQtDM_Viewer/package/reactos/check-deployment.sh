@@ -4,6 +4,10 @@ source "$(dirname "${BASH_SOURCE[0]}")/env.sh"
 
 for required in caQtDM.exe caQtDM_Lib.dll qtcontrols.dll qwt.dll \
     Com.dll ca.dll Qt5OpenGL.dll platforms/qwindows.dll \
+    designer/qtcontrols_controllers_plugin.dll \
+    designer/qtcontrols_graphics_plugin.dll \
+    designer/qtcontrols_monitors_plugin.dll \
+    designer/qtcontrols_utilities_plugin.dll \
     controlsystems/epics3_plugin.dll controlsystems/epics4_plugin.dll; do
     if [[ ! -f "$CAQTDM_COLLECT/$required" ]]; then
         printf 'ERROR: missing deployment file: %s\n' "$required" >&2

@@ -59,6 +59,7 @@ The EPICS submodule revisions in the working checkout were:
 | `test-environment.c` | Checks EPICS environment set, replacement, and unset behavior |
 | `deploy.sh` | Stages application/dependency DLLs and runs release `windeployqt` |
 | `check-deployment.sh` | Rejects non-x86 binaries, debug Qt/unsupported CRT imports, and missing Qt DLLs |
+| `plugin-probe.cpp`, `plugin-probe.pro` | Checks actual custom-widget construction and EPICS plugin loading |
 
 ## 1. Set up the environment
 
@@ -228,6 +229,9 @@ Stop on any error; do not proceed with partially built libraries. The full
 EPICS test build previously failed on unqualified `isnan` calls, so it is not
 the build entry point for this recipe. Use a clean dependency tree when changing
 these ABI flags; an incremental build can retain objects compiled in TR1 mode.
+This includes `pvAccess/src/ca` and `pvAccess/src/ioc`, not just
+`pvAccess/src`. A stale TR1 `pvAccessCA.dll` can link into the package but fail
+when EPICS4 is loaded at runtime with "The specified procedure could not be found".
 
 Check the environment patch on the Windows build host:
 
@@ -277,7 +281,11 @@ then runs:
 windeployqt --release --compiler-runtime --no-translations --no-opengl-sw \
     --dir "$CAQTDM_COLLECT" \
     "$CAQTDM_COLLECT/caQtDM.exe" "$CAQTDM_COLLECT/caQtDM_Lib.dll" \
-    "$CAQTDM_COLLECT/qtcontrols.dll" "$CAQTDM_COLLECT/qwt.dll"
+    "$CAQTDM_COLLECT/qtcontrols.dll" "$CAQTDM_COLLECT/qwt.dll" \
+    "$CAQTDM_COLLECT/designer/qtcontrols_controllers_plugin.dll" \
+    "$CAQTDM_COLLECT/designer/qtcontrols_graphics_plugin.dll" \
+    "$CAQTDM_COLLECT/designer/qtcontrols_monitors_plugin.dll" \
+    "$CAQTDM_COLLECT/designer/qtcontrols_utilities_plugin.dll"
 ```
 
 **Include `qwt.dll` as an input.** Deploying only `caQtDM.exe` missed
@@ -297,6 +305,7 @@ Qt5OpenGL.dll, Qt5PrintSupport.dll, Qt5Svg.dll, Qt5Widgets.dll, Qt5Xml.dll
 libgcc_s_dw2-1.dll, libstdc++-6.dll, libwinpthread-1.dll
 platforms/qwindows.dll
 controlsystems/*_plugin.dll
+designer/qtcontrols_{controllers,graphics,monitors,utilities}_plugin.dll
 imageformats/, iconengines/, printsupport/, bearer/
 ```
 
@@ -318,6 +327,40 @@ compatibility. Copy **the whole collection directory**, retaining the plugin
 subdirectories, to ReactOS and launch `caQtDM.exe` there.
 Static/import `.a` files are only needed for building, not for deployment.
 
-For optional Qt Designer use, caQtDM's four release Designer plugins are in
-`$CAQTDM_BUILD/caQtDM_QtControls/plugins/release/`; they are not required
-for the viewer's runtime deployment.
+The four caQtDM Designer plugins are also **required at viewer runtime**:
+`QUiLoader` uses them to instantiate caQtDM widgets from UI files. They are
+built in `$CAQTDM_BUILD/caQtDM_QtControls/plugins/release/` and `deploy.sh`
+copies them to `designer/` beside the executable. Without them, standard Qt
+widgets may appear while caQtDM widgets, their macro processing, and their PV
+subscriptions are missing.
+
+## Runtime plugin diagnosis
+
+Import checks alone cannot prove that a Qt plugin loads. Build the small probe
+outside the source checkout:
+
+```bash
+mkdir -p "$CAQTDM_BUILD/plugin-probe"
+cd "$CAQTDM_BUILD/plugin-probe"
+qmake "$REACTOS_PACKAGE_DIR/plugin-probe.pro" -spec win32-g++
+mingw32-make -j4
+cp reactos-plugin-probe.exe "$CAQTDM_COLLECT/"
+"$CAQTDM_COLLECT/reactos-plugin-probe.exe"
+```
+
+Run it from the collection directory on ReactOS as well. It must instantiate
+`caLineEdit`, `caNumeric`, `caLabel`, and `caShellCommand`, and load both EPICS
+plugins. It exits nonzero and prints the loader error if any check fails.
+Loading EPICS plugins does not prove network connectivity to an IOC.
+
+For ReactOS loader diagnostics, run from a command prompt:
+
+```bat
+set QT_DEBUG_PLUGINS=1
+set QT_LOGGING_RULES=caqtdm.lib.loadplugins.debug=true;caqtdm.lib.fileio.debug=true
+caQtDM.exe -macro "NAME=value" panel.ui > reactos-runtime.log 2>&1
+```
+
+Also inspect the viewer's caQtDM Messages window for control-system plugin and
+channel errors. Confirm the plugin probe works before debugging IOC addressing
+or macros: a missing custom widget has no channel subscription to connect.
