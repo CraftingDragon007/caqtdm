@@ -783,13 +783,13 @@ caQtDM_Lib {
    		}
    		win32-g++ {
                         INCLUDEPATH += $$(EPICS_BASE)/include/compiler/gcc
-        		DEFINES += CAQTDM_LIB_LIBRARY
-       			EPICS_LIBS=$$(EPICS_BASE)/lib/win32-x86-mingw
+                        DEFINES += CAQTDM_LIB_LIBRARY
+                        EPICS_LIBS=$$(EPICS_BASE)/lib/win32-x86-mingw
                         LIBS += $$(QWTLIB)/lib$$(QWTLIBNAME).a
-			LIBS += $$OUT_PWD/../caQtDM_QtControls/release/libqtcontrols.a
-			LIBS += $${EPICS_LIBS}/libca.dll.a
-			LIBS += $${EPICS_LIBS}/libCom.dll.a
-			QMAKE_POST_LINK = $${QMAKE_COPY} release/caQtDM_Lib.dll $$(CAQTDM_COLLECT)
+                        LIBS += $$OUT_PWD/../caQtDM_QtControls/release/libqtcontrols.a
+                        LIBS += $${EPICS_LIBS}/libca.dll.a
+                        LIBS += $${EPICS_LIBS}/libCom.dll.a
+                        QMAKE_POST_LINK = $${QMAKE_COPY} release/caQtDM_Lib.dll $$(CAQTDM_COLLECT)
                         QMAKE_POST_LINK += && $${QMAKE_COPY} release/libcaQtDM_Lib.a $$(CAQTDM_COLLECT)
    		}		
 	}
