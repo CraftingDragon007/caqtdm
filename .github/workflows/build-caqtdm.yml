@@ -10,6 +10,8 @@ on:
     paths-ignore:
       - 'caQtDM_docs/**'
       - 'caQtDM_Tests/**'
+  schedule: # Daily at 2am
+    - cron: '0 2 * * *'
 
 jobs:
   build:
@@ -54,7 +56,10 @@ jobs:
           qt6-5compat \
           cmake \
           ninja \
-          openssl
+          openssl \
+          devtools \
+          pacman-contrib \
+          nvchecker
 
     - name: Checkout repository
       uses: actions/checkout@v6
@@ -78,19 +83,51 @@ jobs:
         echo "Current MAKEFLAGS in /etc/makepkg.conf:"
         grep "MAKEFLAGS" /etc/makepkg.conf
 
+    - name: Match qt6-opcua to Arch Qt and upgrade epics-base
+      id: dep_versions
+      run: |
+        set -euo pipefail
+        WORKSPACE_DIR="${GITHUB_WORKSPACE:-$PWD}"
+        VERSIONS_FILE="$(mktemp)"
+        touch "$VERSIONS_FILE" && chmod 666 "$VERSIONS_FILE"
+
+        sudo -u builder env WORKSPACE_DIR="$WORKSPACE_DIR" VERSIONS_FILE="$VERSIONS_FILE" bash -lc '
+          set -euo pipefail
+          export TERM=xterm
+          ARCH_DIR="$WORKSPACE_DIR/caQtDM_Viewer/package/archlinux"
+          cd "$ARCH_DIR/qt6-opcua"
+          qt_version=$(pacman -Q qt6-base | awk "{print \$2}")
+          qt_version=${qt_version%-*}
+          current_version=$(makepkg --printsrcinfo | awk "\$1 == \"pkgver\" {print \$3}")
+          if [[ "$current_version" != "$qt_version" ]]; then
+            sed -i "s/^pkgver=.*/pkgver=$qt_version/" PKGBUILD
+            updpkgsums
+          fi
+          echo "qt6-opcua=$qt_version" >> "$VERSIONS_FILE"
+
+          cd "$ARCH_DIR/epics-base"
+          echo "::group::pkgctl version upgrade epics-base"
+          pkgctl version upgrade
+          echo "::endgroup::"
+          makepkg --printsrcinfo | awk "\$1 == \"pkgver\" {print \"epics-base=\" \$3}" >> "$VERSIONS_FILE"
+        '
+
+        cat "$VERSIONS_FILE" | tee -a "$GITHUB_OUTPUT"
+        rm -f "$VERSIONS_FILE"
+
     - name: Cache epics-base package
       id: cache-epics-base
       uses: actions/cache@v5
       with:
         path: caQtDM_Viewer/package/archlinux/epics-base/*.pkg.tar.*
-        key: epics-base-pkg-${{ runner.os }}-${{ hashFiles('caQtDM_Viewer/package/archlinux/epics-base/PKGBUILD', 'caQtDM_Viewer/package/archlinux/epics-base/*.patch') }}
+        key: epics-base-pkg-${{ runner.os }}-v${{ steps.dep_versions.outputs.epics-base }}-${{ hashFiles('caQtDM_Viewer/package/archlinux/epics-base/PKGBUILD', 'caQtDM_Viewer/package/archlinux/epics-base/*.patch') }}
 
     - name: Cache qt6-opcua package
       id: cache-qt6-opcua
       uses: actions/cache@v5
       with:
         path: caQtDM_Viewer/package/archlinux/qt6-opcua/*.pkg.tar.*
-        key: qt6-opcua-pkg-${{ runner.os }}-${{ hashFiles('caQtDM_Viewer/package/archlinux/qt6-opcua/PKGBUILD') }}
+        key: qt6-opcua-pkg-${{ runner.os }}-v${{ steps.dep_versions.outputs.qt6-opcua }}-${{ hashFiles('caQtDM_Viewer/package/archlinux/qt6-opcua/PKGBUILD') }}
 
     - name: Build and install dependency packages
       run: |
