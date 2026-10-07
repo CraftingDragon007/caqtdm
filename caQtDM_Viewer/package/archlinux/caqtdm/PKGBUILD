@@ -24,6 +24,8 @@ depends=(
 makedepends=(
     'git'
     'qt6-5compat'
+    'cmake'
+    'ninja'
 )
 provides=("caqtdm=${pkgver}")
 conflicts=('caqtdm')
@@ -42,40 +44,19 @@ pkgver() {
 build() {
     cd "$srcdir/$_pkgsrc"
 
-    local _pythonver
-    _pythonver=$(python --version 2>&1 | cut -d' ' -f2 | cut -d'.' -f1-2)
-
-    export QWTLIBNAME=qwt
-    export QWTINCLUDE=/usr/include/qwt
-    export EPICS_BASE=/usr/lib/epics
-    export PYTHONVERSION="$_pythonver"
-    export ZMQ=/usr
-    export ZMQINC=/usr/include
-    export ZMQLIB=/usr/lib
-    export CAQTDM_OPCUA=1
-    export CAQTDM_MODBUS=1
-    export CAQTDM_GPS=1
-    export CAQTDM_NORPATH=1
-    export EPICS_HOST_ARCH="linux-${CARCH}"
-    export QTHOME=/usr
-    export QWTHOME=/usr
-    export QWTLIB=/usr/lib
-    export QWTVERSION=6.1
-    export EPICSINCLUDE="$EPICS_BASE/include"
-    export EPICSLIB="$EPICS_BASE/lib/$EPICS_HOST_ARCH"
-    export EPICSEXTENSIONS="$EPICS_BASE/extensions"
-    export QTCONTROLS_LIBS="$srcdir/binaries"
-    export CAQTDM_COLLECT="$srcdir/binaries"
-    export QTBASE="$QTCONTROLS_LIBS"
-    export CAQTDM_CA_ARCHIVELIBS="$srcdir/binaries/"
-    export CAQTDM_LOGGING_ARCHIVELIBS="$srcdir/binaries"
-    export QTDM_LIBINSTALL="$EPICSEXTENSIONS/lib/$EPICS_HOST_ARCH"
-    export QTDM_BININSTALL="$EPICSEXTENSIONS/bin/$EPICS_HOST_ARCH"
-    export PYTHONINCLUDE="/usr/include/python$_pythonver"
-    export PYTHONLIB=/usr/lib/
-
-    qmake6 ./all.pro
-    make
+    cmake -S . -B "$srcdir/caqtdm-build" -G Ninja \
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+        -DCAQTDM_COLLECT="$srcdir/binaries" \
+        -DCAQTDM_EPICS_BASE=/usr/lib/epics \
+        -DCAQTDM_EPICS_HOST_ARCH="linux-${CARCH}" \
+        -DCAQTDM_QWT_LIBNAME=qwt \
+        -DCAQTDM_BUILD_GPS=ON \
+        -DCAQTDM_BUILD_MODBUS=ON \
+        -DCAQTDM_BUILD_OPCUA=ON \
+        -DCAQTDM_PYTHONCALC=ON \
+        -DCAQTDM_WITH_TESTS=ON \
+        -DCAQTDM_NORPATH=ON
+    cmake --build "$srcdir/caqtdm-build" --parallel "${CMAKE_BUILD_PARALLEL_LEVEL:-2}"
 }
 
 package() {
@@ -159,7 +140,5 @@ EOF
 }
 
 check() {
-    cd "$srcdir/$_pkgsrc"
-    export LD_LIBRARY_PATH="$srcdir/binaries:$LD_LIBRARY_PATH"
-    make -C caQtDM_UnitTests check
+    ctest --test-dir "$srcdir/caqtdm-build" --output-on-failure
 }

@@ -107,10 +107,10 @@ private:
     QList<Log> m_logBuffer;
     QMutex m_logFileMutex;
     QMutex m_logBufferMutex;
-    QTimer *m_logBufferTimer;
-    int m_logBufferTimeoutMs;
-    int m_logBufferMaxSize;
-    qint64 m_logFileMaxSizeB;
+    QTimer *m_logBufferTimer = Q_NULLPTR;
+    int m_logBufferTimeoutMs = 0;
+    int m_logBufferMaxSize = DEFAULT_BUFFER_SIZE;
+    qint64 m_logFileMaxSizeB = DEFAULT_FILE_SIZE_B;
 };
 
 #endif // FILELOGHANDLER_H

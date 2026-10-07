@@ -1,7 +1,6 @@
 # Parser libraries: adl (MEDM), edl (EDM, Unix only) and prc (PEP panels).
-# Each parser is built as a static library (linked into libqtcontrols /
-# the converter tools) and as a shared library (runtime conversion in the
-# viewer). Mirrors caQtDM_Parsers.pro.
+# Each parser is built as a static library for qtcontrols and the converter
+# tools; desktop builds also produce shared libraries. Mirrors caQtDM_Parsers.pro.
 
 set(_parsers_src "${CMAKE_CURRENT_SOURCE_DIR}")
 
@@ -33,14 +32,15 @@ target_include_directories(adlParserStatic PUBLIC "${_parsers_src}/adlParserSrc"
 target_link_libraries(adlParserStatic PUBLIC Qt6::Widgets)
 set_target_properties(adlParserStatic PROPERTIES OUTPUT_NAME adlParser)
 
-add_library(adlParser SHARED ${ADL_SOURCES} ${ADL_HEADERS})
-target_include_directories(adlParser PUBLIC "${_parsers_src}/adlParserSrc")
-target_link_libraries(adlParser PUBLIC Qt6::Widgets)
-set_target_properties(adlParser PROPERTIES OUTPUT_NAME adlParser)
-
-if(WIN32)
-    caqtdm_add_version_rc(adlParser
-        "${PROJECT_SOURCE_DIR}/caQtDM_Viewer/src/caQtDM.rc" "ADL converter library for Display Manager" "adlParser.dll")
+if(NOT CAQTDM_MOBILE)
+    add_library(adlParser SHARED ${ADL_SOURCES} ${ADL_HEADERS})
+    target_include_directories(adlParser PUBLIC "${_parsers_src}/adlParserSrc")
+    target_link_libraries(adlParser PUBLIC Qt6::Widgets)
+    set_target_properties(adlParser PROPERTIES OUTPUT_NAME adlParser)
+    if(WIN32)
+        caqtdm_add_version_rc(adlParser
+            "${PROJECT_SOURCE_DIR}/caQtDM_Viewer/src/caQtDM.rc" "ADL converter library for Display Manager" "adlParser.dll")
+    endif()
 endif()
 
 # --------------------------------------------------------------------------------------------------
@@ -68,9 +68,11 @@ if(UNIX)
         if(_kind STREQUAL "Static")
             add_library(edlParserStatic STATIC ${EDL_SOURCES} ${EDL_HEADERS})
             set(_tgt edlParserStatic)
-        else()
+        elseif(NOT CAQTDM_MOBILE)
             add_library(edlParser SHARED ${EDL_SOURCES} ${EDL_HEADERS})
             set(_tgt edlParser)
+        else()
+            continue()
         endif()
         target_include_directories(${_tgt} PUBLIC "${_parsers_src}/edlParserSrc")
         target_link_libraries(${_tgt} PUBLIC Qt6::Widgets)
@@ -97,15 +99,43 @@ target_include_directories(prcParserStatic PUBLIC "${_parsers_src}/prcParserSrc"
 target_link_libraries(prcParserStatic PUBLIC Qt6::Widgets Qt6::UiTools)
 set_target_properties(prcParserStatic PROPERTIES OUTPUT_NAME prcParser)
 
-add_library(prcParser SHARED ${PRC_SOURCES} ${PRC_HEADERS})
-target_include_directories(prcParser PUBLIC "${_parsers_src}/prcParserSrc")
-target_link_libraries(prcParser PUBLIC Qt6::Widgets Qt6::UiTools)
-target_compile_definitions(prcParser PRIVATE PRCPARSER_MAKEDLL)
-set_target_properties(prcParser PROPERTIES OUTPUT_NAME prcParser)
+if(NOT CAQTDM_MOBILE)
+    add_library(prcParser SHARED ${PRC_SOURCES} ${PRC_HEADERS})
+    target_include_directories(prcParser PUBLIC "${_parsers_src}/prcParserSrc")
+    target_link_libraries(prcParser PUBLIC Qt6::Widgets Qt6::UiTools)
+    target_compile_definitions(prcParser PRIVATE PRCPARSER_MAKEDLL)
+    set_target_properties(prcParser PROPERTIES OUTPUT_NAME prcParser)
+    if(WIN32)
+        caqtdm_add_version_rc(prcParser
+            "${PROJECT_SOURCE_DIR}/caQtDM_Viewer/src/caQtDM.rc" "PRC converter library for Display Manager" "prcParser.dll")
+    endif()
+endif()
 
-if(WIN32)
-    caqtdm_add_version_rc(prcParser
-        "${PROJECT_SOURCE_DIR}/caQtDM_Viewer/src/caQtDM.rc" "PRC converter library for Display Manager" "prcParser.dll")
+# ALH configuration parser, model and UI generator.
+set(ALH_SOURCES
+    ${_parsers_src}/alhParserSrc/alhmodel.cpp
+    ${_parsers_src}/alhParserSrc/alhconfigparser.cpp
+    ${_parsers_src}/alhParserSrc/alhuigenerator.cpp)
+set(ALH_HEADERS
+    ${_parsers_src}/alhParserSrc/alhmodel.h
+    ${_parsers_src}/alhParserSrc/alhconfigparser.h
+    ${_parsers_src}/alhParserSrc/alhuigenerator.h
+    ${_parsers_src}/alhParserSrc/alhparserdefs.h)
+add_library(alhParserStatic STATIC ${ALH_SOURCES} ${ALH_HEADERS})
+target_include_directories(alhParserStatic PUBLIC "${_parsers_src}/alhParserSrc")
+target_link_libraries(alhParserStatic PUBLIC Qt6::Core)
+set_target_properties(alhParserStatic PROPERTIES OUTPUT_NAME alhParser)
+
+if(NOT CAQTDM_MOBILE)
+    add_library(alhParser SHARED ${ALH_SOURCES} ${ALH_HEADERS})
+    target_include_directories(alhParser PUBLIC "${_parsers_src}/alhParserSrc")
+    target_link_libraries(alhParser PUBLIC Qt6::Core)
+    target_compile_definitions(alhParser PRIVATE ALHPARSER_MAKEDLL)
+    set_target_properties(alhParser PROPERTIES OUTPUT_NAME alhParser)
+    if(WIN32)
+        caqtdm_add_version_rc(alhParser
+            "${PROJECT_SOURCE_DIR}/caQtDM_Viewer/src/caQtDM.rc" "ALH config library for Display Manager" "alhParser.dll")
+    endif()
 endif()
 
 # On Windows the import lib of a shared target and a static library with
@@ -113,13 +143,25 @@ endif()
 if(WIN32)
     set_target_properties(adlParserStatic PROPERTIES OUTPUT_NAME adlParser_static)
     set_target_properties(prcParserStatic PROPERTIES OUTPUT_NAME prcParser_static)
+    set_target_properties(alhParserStatic PROPERTIES OUTPUT_NAME alhParser_static)
 endif()
 
-foreach(_tgt adlParserStatic adlParser prcParserStatic prcParser)
+set(_parser_targets adlParserStatic prcParserStatic alhParserStatic)
+if(NOT CAQTDM_MOBILE)
+    list(APPEND _parser_targets adlParser prcParser)
+endif()
+foreach(_tgt ${_parser_targets})
     target_compile_definitions(${_tgt} PRIVATE ${CAQTDM_PARSER_DEFINES})
 endforeach()
+if(TARGET alhParser)
+    target_compile_definitions(alhParser PRIVATE ${CAQTDM_PARSER_DEFINES})
+endif()
 if(UNIX)
-    foreach(_tgt edlParserStatic edlParser)
+    set(_edl_targets edlParserStatic)
+    if(NOT CAQTDM_MOBILE)
+        list(APPEND _edl_targets edlParser)
+    endif()
+    foreach(_tgt ${_edl_targets})
         target_compile_definitions(${_tgt} PRIVATE ${CAQTDM_PARSER_DEFINES})
     endforeach()
 endif()
@@ -127,12 +169,23 @@ endif()
 # --------------------------------------------------------------------------------------------------
 # Install
 # --------------------------------------------------------------------------------------------------
-install(TARGETS adlParserStatic adlParser prcParserStatic prcParser
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-if(UNIX)
-    install(TARGETS edlParserStatic edlParser
+install(TARGETS adlParserStatic prcParserStatic
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+if(NOT CAQTDM_MOBILE)
+    install(TARGETS adlParser prcParser
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+endif()
+install(TARGETS alhParserStatic ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+if(TARGET alhParser)
+    install(TARGETS alhParser
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+endif()
+if(UNIX)
+    install(TARGETS edlParserStatic ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+    if(NOT CAQTDM_MOBILE)
+        install(TARGETS edlParser LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+    endif()
 endif()

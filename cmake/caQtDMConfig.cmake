@@ -16,6 +16,7 @@ option(CAQTDM_WEB           "Build caQtDM Web support (websocket server)"       
 option(CAQTDM_WITH_TESTS    "Build unit tests and register them with CTest"            ON)
 option(CAQTDM_NORPATH       "Build without rpath entries (packaging builds)"           OFF)
 option(CAQTDM_NO_CUSTOM_LOGHANDLER "Build the viewer without the custom log handlers"  OFF)
+option(CAQTDM_ALH2UI       "Build the ALH configuration debug converter"           OFF)
 
 # --------------------------------------------------------------------------------------------------
 # Path configuration
@@ -23,9 +24,15 @@ option(CAQTDM_NO_CUSTOM_LOGHANDLER "Build the viewer without the custom log hand
 set(CAQTDM_COLLECT "${CMAKE_BINARY_DIR}/caQtDM_Binaries" CACHE PATH
     "Collect directory all libraries/plugins/executables are built into")
 
-set(CAQTDM_EPICS_BASE "" CACHE PATH "EPICS base directory")
+set(CAQTDM_EPICS_BASE "" CACHE PATH "EPICS base directory (falls back to EPICS_BASE environment variable)")
 set(CAQTDM_EPICS_HOST_ARCH "" CACHE STRING
-    "EPICS host architecture (e.g. linux-x86_64); derived from the platform when empty")
+    "EPICS host architecture; falls back to EPICS_HOST_ARCH, then a known platform default")
+if(NOT CAQTDM_EPICS_BASE AND DEFINED ENV{EPICS_BASE} AND NOT "$ENV{EPICS_BASE}" STREQUAL "")
+    set(CAQTDM_EPICS_BASE "$ENV{EPICS_BASE}")
+endif()
+if(NOT CAQTDM_EPICS_HOST_ARCH AND DEFINED ENV{EPICS_HOST_ARCH} AND NOT "$ENV{EPICS_HOST_ARCH}" STREQUAL "")
+    set(CAQTDM_EPICS_HOST_ARCH "$ENV{EPICS_HOST_ARCH}")
+endif()
 
 set(CAQTDM_QWT_HOME "" CACHE PATH "Qwt installation prefix")
 set(CAQTDM_QWT_INCLUDE "" CACHE PATH "Qwt include directory")
@@ -34,6 +41,7 @@ set(CAQTDM_QWT_LIBNAME "qwt" CACHE STRING "Qwt library name (qwt, qwt-qt5, qwt-q
 
 set(CAQTDM_ZMQ_INCLUDE "" CACHE PATH "ZeroMQ include directory")
 set(CAQTDM_ZMQ_LIB "" CACHE PATH "ZeroMQ library directory")
+set(CAQTDM_ANDROID_SSL_ROOT "" CACHE PATH "Directory containing Android libcrypto.so and libssl.so to package")
 
 set(CAQTDM_PYTHON_ROOT "" CACHE PATH "Python installation prefix used for PYTHONCALC")
 set(CAQTDM_PYTHON_INCLUDE "" CACHE PATH "Python include directory override for PYTHONCALC")
@@ -73,7 +81,16 @@ message(STATUS "caQtDM version: ${CAQTDM_VERSION_STR}")
 # --------------------------------------------------------------------------------------------------
 # Qt6
 # --------------------------------------------------------------------------------------------------
-find_package(Qt6 6.2 REQUIRED COMPONENTS Core Gui Widgets Network Xml OpenGL Concurrent UiTools PrintSupport Svg Designer Test)
+set(_caqtdm_qt_components Core Gui Widgets Network Xml OpenGL Concurrent UiTools PrintSupport Svg)
+if(CAQTDM_MOBILE)
+    list(APPEND _caqtdm_qt_components UiPlugin)
+else()
+    list(APPEND _caqtdm_qt_components Designer)
+    if(CAQTDM_WITH_TESTS)
+        list(APPEND _caqtdm_qt_components Test)
+    endif()
+endif()
+find_package(Qt6 6.2 REQUIRED COMPONENTS ${_caqtdm_qt_components})
 find_package(Qt6 QUIET COMPONENTS Positioning SerialBus OpcUa WebSockets)
 
 if(MSVC)
@@ -150,6 +167,7 @@ if(NOT CAQTDM_MOBILE)
 endif()
 
 set(CAQTDM_HAVE_PYTHON OFF)
+set(CAQTDM_PYTHON_LIB_DIR "")
 if(CAQTDM_PYTHONCALC AND NOT CAQTDM_MOBILE)
     if(CAQTDM_PYTHON_INCLUDE AND CAQTDM_PYTHON_LIBRARY)
         add_library(caqtdm::python UNKNOWN IMPORTED)
@@ -157,30 +175,18 @@ if(CAQTDM_PYTHONCALC AND NOT CAQTDM_MOBILE)
             IMPORTED_LOCATION "${CAQTDM_PYTHON_LIBRARY}"
             INTERFACE_INCLUDE_DIRECTORIES "${CAQTDM_PYTHON_INCLUDE}")
         set(CAQTDM_HAVE_PYTHON ON)
+        get_filename_component(CAQTDM_PYTHON_LIB_DIR "${CAQTDM_PYTHON_LIBRARY}" DIRECTORY)
     else()
         if(CAQTDM_PYTHON_ROOT)
-            list(PREPEND CMAKE_PREFIX_PATH "${CAQTDM_PYTHON_ROOT}")
+            set(Python3_ROOT_DIR "${CAQTDM_PYTHON_ROOT}")
         endif()
-        find_program(CAQTDM_PYTHON_INTERPRETER NAMES python3 python
-            HINTS "${CAQTDM_PYTHON_ROOT}/bin")
-        if(CAQTDM_PYTHON_INTERPRETER)
-            execute_process(COMMAND ${CAQTDM_PYTHON_INTERPRETER} -c
-                "import sysconfig; print(sysconfig.get_paths()['include'])"
-                OUTPUT_VARIABLE _py_include OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
-            execute_process(COMMAND ${CAQTDM_PYTHON_INTERPRETER} -c
-                "import sysconfig; v = sysconfig.get_config_var('LDVERSION') or '{}.{}'.format(*sys.version_info[:2]); print('python' + v.replace('.', '') if sys.platform == 'win32' else 'python' + v)"
-                OUTPUT_VARIABLE _py_ldversion OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
-            execute_process(COMMAND ${CAQTDM_PYTHON_INTERPRETER} -c
-                "import sysconfig, os; print(os.path.join(os.path.dirname(sys.executable), 'libs'))"
-                OUTPUT_VARIABLE _py_libdir OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
-            find_library(CAQTDM_PYTHON_LIBFILE NAMES ${_py_ldversion} HINTS ${_py_libdir})
-            if(CAQTDM_PYTHON_LIBFILE)
-                add_library(caqtdm::python UNKNOWN IMPORTED)
-                set_target_properties(caqtdm::python PROPERTIES
-                    IMPORTED_LOCATION "${CAQTDM_PYTHON_LIBFILE}"
-                    INTERFACE_INCLUDE_DIRECTORIES "${_py_include}")
-                set(CAQTDM_HAVE_PYTHON ON)
-            endif()
+        find_package(Python3 QUIET COMPONENTS Interpreter Development)
+        if(TARGET Python3::Python)
+            add_library(caqtdm::python ALIAS Python3::Python)
+            set(CAQTDM_HAVE_PYTHON ON)
+            list(GET Python3_LIBRARIES 0 _python_library)
+            get_filename_component(CAQTDM_PYTHON_LIB_DIR "${_python_library}" DIRECTORY)
+            unset(_python_library)
         endif()
     endif()
 endif()
@@ -193,15 +199,18 @@ endif()
 # --------------------------------------------------------------------------------------------------
 set(CAQTDM_EPICS7 OFF)
 if(EXISTS "${Epics_INCLUDE_DIR}/pv/pvAccess.h")
-    set(CAQTDM_EPICS7 ON)
+    if(TARGET Epics::pvAccess AND TARGET Epics::pvAccessCA AND TARGET Epics::pvData
+            AND TARGET Epics::pvaClient AND TARGET Epics::nt)
+        set(CAQTDM_EPICS7 ON)
+    else()
+        message(WARNING "EPICS pvAccess headers were found, but its libraries are incomplete; epics4 plugin disabled")
+    endif()
 endif()
 
 if(CAQTDM_MOBILE)
     set(CAQTDM_ADL_EDL OFF)
-    set(CAQTDM_ARCHIVE_PLUGINS OFF)
-else()
-    set(CAQTDM_ARCHIVE_PLUGINS ON)
 endif()
+set(CAQTDM_ARCHIVE_PLUGINS ON)
 
 add_feature_info(gps CAQTDM_BUILD_GPS "GPS control-system plugin")
 add_feature_info(modbus CAQTDM_BUILD_MODBUS "Modbus control-system plugin")
@@ -232,6 +241,9 @@ add_compile_definitions(
 )
 if(CAQTDM_ADL_EDL)
     add_compile_definitions(ADL_EDL_FILES)
+endif()
+if(NOT CAQTDM_MOBILE)
+    add_compile_definitions(ALH_FILES)
 endif()
 if(CAQTDM_MOBILE)
     add_compile_definitions(MOBILE)
@@ -277,5 +289,3 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CAQTDM_COLLECT_GENEX}")
 # --------------------------------------------------------------------------------------------------
 feature_summary(WHAT ENABLED_FEATURES DISABLED_FEATURES
     DESCRIPTION "--- caQtDM feature summary ---")
-
-

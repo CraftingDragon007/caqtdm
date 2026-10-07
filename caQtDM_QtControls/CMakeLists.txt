@@ -1,6 +1,6 @@
 # qtcontrols: the widget library (mirrors caQtDM_QtControls.pro).
-# On Linux the prc parser is linked statically into libqtcontrols.so so the
-# library stays self-contained (no DT_NEEDED on libprcParser.so).
+# Parser code is linked statically into qtcontrols so conversion works
+# wherever the widget library is loaded.
 
 set(_src "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
@@ -87,7 +87,11 @@ set(QTCONTROLS_SOURCES
     ${_src}/fileFunctions.cpp
     ${_src}/hmiapplicationeventfilter.cpp
     ${_src}/cahmiconfig.cpp
-    ${_src}/cahmiconfigtransferitem.cpp)
+    ${_src}/cahmiconfigtransferitem.cpp
+    ${_src}/alhtreemodel.cpp
+    ${_src}/caalarmtree.cpp
+    ${_src}/caalarmlog.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/qtcontrols.qrc)
 
 set(QTCONTROLS_HEADERS
     ${_src}/networkaccess.h
@@ -180,7 +184,10 @@ set(QTCONTROLS_HEADERS
     ${_src}/caWidgetInterface.h
     ${_src}/addevent.h
     ${_src}/animationcode.h
-    ${_src}/hideobjectcode.h)
+    ${_src}/hideobjectcode.h
+    ${_src}/alhtreemodel.h
+    ${_src}/caalarmtree.h
+    ${_src}/caalarmlog.h)
 
 if(Qwt_VERSION_MINOR EQUAL 0)
     list(APPEND QTCONTROLS_SOURCES ${_src}/qwt_thermo_marker.cpp)
@@ -236,7 +243,8 @@ target_include_directories(qtcontrols
         "${PROJECT_SOURCE_DIR}/caQtDM_Lib/src"
         "${PROJECT_SOURCE_DIR}/caQtDM_Parsers/adlParserSrc"
         "${PROJECT_SOURCE_DIR}/caQtDM_Parsers/edlParserSrc"
-        "${PROJECT_SOURCE_DIR}/caQtDM_Parsers/prcParserSrc")
+        "${PROJECT_SOURCE_DIR}/caQtDM_Parsers/prcParserSrc"
+        "${PROJECT_SOURCE_DIR}/caQtDM_Parsers/alhParserSrc")
 
 target_link_libraries(qtcontrols
     PUBLIC
@@ -248,7 +256,8 @@ target_link_libraries(qtcontrols
         Qt6::UiTools
         Qwt::Qwt
     PRIVATE
-        prcParserStatic)
+        prcParserStatic
+        alhParserStatic)
 
 if(CAQTDM_ADL_EDL)
     target_link_libraries(qtcontrols PRIVATE adlParserStatic)
@@ -261,7 +270,7 @@ if(NOT CAQTDM_MOBILE)
     target_link_libraries(qtcontrols PRIVATE Qt6::Designer)
 endif()
 
-if(APPLE)
+if(APPLE OR CMAKE_SYSTEM_NAME MATCHES "^(FreeBSD|OpenBSD)$")
     find_package(ZLIB REQUIRED)
     target_link_libraries(qtcontrols PRIVATE ZLIB::ZLIB)
 endif()
@@ -285,6 +294,4 @@ install(TARGETS qtcontrols
 # --------------------------------------------------------------------------------------------------
 # Designer plugins (desktop only; mobile builds them statically into the app)
 # --------------------------------------------------------------------------------------------------
-if(NOT CAQTDM_MOBILE)
-    add_subdirectory(plugins)
-endif()
+add_subdirectory(plugins)

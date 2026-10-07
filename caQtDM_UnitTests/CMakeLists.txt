@@ -59,18 +59,29 @@ add_executable(tst_qtcontrols
     tst_qtcontrols/tst_canumeric.cpp
     tst_qtcontrols/tst_caspinbox.cpp
     tst_qtcontrols/tst_caapplynumeric.cpp
+    tst_qtcontrols/tst_caimage.cpp
+    tst_qtcontrols/tst_alhparser.cpp
+    tst_qtcontrols/tst_alarmtree_logic.cpp
     "${_tests_src}/pvdialog.cpp"
+    "${PROJECT_SOURCE_DIR}/caQtDM_Parsers/alhParserSrc/alhmodel.cpp"
+    "${PROJECT_SOURCE_DIR}/caQtDM_Parsers/alhParserSrc/alhconfigparser.cpp"
+    "${PROJECT_SOURCE_DIR}/caQtDM_Parsers/alhParserSrc/alhuigenerator.cpp"
+    tst_qtcontrols/tst_alh_fixtures.qrc
     tst_qtcontrols/tst_pvdialog.h
     tst_qtcontrols/tst_gensoftpv.h
     tst_qtcontrols/tst_canumeric.h
     tst_qtcontrols/tst_caspinbox.h
     tst_qtcontrols/tst_caapplynumeric.h
+    tst_qtcontrols/tst_caimage.h
+    tst_qtcontrols/tst_alhparser.h
+    tst_qtcontrols/tst_alarmtree_logic.h
     tst_qtcontrols/tst_numeric_suite.h
     tst_qtcontrols/fakeformwindow.h
     "${_tests_src}/pvdialog.h")
 target_include_directories(tst_qtcontrols PRIVATE
     "${_tests_src}"
-    "${_lib_src}")
+    "${_lib_src}"
+    "${PROJECT_SOURCE_DIR}/caQtDM_Parsers/alhParserSrc")
 target_link_libraries(tst_qtcontrols PRIVATE
     caqtdm_test_common
     qtcontrols
@@ -269,13 +280,18 @@ if(WIN32)
     if(CAQTDM_EPICS_HOST_ARCH)
         string(APPEND _path "\\;${CAQTDM_EPICS_BASE}/bin/${CAQTDM_EPICS_HOST_ARCH}")
     endif()
+    if(CAQTDM_PYTHON_LIB_DIR)
+        string(APPEND _path "\\;${CAQTDM_PYTHON_LIB_DIR}")
+    endif()
     # the configure shell's PATH must be escaped as well, or ctest splits the
     # ENVIRONMENT list at its semicolons and truncates PATH
     string(REPLACE ";" "\\;" _env_path "$ENV{PATH}")
     string(APPEND _path "\\;${_env_path}")
     set(_test_env "QT_QPA_PLATFORM=offscreen;PATH=${_path}")
+elseif(APPLE)
+    set(_test_env "QT_QPA_PLATFORM=offscreen;DYLD_LIBRARY_PATH=${CAQTDM_COLLECT}:${CAQTDM_COLLECT}/designer:${CAQTDM_COLLECT}/controlsystems:${Epics_LIBRARY_DIR}:${Qwt_LIBRARY_DIR}:${CAQTDM_PYTHON_LIB_DIR};DYLD_FRAMEWORK_PATH=${Qwt_LIBRARY_DIR}")
 else()
-    set(_test_env "QT_QPA_PLATFORM=offscreen;LD_LIBRARY_PATH=${CAQTDM_COLLECT}:${CAQTDM_COLLECT}/designer:${CAQTDM_COLLECT}/controlsystems")
+    set(_test_env "QT_QPA_PLATFORM=offscreen;XDG_DATA_HOME=${CMAKE_BINARY_DIR}/test-data;LD_LIBRARY_PATH=${CAQTDM_COLLECT}:${CAQTDM_COLLECT}/designer:${CAQTDM_COLLECT}/controlsystems:${Epics_LIBRARY_DIR}:${Qwt_LIBRARY_DIR}:${CAQTDM_ZMQ_LIB_DIR}:${CAQTDM_PYTHON_LIB_DIR}")
 endif()
 
 foreach(_test ${_all_tests})
