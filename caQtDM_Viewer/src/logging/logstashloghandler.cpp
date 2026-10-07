@@ -58,15 +58,14 @@ LogstashLogHandler::LogstashLogHandler(QObject *parent)
 LogstashLogHandler::~LogstashLogHandler()
 {
     if (QThread::currentThread() != this->thread()) {
-        QMetaObject::invokeMethod(
-            this,
-            [=]() {
-                if (m_logBufferTimer) {
-                    delete m_logBufferTimer;
-                }
-            },
-            Qt::BlockingQueuedConnection);
+        QMetaObject::invokeMethod(this, "deleteLogBufferTimer", Qt::BlockingQueuedConnection);
     } // Otherwise, it will automatically be cleaned up by Qt due to being a child of this
+}
+
+void LogstashLogHandler::deleteLogBufferTimer()
+{
+    delete m_logBufferTimer;
+    m_logBufferTimer = Q_NULLPTR;
 }
 
 qint64 LogstashLogHandler::intFromEnv(const char *envName, const qint64 defaultValue)

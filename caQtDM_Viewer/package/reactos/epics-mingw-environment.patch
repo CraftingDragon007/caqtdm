@@ -1,0 +1,24 @@
+diff --git a/modules/libcom/src/osi/os/WIN32/osdEnv.c b/modules/libcom/src/osi/os/WIN32/osdEnv.c
+--- a/modules/libcom/src/osi/os/WIN32/osdEnv.c
++++ b/modules/libcom/src/osi/os/WIN32/osdEnv.c
+@@ -29,7 +29,20 @@
+ static
+ void setEnv(const char *name, const char *value)
+ {
++#ifdef _MINGW
++    size_t length = strlen(name) + strlen(value) + 2;
++    char *assignment = malloc(length);
++    int err;
++    if (!assignment) {
++        errlogPrintf("Can't set environment %s: out of memory\n", name);
++        return;
++    }
++    snprintf(assignment, length, "%s=%s", name, value);
++    err = _putenv(assignment);
++    free(assignment);
++#else
+     errno_t err = _putenv_s(name, value);
++#endif
+     if(err)
+         errlogPrintf("Can't set environment %s=\"%s\" : %d\n", name, value, (int)err);
+ }

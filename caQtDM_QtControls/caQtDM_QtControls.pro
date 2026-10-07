@@ -46,7 +46,7 @@ MOC_DIR = moc
 INCLUDEPATH += src
 INCLUDEPATH += ../caQtDM_Lib/src
 INCLUDEPATH += ../caQtDM_Parsers/adlParserSrc
-INCLUDEPATH += ../caQtDM_Parsers/edlParserSrc
+unix:INCLUDEPATH += ../caQtDM_Parsers/edlParserSrc
 INCLUDEPATH += ../caQtDM_Parsers/prcParserSrc
 INCLUDEPATH += ../caQtDM_Parsers/alhParserSrc
 
@@ -63,6 +63,10 @@ RC_FILE = ./src/qtcontrols.rc
 
 freebsd {
    LIBS += -L/usr/local/lib -lz
+}
+
+win32-g++ {
+   LIBS += -lz
 }
 
 PRE_TARGETDEPS += \

@@ -349,7 +349,7 @@ void caLineDraw::mouseReleaseEvent(QMouseEvent *event){
     lineDrawList.removeAt(lineDrawList.indexOf(this));
 
     QString s = m_Text;
-    if(s[s.length()-1] == QString(" ")){
+    if(s[s.length()-1] == QLatin1Char(' ')){
         s.remove(s.length()-1,1);
         qCDebug(caLineDrawLog) << s;
     }
@@ -667,12 +667,12 @@ void caLineDraw::paintEvent(QPaintEvent *)
         break;
     case Right:
         painter.drawText(textRect, Qt::AlignRight | Qt::AlignVCenter, m_Text);
-        widthTextLess = textRect.width() - fm.horizontalAdvance(m_Text);
+        widthTextLess = textRect.width() - QMETRIC_HORIZONTAL_ADVANCE(fm, m_Text);
         break;
     case Center:
     default:
         painter.drawText(textRect, Qt::AlignCenter | Qt::AlignVCenter, m_Text);
-        widthTextLess = (textRect.width() / 2) - (fm.horizontalAdvance(m_Text)/2);
+        widthTextLess = (textRect.width() / 2) - (QMETRIC_HORIZONTAL_ADVANCE(fm, m_Text)/2);
         break;
     }
 
@@ -702,7 +702,7 @@ void caLineDraw::paintEvent(QPaintEvent *)
             xCoordinate = calculateSumOfStartingCoordinates(letterCoordinates) + (1 + m_FrameLineWidth);
 
             // Get accurate width of bounding rectangle
-            int horizontalAdvance = fm.horizontalAdvance(m_Text[i]);
+            int horizontalAdvance = QMETRIC_HORIZONTAL_ADVANCE(fm, m_Text[i]);
 
 
             // Calculate and set Startingpoint from previous letters
@@ -719,7 +719,7 @@ void caLineDraw::paintEvent(QPaintEvent *)
                 m_LettersBoundingRects << rectangleToDraw;
             }
 
-            bool isLastEmpty = m_Text[i] == QString(" ") && i == (m_Text.size() -1);
+            bool isLastEmpty = m_Text[i] == QLatin1Char(' ') && i == (m_Text.size() -1);
             bool isCurrentFieldMarked = false;
             if(m_LetterMarkedList.size() > 0 && !isLastEmpty){
                 isCurrentFieldMarked = m_LetterMarkedList[i];
@@ -1179,6 +1179,4 @@ void caLineDraw::copy(){
         clipboard->setText(copyString);
     }
 }
-
-
 

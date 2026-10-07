@@ -77,6 +77,7 @@ private slots:
      * This function must not be called from other threads than the object's thread.
      */
     void clearLogBuffer();
+    void deleteLogBufferTimer();
 
 #ifdef UNIT_TESTING
 public:

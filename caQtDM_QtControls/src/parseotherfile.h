@@ -36,7 +36,9 @@
 #include <QFile>
 #include <QtUiTools/QUiLoader>
 #include "adlParserMain.h"
+#if !defined(Q_OS_WIN)
 #include "edlParserMain.h"
+#endif
 
 #define PRINT(x)
 

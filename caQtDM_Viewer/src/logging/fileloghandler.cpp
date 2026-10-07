@@ -52,7 +52,7 @@ FileLogHandler::FileLogHandler(QObject *parent)
         }
     }
 
-    const qint64 timestamp = QDateTime::currentSecsSinceEpoch();
+    const qint64 timestamp = QDateTime::currentMSecsSinceEpoch() / 1000;
     QFile logFile(logDirectory.filePath(QString::number(timestamp) + QSL(".log")));
     if (!logFile.open(QIODevice::ReadWrite)) {
         qCCritical(fileLogHandlerLog) << QSL("Failed to create log file:") << logFile.fileName();
@@ -81,15 +81,14 @@ FileLogHandler::~FileLogHandler()
 {
     QMutexLocker locker(&m_logFileMutex);
     if (QThread::currentThread() != this->thread()) {
-        QMetaObject::invokeMethod(
-            this,
-            [=]() {
-                if (m_logBufferTimer) {
-                    delete m_logBufferTimer;
-                }
-            },
-            Qt::BlockingQueuedConnection);
+        QMetaObject::invokeMethod(this, "deleteLogBufferTimer", Qt::BlockingQueuedConnection);
     } // Otherwise, it will automatically be cleaned up by Qt due to being a child of this
+}
+
+void FileLogHandler::deleteLogBufferTimer()
+{
+    delete m_logBufferTimer;
+    m_logBufferTimer = Q_NULLPTR;
 }
 
 qint64 FileLogHandler::intFromEnv(const char *envName, const qint64 defaultValue)

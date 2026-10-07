@@ -75,6 +75,18 @@
             //#define QPalette::Background QPalette::Window
 #endif
 
+#if QT_VERSION < QT_VERSION_CHECK(5, 11, 0)
+            #define QMETRIC_HORIZONTAL_ADVANCE(metric,text) metric.width(text)
+#else
+            #define QMETRIC_HORIZONTAL_ADVANCE(metric,text) metric.horizontalAdvance(text)
+#endif
+
+#if QT_VERSION < QT_VERSION_CHECK(5, 8, 0)
+            #define ISO_DATE_WITH_MS Qt::ISODate
+#else
+            #define ISO_DATE_WITH_MS Qt::ISODateWithMs
+#endif
+
 Q_DECLARE_LOGGING_CATEGORY(caApplyNumericLog)
 Q_DECLARE_LOGGING_CATEGORY(caBitnamesLog)
 Q_DECLARE_LOGGING_CATEGORY(caByteLog)

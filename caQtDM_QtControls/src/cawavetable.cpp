@@ -327,7 +327,7 @@ void caWaveTable::pasteDataCSV()
 
     // Figure out if the pasted data contains a header and remove it if so.
     // Pasting of header values is not allowed / headers should be ignored.
-    QStringList lines = text.split("\n", Qt::SkipEmptyParts);
+    QStringList lines = text.split("\n", SKIP_EMPTY_PARTS);
     bool removeHeader = false;
     if (lines.size() > 1) {
         // If the current header corresponds to the first pasted line, it is a header and should be ignored
@@ -335,7 +335,7 @@ void caWaveTable::pasteDataCSV()
             removeHeader = true;
         } else {
             // Analyze the first possible header value to figure out if it can be converted into a value, if not it is a header
-            QStringList headerParts = lines[0].split(csvSeparator, Qt::SkipEmptyParts);
+            QStringList headerParts = lines[0].split(csvSeparator, SKIP_EMPTY_PARTS);
             QString possibleHeaderValue;
             if (!headerParts.isEmpty()) {
                 possibleHeaderValue = headerParts.first();
@@ -990,4 +990,3 @@ void caWaveTable::copy()
 void caWaveTable::createActions() {
 
 }
-

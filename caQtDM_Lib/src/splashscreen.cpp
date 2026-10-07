@@ -40,16 +40,33 @@
 #include <QStyleOptionProgressBar>
 #endif
 #include <QApplication>
+#include <QDateTime>
 #include <QFile>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
+#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
 #include <QRandomGenerator>
+#endif
 #include <QImageReader>
 
 #define PROGRESS_BAR_AREA_HEIGHT 50
 
 Q_LOGGING_CATEGORY(splashScreenLog, "caqtdm.lib.splashscreen")
+
+static int boundedRandom(int upperBound)
+{
+#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
+    return QRandomGenerator::global()->bounded(upperBound);
+#else
+    static bool seeded = false;
+    if (!seeded) {
+        qsrand(QDateTime::currentDateTime().toTime_t());
+        seeded = true;
+    }
+    return qrand() % upperBound;
+#endif
+}
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 SplashScreen::SplashScreen(QWidget *parent) : QSplashScreen(parent), m_progress(0)
@@ -139,7 +156,7 @@ QString SplashScreen::getMappedSplashScreenImage(QDate &date)
     } else if (isCoffeeTime(QTime::currentTime()) && mappingObject.contains("COFFEE")) {
         mappedValue = mappingObject.value("COFFEE");
     } else if (mappedValue.isUndefined() && mappingObject.contains("RANDOM")
-               && QRandomGenerator::global()->bounded(100.0) > 99.0) {
+               && boundedRandom(100) == 99) {
         // 1% chance to take one of the randomly available ones
         mappedValue = mappingObject.value("RANDOM");
     }
@@ -152,7 +169,7 @@ QString SplashScreen::getMappedSplashScreenImage(QDate &date)
     if (mappedValue.isArray()) {
         QJsonArray mappedValueArray = mappedValue.toArray();
         mappedImagePath = mappedValueArray
-                              .at(QRandomGenerator::global()->bounded(mappedValueArray.size()))
+                              .at(boundedRandom(mappedValueArray.size()))
                               .toString();
     } else {
         mappedImagePath = mappedValue.toString();

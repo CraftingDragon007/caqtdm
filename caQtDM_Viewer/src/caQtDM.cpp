@@ -329,7 +329,7 @@ int main(int argc, char *argv[])
             HTTPCONFIGURATOR = true;
         } else if(!strcmp(argv[in], "-url")) {
             in++;
-            setenv("CAQTDM_URL_DISPLAY_PATH", argv[in], 1);
+            qputenv("CAQTDM_URL_DISPLAY_PATH", argv[in]);
         } else if(!strcmp(argv[in], "-emptycache")) {
             Specials specials;
             QString path =  specials.getStdPath();

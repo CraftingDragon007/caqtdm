@@ -289,7 +289,11 @@ CONFIG += archive
     archive: {
     # http retrieval, can always be build
        CONFIG += archiveSF
-       CONFIG += archiveHTTP
+       greaterThan(QT_MAJOR_VERSION, 5) {
+           CONFIG += archiveHTTP
+       } else:equals(QT_MAJOR_VERSION, 5):greaterThan(QT_MINOR_VERSION, 14) {
+           CONFIG += archiveHTTP
+       }
     # next ones are only buildable at psi
 
     QMAKESPEC = $$(QMAKESPEC)
@@ -329,6 +333,10 @@ DEFINES += TARGET_DESCRIPTION=\"\\\"$${TARGET_DESCRIPTION}\\\"\"
 DEFINES += TARGET_COPYRIGHT=\"\\\"$${TARGET_COPYRIGHT}\\\"\"
 DEFINES += TARGET_INTERNALNAME=\"\\\"$${TARGET_INTERNALNAME}\\\"\"
 DEFINES += TARGET_VERSION_STR=\"\\\"$${CAQTDM_VERSION}\\\"\"
+
+win32-g++ {
+    DEFINES += CAQTDM_MINGW_RESOURCE_COMPAT
+}
 
 DEFINES += QT_MESSAGELOGCONTEXT
 
@@ -1069,5 +1077,3 @@ DEFINES += QT_MESSAGELOGCONTEXT
 # special arguments &A and &T were implemented in shell commands
 # cabitnames, cachoice, cashellcommand : possibility to choose the font and size, buttons will be also separated by 2 pixels
 # in case of static visibility, channels will be ignored.
-
-

@@ -73,7 +73,8 @@ public:
         out << config.uuid() << config.pid() << config.enabled() << config.objectName() << config.fileName()
             << config.outputA() << config.outputB() << config.channel() << config.channelB()
             << config.channelC() << config.channelD() << config.shortcut() << config.value()
-            << config.calculationType() << config.captureType() << config.captureRange() << config.timestamp();
+            << qint32(config.calculationType()) << qint32(config.captureType()) << qint32(config.captureRange())
+            << config.timestamp();
         return out;
     }
 
@@ -91,9 +92,9 @@ public:
         QString channelD;
         QKeySequence shortcut;
         QVariant value;
-        caHMIConfig::calcType calculationType;
-        caHMIConfig::capType captureType;
-        caHMIConfig::capRange captureRange;
+        qint32 calculationType;
+        qint32 captureType;
+        qint32 captureRange;
         qint64 timestamp;
 
         in >> uuid >> pid >> enabled >> objectName >> fileName
@@ -115,9 +116,9 @@ public:
         config.setChannelD(channelD);
         config.setShortcut(shortcut);
         config.setValue(value);
-        config.setCalculationType(calculationType);
-        config.setCaptureType(captureType);
-        config.setCaptureRange(captureRange);
+        config.setCalculationType(static_cast<caHMIConfig::calcType>(calculationType));
+        config.setCaptureType(static_cast<caHMIConfig::capType>(captureType));
+        config.setCaptureRange(static_cast<caHMIConfig::capRange>(captureRange));
         config.setTimestamp(timestamp);
 
         return in;

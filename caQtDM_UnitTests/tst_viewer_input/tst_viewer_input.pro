@@ -62,6 +62,10 @@ LIBS += \
     -lcaQtDM_Lib \
     -lqtcontrols
 
+win32-g++ {
+    LIBS += -lpsapi
+}
+
 _EPICSLIB = $$(EPICSLIB)
 !isEmpty(_EPICSLIB) {
     QMAKE_RPATHDIR += $$(EPICSLIB)

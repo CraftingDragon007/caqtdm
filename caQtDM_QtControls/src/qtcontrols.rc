@@ -16,6 +16,7 @@ VS_VERSION_INFO VERSIONINFO
 BEGIN
     BLOCK "StringFileInfo"
     BEGIN
+#if !defined(CAQTDM_MINGW_RESOURCE_COMPAT)
         BLOCK "040904b0"
         BEGIN
             VALUE "CompanyName",        TARGET_COMPANY "\0"
@@ -27,6 +28,20 @@ BEGIN
             VALUE "ProductName",        TARGET_DESCRIPTION "\0"
             VALUE "ProductVersion",     TARGET_VERSION_STR "\0"
         END
+#endif
+#ifdef CAQTDM_MINGW_RESOURCE_COMPAT
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "CompanyName",        "Paul Scherrer Institut"
+            VALUE "FileDescription",    "Widgets for Display Manager"
+            VALUE "FileVersion",        "V4.9.0"
+            VALUE "InternalName",       "caqtdm"
+            VALUE "LegalCopyright",     "Copyright (C) 2012-2025 Paul Scherrer Institut"
+            VALUE "OriginalFilename",   "qtcontrols.dll"
+            VALUE "ProductName",        "Channel Access Qt Display Manager"
+            VALUE "ProductVersion",     "V4.9.0"
+        END
+#endif
     END
 
     BLOCK "VarFileInfo"

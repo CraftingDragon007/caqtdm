@@ -61,7 +61,7 @@ public:
         if(role == Qt::DisplayRole) {
             switch(index.column()) {
             case caAlarmLog::ColTime: {
-                const QDateTime ts = QDateTime::fromString(ev.value(QStringLiteral("ts")).toString(), Qt::ISODateWithMs);
+                const QDateTime ts = QDateTime::fromString(ev.value(QStringLiteral("ts")).toString(), ISO_DATE_WITH_MS);
                 return ts.isValid() ? ts.toLocalTime().toString(QStringLiteral("yyyy-MM-dd HH:mm:ss.zzz")) : ev.value(QStringLiteral("ts"));
             }
             case caAlarmLog::ColAction: return ev.value(QStringLiteral("action"));

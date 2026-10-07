@@ -1,3 +1,7 @@
+win32-g++ {
+    DEFINES += _MINGW __MINGW_USE_VC2005_COMPAT
+}
+
 opcua_plugin {
         CONFIG += caQtDM_Plugin
         CONFIG += Define_ControlsysTargetDir Define_Build_objDirs
@@ -37,7 +41,7 @@ opcua_plugin {
 
                 win32-g++ {
                         EPICS_LIBS=$$(EPICS_BASE)/lib/win32-x86-mingw
-                        LIBS += ../caQtDM_Lib/release/libcaQtDM_Lib.a
+                        LIBS += $$OUT_PWD/../../caQtDM_Lib/release/libcaQtDM_Lib.a
                 }
         }
 }
@@ -100,7 +104,8 @@ archive_plugin {
 
                 win32-g++ {
                         EPICS_LIBS=$$(EPICS_BASE)/lib/win32-x86-mingw
-                        LIBS += ../caQtDM_Lib/release/libcaQtDM_Lib.a
+                        LIBS += $$OUT_PWD/../../../caQtDM_Lib/release/libcaQtDM_Lib.a
+                        LIBS += $$OUT_PWD/../../../caQtDM_QtControls/release/libqtcontrols.a
                 }
         }
 }
@@ -149,7 +154,7 @@ demo_plugin {
 
                 win32-g++ {
                         EPICS_LIBS=$$(EPICS_BASE)/lib/win32-x86-mingw
-                        LIBS += ../caQtDM_Lib/release/libcaQtDM_Lib.a
+                        LIBS += $$OUT_PWD/../../caQtDM_Lib/release/libcaQtDM_Lib.a
                 }
         }
 }
@@ -198,7 +203,7 @@ internal_plugin {
 
                 win32-g++ {
                         EPICS_LIBS=$$(EPICS_BASE)/lib/win32-x86-mingw
-                        LIBS += ../caQtDM_Lib/release/libcaQtDM_Lib.a
+                        LIBS += $$OUT_PWD/../../caQtDM_Lib/release/libcaQtDM_Lib.a
                 }
         }
 }
@@ -247,7 +252,7 @@ gps_plugin {
 
                 win32-g++ {
                         EPICS_LIBS=$$(EPICS_BASE)/lib/win32-x86-mingw
-                        LIBS += ../caQtDM_Lib/release/libcaQtDM_Lib.a
+                        LIBS += $$OUT_PWD/../../caQtDM_Lib/release/libcaQtDM_Lib.a
                 }
         }
 }
@@ -289,7 +294,7 @@ bsread_Plugin {
 
                 win32-g++ {
                         EPICS_LIBS=$$(EPICS_BASE)/lib/win32-x86-mingw
-                        LIBS += ../caQtDM_Lib/release/libcaQtDM_Lib.a
+                        LIBS += $$OUT_PWD/../../caQtDM_Lib/release/libcaQtDM_Lib.a
                 }
         }
 }
@@ -355,18 +360,19 @@ epics3_plugin {
 	win32 {
                 message("epics3_plugin configuration win32")
                 INCLUDEPATH += $$(EPICS_BASE)/include/os/win32
-                INCLUDEPATH += $$(EPICS_BASE)/include/compiler/msvc
                 win32-msvc* || msvc{
+                        INCLUDEPATH += $$(EPICS_BASE)/include/compiler/msvc
                         DEFINES +=_CRT_SECURE_NO_WARNINGS
                         CONFIG += Define_Build_epics_controls 
                         CONFIG += Define_Build_caQtDM_Lib Define_Symbols
                 }
 
                 win32-g++ {
+                        INCLUDEPATH += $$(EPICS_BASE)/include/compiler/gcc
                         EPICS_LIBS=$$(EPICS_BASE)/lib/win32-x86-mingw
-                        LIBS += $${EPICS_LIBS}/ca.lib
-                        LIBS += $${EPICS_LIBS}/COM.lib
-                        LIBS += ../caQtDM_Lib/release/libcaQtDM_Lib.a
+                        LIBS += $${EPICS_LIBS}/libca.dll.a
+                        LIBS += $${EPICS_LIBS}/libCom.dll.a
+                        LIBS += $$OUT_PWD/../../caQtDM_Lib/release/libcaQtDM_Lib.a
                 }
 	}
 }
@@ -439,7 +445,7 @@ environment_Plugin {
 
                 win32-g++ {
                         EPICS_LIBS=$$(EPICS_BASE)/lib/win32-x86-mingw
-                        LIBS += ../caQtDM_Lib/release/libcaQtDM_Lib.a
+                        LIBS += $$OUT_PWD/../../caQtDM_Lib/release/libcaQtDM_Lib.a
                 }
         }
 }
@@ -591,6 +597,22 @@ epics4_plugin {
  		
  
 	}
+        win32-g++ {
+                message("epics4_plugin configuration win32-g++")
+                INCLUDEPATH += $$(EPICS_BASE)/include
+                INCLUDEPATH += $$(EPICS_BASE)/include/pv
+                INCLUDEPATH += $$(EPICS_BASE)/include/os/win32
+                INCLUDEPATH += $$(EPICS_BASE)/include/compiler/gcc
+                EPICS_LIBS=$$(EPICS_BASE)/lib/win32-x86-mingw
+                LIBS += $${EPICS_LIBS}/libca.dll.a
+                LIBS += $${EPICS_LIBS}/libCom.dll.a
+                LIBS += $${EPICS_LIBS}/libpvAccess.dll.a
+                LIBS += $${EPICS_LIBS}/libpvAccessCA.dll.a
+                LIBS += $${EPICS_LIBS}/libpvData.dll.a
+                LIBS += $${EPICS_LIBS}/libpvaClient.dll.a
+                LIBS += $${EPICS_LIBS}/libnt.dll.a
+                LIBS += $$OUT_PWD/../../caQtDM_Lib/release/libcaQtDM_Lib.a
+        }
 }
 
 caQtDM_Plugin {
@@ -654,6 +676,8 @@ caQtDM_QtControls {
                         LIBS += $$(QWTLIB)/lib$$(QWTLIBNAME).a
                         LIBS += $$(CAQTDM_COLLECT)/libprcParser.a
                         LIBS += $$(CAQTDM_COLLECT)/libalhParser.a
+                        QMAKE_POST_LINK = $${QMAKE_COPY} release/qtcontrols.dll $$(CAQTDM_COLLECT)
+                        QMAKE_POST_LINK += && $${QMAKE_COPY} release/libqtcontrols.a $$(CAQTDM_COLLECT)
      		}
      		win32-msvc* || msvc{
         		DEFINES += QTCON_MAKEDLL _CRT_SECURE_NO_WARNINGS
@@ -747,10 +771,10 @@ caQtDM_Lib {
                 message("caQtDM_Lib configuration : win32")
    		INCLUDEPATH += $$(EPICS_BASE)/include
    		INCLUDEPATH += $$(EPICS_BASE)/include/os/win32
-                INCLUDEPATH += $$(EPICS_BASE)/include/compiler/msvc
 
 
   		win32-msvc* || msvc{
+                        INCLUDEPATH += $$(EPICS_BASE)/include/compiler/msvc
         		DEFINES +=_CRT_SECURE_NO_WARNINGS
         		DEFINES += CAQTDM_LIB_LIBRARY
         		TEMPLATE = lib
@@ -758,12 +782,15 @@ caQtDM_Lib {
                         CONFIG += Define_Build_epics_controls Define_Symbols Define_Build_OutputDir
    		}
    		win32-g++ {
+                        INCLUDEPATH += $$(EPICS_BASE)/include/compiler/gcc
+        		DEFINES += CAQTDM_LIB_LIBRARY
        			EPICS_LIBS=$$(EPICS_BASE)/lib/win32-x86-mingw
                         LIBS += $$(QWTLIB)/lib$$(QWTLIBNAME).a
-			LIBS += $$(QTCONTROLS_LIBS)/release//libqtcontrols.a
-			LIBS += $${EPICS_LIBS}/ca.lib
-			LIBS += $${EPICS_LIBS}/COM.lib
-			QMAKE_POST_LINK = $${QMAKE_COPY} .\\release\\caQtDM_Lib.dll ..\caQtDM_Binaries
+			LIBS += $$OUT_PWD/../caQtDM_QtControls/release/libqtcontrols.a
+			LIBS += $${EPICS_LIBS}/libca.dll.a
+			LIBS += $${EPICS_LIBS}/libCom.dll.a
+			QMAKE_POST_LINK = $${QMAKE_COPY} release/caQtDM_Lib.dll $$(CAQTDM_COLLECT)
+                        QMAKE_POST_LINK += && $${QMAKE_COPY} release/libcaQtDM_Lib.a $$(CAQTDM_COLLECT)
    		}		
 	}
 }
@@ -1170,7 +1197,11 @@ caQtDM_Viewer {
                 INCLUDEPATH += $(QWTHOME)/src
                 INCLUDEPATH += $$(EPICS_BASE)/include
                 INCLUDEPATH += $$(EPICS_BASE)/include/os/win32
-                INCLUDEPATH += $$(EPICS_BASE)/include/compiler/msvc
+                win32-g++ {
+                    INCLUDEPATH += $$(EPICS_BASE)/include/compiler/gcc
+                } else {
+                    INCLUDEPATH += $$(EPICS_BASE)/include/compiler/msvc
+                }
                 INCLUDEPATH += ../caQtDM_Lib/src
                 INCLUDEPATH += ../caQtDM_QtControls/src
                 INCLUDEPATH += $(QWTINCLUDE)
@@ -1196,11 +1227,12 @@ caQtDM_Viewer {
                 win32-g++ {
                         EPICS_LIBS=$$(EPICS_BASE)/lib/win32-x86-mingw
                         LIBS += $$(QWTLIB)/lib$$(QWTLIBNAME).a
-                        LIBS += $$(QTCONTROLS_LIBS)/release/libqtcontrols.a
-                        LIBS += $${EPICS_LIBS}/ca.lib
-                        LIBS += $${EPICS_LIBS}/COM.lib
+                        LIBS += $$OUT_PWD/../caQtDM_QtControls/release/libqtcontrols.a
+                        LIBS += $${EPICS_LIBS}/libca.dll.a
+                        LIBS += $${EPICS_LIBS}/libCom.dll.a
                         LIBS += ../caQtDM_Lib/release/libcaQtDM_Lib.a
-                        QMAKE_POST_LINK = $${QMAKE_COPY} .\\release\\caQtDM.exe ..\caQtDM_Binaries
+                        LIBS += -lpsapi
+                        QMAKE_POST_LINK = $${QMAKE_COPY} release/caQtDM.exe $$(CAQTDM_COLLECT)
                 }
         }
 

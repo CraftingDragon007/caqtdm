@@ -234,7 +234,7 @@ public:
             if(bg.isValid()) fill = bg.value<QColor>();
             if(hover) fill = fill.lighter(110);
             QRect box = cell;
-            box.setWidth(qMin(cell.width(), QFontMetrics(opt.font).horizontalAdvance(QStringLiteral("W")) + 10));
+            box.setWidth(qMin(cell.width(), QMETRIC_HORIZONTAL_ADVANCE(QFontMetrics(opt.font), QStringLiteral("W")) + 10));
             drawBox(painter, box, fill, col == AlhTreeModel::ColUnackSevr && !text.isEmpty() ? Raised : Flat);
             painter->setPen(ALH_SEVR_TEXT);
             painter->drawText(box, Qt::AlignCenter, text);
@@ -247,7 +247,7 @@ public:
             else if(hover) fill = fill.lighter(108);
             // button as wide as its text like the alh push button, the column keeps the widest name
             QRect button = cell;
-            button.setWidth(qMin(cell.width(), QFontMetrics(opt.font).horizontalAdvance(text) + 12));
+            button.setWidth(qMin(cell.width(), QMETRIC_HORIZONTAL_ADVANCE(QFontMetrics(opt.font), text) + 12));
             drawBox(painter, button, fill, selected ? Sunken : Raised);
             // channel buttons have a fixed fill per mode, so their text colour is fixed too
             QColor fg = selected ? QApplication::palette().highlightedText().color()
@@ -304,14 +304,14 @@ public:
         opt.font = option.font;
         if(index.column() == AlhTreeModel::ColName) opt.font.setBold(true);
         const QFontMetrics fm(opt.font);
-        QSize s(fm.horizontalAdvance(opt.text) + 8, fm.height() + 8);
+        QSize s(QMETRIC_HORIZONTAL_ADVANCE(fm, opt.text) + 8, fm.height() + 8);
         switch(index.column()) {
         case AlhTreeModel::ColUnackSevr:
-        case AlhTreeModel::ColCurSevr: s.setWidth(fm.horizontalAdvance(QStringLiteral("W")) + 14); break;
+        case AlhTreeModel::ColCurSevr: s.setWidth(QMETRIC_HORIZONTAL_ADVANCE(fm, QStringLiteral("W")) + 14); break;
         case AlhTreeModel::ColArrow: s.setWidth((m_treeWindow ? opt.text.isEmpty() : !index.data(AlhTreeModel::IsGroupRole).toBool()) ? 4 : 18); break;
         case AlhTreeModel::ColGuidance:
-        case AlhTreeModel::ColProcess: s.setWidth(opt.text.isEmpty() ? 4 : fm.horizontalAdvance(QStringLiteral("W")) + 14); break;
-        case AlhTreeModel::ColName: s.setWidth(fm.horizontalAdvance(opt.text) + 14); break;
+        case AlhTreeModel::ColProcess: s.setWidth(opt.text.isEmpty() ? 4 : QMETRIC_HORIZONTAL_ADVANCE(fm, QStringLiteral("W")) + 14); break;
+        case AlhTreeModel::ColName: s.setWidth(QMETRIC_HORIZONTAL_ADVANCE(fm, opt.text) + 14); break;
         default: break;
         }
         return s;
@@ -789,12 +789,12 @@ void caAlarmTree::fixColumnWidths()
     QFont bold = m_groupView->font();
     bold.setBold(true);
     const QFontMetrics fm(m_groupView->font()), fmBold(bold);
-    int nameW = fmBold.horizontalAdvance(QStringLiteral("Name")) + 14, groupNameW = nameW, maxDepth = 0, channels = 0;
+    int nameW = QMETRIC_HORIZONTAL_ADVANCE(fmBold, QStringLiteral("Name")) + 14, groupNameW = nameW, maxDepth = 0, channels = 0;
     bool anyGuidance = false, anyCommand = false, anySubGroup = false, anyGroup = false;
     for(int id = 0; id < m.nodeCount(); id++) {
         const AlhNode &n = m.node(id);
-        nameW = qMax(nameW, fmBold.horizontalAdvance(n.displayName()) + 14);
-        if(n.isGroup()) groupNameW = qMax(groupNameW, fmBold.horizontalAdvance(n.displayName()) + 14);
+        nameW = qMax(nameW, QMETRIC_HORIZONTAL_ADVANCE(fmBold, n.displayName()) + 14);
+        if(n.isGroup()) groupNameW = qMax(groupNameW, QMETRIC_HORIZONTAL_ADVANCE(fmBold, n.displayName()) + 14);
         anyGuidance = anyGuidance || !n.guidanceText.isEmpty() || !n.guidanceLocation.isEmpty();
         anyCommand = anyCommand || !n.command.isEmpty();
         if(n.isChannel()) { channels++; continue; }
@@ -804,13 +804,13 @@ void caAlarmTree::fixColumnWidths()
         maxDepth = qMax(maxDepth, depth);
         anySubGroup = anySubGroup || (n.parentId >= 0);
     }
-    const int letterW = fm.horizontalAdvance(QStringLiteral("W")) + 14;
+    const int letterW = QMETRIC_HORIZONTAL_ADVANCE(fm, QStringLiteral("W")) + 14;
     const QString digits(QString::number(qMax(channels, 1)).size(), QLatin1Char('9'));
     int longestStat = 0;
-    foreach(const QString &stat, AlhModel::statusNames()) longestStat = qMax(longestStat, fm.horizontalAdvance(stat));
-    const int infoW = qMax(fm.horizontalAdvance(QString("(%1,%1,%1,%1,%1)").arg(digits)),
-                           longestStat + fm.horizontalAdvance(QStringLiteral("<,NO_ALARM>,<NO_ALARM>"))) + 8;
-    const int maskW = fm.horizontalAdvance(QStringLiteral("<CDATL> M")) + 8;
+    foreach(const QString &stat, AlhModel::statusNames()) longestStat = qMax(longestStat, QMETRIC_HORIZONTAL_ADVANCE(fm, stat));
+    const int infoW = qMax(QMETRIC_HORIZONTAL_ADVANCE(fm, QString("(%1,%1,%1,%1,%1)").arg(digits)),
+                           longestStat + QMETRIC_HORIZONTAL_ADVANCE(fm, QStringLiteral("<,NO_ALARM>,<NO_ALARM>"))) + 8;
+    const int maskW = QMETRIC_HORIZONTAL_ADVANCE(fm, QStringLiteral("<CDATL> M")) + 8;
 
     QTreeView *views[2] = { m_treeView, m_groupView };
     for(int v = 0; v < 2; v++) {
@@ -1287,7 +1287,7 @@ void caAlarmTree::emitEvent(QVariantMap event)
 {
     const int nodeId = event.take(QStringLiteral("nodeId")).toInt();
     event.remove(QStringLiteral("latched"));
-    event.insert(QStringLiteral("ts"), QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs));
+    event.insert(QStringLiteral("ts"), QDateTime::currentDateTimeUtc().toString(ISO_DATE_WITH_MS));
     if(!event.contains(QStringLiteral("user"))) event.insert(QStringLiteral("user"), userName());
     event.insert(QStringLiteral("host"), m_host);
     event.insert(QStringLiteral("display"), m_resolvedConfig);

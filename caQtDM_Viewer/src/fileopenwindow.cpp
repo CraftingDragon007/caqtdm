@@ -25,11 +25,13 @@
 
 bool HTTPCONFIGURATOR = false;
 
-#if defined(_MSC_VER)
+#if defined(_WIN32)
   #define NOMINMAX
   #include <windows.h>
   #include <Psapi.h>
+#if defined(_MSC_VER)
   #pragma comment (lib, "Psapi.lib")
+#endif
 #endif
 #include "searchfile.h"
 
@@ -98,16 +100,6 @@ bool HTTPCONFIGURATOR = false;
 #endif //CAQTDM_X11
 
 #if defined(_MSC_VER)
-int setenv(const char *name, const char *value, int overwrite)
-{
-    int errcode = 0;
-    if(!overwrite) {
-        size_t envsize = 0;
-        errcode = getenv_s(&envsize, Q_NULLPTR, 0, name);
-        if(errcode || envsize) return errcode;
-    }
-    return _putenv_s(name, value);
-}
 #ifndef snprintf
  #define snprintf _snprintf
 #endif
@@ -289,7 +281,7 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
 
     // set for epics longer waveforms
     QString maxBytes = (QString)  qgetenv("EPICS_CA_MAX_ARRAY_BYTES");
-    if(maxBytes.size() == 0) setenv("EPICS_CA_MAX_ARRAY_BYTES", "150000000", 1);
+    if(maxBytes.size() == 0) qputenv("EPICS_CA_MAX_ARRAY_BYTES", "150000000");
 #ifdef MOBILE
     Q_INIT_RESOURCE(qtcontrolsplugin);  // load resources from resource file
 #endif
@@ -698,7 +690,7 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
     fileFunctions filefunction;
 
     // download the choosen configurations file from the choosen url, but find it first locally
-    setenv("CAQTDM_DISPLAY_PATH", qasc(specials.getStdPath()), 1);
+    qputenv("CAQTDM_DISPLAY_PATH", qasc(specials.getStdPath()));
     int success = filefunction.checkFileAndDownload(file, url);
     if(!success) {
         QMessageBox::critical(Q_NULLPTR, tr("caQtDM"), tr("could not download file %1 from %2").arg(file).arg(url));
@@ -757,7 +749,7 @@ FileOpenWindow::FileOpenWindow(QMainWindow* parent,  QString filename, QString m
     if(!displayPath.contains(specials.getStdPath())) {
        displayPath.append(pathSeparator);
        displayPath.append(specials.getStdPath());
-       setenv("CAQTDM_DISPLAY_PATH", (char*) qasc(displayPath), 1);
+       qputenv("CAQTDM_DISPLAY_PATH", (char*) qasc(displayPath));
     }
 #endif
 
@@ -985,7 +977,7 @@ void FileOpenWindow::setAllEnvironmentVariables(const QString &fileName, Message
                 continue;
             }
 
-            setenv(qasc(envName), qasc(envString), 1);
+            qputenv(qasc(envName), qasc(envString));
             //messageWindow->postMsgEvent(QtDebugMsg, (char*) qasc(envString));
         } else if(line.size() > 0) {
             snprintf(asc, MAX_STRING_LENGTH, "environment variable could not be set from %s", qasc(line));
@@ -993,7 +985,7 @@ void FileOpenWindow::setAllEnvironmentVariables(const QString &fileName, Message
         }
     }
     //Replacement for standard writable directory
-    setenv("CAQTDM_DISPLAY_PATH", qasc(stdpathdoc), 1);
+    qputenv("CAQTDM_DISPLAY_PATH", qasc(stdpathdoc));
 
     snprintf(asc, MAX_STRING_LENGTH, "epics configuration file loaded: %s", qasc(fileName));
     if(messageWindow != Q_NULLPTR) messageWindow->postMsgEvent(QtDebugMsg, asc);

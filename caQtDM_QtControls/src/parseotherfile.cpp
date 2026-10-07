@@ -38,7 +38,11 @@ ParseOtherFile::ParseOtherFile(QString fileName, bool &ok, QString &errorString)
     fileExists = false;
 
     const bool isMedmFile = fileName.endsWith (".adl");
+#if defined(Q_OS_WIN)
+    const bool isEdmFile = false;
+#else
     const bool isEdmFile = fileName.endsWith (".edl");
+#endif
 
     if(isMedmFile || isEdmFile) {
         qCDebug(parseOtherFileLog) << "caQtDM -- parseotherfile" << fileName << "is a file to convert";
@@ -73,7 +77,7 @@ ParseOtherFile::ParseOtherFile(QString fileName, bool &ok, QString &errorString)
                     converter.setTmp_directory(QDir::tempPath());
                     converter.adl2ui(fileName);
                 }
-#ifndef _MSC_VER
+#if !defined(Q_OS_WIN)
                 else if ( isEdmFile ){
                     // edm conversion
                     myParserEDM converter;

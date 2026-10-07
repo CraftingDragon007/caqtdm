@@ -1,0 +1,5 @@
+# REACTOS_CRT_DIR must be a native Windows path with forward slashes.
+USR_CPPFLAGS += -D__MINGW_USE_VC2005_COMPAT -D_finite=isfinite
+USR_CXXFLAGS += -std=c++11
+USR_LDFLAGS += -L$(REACTOS_CRT_DIR)
+USR_SYS_LIBS += roscrtcompat

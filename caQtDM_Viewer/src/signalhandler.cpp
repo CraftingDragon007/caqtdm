@@ -30,7 +30,7 @@
 
 #include <QDebug>
 
-#ifdef _MSC_VER
+#if defined(_WIN32) || defined(WIN32)
 #include <windows.h>
 #else
 #include <sys/socket.h>
@@ -40,7 +40,7 @@
 
 Q_LOGGING_CATEGORY(signalHandler, "caqtdm.viewer.signalHandler")
 
-#ifndef _MSC_VER
+#if !defined(_WIN32) && !defined(WIN32)
 int SignalHandler::signalSocketPair[2];
 
 void SignalHandler::posixSignalHandler(int) {
@@ -49,11 +49,11 @@ void SignalHandler::posixSignalHandler(int) {
 }
 #endif
 
-#ifdef _MSC_VER
+#if defined(_WIN32) || defined(WIN32)
 BOOL WINAPI windowsCtrlHandler(DWORD ctrlType) {
     if (ctrlType == CTRL_C_EVENT || ctrlType == CTRL_CLOSE_EVENT) {
         qCInfo(signalHandler) << "Windows signal received. Exiting...";
-        QMetaObject::invokeMethod(qApp, [=](){ qApp->exit(0); });
+        QMetaObject::invokeMethod(qApp, "quit", Qt::QueuedConnection);
         return TRUE;
     }
     return FALSE;
@@ -61,7 +61,7 @@ BOOL WINAPI windowsCtrlHandler(DWORD ctrlType) {
 #endif
 
 SignalHandler::SignalHandler(QObject *parent) : QObject(parent) {
-#ifndef _MSC_VER
+#if !defined(_WIN32) && !defined(WIN32)
     socketNotifier = new QSocketNotifier(signalSocketPair[1], QSocketNotifier::Read, this);
     connect(socketNotifier, &QSocketNotifier::activated, this, &SignalHandler::handleUnixSignal);
 #endif
@@ -70,7 +70,7 @@ SignalHandler::SignalHandler(QObject *parent) : QObject(parent) {
 SignalHandler::~SignalHandler() {}
 
 int SignalHandler::setupHandlers() {
-#ifdef _MSC_VER
+#if defined(_WIN32) || defined(WIN32)
     return SetConsoleCtrlHandler(windowsCtrlHandler, TRUE) ? 0 : 1;
 #else
     if (::socketpair(AF_UNIX, SOCK_STREAM, 0, signalSocketPair)) return 1;
@@ -86,7 +86,7 @@ int SignalHandler::setupHandlers() {
 #endif
 }
 
-#ifndef _MSC_VER
+#if !defined(_WIN32) && !defined(WIN32)
 void SignalHandler::handleUnixSignal() {
     socketNotifier->setEnabled(false);
     char tmp;
