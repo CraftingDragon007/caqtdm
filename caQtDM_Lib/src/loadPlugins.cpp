@@ -83,7 +83,7 @@ bool loadPlugins::loadAll(QMap<QString, ControlsInterface*> &interfaces, MutexKn
 
         QStringList filesInPluginFolder = pluginsDir.entryList(QDir::Files);
         QStringList possiblePlugins;
-#if defined(linux) || defined(__FreeBSD__)
+#if defined(linux) || defined(__FreeBSD__) || defined(__OpenBSD__)
         // Only check .so files, otherwise we get unneccessary errors
         for (int i = 0; i < filesInPluginFolder.size(); ++i) {
             const QString& filename = filesInPluginFolder.at(i);

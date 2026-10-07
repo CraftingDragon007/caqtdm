@@ -92,6 +92,11 @@ else()
 endif()
 find_package(Qt6 6.2 REQUIRED COMPONENTS ${_caqtdm_qt_components})
 find_package(Qt6 QUIET COMPONENTS Positioning SerialBus OpcUa WebSockets)
+if(WIN32 AND NOT MINGW)
+    find_package(ZLIB QUIET)
+else()
+    find_package(ZLIB REQUIRED)
+endif()
 
 if(MSVC)
     # The EPICS pvAccess headers need /Zc:twoPhase- to compile under the

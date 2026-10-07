@@ -65,6 +65,10 @@ freebsd {
    LIBS += -L/usr/local/lib -lz
 }
 
+win32-g++ {
+   LIBS += -lz
+}
+
 PRE_TARGETDEPS += \
      moc/moc_caslider.cpp \
      moc/moc_cacartesianplot.cpp \

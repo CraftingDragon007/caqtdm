@@ -67,6 +67,12 @@ if(CAQTDM_ARCHIVE_PLUGINS)
             controlsinterface.h caQtDM_Plugins_global.h
         INCLUDES "${_root}/archive" "${_root}/archive/archiveHTTP"
         LINKS Qt6::UiTools)
+    if(ZLIB_FOUND)
+        target_link_libraries(archiveHTTP_plugin PRIVATE ZLIB::ZLIB)
+        target_compile_definitions(archiveHTTP_plugin PRIVATE CAQTDM_USE_SYSTEM_ZLIB)
+    else()
+        target_compile_definitions(archiveHTTP_plugin PRIVATE CAQTDM_USE_QT_ZLIB)
+    endif()
 endif()
 
 # --------------------------------------------------------------------------------------------------

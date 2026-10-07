@@ -44,13 +44,10 @@
 #define ZLIB_BYTE Bytef
 #define ZLIB_ULONG uLongf
 
-#if defined(_MSC_VER)
+#if defined(CAQTDM_USE_QT_ZLIB) || (defined(_MSC_VER) && !defined(CAQTDM_USE_SYSTEM_ZLIB))
 #include <QtZlib/zconf.h>
 #include <QtZlib/zlib.h>
-#endif
-
-#if defined(linux)|| defined TARGET_OS_MAC || defined(__FreeBSD__)
-#include <zconf.h>
+#else
 #include <zlib.h>
 #endif
 

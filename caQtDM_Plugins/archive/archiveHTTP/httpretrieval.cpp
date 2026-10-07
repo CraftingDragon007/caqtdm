@@ -37,11 +37,9 @@
 #include <QThread>
 #include <QTime>
 
-#if defined(_MSC_VER)
+#if defined(CAQTDM_USE_QT_ZLIB) || (defined(_MSC_VER) && !defined(CAQTDM_USE_SYSTEM_ZLIB))
 #include <QtZlib/zlib.h>
-#endif
-
-#if defined(linux) || defined TARGET_OS_MAC || defined(__FreeBSD__)
+#else
 #include <zlib.h>
 #endif
 

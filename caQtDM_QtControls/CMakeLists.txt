@@ -270,9 +270,11 @@ if(NOT CAQTDM_MOBILE)
     target_link_libraries(qtcontrols PRIVATE Qt6::Designer)
 endif()
 
-if(APPLE OR CMAKE_SYSTEM_NAME MATCHES "^(FreeBSD|OpenBSD)$")
-    find_package(ZLIB REQUIRED)
+if(ZLIB_FOUND)
     target_link_libraries(qtcontrols PRIVATE ZLIB::ZLIB)
+    target_compile_definitions(qtcontrols PRIVATE CAQTDM_USE_SYSTEM_ZLIB)
+else()
+    target_compile_definitions(qtcontrols PRIVATE CAQTDM_USE_QT_ZLIB)
 endif()
 
 target_compile_definitions(qtcontrols PRIVATE QT_DISABLE_DEPRECATED_BEFORE=0x050000)

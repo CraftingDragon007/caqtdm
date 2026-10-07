@@ -52,6 +52,7 @@ jobs:
           qt6-tools \
           qwt \
           zeromq \
+          zlib \
           git \
           qt6-5compat \
           cmake \

@@ -299,6 +299,8 @@ foreach(_test ${_all_tests})
     set_tests_properties(${_test} PROPERTIES
         ENVIRONMENT "${_test_env}")
 endforeach()
+set_tests_properties(tst_qtcontrols PROPERTIES
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/caQtDM_UnitTests/tst_qtcontrols")
 
 caqtdm_apply_rpath(tst_viewer)
 caqtdm_apply_rpath(tst_qtcontrols)

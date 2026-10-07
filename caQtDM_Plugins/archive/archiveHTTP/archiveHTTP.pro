@@ -16,6 +16,10 @@ CONFIG += archive_plugin
 
 include (../../../caQtDM.pri)
 
+win32-g++ {
+    LIBS += -lz
+}
+
 MOC_DIR = ./moc
 VPATH += ./src
 

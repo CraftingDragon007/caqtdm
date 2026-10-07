@@ -2,7 +2,7 @@
 _pkgsrc=caqtdm
 _caqtdm_repo="${CAQTDM_REPO_URL:-https://github.com/caqtdm/caqtdm.git}"
 pkgname='caqtdm-git'
-pkgver=4.6.0.r5463.g24d9eb2
+pkgver=4.9.0.r6437.gfa248a0
 pkgrel=1
 pkgdesc='caQtDM is a popular Epics framework for developing panels'
 arch=('x86_64')
@@ -20,6 +20,7 @@ depends=(
     'qt6-tools'
     'qwt'
     'zeromq'
+    'zlib'
 )
 makedepends=(
     'git'
