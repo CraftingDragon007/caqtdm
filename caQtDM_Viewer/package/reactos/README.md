@@ -118,6 +118,18 @@ EPICS3, EPICS4, archiveSF, internal, environment, and demo plugins are built.
 ArchiveHTTP is excluded by the source's Qt-version gate because Qt 5.7 lacks
 the APIs it requires. Python and ZeroMQ are not needed for this recipe.
 
+## Known limitations
+
+- **ArchiveHTTP is unavailable in this build.** Its build gate requires
+  Qt 5.15 or newer, while this ReactOS recipe uses Qt 5.7.1. The plugin is
+  intentionally not compiled or deployed, so channels using ArchiveHTTP
+  cannot retrieve archive data. Copying a plugin built against newer Qt into
+  this package is not a supported workaround. ArchiveSF is a separate plugin
+  and does not replace ArchiveHTTP's backend. No Qt 5.7 port is included.
+- **System memory reporting is incorrect on ReactOS**, as reported during
+  runtime testing. An XP-compatible Windows API implementation may be needed;
+  this remains deferred. Do not rely on the displayed memory figures.
+
 ## 2. Build Qwt in release mode
 
 Use a separate Qwt 6.3.0 source tree. Copy both configuration files:

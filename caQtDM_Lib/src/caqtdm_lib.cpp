@@ -1487,7 +1487,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         map.insert("CAQTDM_INTERNAL_DPI",QString::number(qApp->primaryScreen()->physicalDotsPerInch()));
 
 #endif
-#if QT_VERSION >= QT_VERSION_CHECK(5, 8, 0)
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
         map.insert("CAQTDM_INTERNAL_REFRESHRATE",QString::number(qApp->primaryScreen()->refreshRate()));
 #endif
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
