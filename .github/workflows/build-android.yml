@@ -368,8 +368,9 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p artifacts
-          find "${GITHUB_WORKSPACE}/build/cmake-android" -type f -name "*.apk" -exec cp -v {} artifacts/ \;
-          test -n "$(find artifacts -maxdepth 1 -type f -name '*.apk' -print -quit)"
+          APK_PATH="$(find "${GITHUB_WORKSPACE}/build/cmake-android" -type f -name "caQtDM.apk" -print -quit)"
+          test -n "${APK_PATH}"
+          cp -v "${APK_PATH}" artifacts/caQtDM.apk
           ls -lah artifacts
 
       - name: Upload APK artifact
