@@ -229,6 +229,7 @@ caqtdm_set_output_dir(caQtDM)
 caqtdm_apply_rpath(caQtDM)
 
 install(TARGETS caQtDM
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     BUNDLE DESTINATION .)
 
