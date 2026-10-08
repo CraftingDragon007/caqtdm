@@ -5,17 +5,30 @@ set(_plugin_groups controllers graphics monitors utilities)
 
 foreach(_group ${_plugin_groups})
     set(_target qtcontrols_${_group}_plugin)
-    if(CAQTDM_MOBILE)
-        set(_plugin_type STATIC)
+    if(_group STREQUAL "controllers")
+        set(_class_name CustomWidgetCollectionInterface_Controllers)
+    elseif(_group STREQUAL "graphics")
+        set(_class_name CustomWidgetCollectionInterface_Graphics)
+    elseif(_group STREQUAL "monitors")
+        set(_class_name CustomWidgetCollectionInterface_Monitors)
     else()
-        set(_plugin_type MODULE)
+        set(_class_name CustomWidgetCollectionInterface_Utilities)
     endif()
-    add_library(${_target} ${_plugin_type}
-        "${CMAKE_CURRENT_SOURCE_DIR}/qtcontrols_${_group}_plugin.cpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/qtcontrols_${_group}_plugin.h"
-        "${CMAKE_CURRENT_SOURCE_DIR}/designerPluginTexts.h"
-        "${CMAKE_CURRENT_SOURCE_DIR}/plugin_xml_helper.h"
-        "${CMAKE_CURRENT_SOURCE_DIR}/qtcontrolsplugin.qrc")
+    if(CAQTDM_MOBILE)
+        qt_add_plugin(${_target} STATIC CLASS_NAME "${_class_name}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/qtcontrols_${_group}_plugin.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/qtcontrols_${_group}_plugin.h"
+            "${CMAKE_CURRENT_SOURCE_DIR}/designerPluginTexts.h"
+            "${CMAKE_CURRENT_SOURCE_DIR}/plugin_xml_helper.h"
+            "${CMAKE_CURRENT_SOURCE_DIR}/qtcontrolsplugin.qrc")
+    else()
+        add_library(${_target} MODULE
+            "${CMAKE_CURRENT_SOURCE_DIR}/qtcontrols_${_group}_plugin.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/qtcontrols_${_group}_plugin.h"
+            "${CMAKE_CURRENT_SOURCE_DIR}/designerPluginTexts.h"
+            "${CMAKE_CURRENT_SOURCE_DIR}/plugin_xml_helper.h"
+            "${CMAKE_CURRENT_SOURCE_DIR}/qtcontrolsplugin.qrc")
+    endif()
     target_include_directories(${_target} PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}"
         "${PROJECT_SOURCE_DIR}/caQtDM_Lib/src")

@@ -165,7 +165,6 @@ set(QTCONTROLS_HEADERS
     ${_src}/qwtplotcurvenan.h
     ${_src}/cawavetable.h
     ${_src}/cawavetablemodel.h
-    ${_src}/capolylinedialog.h
     ${_src}/specialFunctions.h
     ${_src}/caclock.h
     ${_src}/cameter.h
@@ -223,6 +222,7 @@ if(NOT CAQTDM_MOBILE)
         ${_src}/cadoubletabwidgetextension.h
         ${_src}/cadoubletabwidgetextensionfactory.h
         ${_src}/capolylinetaskmenu.h)
+    list(APPEND QTCONTROLS_HEADERS ${_src}/capolylinedialog.h)
 endif()
 
 # --------------------------------------------------------------------------------------------------

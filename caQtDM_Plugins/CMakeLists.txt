@@ -8,19 +8,23 @@ set(_root "${CMAKE_CURRENT_SOURCE_DIR}")
 # Always built plugins
 # --------------------------------------------------------------------------------------------------
 caqtdm_add_cs_plugin(demo_plugin
+    CLASS_NAME DemoPlugin
     SOURCES demo/demo_plugin.cpp
     HEADERS demo/demo_plugin.h controlsinterface.h caQtDM_Plugins_global.h)
 
 caqtdm_add_cs_plugin(internal_plugin
+    CLASS_NAME InternalPlugin
     SOURCES internal/internal_plugin.cpp internal/internal_channel.cpp
     HEADERS internal/internal_plugin.h internal/internal_channel.h controlsinterface.h caQtDM_Plugins_global.h)
 
 caqtdm_add_cs_plugin(environment_plugin
+    CLASS_NAME environmentPlugin
     SOURCES environment/environment_plugin.cpp
     HEADERS environment/environment_plugin.h controlsinterface.h caQtDM_Plugins_global.h
     LINKS Qt6::Concurrent)
 
 caqtdm_add_cs_plugin(epics3_plugin
+    CLASS_NAME Epics3Plugin
     SOURCES epics3/epics3_plugin.cpp epics3/epicsSubs.c
     HEADERS epics3/epics3_plugin.h controlsinterface.h caQtDM_Plugins_global.h
     LINKS Epics::ca Epics::Com)
@@ -29,6 +33,7 @@ if(CAQTDM_EPICS7)
     set(EPICS4_LINKS Epics::pvAccess Epics::pvAccessCA Epics::pvData Epics::pvaClient Epics::nt)
     list(FILTER EPICS4_LINKS INCLUDE REGEX ".+")
     caqtdm_add_cs_plugin(epics4_plugin
+        CLASS_NAME Epics4Plugin
         SOURCES epics4/epics4_plugin.cpp epics4/epics4_callbackThread.cpp epics4/epics4Requester.cpp
         HEADERS epics4/epics4_plugin.h epics4/epics4_callbackThread.h epics4/epics4Requester.h
             controlsinterface.h caQtDM_Plugins_global.h
@@ -41,6 +46,7 @@ endif()
 # --------------------------------------------------------------------------------------------------
 if(CAQTDM_ARCHIVE_PLUGINS)
     caqtdm_add_cs_plugin(archiveSF_plugin
+        CLASS_NAME ArchiveSF_Plugin
         SOURCES archive/archiveSF/archiveSF_plugin.cpp archive/archiveSF/sfRetrieval.cpp archive/archiverCommon.cpp
         HEADERS archive/archiveSF/archiveSF_plugin.h archive/archiveSF/sfRetrieval.h
             archive/archiverCommon.h controlsinterface.h caQtDM_Plugins_global.h
@@ -48,6 +54,7 @@ if(CAQTDM_ARCHIVE_PLUGINS)
         LINKS Qt6::UiTools)
 
     caqtdm_add_cs_plugin(archiveHTTP_plugin
+        CLASS_NAME ArchiveHTTP_Plugin
         SOURCES
             archive/archiveHTTP/archivehttp_plugin.cpp
             archive/archiveHTTP/httpretrieval.cpp
@@ -81,6 +88,7 @@ endif()
 if(CAQTDM_BUILD_MODBUS)
     # uses calcPerform/postfix from EPICS base (in Com)
     caqtdm_add_cs_plugin(modbus_plugin
+        CLASS_NAME modbusPlugin
         SOURCES modbus/modbus_Plugin.cpp modbus/modbus_decode.cpp modbus/modbus_channeldata.cpp
         HEADERS modbus/modbus_plugin.h modbus/modbus_decode.h modbus/modbus_channeldata.h
             controlsinterface.h caQtDM_Plugins_global.h
@@ -89,6 +97,7 @@ endif()
 
 if(CAQTDM_BUILD_GPS)
     caqtdm_add_cs_plugin(gps_plugin
+        CLASS_NAME gpsPlugin
         SOURCES gps/gps_plugin.cpp
         HEADERS gps/gps_plugin.h controlsinterface.h caQtDM_Plugins_global.h
         LINKS Qt6::Positioning)
@@ -104,6 +113,7 @@ if(CAQTDM_HAVE_OPCUA)
         list(APPEND OPCUA_FORMS opcua/certificatedialog.ui)
     endif()
     caqtdm_add_cs_plugin(opcua_plugin
+        CLASS_NAME OPCUAPlugin
         SOURCES ${OPCUA_SOURCES}
         HEADERS ${OPCUA_HEADERS}
         FORMS ${OPCUA_FORMS}
@@ -115,6 +125,7 @@ endif()
 
 if(CAQTDM_HAVE_BSREAD)
     caqtdm_add_cs_plugin(bsread_Plugin
+        CLASS_NAME bsreadPlugin
         SOURCES
             bsread/bsread_Plugin.cpp
             bsread/md5.cc
