@@ -288,10 +288,11 @@ endif()
 caqtdm_set_output_dir(qtcontrols)
 caqtdm_apply_rpath(qtcontrols)
 
-install(TARGETS qtcontrols
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+if(NOT CAQTDM_MOBILE)
+    install(TARGETS qtcontrols
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+endif()
 
 # --------------------------------------------------------------------------------------------------
 # Designer plugins (desktop only; mobile builds them statically into the app)

@@ -169,23 +169,18 @@ endif()
 # --------------------------------------------------------------------------------------------------
 # Install
 # --------------------------------------------------------------------------------------------------
-install(TARGETS adlParserStatic prcParserStatic
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 if(NOT CAQTDM_MOBILE)
     install(TARGETS adlParser prcParser
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()
-install(TARGETS alhParserStatic ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 if(TARGET alhParser)
     install(TARGETS alhParser
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()
-if(UNIX)
-    install(TARGETS edlParserStatic ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
-    if(NOT CAQTDM_MOBILE)
-        install(TARGETS edlParser LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
-    endif()
+if(UNIX AND NOT CAQTDM_MOBILE)
+    install(TARGETS edlParser
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()

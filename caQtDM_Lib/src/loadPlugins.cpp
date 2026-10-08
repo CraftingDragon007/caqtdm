@@ -24,6 +24,7 @@
  */
 
 #include <QDebug>
+#include <QDir>
 #include "loadPlugins.h"
 #include "qtdefinitions.h"
 #include "pathdefinitions.h"
@@ -73,6 +74,12 @@ bool loadPlugins::loadAll(QMap<QString, ControlsInterface*> &interfaces, MutexKn
     QString alternativePath(qApp->applicationDirPath());
     alternativePath.append("/controlsystems");
     allPaths.append(alternativePath);
+#ifdef CAQTDM_INSTALL_LIBDIR
+    QString installLibDir = QString::fromUtf8(CAQTDM_INSTALL_LIBDIR);
+    if (QDir::isRelativePath(installLibDir))
+        installLibDir = QDir(qApp->applicationDirPath()).absoluteFilePath(installLibDir);
+    allPaths.append(QDir(installLibDir).filePath("controlsystems"));
+#endif
     allPaths.append(QLibraryInfo::location(QLibraryInfo::PluginsPath).append("/controlsystems"));
 #endif
 
@@ -151,4 +158,3 @@ bool loadPlugins::loadAll(QMap<QString, ControlsInterface*> &interfaces, MutexKn
 
     if(nbInterfaces== 0) return false; else return true;
 }
-

@@ -13,3 +13,21 @@ ctest --test-dir ../caqtdm-build/local --output-on-failure
 The target logic covers Linux, Windows, macOS, FreeBSD, OpenBSD, Android and iOS. Mobile builds require the matching Qt toolchain and EPICS/Qwt libraries. `CAQTDM_ALH2UI=ON` adds a diagnostic ALH converter that is not installed. Unit tests are registered with CTest on desktop platforms.
 
 MinGW builds require zlib for the MinGW target (for example, MSYS2's `mingw-w64-x86_64-zlib`). Other Windows kits use an external zlib when found and otherwise use QtZlib.
+
+Install
+-------
+
+Desktop builds install the viewer, converter tools, shared libraries, and
+control-system and Designer plugins into the selected CMake prefix. Qt, EPICS,
+and Qwt remain host dependencies. For example:
+
+```sh
+cmake --install ../caqtdm-build/local --prefix /opt/caqtdm
+```
+
+The executable and converter tools go under `bin`; shared libraries go under
+the configured CMake library directory (usually `lib`); control-system and
+Designer plugins go under its `controlsystems` and `designer` subdirectories.
+The viewer searches the configured install library directory for control-system
+plugins. Mobile applications continue to use their Qt deployment workflows and
+do not install intermediate static libraries or plugins.

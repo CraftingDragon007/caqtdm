@@ -37,7 +37,9 @@ foreach(_group ${_plugin_groups})
     endif()
     caqtdm_set_output_dir(${_target} SUBDIR designer)
     caqtdm_apply_rpath(${_target})
-    install(TARGETS ${_target}
-        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/designer
-        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/designer)
+    if(NOT CAQTDM_MOBILE)
+        install(TARGETS ${_target}
+            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/designer
+            RUNTIME DESTINATION ${CMAKE_INSTALL_LIBDIR}/designer)
+    endif()
 endforeach()
