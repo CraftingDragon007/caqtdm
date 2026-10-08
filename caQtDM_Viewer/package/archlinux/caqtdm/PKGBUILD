@@ -45,8 +45,12 @@ pkgver() {
 build() {
     cd "$srcdir/$_pkgsrc"
 
+    # Keep the package's established /opt/caqtdm/lib/qt6 runtime layout.
     cmake -S . -B "$srcdir/caqtdm-build" -G Ninja \
         -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+        -DCMAKE_INSTALL_PREFIX=/opt/caqtdm \
+        -DCMAKE_INSTALL_BINDIR=lib/qt6 \
+        -DCMAKE_INSTALL_LIBDIR=lib/qt6 \
         -DCAQTDM_COLLECT="$srcdir/binaries" \
         -DCAQTDM_EPICS_BASE=/usr/lib/epics \
         -DCAQTDM_EPICS_HOST_ARCH="linux-${CARCH}" \
@@ -65,14 +69,13 @@ package() {
 
     install -dm755 \
         "$pkgdir/opt/caqtdm/doc" \
-        "$pkgdir/opt/caqtdm/lib/qt6" \
         "$pkgdir/usr/bin" \
         "$pkgdir/usr/include/caqtdm/plugins" \
         "$pkgdir/usr/include/caqtdm/caQtDM_Plugins" \
         "$pkgdir/usr/lib/qt6/plugins/designer" \
         "$pkgdir/etc/ld.so.conf.d"
 
-    cp -r "$srcdir/binaries/"* "$pkgdir/opt/caqtdm/lib/qt6/"
+    DESTDIR="$pkgdir" cmake --install "$srcdir/caqtdm-build" --prefix /opt/caqtdm
 
     install -Dm755 /dev/stdin "$pkgdir/opt/caqtdm/lib/qt6/caqtdm" << 'EOF'
 #!/bin/bash

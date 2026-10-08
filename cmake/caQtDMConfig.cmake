@@ -13,7 +13,6 @@ else()
         BASE_DIRECTORY "${CMAKE_INSTALL_BINDIR}"
         OUTPUT_VARIABLE _caqtdm_install_libdir)
 endif()
-add_compile_definitions("CAQTDM_INSTALL_LIBDIR=\"${_caqtdm_install_libdir}\"")
 
 # --------------------------------------------------------------------------------------------------
 # Options (feature switches, mirror the CAQTDM_* env switches of the qmake build)

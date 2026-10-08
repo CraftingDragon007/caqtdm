@@ -73,6 +73,8 @@ else()
 endif()
 
 add_library(caqtdm::lib ALIAS caQtDM_Lib)
+target_compile_definitions(caQtDM_Lib PRIVATE
+    "CAQTDM_INSTALL_LIBDIR=\"${_caqtdm_install_libdir}\"")
 
 set_target_properties(caQtDM_Lib PROPERTIES AUTOUIC_SEARCH_PATHS "${PROJECT_SOURCE_DIR}/caQtDM_Viewer/src")
 
