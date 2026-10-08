@@ -587,7 +587,7 @@ int main(int argc, char *argv[])
 
     // get data from pipe if any (ui data can be piped to this application, for linux at this time)
     // only when no file is given, attaching is not allowed, in order to get rid of the temporary file when exit
-#if defined linux || defined TARGET_OS_MAC
+#if !defined(MOBILE) && (defined(linux) || defined(TARGET_OS_MAC))
     if(fileName.length() <= 0) {
 
         QEventLoop *loop = new QEventLoop();
