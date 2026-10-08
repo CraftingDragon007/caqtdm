@@ -16,15 +16,29 @@ if(NOT CAQTDM_QWT_LIBNAME)
     set(CAQTDM_QWT_LIBNAME qwt)
 endif()
 
-find_path(Qwt_INCLUDE_DIR NAMES qwt_global.h
-    HINTS ${CAQTDM_QWT_INCLUDE} ${CAQTDM_QWT_HOME}/include ${CAQTDM_QWT_HOME}/lib/qwt.framework/Headers
-    PATHS /usr/include/qwt /usr/include/qwt-qt6 /usr/include/qwt-qt5 /usr/local/include/qwt
-    PATH_SUFFIXES qwt qwt-qt6 qwt-qt5)
+if(ANDROID OR IOS)
+    # These are target-platform libraries staged outside the NDK/Xcode sysroot.
+    # Search only the explicit kit paths and don't re-root them into the sysroot.
+    find_path(Qwt_INCLUDE_DIR NAMES qwt_global.h
+        HINTS ${CAQTDM_QWT_INCLUDE} ${CAQTDM_QWT_HOME}/include ${CAQTDM_QWT_HOME}/lib/qwt.framework/Headers
+        PATH_SUFFIXES qwt qwt-qt6 qwt-qt5
+        NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
 
-find_library(Qwt_LIBRARY NAMES ${CAQTDM_QWT_LIBNAME}
-    HINTS ${CAQTDM_QWT_LIB} ${CAQTDM_QWT_HOME}/lib
-    PATHS /usr/lib /usr/local/lib /usr/lib/x86_64-linux-gnu
-    PATH_SUFFIXES qwt qwt-qt6 qwt-qt5)
+    find_library(Qwt_LIBRARY NAMES ${CAQTDM_QWT_LIBNAME}
+        HINTS ${CAQTDM_QWT_LIB} ${CAQTDM_QWT_HOME}/lib
+        PATH_SUFFIXES qwt qwt-qt6 qwt-qt5
+        NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
+else()
+    find_path(Qwt_INCLUDE_DIR NAMES qwt_global.h
+        HINTS ${CAQTDM_QWT_INCLUDE} ${CAQTDM_QWT_HOME}/include ${CAQTDM_QWT_HOME}/lib/qwt.framework/Headers
+        PATHS /usr/include/qwt /usr/include/qwt-qt6 /usr/include/qwt-qt5 /usr/local/include/qwt
+        PATH_SUFFIXES qwt qwt-qt6 qwt-qt5)
+
+    find_library(Qwt_LIBRARY NAMES ${CAQTDM_QWT_LIBNAME}
+        HINTS ${CAQTDM_QWT_LIB} ${CAQTDM_QWT_HOME}/lib
+        PATHS /usr/lib /usr/local/lib /usr/lib/x86_64-linux-gnu
+        PATH_SUFFIXES qwt qwt-qt6 qwt-qt5)
+endif()
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(Qwt REQUIRED_VARS Qwt_LIBRARY Qwt_INCLUDE_DIR)

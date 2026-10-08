@@ -52,6 +52,9 @@ set(CAQTDM_QWT_LIBNAME "qwt" CACHE STRING "Qwt library name (qwt, qwt-qt5, qwt-q
 set(CAQTDM_ZMQ_INCLUDE "" CACHE PATH "ZeroMQ include directory")
 set(CAQTDM_ZMQ_LIB "" CACHE PATH "ZeroMQ library directory")
 set(CAQTDM_ANDROID_SSL_ROOT "" CACHE PATH "Directory containing Android libcrypto.so and libssl.so to package")
+set(CAQTDM_ANDROID_MIN_SDK_VERSION "" CACHE STRING "Minimum Android SDK version for the application package")
+set(CAQTDM_ANDROID_COMPILE_SDK_VERSION "" CACHE STRING "Android compile SDK version for the application package")
+set(CAQTDM_ANDROID_TARGET_SDK_VERSION "" CACHE STRING "Android target SDK version for the application package")
 
 set(CAQTDM_PYTHON_ROOT "" CACHE PATH "Python installation prefix used for PYTHONCALC")
 set(CAQTDM_PYTHON_INCLUDE "" CACHE PATH "Python include directory override for PYTHONCALC")

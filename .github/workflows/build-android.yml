@@ -17,7 +17,6 @@ env:
   ANDROID_API: "36"
   ANDROID_SSL_API: "28"
   ANDROID_NDK_VERSION: "27.2.12479018"
-  BUILD_TYPE: debug
   ANDROID_ABI: arm64-v8a
 
   DEPS_ROOT: ${{ github.workspace }}/.ci-cache/deps
@@ -28,11 +27,6 @@ env:
   QT_HOST_ROOT: ${{ github.workspace }}/.ci-cache/Qt/6.11.1/gcc_64
   QT_ANDROID_ROOT: ${{ github.workspace }}/.ci-cache/Qt/6.11.1/android_arm64_v8a
   QT_SRC_ROOT: ${{ github.workspace }}/.ci-cache/qt-src
-
-  CAQTDM_NORPATH: "1"
-  CAQTDM_GPS: "1"
-  CAQTDM_MODBUS: "1"
-  CAQTDM_OPCUA: "1"
 
 jobs:
   build-qt:
@@ -243,7 +237,9 @@ jobs:
         run: |
           set -euo pipefail
           test -x "${QT_ANDROID_ROOT}/bin/qmake"
+          test -x "${QT_ANDROID_ROOT}/bin/qt-cmake"
           test -x "${QT_HOST_ROOT}/bin/qmake6"
+          test -x "${QT_HOST_ROOT}/bin/androiddeployqt"
 
       - name: Verify OpenSSL Android artifacts restored
         run: |
@@ -332,68 +328,48 @@ jobs:
           mkdir -p "${EPICS_BASE}/lib/android-arm64-v8a"
           rsync -a lib/android-arm64-v8a/ "${EPICS_BASE}/lib/android-arm64-v8a/"
 
-      - name: Export caQtDM build environment
+      - name: Configure and build caQtDM APK with CMake
         run: |
           set -euo pipefail
-          {
-            echo "QTHOME=${QT_ANDROID_ROOT}"
-            echo "QMAKESPECS=${QT_ANDROID_ROOT}/mkspecs/android-clang"
-            echo "QWTHOME=${QWT_INSTALL}"
-            echo "QWTINCLUDE=${QWT_INSTALL}/include"
-            echo "QWTLIB=${QWT_INSTALL}/lib"
-            echo "QWTVERSION=6.1"
-            echo "QWTLIBNAME=qwt"
-            echo "EPICS_BASE=${EPICS_BASE}"
-            echo "EPICS_HOST_ARCH=android-arm64-v8a"
-            echo "EPICSINCLUDE=${EPICS_BASE}/include"
-            echo "EPICSLIB=${EPICS_BASE}/lib/android-arm64-v8a"
-            echo "EPICSEXTENSIONS=/usr/lib/epics/extensions"
-            echo "QTCONTROLS_LIBS=${GITHUB_WORKSPACE}/caQtDM_Binaries"
-            echo "CAQTDM_COLLECT=${GITHUB_WORKSPACE}/caQtDM_Binaries"
-            echo "QTBASE=${GITHUB_WORKSPACE}/caQtDM_Binaries"
-            echo "CAQTDM_CA_ARCHIVELIBS=${GITHUB_WORKSPACE}/caQtDM_Binaries"
-            echo "CAQTDM_LOGGING_ARCHIVELIBS=${GITHUB_WORKSPACE}/caQtDM_Binaries"
-            echo "QTDM_LIBINSTALL=/usr/lib/epics/extensions/lib/linux-x86_64"
-            echo "QTDM_BININSTALL=/usr/lib/epics/extensions/lib/linux-x86_64"
-            echo "PYTHONVERSION=3"
-            echo "PYTHONINCLUDE=/usr/include/python3"
-            echo "PYTHONLIB=/usr/lib"
-            echo "ZMQ=/usr"
-            echo "ZMQINC=/usr/include"
-            echo "ZMQLIB=/usr/lib"
-            echo "SSLLIB=${OPENSSL_ANDROID_PREFIX}/lib"
-          } >> "$GITHUB_ENV"
-
-      - name: Build caQtDM
-        run: |
-          set -euo pipefail
-          "${QTHOME}/bin/qmake" all.pro CONFIG+=${BUILD_TYPE}
-          make -j"$(nproc)"
-
-      - name: Build APK with androiddeployqt
-        run: |
-          set -euo pipefail
-          test -f caQtDM_Viewer/android-caQtDM-deployment-settings.json
-          test -x "${QT_HOST_ROOT}/bin/androiddeployqt"
           mkdir -p "${GITHUB_WORKSPACE}/caQtDM_Viewer/src/Android/assets"
           cp -f "${GITHUB_WORKSPACE}/caQtDM_Viewer/caQtDM_IOS_Config.xml" \
                 "${GITHUB_WORKSPACE}/caQtDM_Viewer/src/Android/assets/caQtDM_IOS_Config.xml"
-          mkdir -p "${GITHUB_WORKSPACE}/build/android"
-          mkdir -p "${GITHUB_WORKSPACE}/build/android/libs/${ANDROID_ABI}"
-          cp -f "${GITHUB_WORKSPACE}/caQtDM_Binaries/libcaQtDM_${ANDROID_ABI}.so" \
-                "${GITHUB_WORKSPACE}/build/android/libs/${ANDROID_ABI}/libcaQtDM_${ANDROID_ABI}.so"
-          "${QT_HOST_ROOT}/bin/androiddeployqt" \
-            --input caQtDM_Viewer/android-caQtDM-deployment-settings.json \
-            --output "${GITHUB_WORKSPACE}/build/android" \
-            --android-platform "android-${ANDROID_API}" \
-            --debug \
-            --gradle
+          BUILD_DIR="${GITHUB_WORKSPACE}/build/cmake-android"
+          "${QT_ANDROID_ROOT}/bin/qt-cmake" \
+            -S "${GITHUB_WORKSPACE}" \
+            -B "${BUILD_DIR}" \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DQT_HOST_PATH="${QT_HOST_ROOT}" \
+            -DANDROID_SDK_ROOT="${ANDROID_SDK_ROOT}" \
+            -DANDROID_NDK_ROOT="${ANDROID_NDK_ROOT}" \
+            -DANDROID_ABI="${ANDROID_ABI}" \
+            -DANDROID_PLATFORM="android-${ANDROID_SSL_API}" \
+            -DCAQTDM_ANDROID_MIN_SDK_VERSION="${ANDROID_SSL_API}" \
+            -DCAQTDM_ANDROID_COMPILE_SDK_VERSION="${ANDROID_API}" \
+            -DCAQTDM_ANDROID_TARGET_SDK_VERSION="${ANDROID_API}" \
+            -DCAQTDM_EPICS_BASE="${EPICS_BASE}" \
+            -DCAQTDM_EPICS_HOST_ARCH="android-arm64-v8a" \
+            -DCAQTDM_QWT_HOME="${QWT_INSTALL}" \
+            -DCAQTDM_QWT_INCLUDE="${QWT_INSTALL}/include" \
+            -DCAQTDM_QWT_LIB="${QWT_INSTALL}/lib" \
+            -DCAQTDM_QWT_LIBNAME="qwt_${ANDROID_ABI}" \
+            -DCAQTDM_ANDROID_SSL_ROOT="${OPENSSL_ANDROID_PREFIX}/lib" \
+            -DCAQTDM_BUILD_GPS=ON \
+            -DCAQTDM_BUILD_MODBUS=ON \
+            -DCAQTDM_BUILD_OPCUA=ON \
+            -DCAQTDM_PYTHONCALC=OFF \
+            -DCAQTDM_WEB=OFF \
+            -DCAQTDM_WITH_TESTS=OFF \
+            -DCAQTDM_NORPATH=ON
+          cmake --build "${BUILD_DIR}" --target apk --parallel "$(nproc)"
 
       - name: Collect artifacts
         run: |
           set -euo pipefail
           mkdir -p artifacts
-          find "${GITHUB_WORKSPACE}/build/android" -type f -name "*.apk" -exec cp -v {} artifacts/ \;
+          find "${GITHUB_WORKSPACE}/build/cmake-android" -type f -name "*.apk" -exec cp -v {} artifacts/ \;
+          test -n "$(find artifacts -maxdepth 1 -type f -name '*.apk' -print -quit)"
           ls -lah artifacts
 
       - name: Upload APK artifact

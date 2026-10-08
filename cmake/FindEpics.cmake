@@ -113,9 +113,15 @@ function(_epics_make_target name libname)
             unset(_epics_${name}_LIBRARY CACHE)
         endif()
     endif()
+    set(_epics_find_options NO_DEFAULT_PATH)
+    if(ANDROID OR IOS)
+        # EPICS was built for the target ABI in a staged directory outside
+        # the NDK/Xcode sysroot; do not re-root that explicit directory.
+        list(APPEND _epics_find_options NO_CMAKE_FIND_ROOT_PATH)
+    endif()
     find_library(_epics_${name}_LIBRARY NAMES ${libname}
         HINTS ${Epics_LIBRARY_DIR}
-        NO_DEFAULT_PATH)
+        ${_epics_find_options})
     if(_epics_${name}_LIBRARY)
         add_library(Epics::${name} UNKNOWN IMPORTED)
         set_target_properties(Epics::${name} PROPERTIES

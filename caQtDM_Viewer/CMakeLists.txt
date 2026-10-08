@@ -200,6 +200,18 @@ endif()
 if(ANDROID)
     set_target_properties(caQtDM PROPERTIES
         QT_ANDROID_PACKAGE_SOURCE_DIR "${_src}/Android")
+    if(CAQTDM_ANDROID_MIN_SDK_VERSION)
+        set_property(TARGET caQtDM PROPERTY QT_ANDROID_MIN_SDK_VERSION
+            "${CAQTDM_ANDROID_MIN_SDK_VERSION}")
+    endif()
+    if(CAQTDM_ANDROID_COMPILE_SDK_VERSION)
+        set_property(TARGET caQtDM PROPERTY QT_ANDROID_COMPILE_SDK_VERSION
+            "${CAQTDM_ANDROID_COMPILE_SDK_VERSION}")
+    endif()
+    if(CAQTDM_ANDROID_TARGET_SDK_VERSION)
+        set_property(TARGET caQtDM PROPERTY QT_ANDROID_TARGET_SDK_VERSION
+            "${CAQTDM_ANDROID_TARGET_SDK_VERSION}")
+    endif()
     if(CAQTDM_ANDROID_SSL_ROOT)
         set(_android_ssl_libs
             "${CAQTDM_ANDROID_SSL_ROOT}/libcrypto.so"
