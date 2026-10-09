@@ -17,6 +17,7 @@ jobs:
       image: ${{ matrix.image }}
     env:
       CAQTDM_OPCUA: 1
+      CAQTDM_NORPATH: 1
     strategy:
       fail-fast: false
       matrix:
