@@ -236,6 +236,10 @@ endif()
 
 add_library(caqtdm::qtcontrols ALIAS qtcontrols)
 
+if(CAQTDM_HAVE_WEBSOCKETS)
+    target_compile_definitions(qtcontrols PUBLIC WEB)
+endif()
+
 target_include_directories(qtcontrols
     PUBLIC
         "${_src}"
