@@ -369,6 +369,7 @@ jobs:
           fi
           mkdir -p "$APP/Contents/PlugIns/platforms" \
                    "$APP/Contents/PlugIns/imageformats" \
+                   "$APP/Contents/PlugIns/opcua" \
                    "$APP/Contents/Frameworks"
           # macdeployqt resolves "@rpath/..." dependencies only through the rpath
           # entries of the binaries (Contents/Frameworks), not via -libpath.
@@ -377,6 +378,13 @@ jobs:
           cp "${QTHOME}"/plugins/imageformats/*.dylib "$APP/Contents/PlugIns/imageformats/" 2>/dev/null || true
           rm -f "$APP"/Contents/PlugIns/imageformats/*_debug.dylib || true
           cp "${QTHOME}/plugins/platforms/libqcocoa.dylib" "$APP/Contents/PlugIns/platforms/" 2>/dev/null || true
+          OPCUA_BACKEND_SOURCE="${QTHOME}/plugins/opcua/libopen62541_backend.dylib"
+          if [ ! -f "$OPCUA_BACKEND_SOURCE" ]; then
+            echo "Qt OPC UA backend not found at $OPCUA_BACKEND_SOURCE" >&2
+            find "${QTHOME}/plugins" -maxdepth 3 -iname '*open62541*' -print >&2 || true
+            exit 1
+          fi
+          cp "$OPCUA_BACKEND_SOURCE" "$APP/Contents/PlugIns/opcua/"
           QWT_NEWID=""
           QWT_BIN="$(find "$APP/Contents/Frameworks/qwt.framework/Versions" -type f -name qwt 2>/dev/null | head -n1 || true)"
           if [ -n "$QWT_BIN" ]; then
