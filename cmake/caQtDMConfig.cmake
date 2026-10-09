@@ -144,9 +144,12 @@ if(MSVC)
     # The EPICS pvAccess headers need /Zc:twoPhase- to compile under the
     # -permissive- conformance mode that the Qt kits enable. The option
     # must appear AFTER -permissive- on the command line, so it is appended
-    # to the interface options of Qt::Platform instead of the targets.
+    # to Qt::Platform's interface options. Restrict it to epics4_plugin:
+    # qmake only sets these flags for that plugin. Applying them to
+    # qtcontrols triggers an MSVC 14.51 error in Qt's QVarLengthArray header.
     set_property(TARGET ${CAQTDM_QT_PACKAGE}::Platform APPEND PROPERTY INTERFACE_COMPILE_OPTIONS
-        "/Zc:twoPhase-;-Zc:referenceBinding")
+        "$<$<STREQUAL:$<TARGET_PROPERTY:NAME>,epics4_plugin>:/Zc:twoPhase->"
+        "$<$<STREQUAL:$<TARGET_PROPERTY:NAME>,epics4_plugin>:-Zc:referenceBinding>")
 endif()
 
 if(CAQTDM_BUILD_GPS AND NOT TARGET ${CAQTDM_QT_PACKAGE}::Positioning)
