@@ -28,6 +28,9 @@ foreach(_group ${_plugin_groups})
             "${CMAKE_CURRENT_SOURCE_DIR}/designerPluginTexts.h"
             "${CMAKE_CURRENT_SOURCE_DIR}/plugin_xml_helper.h"
             "${CMAKE_CURRENT_SOURCE_DIR}/qtcontrolsplugin.qrc")
+        if(APPLE)
+            set_target_properties(${_target} PROPERTIES SUFFIX ".dylib")
+        endif()
     endif()
     target_include_directories(${_target} PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}"

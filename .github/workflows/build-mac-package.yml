@@ -385,6 +385,7 @@ jobs:
             exit 1
           fi
           cp "$OPCUA_BACKEND_SOURCE" "$APP/Contents/PlugIns/opcua/"
+          ditto "${QTHOME}/lib/QtOpcUa.framework" "$APP/Contents/Frameworks/QtOpcUa.framework"
           QWT_NEWID=""
           QWT_BIN="$(find "$APP/Contents/Frameworks/qwt.framework/Versions" -type f -name qwt 2>/dev/null | head -n1 || true)"
           if [ -n "$QWT_BIN" ]; then
@@ -422,15 +423,25 @@ jobs:
             -libpath="${EPICSLIB}" \
             -libpath="${QWTLIB}" \
             -libpath="${ZMQLIB}" \
-            -libpath="${OPENSSL_ROOT_DIR}/lib" || true
+            -libpath="${OPENSSL_ROOT_DIR}/lib"
 
           # Optional plugins must be present and relocatable
           for p in opcua modbus gps; do
-            test -f "$APP/Contents/PlugIns/controlsystems/lib${p}_plugin.dylib"
+            plugin="$APP/Contents/PlugIns/controlsystems/lib${p}_plugin.dylib"
+            if [ ! -f "$plugin" ]; then
+              echo "Required control-system plugin missing: $plugin" >&2
+              exit 1
+            fi
           done
           OPCUA_BACKEND="$APP/Contents/PlugIns/opcua/libopen62541_backend.dylib"
-          test -f "$OPCUA_BACKEND"
-          test -d "$APP/Contents/Frameworks/QtOpcUa.framework"
+          if [ ! -f "$OPCUA_BACKEND" ]; then
+            echo "Qt OPC UA backend missing: $OPCUA_BACKEND" >&2
+            exit 1
+          fi
+          if [ ! -d "$APP/Contents/Frameworks/QtOpcUa.framework" ]; then
+            echo "Qt OPC UA framework missing from application bundle" >&2
+            exit 1
+          fi
           otool -L "$OPCUA_BACKEND"
           if otool -L "$OPCUA_BACKEND" | grep -qE '/opt/homebrew/|/usr/local/opt/'; then
             echo "open62541 backend still references Homebrew libraries" >&2
@@ -439,7 +450,10 @@ jobs:
 
           # Python must be bundled and referenced relocatably (PYTHONCALC)
           PYLIB="$APP/Contents/Frameworks/libpython${PYTHONVERSION}.dylib"
-          test -f "$PYLIB"
+          if [ ! -f "$PYLIB" ]; then
+            echo "Python library missing from application bundle: $PYLIB" >&2
+            exit 1
+          fi
           if otool -L "$APP/Contents/Frameworks/libcaQtDM_Lib.dylib" | grep -q "/Library/Frameworks/Python"; then
             echo "libcaQtDM_Lib.dylib still references the system Python framework" >&2
             otool -L "$APP/Contents/Frameworks/libcaQtDM_Lib.dylib"
