@@ -575,7 +575,7 @@ QString caThermo::setScaleLabel(double value) const
     if(qIsNaN(value)){
       snprintf(asc, MAX_STRING_LENGTH,  "nan");
     }
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
     label = QString::fromAscii(asc);
 #else
     label = QString::fromLatin1(asc);

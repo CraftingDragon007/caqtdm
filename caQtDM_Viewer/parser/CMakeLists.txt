@@ -16,7 +16,7 @@ else()
         adlParserStatic
         edlParserStatic)
 endif()
-target_link_libraries(adl2ui PRIVATE Qt6::Widgets)
+target_link_libraries(adl2ui PRIVATE ${CAQTDM_QT_PACKAGE}::Widgets)
 
 if(WIN32)
     caqtdm_add_version_rc(adl2ui

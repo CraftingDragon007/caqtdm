@@ -10,7 +10,7 @@ target_include_directories(prc2ui PRIVATE
 
 target_link_libraries(prc2ui PRIVATE
     prcParserStatic
-    Qt6::Widgets)
+    ${CAQTDM_QT_PACKAGE}::Widgets)
 
 if(WIN32)
     caqtdm_add_version_rc(prc2ui

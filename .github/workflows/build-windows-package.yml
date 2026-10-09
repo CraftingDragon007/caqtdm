@@ -395,6 +395,7 @@ jobs:
           echo QWTLIB=${{ env.QWT_INSTALL_DIR }}\lib>> %GITHUB_ENV%
           echo QWTVERSION=6.1>> %GITHUB_ENV%
           echo QWTLIBNAME=qwt>> %GITHUB_ENV%
+          echo QTOPCUA_INSTALL_DIR=${{ env.QTOPCUA_INSTALL_ROOT }}\qt${{ matrix.qt-version }}-openssl${{ steps.openssl-version.outputs.version }}>> %GITHUB_ENV%
           echo ZMQ=${{ env.ZEROMQ_INSTALL_DIR }}>> %GITHUB_ENV%
           echo ZMQINC=${{ env.ZEROMQ_INSTALL_DIR }}\include>> %GITHUB_ENV%
           echo ZMQLIB=${{ env.ZEROMQ_INSTALL_DIR }}\lib>> %GITHUB_ENV%
@@ -404,7 +405,6 @@ jobs:
           echo QTCONTROLS_LIBS=${{ env.CAQTDM_DIR }}\caQtDM_Binaries>> %GITHUB_ENV%
           echo CAQTDM_COLLECT=${{ env.CAQTDM_DIR }}\caQtDM_Binaries>> %GITHUB_ENV%
           echo QTBASE=${{ env.CAQTDM_DIR }}\caQtDM_Binaries>> %GITHUB_ENV%
-          echo QMAKESPEC=${{ env.QT_ROOT_DIR }}\mkspecs\win32-msvc>> %GITHUB_ENV%
           echo TIMESTAMPER=http://timestamp.digicert.com>> %GITHUB_ENV%
           echo CAQTDM_SIGNER=Paul Scherrer Institut>> %GITHUB_ENV%
           echo CAQTDM_GPS=1 >> %GITHUB_ENV%
@@ -415,12 +415,27 @@ jobs:
         shell: pwsh
         run: |
           $timerstart = Get-Date
-          qmake all.pro
-          
-          $process = Start-Process -FilePath "jom.exe" -ArgumentList "-j$env:NUMBER_OF_PROCESSORS", "release" -Wait -PassThru -NoNewWindow
-          if ($process.ExitCode -ne 0) {
-            throw "Build failed with exit code $($process.ExitCode)"
-          }
+          $buildDir = Join-Path $env:RUNNER_TEMP "caqtdm-cmake-build"
+          $qtopcuaDir = Join-Path $env:QTOPCUA_INSTALL_DIR "lib\cmake\Qt6OpcUa"
+          cmake -S . -B $buildDir -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_PREFIX_PATH="$env:QT_ROOT_DIR;$env:QTOPCUA_INSTALL_DIR" `
+            -DQt6_DIR="$env:QT_ROOT_DIR\lib\cmake\Qt6" `
+            -DQt6OpcUa_DIR="$qtopcuaDir" `
+            -DCAQTDM_QT_MAJOR_VERSION=6 `
+            -DCAQTDM_EPICS_BASE="$env:EPICS_BASE" `
+            -DCAQTDM_EPICS_HOST_ARCH="$env:EPICS_HOST_ARCH" `
+            -DCAQTDM_QWT_HOME="$env:QWTHOME" `
+            -DCAQTDM_QWT_INCLUDE="$env:QWTINCLUDE" `
+            -DCAQTDM_QWT_LIB="$env:QWTLIB" `
+            -DCAQTDM_QWT_LIBNAME=qwt `
+            -DCAQTDM_ZMQ_INCLUDE="$env:ZMQINC" `
+            -DCAQTDM_ZMQ_LIB="$env:ZMQLIB" `
+            -DCAQTDM_COLLECT="$env:CAQTDM_COLLECT" `
+            -DCAQTDM_BUILD_GPS=ON -DCAQTDM_BUILD_MODBUS=ON -DCAQTDM_BUILD_OPCUA=ON
+          if ($LASTEXITCODE -ne 0) { throw "CMake configure failed" }
+          cmake --build $buildDir --config Release --parallel $env:NUMBER_OF_PROCESSORS
+          if ($LASTEXITCODE -ne 0) { throw "CMake build failed" }
           
           $timerstop = Get-Date
           $elapsed = $timerstop - $timerstart
@@ -428,7 +443,7 @@ jobs:
 
       - name: Run unit tests
         shell: pwsh
-        working-directory: ${{ env.CAQTDM_DIR }}\caQtDM_UnitTests
+        working-directory: ${{ env.CAQTDM_DIR }}
         run: |
           $env:PATH = (@(
            "$env:EPICS_BASE\bin\$env:EPICS_HOST_ARCH"
@@ -442,11 +457,8 @@ jobs:
           $env:QT_FORCE_STDERR_LOGGING = "1"
           $env:QT_LOGGING_TO_CONSOLE = "1"
           
-          jom check
-          
-          if ($LASTEXITCODE -ne 0) {
-            throw "Unit tests failed"
-          }
+          ctest --test-dir (Join-Path $env:RUNNER_TEMP "caqtdm-cmake-build") --build-config Release --output-on-failure
+          if ($LASTEXITCODE -ne 0) { throw "Unit tests failed" }
 
       - name: Set packaging environment variables
         run: |

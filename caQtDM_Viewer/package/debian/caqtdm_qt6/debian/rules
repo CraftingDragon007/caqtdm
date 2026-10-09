@@ -22,6 +22,12 @@ export CAQTDM_COLLECT=$(shell pwd)/binaries
 export QTBASE=${QTCONTROLS_LIBS}
 export CAQTDM_CA_ARCHIVELIBS=$(shell pwd)/binaries
 export CAQTDM_LOGGING_ARCHIVELIBS=$(shell pwd)/binaries
+export CAQTDM_BUILD_GPS=ON
+export CAQTDM_BUILD_MODBUS=ON
+export CAQTDM_BUILD_OPCUA=ON
+
+BUILD_DIR=$(CURDIR)/debian/cmake-build
+EPICS_ARCH=linux-$(shell uname -m)
 export QTDM_LIBINSTALL=${EPICSEXTENSIONS}/lib
 export QTDM_BININSTALL=${EPICSEXTENSIONS}/bin
 export PYTHONINCLUDE=/usr/include/python${PYTHONVERSION}
@@ -33,7 +39,24 @@ export CAQTDM_GPS=1
 	dh $@
 
 override_dh_auto_configure:	
-	qmake6 ./all.pro
+	cmake -S . -B $(BUILD_DIR) -G Ninja \
+		-DCAQTDM_QT_MAJOR_VERSION=6 \
+		-DCAQTDM_EPICS_BASE=/usr \
+		-DCAQTDM_EPICS_HOST_ARCH=$(EPICS_ARCH) \
+		-DCAQTDM_EPICS_INCLUDE=/usr/include/epics/include \
+		-DCAQTDM_EPICS_LIBRARY_DIR=/usr/lib/epics/lib/$(EPICS_ARCH) \
+		-DCAQTDM_QWT_INCLUDE=/usr/include/qwt \
+		-DCAQTDM_QWT_LIB=/usr/lib \
+		-DCAQTDM_QWT_LIBNAME=qwt-qt6 \
+		-DCAQTDM_COLLECT=$(CURDIR)/binaries \
+		-DCAQTDM_NORPATH=ON \
+		-DCAQTDM_BUILD_GPS=ON -DCAQTDM_BUILD_MODBUS=ON -DCAQTDM_BUILD_OPCUA=ON
+
+override_dh_auto_build:
+	cmake --build $(BUILD_DIR) --parallel $(shell nproc)
+
+override_dh_auto_test:
+	QT_QPA_PLATFORM=offscreen ctest --test-dir $(BUILD_DIR) --output-on-failure
 
 override_dh_auto_install:
 	# Install beginning

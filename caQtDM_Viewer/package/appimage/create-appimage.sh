@@ -895,9 +895,13 @@ setup_build_env() {
 }
 
 build_caqtdm() {
-  local qmake_args=()
+  local cmake_build_dir="$BUILD_DIR/caqtdm-cmake-build"
+  local gps=OFF modbus=OFF opcua=OFF norpath=OFF
 
-  qt_requires_cxx17 && qmake_args+=("CONFIG+=c++17")
+  [ -n "${CAQTDM_GPS:-}" ] && gps=ON
+  [ -n "${CAQTDM_MODBUS:-}" ] && modbus=ON
+  [ -n "${CAQTDM_OPCUA:-}" ] && opcua=ON
+  [ -n "${CAQTDM_NORPATH:-}" ] && norpath=ON
 
   if [ "$SKIP_BUILD" -eq 1 ]; then
     msg "Skipping build, using $BINARY_DIR"
@@ -905,12 +909,24 @@ build_caqtdm() {
     return
   fi
 
-  msg "Building caQtDM with $QMAKE_BIN"
-  (
-    cd "$SOURCE_DIR"
-    "$QMAKE_BIN" ./all.pro "${qmake_args[@]}"
-    make -j"$JOBS" QMAKE="$QMAKE_BIN"
-  )
+  msg "Building caQtDM with CMake and Qt $QT_MAJOR"
+  cmake -S "$SOURCE_DIR" -B "$cmake_build_dir" -G Ninja \
+    -DCAQTDM_QT_MAJOR_VERSION="$QT_MAJOR" \
+    -DCAQTDM_EPICS_BASE="$EPICS_BASE" \
+    -DCAQTDM_EPICS_HOST_ARCH="$EPICS_HOST_ARCH" \
+    -DCAQTDM_EPICS_INCLUDE="$EPICSINCLUDE" \
+    -DCAQTDM_EPICS_LIBRARY_DIR="$EPICSLIB" \
+    -DCAQTDM_QWT_HOME="$QWTHOME" \
+    -DCAQTDM_QWT_INCLUDE="$QWTINCLUDE" \
+    -DCAQTDM_QWT_LIB="$QWTLIB" \
+    -DCAQTDM_QWT_LIBNAME="$QWTLIBNAME" \
+    -DCAQTDM_COLLECT="$BINARY_DIR" \
+    -DCAQTDM_BUILD_GPS="$gps" \
+    -DCAQTDM_BUILD_MODBUS="$modbus" \
+    -DCAQTDM_BUILD_OPCUA="$opcua" \
+    -DCAQTDM_WITH_TESTS=OFF \
+    -DCAQTDM_NORPATH="$norpath"
+  cmake --build "$cmake_build_dir" --parallel "$JOBS"
 
   [ -x "$BINARY_DIR/caQtDM" ] || die "build finished but $BINARY_DIR/caQtDM was not created"
 }
@@ -1236,6 +1252,8 @@ main() {
   parse_args "$@"
 
   require_command git
+  require_command cmake
+  require_command ninja
   require_command make
   require_command python3
   require_command ldd

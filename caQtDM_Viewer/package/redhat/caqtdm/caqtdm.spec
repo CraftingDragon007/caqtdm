@@ -49,16 +49,18 @@ Source:  https://github.com/caqtdm/caqtdm/%{name}/%{name}-%{version}.tar.gz
 # %%endif
 
 %if 0%{?qt5}
+BuildRequires: cmake ninja-build
 # Requires: caqtdm_archiver
 %if 0%{?rhel} <  7
 BuildRequires: qt5-devel
 %else
 BuildRequires: qt5-qtbase-devel
 %endif
-BuildRequires: qt5-qtserialbus-devel qt5-qtsvg-devel qt5-qttools-devel qwt-qt5-devel libXext-devel cppzmq-devel python3-devel
+BuildRequires: qt5-qtserialbus-devel qt5-qtsvg-devel qt5-qttools-devel qt5-qtx11extras-devel qwt-qt5-devel libXext-devel cppzmq-devel python3-devel
 %endif
 
 %if 0%{?qt6}
+BuildRequires: cmake ninja-build
 BuildRequires: qt6-qtbase-devel
 BuildRequires: qt6-qttools-devel
 BuildRequires: qt6-qtsvg-devel
@@ -258,9 +260,8 @@ export QMAKESPEC=/usr/lib64/qt5/mkspecs/linux-g++-64
 export CAQTDM_CA_ARCHIVELIBS=/opt/caqtdm-archiver/lib
 export CAQTDM_LOGGING_ARCHIVELIBS=/opt/caqtdm-archiver/lib
 
-%{?qmake_qt5}%{?!qmake_qt5:%{_qt5_qmake}} ../all.pro 
-
-%make_build 
+cmake -S .. -B . -G Ninja -DCAQTDM_QT_MAJOR_VERSION=5 -DCAQTDM_EPICS_BASE="$EPICS_BASE" -DCAQTDM_EPICS_HOST_ARCH="$EPICS_HOST_ARCH" -DCAQTDM_EPICS_INCLUDE="$EPICSINCLUDE" -DCAQTDM_EPICS_LIBRARY_DIR="$EPICSLIB" -DCAQTDM_QWT_INCLUDE="$QWTINCLUDE" -DCAQTDM_QWT_LIB="$QWTLIB" -DCAQTDM_QWT_LIBNAME="$QWTLIBNAME" -DCAQTDM_COLLECT="$CAQTDM_COLLECT" -DCAQTDM_BUILD_GPS=ON -DCAQTDM_BUILD_MODBUS=ON -DCAQTDM_BUILD_OPCUA=OFF
+cmake --build . --parallel %{_smp_build_ncpus}
 #%make_install
 popd
 %endif
@@ -341,9 +342,8 @@ export ZMQLIB=/usr/lib64
 export CAQTDM_CA_ARCHIVELIBS=/opt/caqtdm-archiver/lib
 export CAQTDM_LOGGING_ARCHIVELIBS=/opt/caqtdm-archiver/lib
 
-%{?qmake_qt6}%{?!qmake_qt6:%{_qt6_qmake}} ../all.pro
-
-%make_build
+cmake -S .. -B . -G Ninja -DCAQTDM_QT_MAJOR_VERSION=6 -DCAQTDM_EPICS_BASE="$EPICS_BASE" -DCAQTDM_EPICS_HOST_ARCH="$EPICS_HOST_ARCH" -DCAQTDM_EPICS_INCLUDE="$EPICSINCLUDE" -DCAQTDM_EPICS_LIBRARY_DIR="$EPICSLIB" -DCAQTDM_QWT_INCLUDE="$QWTINCLUDE" -DCAQTDM_QWT_LIB="$QWTLIB" -DCAQTDM_QWT_LIBNAME="$QWTLIBNAME" -DCAQTDM_COLLECT="$CAQTDM_COLLECT" -DCAQTDM_BUILD_GPS=ON -DCAQTDM_BUILD_MODBUS=ON -DCAQTDM_BUILD_OPCUA=%{?caqtdm_opcua} -DCAQTDM_NORPATH=%{?no_rpath}
+cmake --build . --parallel %{_smp_build_ncpus}
 #%make_install
 popd
 %endif
@@ -357,7 +357,7 @@ ZMQLIB="/usr/lib64"
 %if 0%{?qt5}
 pushd %{_target_platform}-qt5
 export LD_LIBRARY_PATH="%{_builddir}/%{name}-%{version}/build/opt/caqtdm/lib/qt5:${EPICSLIB}:${ZMQLIB}:${LD_LIBRARY_PATH}"
-make -C caQtDM_UnitTests check
+ctest --test-dir . --output-on-failure
 popd
 %endif
 
@@ -375,7 +375,7 @@ EPICS_HOST_ARCH="linux-aarch64"
 EPICSLIB="${EPICS_BASE}/lib/${EPICS_HOST_ARCH}"
 %endif
 export LD_LIBRARY_PATH="%{_builddir}/%{name}-%{version}/build/opt/caqtdm/lib/qt6:${EPICSLIB}:${ZMQLIB}:${LD_LIBRARY_PATH}"
-make -C caQtDM_UnitTests check
+ctest --test-dir . --output-on-failure
 popd
 %endif
 
@@ -401,7 +401,9 @@ popd
         pushd %{_builddir}/%{name}-%{version}/%{_target_platform}-qt6
         mkdir -p %{buildroot}/usr/lib64/qt6/plugins/designer
 %endif
-        %make_install 
+%if 0%{?qt4}
+        %make_install
+%endif
         popd
         cp %{_builddir}/%{name}-%{version}/caQtDM_QtControls/src/*.h     %{buildroot}/usr/local/include/caqtdm
 	

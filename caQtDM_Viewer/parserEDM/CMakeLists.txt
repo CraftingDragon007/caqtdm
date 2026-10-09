@@ -11,6 +11,6 @@ target_include_directories(edl2ui PRIVATE
 
 target_link_libraries(edl2ui PRIVATE
     edlParserStatic
-    Qt6::Widgets)
+    ${CAQTDM_QT_PACKAGE}::Widgets)
 
 caqtdm_set_output_dir(edl2ui)

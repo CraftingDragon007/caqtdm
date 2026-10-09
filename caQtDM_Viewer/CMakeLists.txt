@@ -76,21 +76,25 @@ target_link_libraries(caQtDM
     PRIVATE
         caQtDM_Lib
         qtcontrols
-        Qt6::Core
-        Qt6::Gui
-        Qt6::Svg
-        Qt6::UiTools
-        Qt6::Network
-        Qt6::OpenGL
-        Qt6::Xml
-        Qt6::PrintSupport)
+        ${CAQTDM_QT_PACKAGE}::Core
+        ${CAQTDM_QT_PACKAGE}::Gui
+        ${CAQTDM_QT_PACKAGE}::Svg
+        ${CAQTDM_QT_PACKAGE}::UiTools
+        ${CAQTDM_QT_PACKAGE}::Network
+        ${CAQTDM_QT_PACKAGE}::OpenGL
+        ${CAQTDM_QT_PACKAGE}::Xml
+        ${CAQTDM_QT_PACKAGE}::PrintSupport)
+
+if(TARGET ${CAQTDM_QT_PACKAGE}::X11Extras)
+    target_link_libraries(caQtDM PRIVATE ${CAQTDM_QT_PACKAGE}::X11Extras X11::X11)
+endif()
 
 if(CAQTDM_BUILD_MODBUS)
-    target_link_libraries(caQtDM PRIVATE Qt6::SerialBus)
+    target_link_libraries(caQtDM PRIVATE ${CAQTDM_QT_PACKAGE}::SerialBus)
     target_compile_definitions(caQtDM PRIVATE CAQTDM_MODBUS)
 endif()
 if(CAQTDM_BUILD_GPS)
-    target_link_libraries(caQtDM PRIVATE Qt6::Positioning)
+    target_link_libraries(caQtDM PRIVATE ${CAQTDM_QT_PACKAGE}::Positioning)
     target_compile_definitions(caQtDM PRIVATE CAQTDM_GPS)
 endif()
 if(CAQTDM_HAVE_OPCUA)
@@ -121,7 +125,7 @@ if(CAQTDM_MOBILE)
         target_link_libraries(caQtDM PRIVATE gps_plugin)
     endif()
     if(CAQTDM_HAVE_OPCUA)
-        target_link_libraries(caQtDM PRIVATE opcua_plugin Qt6::OpcUa)
+        target_link_libraries(caQtDM PRIVATE opcua_plugin ${CAQTDM_QT_PACKAGE}::OpcUa)
     endif()
 endif()
 

@@ -10,6 +10,8 @@ class Caqtdm < Formula
 
   depends_on "qt"
   depends_on "qtbase"  => :build
+  depends_on "cmake" => :build
+  depends_on "ninja" => :build
   depends_on "qt5compat"
   depends_on "qtpositioning"
   depends_on "qtserialbus"
@@ -53,9 +55,21 @@ class Caqtdm < Formula
     compiler = ENV.compiler.to_s.match?("clang") ? "clang" : "g++"
 
     #system "qmake", "PREFIX=#{prefix} release -spec #{os}-#{compiler}"
-    system Formula["qtbase"].bin/"qmake", "all.pro"
-    system "make"
-    system "make", "install"
+    build_dir = buildpath/"cmake-build"
+    system "cmake", "-S", buildpath, "-B", build_dir, "-G", "Ninja",
+           "-DCMAKE_INSTALL_PREFIX=#{prefix}",
+           "-DCAQTDM_QT_MAJOR_VERSION=6",
+           "-DCAQTDM_EPICS_BASE=#{ENV["EPICS_BASE"]}",
+           "-DCAQTDM_EPICS_HOST_ARCH=#{ENV["EPICS_HOST_ARCH"]}",
+           "-DCAQTDM_QWT_HOME=#{ENV["QWTHOME"]}",
+           "-DCAQTDM_QWT_INCLUDE=#{ENV["QWTINCLUDE"]}",
+           "-DCAQTDM_QWT_LIB=#{ENV["QWTLIB"]}",
+           "-DCAQTDM_QWT_LIBNAME=#{ENV["QWTLIBNAME"]}",
+           "-DCAQTDM_COLLECT=#{prefix}",
+           "-DCAQTDM_BUILD_GPS=ON", "-DCAQTDM_BUILD_MODBUS=ON",
+           "-DCAQTDM_BUILD_OPCUA=OFF", "-DCAQTDM_WITH_TESTS=OFF"
+    system "cmake", "--build", build_dir, "--parallel", ENV.make_jobs.to_s
+    system "cmake", "--install", build_dir
     on_macos do
      caqtdm_path = "#{prefix}/caQtDM.app"
      qt_bin = Formula["qt"].opt_bin

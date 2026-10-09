@@ -90,7 +90,11 @@ caWaveTable::caWaveTable(QWidget *parent) : QTableWidget(parent)
 
 
  #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
     horizontalHeader()->setResizeMode(QHeaderView::Stretch);
+#else
+    horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+#endif
 #else
     horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
 

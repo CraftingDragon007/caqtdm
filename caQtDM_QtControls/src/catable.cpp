@@ -58,7 +58,11 @@ caTable::caTable(QWidget *parent) : QTableWidget(parent)
     setEditTriggers(QTableWidget::NoEditTriggers);
     verticalHeader()->setDefaultSectionSize(20);
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
     horizontalHeader()->setResizeMode(QHeaderView::Interactive);
+#else
+    horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
+#endif
     defaultForeColor = palette().foreground().color();
 #else
     horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
@@ -123,7 +127,11 @@ void caTable::setColumnSizes(QString const &newSizes)
 {
     if(newSizes.size() > 0) {
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
         horizontalHeader()->setResizeMode(QHeaderView::Fixed);
+#else
+        horizontalHeader()->setSectionResizeMode(QHeaderView::Fixed);
+#endif
 #else
         horizontalHeader()->setSectionResizeMode(QHeaderView::Fixed);
 #endif
@@ -136,7 +144,11 @@ void caTable::setColumnSizes(QString const &newSizes)
         }
     } else {
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
         horizontalHeader()->setResizeMode(QHeaderView::Interactive);
+#else
+        horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
+#endif
 #else
         horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
 #endif

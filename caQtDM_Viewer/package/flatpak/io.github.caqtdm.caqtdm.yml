@@ -133,8 +133,20 @@ modules:
 
         
         # Build caQtDM
-        qmake6 ./all.pro
-        make -j$(nproc)
+        cmake -S . -B "${FLATPAK_BUILDER_BUILDDIR}/caqtdm-cmake-build" -G Ninja \
+          -DCAQTDM_QT_MAJOR_VERSION=6 \
+          -DCAQTDM_EPICS_BASE="$EPICS_BASE" \
+          -DCAQTDM_EPICS_HOST_ARCH="$EPICS_HOST_ARCH" \
+          -DCAQTDM_EPICS_INCLUDE="$EPICSINCLUDE" \
+          -DCAQTDM_EPICS_LIBRARY_DIR="$EPICSLIB" \
+          -DCAQTDM_QWT_INCLUDE="$QWTINCLUDE" \
+          -DCAQTDM_QWT_LIB="$QWTLIB" \
+          -DCAQTDM_QWT_LIBNAME="$QWTLIBNAME" \
+          -DCAQTDM_COLLECT="$CAQTDM_COLLECT" \
+          -DCAQTDM_BUILD_GPS=ON \
+          -DCAQTDM_BUILD_MODBUS=ON \
+          -DCAQTDM_BUILD_OPCUA=OFF
+        cmake --build "${FLATPAK_BUILDER_BUILDDIR}/caqtdm-cmake-build" --parallel "$(nproc)"
         
         mkdir -p /app/doc
         mkdir -p /app/lib/caqtdm/qt6

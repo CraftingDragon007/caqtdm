@@ -7,6 +7,7 @@ RUN apk upgrade
 RUN apk add --no-cache \
     build-base \
     cmake \
+    ninja \
     git \
     qt6-qtbase \
     qt6-qtbase-dev \
@@ -72,8 +73,19 @@ RUN mkdir -p /opt/caqtdm/lib/qt6 && \
     export QTDM_RPATH=/opt/caqtdm/lib/qt6 && \
     export QTCONTROLS_LIBS=/opt/caqtdm/lib/qt6 && \
     export QTBASE=/opt/caqtdm/lib/qt6 && \
-    qmake6 all.pro && \
-    make -j$(nproc)
+    cmake -S . -B /build/caqtdm-cmake-build -G Ninja \
+      -DCAQTDM_QT_MAJOR_VERSION=6 \
+      -DCAQTDM_EPICS_BASE="$EPICS_BASE" \
+      -DCAQTDM_EPICS_HOST_ARCH="$EPICS_HOST_ARCH" \
+      -DCAQTDM_QWT_INCLUDE="$QWTINCLUDE" \
+      -DCAQTDM_QWT_LIB="$QWTLIB" \
+      -DCAQTDM_QWT_LIBNAME="$QWTLIBNAME" \
+      -DCAQTDM_COLLECT="$CAQTDM_COLLECT" \
+      -DCAQTDM_WEB=ON \
+      -DCAQTDM_BUILD_GPS=ON \
+      -DCAQTDM_BUILD_MODBUS=ON \
+      -DCAQTDM_BUILD_OPCUA=OFF && \
+    cmake --build /build/caqtdm-cmake-build --parallel "$(nproc)"
 
 WORKDIR /build
 RUN git clone --depth 1 https://github.com/caqtdm/qnovnc-platform-plugin.git

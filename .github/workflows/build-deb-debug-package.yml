@@ -35,12 +35,12 @@ jobs:
     - name: Set up build environment
       run: |
         sudo apt-get update
-        sudo apt-get install -y build-essential devscripts dh-make debhelper
+        sudo apt-get install -y build-essential devscripts dh-make debhelper cmake ninja-build
     
     - name: Install dependencies
       run: |
         sudo apt-get install -y \
-          libssl-dev libmbedtls-dev \
+          libssl-dev libmbedtls-dev cmake ninja-build \
           libncurses-dev libreadline-dev \
           qtbase5-dev qtbase5-private-dev qt5-qmake libqwt-qt5-dev python3-dev qttools5-dev qttools5-dev libqt5svg5-dev libqt5designer5 libqt5svg5 libqt5x11extras5-dev libzmq3-dev libqt5serialbus5-dev qtpositioning5-dev libqt5positioning5-plugins libqt5location5
     

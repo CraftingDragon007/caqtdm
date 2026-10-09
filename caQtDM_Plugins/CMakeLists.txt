@@ -21,7 +21,7 @@ caqtdm_add_cs_plugin(environment_plugin
     CLASS_NAME environmentPlugin
     SOURCES environment/environment_plugin.cpp
     HEADERS environment/environment_plugin.h controlsinterface.h caQtDM_Plugins_global.h
-    LINKS Qt6::Concurrent)
+    LINKS ${CAQTDM_QT_PACKAGE}::Concurrent)
 
 caqtdm_add_cs_plugin(epics3_plugin
     CLASS_NAME Epics3Plugin
@@ -51,7 +51,7 @@ if(CAQTDM_ARCHIVE_PLUGINS)
         HEADERS archive/archiveSF/archiveSF_plugin.h archive/archiveSF/sfRetrieval.h
             archive/archiverCommon.h controlsinterface.h caQtDM_Plugins_global.h
         INCLUDES "${_root}/archive" "${_root}/archive/archiveSF"
-        LINKS Qt6::UiTools)
+        LINKS ${CAQTDM_QT_PACKAGE}::UiTools)
 
     caqtdm_add_cs_plugin(archiveHTTP_plugin
         CLASS_NAME ArchiveHTTP_Plugin
@@ -73,7 +73,7 @@ if(CAQTDM_ARCHIVE_PLUGINS)
             archive/archiveHTTP/workerHttpThread.h
             controlsinterface.h caQtDM_Plugins_global.h
         INCLUDES "${_root}/archive" "${_root}/archive/archiveHTTP"
-        LINKS Qt6::UiTools)
+        LINKS ${CAQTDM_QT_PACKAGE}::UiTools)
     if(ZLIB_FOUND)
         target_link_libraries(archiveHTTP_plugin PRIVATE ZLIB::ZLIB)
         target_compile_definitions(archiveHTTP_plugin PRIVATE CAQTDM_USE_SYSTEM_ZLIB)
@@ -92,7 +92,7 @@ if(CAQTDM_BUILD_MODBUS)
         SOURCES modbus/modbus_Plugin.cpp modbus/modbus_decode.cpp modbus/modbus_channeldata.cpp
         HEADERS modbus/modbus_plugin.h modbus/modbus_decode.h modbus/modbus_channeldata.h
             controlsinterface.h caQtDM_Plugins_global.h
-        LINKS Qt6::SerialBus Qt6::Concurrent Epics::Com)
+        LINKS ${CAQTDM_QT_PACKAGE}::SerialBus ${CAQTDM_QT_PACKAGE}::Concurrent Epics::Com)
 endif()
 
 if(CAQTDM_BUILD_GPS)
@@ -100,7 +100,7 @@ if(CAQTDM_BUILD_GPS)
         CLASS_NAME gpsPlugin
         SOURCES gps/gps_plugin.cpp
         HEADERS gps/gps_plugin.h controlsinterface.h caQtDM_Plugins_global.h
-        LINKS Qt6::Positioning)
+        LINKS ${CAQTDM_QT_PACKAGE}::Positioning)
 endif()
 
 if(CAQTDM_HAVE_OPCUA)
@@ -117,7 +117,7 @@ if(CAQTDM_HAVE_OPCUA)
         SOURCES ${OPCUA_SOURCES}
         HEADERS ${OPCUA_HEADERS}
         FORMS ${OPCUA_FORMS}
-        LINKS Qt6::OpcUa)
+        LINKS ${CAQTDM_QT_PACKAGE}::OpcUa)
     if(CAQTDM_QT_OPCUA_X509)
         target_compile_definitions(opcua_plugin PRIVATE QT_OPCUA_X509)
     endif()
@@ -146,5 +146,5 @@ if(CAQTDM_HAVE_BSREAD)
             bsread/bsread_wfconverterthread.h
             bsread/bsread_internalchannel.h
             controlsinterface.h caQtDM_Plugins_global.h
-        LINKS caqtdm::zmq Qt6::Concurrent)
+        LINKS caqtdm::zmq ${CAQTDM_QT_PACKAGE}::Concurrent)
 endif()

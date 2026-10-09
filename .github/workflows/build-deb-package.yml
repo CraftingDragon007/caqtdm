@@ -46,7 +46,11 @@ jobs:
     - name: Set up build environment
       run: |
         apt-get update
-        apt-get install -y git build-essential devscripts dh-make debhelper gnupg
+        apt-get install -y git build-essential devscripts dh-make debhelper gnupg cmake ninja-build python3-pip
+        cmake_version=$(cmake --version | awk 'NR == 1 { print $3 }')
+        if [ "$(printf '%s\n' 3.24 "$cmake_version" | sort -V | head -n 1)" != "3.24" ]; then
+          python3 -m pip install --break-system-packages 'cmake>=3.24'
+        fi
         useradd --comment "caQtDM package builder" --create-home --shell /bin/bash builder
 
     - name: Checkout repository
@@ -78,7 +82,7 @@ jobs:
       id: qt6-version
       shell: bash
       run: |
-        echo "version=$(qmake6 -query QT_VERSION)" >> "$GITHUB_OUTPUT"
+        echo "version=$(pkg-config --modversion Qt6Core)" >> "$GITHUB_OUTPUT"
 
     - name: Cache Qt 6 Qwt DEBs
       if: matrix.qt-version == '6'

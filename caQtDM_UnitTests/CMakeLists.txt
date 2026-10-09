@@ -6,9 +6,14 @@
 add_library(caqtdm_test_common INTERFACE)
 target_compile_definitions(caqtdm_test_common INTERFACE
     UNIT_TESTING
-    BUILDVERSION=\"UNITTEST\"
-    QT_DISABLE_DEPRECATED_BEFORE=0x050000)
-target_link_libraries(caqtdm_test_common INTERFACE Qt6::Test)
+    BUILDVERSION=\"UNITTEST\")
+if(QT_VERSION_MAJOR GREATER_EQUAL 6)
+    target_compile_definitions(caqtdm_test_common INTERFACE QT_DISABLE_DEPRECATED_BEFORE=0x050000)
+endif()
+target_link_libraries(caqtdm_test_common INTERFACE ${CAQTDM_QT_PACKAGE}::Test)
+if(TARGET ${CAQTDM_QT_PACKAGE}::X11Extras)
+    target_link_libraries(caqtdm_test_common INTERFACE ${CAQTDM_QT_PACKAGE}::X11Extras X11::X11)
+endif()
 if(MSVC)
     target_compile_options(caqtdm_test_common INTERFACE /wd4005)
 endif()
@@ -47,7 +52,7 @@ if(UNIX)
     target_sources(tst_viewer PRIVATE ${_tst_viewer_extra})
 endif()
 target_include_directories(tst_viewer PRIVATE "${_viewer_src}/logging")
-target_link_libraries(tst_viewer PRIVATE caqtdm_test_common Qt6::Network)
+target_link_libraries(tst_viewer PRIVATE caqtdm_test_common ${CAQTDM_QT_PACKAGE}::Network)
 
 # --------------------------------------------------------------------------------------------------
 # tst_qtcontrols: widget tests (pvdialog compiled in, links qtcontrols)
@@ -85,10 +90,10 @@ target_include_directories(tst_qtcontrols PRIVATE
 target_link_libraries(tst_qtcontrols PRIVATE
     caqtdm_test_common
     qtcontrols
-    Qt6::Network
-    Qt6::Gui
-    Qt6::Widgets
-    Qt6::Designer)
+    ${CAQTDM_QT_PACKAGE}::Network
+    ${CAQTDM_QT_PACKAGE}::Gui
+    ${CAQTDM_QT_PACKAGE}::Widgets
+    ${CAQTDM_QT_PACKAGE}::Designer)
 
 # --------------------------------------------------------------------------------------------------
 # tst_lib: dispatcher tests (caqtdm_lib.cpp + internal plugin compiled in)
@@ -120,12 +125,12 @@ target_link_libraries(tst_lib PRIVATE
     qtcontrols
     Epics::ca
     Epics::Com
-    Qt6::Network
-    Qt6::Gui
-    Qt6::Widgets
-    Qt6::Designer
-    Qt6::UiTools
-    Qt6::PrintSupport)
+    ${CAQTDM_QT_PACKAGE}::Network
+    ${CAQTDM_QT_PACKAGE}::Gui
+    ${CAQTDM_QT_PACKAGE}::Widgets
+    ${CAQTDM_QT_PACKAGE}::Designer
+    ${CAQTDM_QT_PACKAGE}::UiTools
+    ${CAQTDM_QT_PACKAGE}::PrintSupport)
 
 # --------------------------------------------------------------------------------------------------
 # tst_viewer_input: viewer input handling (viewer sources + caqtdm_lib compiled in)
@@ -171,12 +176,12 @@ target_link_libraries(tst_viewer_input PRIVATE
     qtcontrols
     Epics::ca
     Epics::Com
-    Qt6::Network
-    Qt6::Gui
-    Qt6::Widgets
-    Qt6::Designer
-    Qt6::UiTools
-    Qt6::PrintSupport)
+    ${CAQTDM_QT_PACKAGE}::Network
+    ${CAQTDM_QT_PACKAGE}::Gui
+    ${CAQTDM_QT_PACKAGE}::Widgets
+    ${CAQTDM_QT_PACKAGE}::Designer
+    ${CAQTDM_QT_PACKAGE}::UiTools
+    ${CAQTDM_QT_PACKAGE}::PrintSupport)
 
 # --------------------------------------------------------------------------------------------------
 # Plugin tests
@@ -202,13 +207,13 @@ target_link_libraries(tst_internal PRIVATE
     caQtDM_Lib
     Epics::ca
     Epics::Com
-    Qt6::Network
-    Qt6::Gui
-    Qt6::Concurrent
-    Qt6::Widgets
-    Qt6::Designer
-    Qt6::UiTools
-    Qt6::PrintSupport)
+    ${CAQTDM_QT_PACKAGE}::Network
+    ${CAQTDM_QT_PACKAGE}::Gui
+    ${CAQTDM_QT_PACKAGE}::Concurrent
+    ${CAQTDM_QT_PACKAGE}::Widgets
+    ${CAQTDM_QT_PACKAGE}::Designer
+    ${CAQTDM_QT_PACKAGE}::UiTools
+    ${CAQTDM_QT_PACKAGE}::PrintSupport)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_link_options(tst_internal PRIVATE "LINKER:--disable-new-dtags")
 endif()
@@ -238,13 +243,13 @@ if(CAQTDM_HAVE_BSREAD)
         caqtdm::zmq
         Epics::ca
         Epics::Com
-        Qt6::Network
-        Qt6::Gui
-        Qt6::Concurrent
-        Qt6::Widgets
-        Qt6::Designer
-        Qt6::UiTools
-        Qt6::PrintSupport)
+        ${CAQTDM_QT_PACKAGE}::Network
+        ${CAQTDM_QT_PACKAGE}::Gui
+        ${CAQTDM_QT_PACKAGE}::Concurrent
+        ${CAQTDM_QT_PACKAGE}::Widgets
+        ${CAQTDM_QT_PACKAGE}::Designer
+        ${CAQTDM_QT_PACKAGE}::UiTools
+        ${CAQTDM_QT_PACKAGE}::PrintSupport)
     target_link_libraries(tst_bsread PRIVATE "$<TARGET_FILE:bsread_Plugin>")
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         target_link_options(tst_bsread PRIVATE "LINKER:--disable-new-dtags")

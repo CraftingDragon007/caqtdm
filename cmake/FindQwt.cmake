@@ -36,7 +36,8 @@ else()
 
     find_library(Qwt_LIBRARY NAMES ${CAQTDM_QWT_LIBNAME}
         HINTS ${CAQTDM_QWT_LIB} ${CAQTDM_QWT_HOME}/lib
-        PATHS /usr/lib /usr/local/lib /usr/lib/x86_64-linux-gnu
+        PATHS /usr/lib /usr/lib64 /usr/local/lib
+              /usr/lib/${CMAKE_LIBRARY_ARCHITECTURE}
         PATH_SUFFIXES qwt qwt-qt6 qwt-qt5)
 endif()
 

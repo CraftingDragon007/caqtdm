@@ -1,12 +1,23 @@
-# Qt 6 CMake build
+# CMake build
 
-Use CMake 3.24 or newer and build outside the source tree:
+Use CMake 3.24 or newer and build outside the source tree. Qt 6 is selected
+automatically when available; pass `CAQTDM_QT_MAJOR_VERSION=5` to build with
+Qt 5.15 instead:
 
 ```sh
 cmake -S . -B ../caqtdm-build/local -G Ninja -DCAQTDM_EPICS_BASE=/path/to/epics-base
 cmake --build ../caqtdm-build/local --parallel
 ctest --test-dir ../caqtdm-build/local --output-on-failure
 ```
+
+```sh
+cmake -S . -B ../caqtdm-build/qt5 -G Ninja \
+  -DCAQTDM_QT_MAJOR_VERSION=5 -DCAQTDM_EPICS_BASE=/path/to/epics-base
+cmake --build ../caqtdm-build/qt5 --parallel
+ctest --test-dir ../caqtdm-build/qt5 --output-on-failure
+```
+
+Qt 5 CMake builds currently support desktop platforms; mobile builds use Qt 6.
 
 `CAQTDM_EPICS_BASE` takes precedence over the `EPICS_BASE` environment variable. `CAQTDM_EPICS_HOST_ARCH` takes precedence over `EPICS_HOST_ARCH`; CMake derives an architecture for known platforms when neither is set. OpenBSD requires an explicitly supplied architecture and a compatible EPICS Base build.
 

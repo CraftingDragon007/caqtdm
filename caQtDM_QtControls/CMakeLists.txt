@@ -248,12 +248,12 @@ target_include_directories(qtcontrols
 
 target_link_libraries(qtcontrols
     PUBLIC
-        Qt6::Widgets
-        Qt6::Concurrent
-        Qt6::OpenGL
-        Qt6::Network
-        Qt6::Xml
-        Qt6::UiTools
+        ${CAQTDM_QT_PACKAGE}::Widgets
+        ${CAQTDM_QT_PACKAGE}::Concurrent
+        ${CAQTDM_QT_PACKAGE}::OpenGL
+        ${CAQTDM_QT_PACKAGE}::Network
+        ${CAQTDM_QT_PACKAGE}::Xml
+        ${CAQTDM_QT_PACKAGE}::UiTools
         Qwt::Qwt
     PRIVATE
         prcParserStatic
@@ -267,7 +267,7 @@ if(CAQTDM_ADL_EDL)
 endif()
 
 if(NOT CAQTDM_MOBILE)
-    target_link_libraries(qtcontrols PRIVATE Qt6::Designer)
+    target_link_libraries(qtcontrols PRIVATE ${CAQTDM_QT_PACKAGE}::Designer)
 endif()
 
 if(ZLIB_FOUND)
@@ -277,7 +277,9 @@ else()
     target_compile_definitions(qtcontrols PRIVATE CAQTDM_USE_QT_ZLIB)
 endif()
 
-target_compile_definitions(qtcontrols PRIVATE QT_DISABLE_DEPRECATED_BEFORE=0x050000)
+if(QT_VERSION_MAJOR GREATER_EQUAL 6)
+    target_compile_definitions(qtcontrols PRIVATE QT_DISABLE_DEPRECATED_BEFORE=0x050000)
+endif()
 
 if(MSVC)
     target_compile_definitions(qtcontrols PRIVATE QTCON_MAKEDLL _CRT_SECURE_NO_WARNINGS)

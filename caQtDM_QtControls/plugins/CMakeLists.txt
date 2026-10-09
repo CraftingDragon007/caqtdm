@@ -36,13 +36,13 @@ foreach(_group ${_plugin_groups})
         PRIVATE
             qtcontrols
             Qwt::Qwt
-            Qt6::UiTools
-            Qt6::Widgets
-            Qt6::OpenGL)
+            ${CAQTDM_QT_PACKAGE}::UiTools
+            ${CAQTDM_QT_PACKAGE}::Widgets
+            ${CAQTDM_QT_PACKAGE}::OpenGL)
     if(CAQTDM_MOBILE)
-        target_link_libraries(${_target} PRIVATE Qt6::UiPlugin)
+        target_link_libraries(${_target} PRIVATE ${CAQTDM_QT_PACKAGE}::UiPlugin)
     else()
-        target_link_libraries(${_target} PRIVATE Qt6::Designer)
+        target_link_libraries(${_target} PRIVATE ${CAQTDM_QT_PACKAGE}::Designer)
     endif()
     target_compile_definitions(${_target} PRIVATE CAHMI)
     if(MSVC)

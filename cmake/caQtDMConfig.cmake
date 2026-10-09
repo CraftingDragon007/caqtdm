@@ -1,5 +1,5 @@
 # Core caQtDM configuration: options, dependency detection, feature switches.
-# Mirrors the qmake logic in caQtDM_Viewer/qtdefs.pri + caQtDM.pri (Qt6 only).
+# Mirrors the qmake logic in caQtDM_Viewer/qtdefs.pri + caQtDM.pri.
 
 include(FeatureSummary)
 include(GNUInstallDirs)
@@ -27,6 +27,8 @@ option(CAQTDM_WITH_TESTS    "Build unit tests and register them with CTest"     
 option(CAQTDM_NORPATH       "Build without rpath entries (packaging builds)"           OFF)
 option(CAQTDM_NO_CUSTOM_LOGHANDLER "Build the viewer without the custom log handlers"  OFF)
 option(CAQTDM_ALH2UI       "Build the ALH configuration debug converter"           OFF)
+set(CAQTDM_QT_MAJOR_VERSION "" CACHE STRING "Qt major version to use (5 or 6; auto-detected when empty)")
+set_property(CACHE CAQTDM_QT_MAJOR_VERSION PROPERTY STRINGS "" 5 6)
 
 # --------------------------------------------------------------------------------------------------
 # Path configuration
@@ -35,6 +37,8 @@ set(CAQTDM_COLLECT "${CMAKE_BINARY_DIR}/caQtDM_Binaries" CACHE PATH
     "Collect directory all libraries/plugins/executables are built into")
 
 set(CAQTDM_EPICS_BASE "" CACHE PATH "EPICS base directory (falls back to EPICS_BASE environment variable)")
+set(CAQTDM_EPICS_INCLUDE "" CACHE PATH "EPICS include directory override for nonstandard package layouts")
+set(CAQTDM_EPICS_LIBRARY_DIR "" CACHE PATH "EPICS library directory override for nonstandard package layouts")
 set(CAQTDM_EPICS_HOST_ARCH "" CACHE STRING
     "EPICS host architecture; falls back to EPICS_HOST_ARCH, then a known platform default")
 if(NOT CAQTDM_EPICS_BASE AND DEFINED ENV{EPICS_BASE} AND NOT "$ENV{EPICS_BASE}" STREQUAL "")
@@ -92,9 +96,26 @@ endif()
 message(STATUS "caQtDM version: ${CAQTDM_VERSION_STR}")
 
 # --------------------------------------------------------------------------------------------------
-# Qt6
+# Qt
 # --------------------------------------------------------------------------------------------------
+if(CAQTDM_QT_MAJOR_VERSION STREQUAL "")
+    find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core)
+    set(CAQTDM_QT_MAJOR_VERSION "${QT_VERSION_MAJOR}")
+elseif(NOT CAQTDM_QT_MAJOR_VERSION STREQUAL "5" AND NOT CAQTDM_QT_MAJOR_VERSION STREQUAL "6")
+    message(FATAL_ERROR "CAQTDM_QT_MAJOR_VERSION must be 5 or 6")
+endif()
+set(QT_VERSION_MAJOR "${CAQTDM_QT_MAJOR_VERSION}")
+set(CAQTDM_QT_PACKAGE "Qt${QT_VERSION_MAJOR}")
+if(QT_VERSION_MAJOR EQUAL 5)
+    set(_caqtdm_qt_minimum 5.15)
+else()
+    set(_caqtdm_qt_minimum 6.2)
+endif()
+
 set(_caqtdm_qt_components Core Gui Widgets Network Xml OpenGL Concurrent UiTools PrintSupport Svg)
+if(QT_VERSION_MAJOR EQUAL 5 AND CMAKE_SYSTEM_NAME MATCHES "^(Linux|FreeBSD)$")
+    list(APPEND _caqtdm_qt_components X11Extras)
+endif()
 if(CAQTDM_MOBILE)
     list(APPEND _caqtdm_qt_components UiPlugin)
 else()
@@ -103,8 +124,14 @@ else()
         list(APPEND _caqtdm_qt_components Test)
     endif()
 endif()
-find_package(Qt6 6.2 REQUIRED COMPONENTS ${_caqtdm_qt_components})
-find_package(Qt6 QUIET COMPONENTS Positioning SerialBus OpcUa WebSockets)
+find_package(${CAQTDM_QT_PACKAGE} ${_caqtdm_qt_minimum} REQUIRED COMPONENTS ${_caqtdm_qt_components})
+find_package(${CAQTDM_QT_PACKAGE} QUIET COMPONENTS Positioning SerialBus OpcUa WebSockets)
+if(TARGET ${CAQTDM_QT_PACKAGE}::X11Extras)
+    find_package(X11 REQUIRED)
+endif()
+if(QT_VERSION_MAJOR EQUAL 5 AND CAQTDM_MOBILE)
+    message(FATAL_ERROR "Qt 5 CMake builds are currently supported on desktop platforms only")
+endif()
 if(WIN32 AND NOT MINGW)
     find_package(ZLIB QUIET)
 else()
@@ -113,28 +140,28 @@ endif()
 
 if(MSVC)
     # The EPICS pvAccess headers need /Zc:twoPhase- to compile under the
-    # -permissive- conformance mode that the Qt6 kits enable. The option
+    # -permissive- conformance mode that the Qt kits enable. The option
     # must appear AFTER -permissive- on the command line, so it is appended
-    # to the interface options of Qt6::Platform instead of the targets.
-    set_property(TARGET Qt6::Platform APPEND PROPERTY INTERFACE_COMPILE_OPTIONS
+    # to the interface options of Qt::Platform instead of the targets.
+    set_property(TARGET ${CAQTDM_QT_PACKAGE}::Platform APPEND PROPERTY INTERFACE_COMPILE_OPTIONS
         "/Zc:twoPhase-;-Zc:referenceBinding")
 endif()
 
-if(CAQTDM_BUILD_GPS AND NOT TARGET Qt6::Positioning)
-    message(FATAL_ERROR "CAQTDM_BUILD_GPS requires the Qt6 Positioning module")
+if(CAQTDM_BUILD_GPS AND NOT TARGET ${CAQTDM_QT_PACKAGE}::Positioning)
+    message(FATAL_ERROR "CAQTDM_BUILD_GPS requires the Qt Positioning module")
 endif()
-if(CAQTDM_BUILD_MODBUS AND NOT TARGET Qt6::SerialBus)
-    message(FATAL_ERROR "CAQTDM_BUILD_MODBUS requires the Qt6 SerialBus module")
+if(CAQTDM_BUILD_MODBUS AND NOT TARGET ${CAQTDM_QT_PACKAGE}::SerialBus)
+    message(FATAL_ERROR "CAQTDM_BUILD_MODBUS requires the Qt SerialBus module")
 endif()
 set(CAQTDM_HAVE_OPCUA OFF)
 if(CAQTDM_BUILD_OPCUA)
-    if(NOT TARGET Qt6::OpcUa)
-        message(FATAL_ERROR "CAQTDM_BUILD_OPCUA requires the Qt6 OpcUa module")
+    if(NOT TARGET ${CAQTDM_QT_PACKAGE}::OpcUa)
+        message(FATAL_ERROR "CAQTDM_BUILD_OPCUA requires the Qt OpcUa module")
     endif()
     set(CAQTDM_HAVE_OPCUA ON)
-    get_target_property(_qt_install_headers Qt6::Core INTERFACE_INCLUDE_DIRECTORIES)
+    get_target_property(_qt_install_headers ${CAQTDM_QT_PACKAGE}::Core INTERFACE_INCLUDE_DIRECTORIES)
     find_path(QT_OPCUA_X509_HEADER QtOpcUa/QOpcUaX509CertificateSigningRequest
-        HINTS ${_qt_install_headers} ${Qt6OpcUa_DIR}/../../include
+        HINTS ${_qt_install_headers} ${${CAQTDM_QT_PACKAGE}OpcUa_DIR}/../../include
         NO_DEFAULT_PATH)
     if(QT_OPCUA_X509_HEADER)
         set(CAQTDM_QT_OPCUA_X509 ON)
@@ -147,8 +174,8 @@ endif()
 
 set(CAQTDM_HAVE_WEBSOCKETS OFF)
 if(CAQTDM_WEB)
-    if(NOT TARGET Qt6::WebSockets)
-        message(FATAL_ERROR "CAQTDM_WEB requires the Qt6 WebSockets module")
+    if(NOT TARGET ${CAQTDM_QT_PACKAGE}::WebSockets)
+        message(FATAL_ERROR "CAQTDM_WEB requires the Qt WebSockets module")
     endif()
     set(CAQTDM_HAVE_WEBSOCKETS ON)
 endif()
@@ -241,7 +268,7 @@ add_feature_info(web CAQTDM_HAVE_WEBSOCKETS "caQtDM Web websocket server support
 add_feature_info(tests CAQTDM_WITH_TESTS "unit tests")
 
 # --------------------------------------------------------------------------------------------------
-# Global compile definitions (mirror the unconditional DEFINES in qtdefs.pri for Qt6)
+# Global compile definitions (mirror the unconditional DEFINES in qtdefs.pri)
 # --------------------------------------------------------------------------------------------------
 add_compile_definitions(
     XDR_HACK

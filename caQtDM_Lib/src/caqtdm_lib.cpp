@@ -976,32 +976,20 @@ CaQtDM_Lib::CaQtDM_Lib(QWidget *parent, QString filename, QString macro, MutexKn
 
     // add a reload action
     QAction *ReloadWindowAction = new QAction(this);
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    ReloadWindowAction->setShortcut(QApplication::translate("MainWindow", "Ctrl+R", 0, QApplication::UnicodeUTF8));
-#else
-    ReloadWindowAction->setShortcut(QApplication::translate("MainWindow", "Ctrl+R", Q_NULLPTR));
-#endif
+    ReloadWindowAction->setShortcut(QApplication::translate("MainWindow", "Ctrl+R"));
     connect(ReloadWindowAction, SIGNAL(triggered()), this, SLOT(Callback_ReloadWindowL()));
     this->addAction(ReloadWindowAction);
 
     // add also a global reload action
     QAction *ReloadAllWindowsAction = new QAction(this);
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    ReloadAllWindowsAction->setShortcut(QApplication::translate("MainWindow", "Ctrl+Alt+R", 0, QApplication::UnicodeUTF8));
-#else
-    ReloadAllWindowsAction->setShortcut(QApplication::translate("MainWindow", "Ctrl+Alt+R", Q_NULLPTR));
-#endif
+    ReloadAllWindowsAction->setShortcut(QApplication::translate("MainWindow", "Ctrl+Alt+R"));
     connect(ReloadAllWindowsAction, SIGNAL(triggered()), this, SLOT(Callback_reloadAllWindows()));
     this->addAction(ReloadAllWindowsAction);
 
     if (!vncServer) {
         // add a print action
         QAction *PrintWindowAction = new QAction(this);
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-        PrintWindowAction->setShortcut(QApplication::translate("MainWindow", "Ctrl+P", 0, QApplication::UnicodeUTF8));
-#else
-        PrintWindowAction->setShortcut(QApplication::translate("MainWindow", "Ctrl+P", Q_NULLPTR));
-#endif
+        PrintWindowAction->setShortcut(QApplication::translate("MainWindow", "Ctrl+P"));
         connect(PrintWindowAction, SIGNAL(triggered()), this, SLOT(Callback_printWindow()));
         this->addAction(PrintWindowAction);
     }
@@ -11466,7 +11454,7 @@ void CaQtDM_Lib::themeChanged() {
 extern "C"  {
 
     QMainWindow *myWidget;
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
     void myMessageOutput(QtMsgType type, const char *msg)
     {
         switch (type) {
@@ -11571,11 +11559,7 @@ extern "C"  {
                 }
             }
         }
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-        qInstallMsgHandler(myMessageOutput);
-#else
-         qInstallMessageHandler(myMessageOutput);
-#endif
+        qInstallMessageHandler(myMessageOutput);
         QMainWindow *pWindow =  new CaQtDM_Lib(Q_NULLPTR, FileName, macroS, mutexKnobData, interfaces);
         pWindow->show();
 

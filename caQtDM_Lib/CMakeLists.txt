@@ -90,22 +90,22 @@ target_include_directories(caQtDM_Lib
 target_link_libraries(caQtDM_Lib
     PUBLIC
         qtcontrols
-        Qt6::Core
-        Qt6::Gui
-        Qt6::Widgets
-        Qt6::Network
-        Qt6::UiTools
-        Qt6::OpenGL
-        Qt6::Xml
+        ${CAQTDM_QT_PACKAGE}::Core
+        ${CAQTDM_QT_PACKAGE}::Gui
+        ${CAQTDM_QT_PACKAGE}::Widgets
+        ${CAQTDM_QT_PACKAGE}::Network
+        ${CAQTDM_QT_PACKAGE}::UiTools
+        ${CAQTDM_QT_PACKAGE}::OpenGL
+        ${CAQTDM_QT_PACKAGE}::Xml
     PRIVATE
         Epics::Com)
 
 if(NOT CAQTDM_MOBILE)
-    target_link_libraries(caQtDM_Lib PUBLIC Qt6::PrintSupport)
+    target_link_libraries(caQtDM_Lib PUBLIC ${CAQTDM_QT_PACKAGE}::PrintSupport)
 endif()
 
 if(CAQTDM_HAVE_WEBSOCKETS)
-    target_link_libraries(caQtDM_Lib PUBLIC Qt6::WebSockets)
+    target_link_libraries(caQtDM_Lib PUBLIC ${CAQTDM_QT_PACKAGE}::WebSockets)
     target_compile_definitions(caQtDM_Lib PUBLIC WEB)
 endif()
 
@@ -114,7 +114,9 @@ if(CAQTDM_HAVE_PYTHON)
     target_compile_definitions(caQtDM_Lib PRIVATE PYTHON)
 endif()
 
-target_compile_definitions(caQtDM_Lib PRIVATE QT_DISABLE_DEPRECATED_BEFORE=0x050000)
+if(QT_VERSION_MAJOR GREATER_EQUAL 6)
+    target_compile_definitions(caQtDM_Lib PRIVATE QT_DISABLE_DEPRECATED_BEFORE=0x050000)
+endif()
 
 if(MSVC)
     target_compile_definitions(caQtDM_Lib PRIVATE CAQTDM_LIB_LIBRARY _CRT_SECURE_NO_WARNINGS)
