@@ -253,7 +253,7 @@ if(CAQTDM_HAVE_BSREAD)
     # Windows links through the plugin import library, as the qmake test does.
     # Other platforms link the plugin binary directly.
     if(WIN32)
-        target_link_libraries(tst_bsread PRIVATE "$<TARGET_LINKER_FILE:bsread_Plugin>")
+        target_link_libraries(tst_bsread PRIVATE bsread_Plugin)
     else()
         target_link_libraries(tst_bsread PRIVATE "$<TARGET_FILE:bsread_Plugin>")
     endif()

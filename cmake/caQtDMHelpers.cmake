@@ -103,18 +103,23 @@ function(caqtdm_add_version_rc target rcfile product filename)
 endfunction()
 
 # Creates one control-system plugin below <collect>/controlsystems.
-# A shared MODULE on desktop platforms, a STATIC library on mobile
-# (mirrors CONFIG += staticlib in caQtDM.pri). All plugins link against
-# caQtDM_Lib.
+# A MODULE on desktop platforms, except linkable Windows plugins which
+# use SHARED to produce an import library; a STATIC library on mobile
+# (mirrors CONFIG += staticlib in caQtDM.pri). All plugins link against caQtDM_Lib.
 function(caqtdm_add_cs_plugin name)
-    cmake_parse_arguments(ARG "" "CLASS_NAME" "SOURCES;HEADERS;FORMS;LINKS;DEFINES;INCLUDES" ${ARGN})
+    cmake_parse_arguments(ARG "LINKABLE" "CLASS_NAME" "SOURCES;HEADERS;FORMS;LINKS;DEFINES;INCLUDES" ${ARGN})
     if(CAQTDM_MOBILE)
         if(NOT ARG_CLASS_NAME)
             message(FATAL_ERROR "Mobile plugin ${name} needs CLASS_NAME for Qt static registration")
         endif()
         qt_add_plugin(${name} STATIC CLASS_NAME "${ARG_CLASS_NAME}" ${ARG_SOURCES} ${ARG_HEADERS})
     else()
-        add_library(${name} MODULE ${ARG_SOURCES} ${ARG_HEADERS})
+        if(WIN32 AND ARG_LINKABLE)
+            # The bsread unit test links against the plugin's import library.
+            add_library(${name} SHARED ${ARG_SOURCES} ${ARG_HEADERS})
+        else()
+            add_library(${name} MODULE ${ARG_SOURCES} ${ARG_HEADERS})
+        endif()
         if(APPLE)
             set_target_properties(${name} PROPERTIES SUFFIX ".dylib")
         endif()

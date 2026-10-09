@@ -125,6 +125,7 @@ endif()
 
 if(CAQTDM_HAVE_BSREAD)
     caqtdm_add_cs_plugin(bsread_Plugin
+        LINKABLE
         CLASS_NAME bsreadPlugin
         SOURCES
             bsread/bsread_Plugin.cpp
