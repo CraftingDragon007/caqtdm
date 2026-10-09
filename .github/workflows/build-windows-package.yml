@@ -417,6 +417,7 @@ jobs:
           $timerstart = Get-Date
           $buildDir = Join-Path $env:RUNNER_TEMP "caqtdm-cmake-build"
           $qtopcuaDir = Join-Path $env:QTOPCUA_INSTALL_DIR "lib\cmake\Qt6OpcUa"
+          $zmqImportLibrary = Join-Path $env:ZMQLIB $env:ZMQ_LIB_NAME
           cmake -S . -B $buildDir -G Ninja `
             -DCMAKE_BUILD_TYPE=Release `
             -DCMAKE_PREFIX_PATH="$env:QT_ROOT_DIR;$env:QTOPCUA_INSTALL_DIR" `
@@ -431,11 +432,14 @@ jobs:
             -DCAQTDM_QWT_LIBNAME=qwt `
             -DCAQTDM_ZMQ_INCLUDE="$env:ZMQINC" `
             -DCAQTDM_ZMQ_LIB="$env:ZMQLIB" `
+            -DCAQTDM_ZMQ_LIBRARY="$zmqImportLibrary" `
             -DCAQTDM_COLLECT="$env:CAQTDM_COLLECT" `
             -DCAQTDM_BUILD_GPS=ON -DCAQTDM_BUILD_MODBUS=ON -DCAQTDM_BUILD_OPCUA=ON
           if ($LASTEXITCODE -ne 0) { throw "CMake configure failed" }
           cmake --build $buildDir --config Release --parallel $env:NUMBER_OF_PROCESSORS
           if ($LASTEXITCODE -ne 0) { throw "CMake build failed" }
+          $bsreadPlugin = Join-Path $env:CAQTDM_COLLECT "controlsystems\bsread_Plugin.dll"
+          if (-not (Test-Path $bsreadPlugin)) { throw "CMake did not build the bsread plugin: $bsreadPlugin" }
           
           $timerstop = Get-Date
           $elapsed = $timerstop - $timerstart

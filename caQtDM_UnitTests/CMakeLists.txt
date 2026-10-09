@@ -250,7 +250,14 @@ if(CAQTDM_HAVE_BSREAD)
         ${CAQTDM_QT_PACKAGE}::Designer
         ${CAQTDM_QT_PACKAGE}::UiTools
         ${CAQTDM_QT_PACKAGE}::PrintSupport)
-    target_link_libraries(tst_bsread PRIVATE "$<TARGET_FILE:bsread_Plugin>")
+    # Windows links through the plugin import library, as the qmake test does.
+    # Other platforms link the plugin binary directly.
+    if(WIN32)
+        target_link_libraries(tst_bsread PRIVATE "$<TARGET_LINKER_FILE:bsread_Plugin>")
+    else()
+        target_link_libraries(tst_bsread PRIVATE "$<TARGET_FILE:bsread_Plugin>")
+    endif()
+    add_dependencies(tst_bsread bsread_Plugin)
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         target_link_options(tst_bsread PRIVATE "LINKER:--disable-new-dtags")
     endif()

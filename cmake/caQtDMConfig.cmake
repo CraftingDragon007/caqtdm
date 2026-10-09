@@ -55,6 +55,7 @@ set(CAQTDM_QWT_LIBNAME "qwt" CACHE STRING "Qwt library name (qwt, qwt-qt5, qwt-q
 
 set(CAQTDM_ZMQ_INCLUDE "" CACHE PATH "ZeroMQ include directory")
 set(CAQTDM_ZMQ_LIB "" CACHE PATH "ZeroMQ library directory")
+set(CAQTDM_ZMQ_LIBRARY "" CACHE FILEPATH "ZeroMQ library or Windows import library file")
 set(CAQTDM_ANDROID_SSL_ROOT "" CACHE PATH "Directory containing Android libcrypto.so and libssl.so to package")
 set(CAQTDM_ANDROID_MIN_SDK_VERSION "" CACHE STRING "Minimum Android SDK version for the application package")
 set(CAQTDM_ANDROID_COMPILE_SDK_VERSION "" CACHE STRING "Android compile SDK version for the application package")
@@ -197,10 +198,22 @@ if(NOT CAQTDM_MOBILE)
     find_path(ZMQ_INCLUDE_DIR zmq.h
         HINTS ${CAQTDM_ZMQ_INCLUDE}
         PATHS /usr/include /usr/local/include)
+    if(CAQTDM_ZMQ_LIBRARY)
+        if(NOT EXISTS "${CAQTDM_ZMQ_LIBRARY}" OR IS_DIRECTORY "${CAQTDM_ZMQ_LIBRARY}")
+            message(FATAL_ERROR "CAQTDM_ZMQ_LIBRARY is not a library file: ${CAQTDM_ZMQ_LIBRARY}")
+        endif()
+        if(NOT ZMQ_INCLUDE_DIR)
+            message(FATAL_ERROR "CAQTDM_ZMQ_LIBRARY was set, but zmq.h was not found")
+        endif()
+    endif()
     if(ZMQ_INCLUDE_DIR)
-        find_library(ZMQ_LIBRARY NAMES zmq
-            HINTS ${CAQTDM_ZMQ_LIB}
-            PATHS /usr/lib /usr/local/lib /usr/lib/x86_64-linux-gnu)
+        if(CAQTDM_ZMQ_LIBRARY)
+            set(ZMQ_LIBRARY "${CAQTDM_ZMQ_LIBRARY}")
+        else()
+            find_library(ZMQ_LIBRARY NAMES zmq
+                HINTS ${CAQTDM_ZMQ_LIB}
+                PATHS /usr/lib /usr/local/lib /usr/lib/x86_64-linux-gnu)
+        endif()
         if(ZMQ_LIBRARY)
             set(CAQTDM_HAVE_BSREAD ON)
             add_library(caqtdm::zmq UNKNOWN IMPORTED)
