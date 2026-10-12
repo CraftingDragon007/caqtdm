@@ -217,16 +217,39 @@ if(ANDROID)
             "${CAQTDM_ANDROID_TARGET_SDK_VERSION}")
     endif()
     if(CAQTDM_ANDROID_SSL_ROOT)
-        set(_android_ssl_libs
-            "${CAQTDM_ANDROID_SSL_ROOT}/libcrypto.so"
-            "${CAQTDM_ANDROID_SSL_ROOT}/libssl.so")
-        foreach(_ssl_lib ${_android_ssl_libs})
-            if(NOT EXISTS "${_ssl_lib}")
-                message(FATAL_ERROR "Android SSL library not found: ${_ssl_lib}")
-            endif()
-        endforeach()
-        set_target_properties(caQtDM PROPERTIES QT_ANDROID_EXTRA_LIBS "${_android_ssl_libs}")
+        set(_android_ssl_search_dir "${CAQTDM_ANDROID_SSL_ROOT}")
+    else()
+        set(_android_ssl_search_dir
+            "${ANDROID_SDK_ROOT}/android_openssl/ssl_3/${ANDROID_ABI}")
     endif()
+
+    set(_android_ssl_libs "")
+    foreach(_android_ssl_suffix IN ITEMS "_3" "")
+        set(_android_crypto_lib
+            "${_android_ssl_search_dir}/libcrypto${_android_ssl_suffix}.so")
+        set(_android_ssl_lib
+            "${_android_ssl_search_dir}/libssl${_android_ssl_suffix}.so")
+        if(EXISTS "${_android_crypto_lib}" AND EXISTS "${_android_ssl_lib}")
+            set(_android_ssl_libs "${_android_crypto_lib}" "${_android_ssl_lib}")
+            break()
+        endif()
+    endforeach()
+
+    if(NOT _android_ssl_libs)
+        if(CAQTDM_ANDROID_SSL_ROOT)
+            message(FATAL_ERROR
+                "Android OpenSSL libraries not found in CAQTDM_ANDROID_SSL_ROOT='${CAQTDM_ANDROID_SSL_ROOT}'. "
+                "Expected a complete pair: libcrypto_3.so and libssl_3.so, or libcrypto.so and libssl.so.")
+        else()
+            message(FATAL_ERROR
+                "Android OpenSSL libraries not found for ABI '${ANDROID_ABI}' under '${ANDROID_SDK_ROOT}/android_openssl/ssl_3/${ANDROID_ABI}'. "
+                "Expected a complete pair: libcrypto_3.so and libssl_3.so, or libcrypto.so and libssl.so. "
+                "Set CAQTDM_ANDROID_SSL_ROOT to the directory containing the desired pair to override SDK detection.")
+        endif()
+    endif()
+
+    message(STATUS "Android OpenSSL libraries: ${_android_ssl_libs}")
+    set_target_properties(caQtDM PROPERTIES QT_ANDROID_EXTRA_LIBS "${_android_ssl_libs}")
 endif()
 
 caqtdm_set_output_dir(caQtDM)
