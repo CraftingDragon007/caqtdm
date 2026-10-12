@@ -449,6 +449,8 @@ jobs:
       - name: Run unit tests
         shell: pwsh
         working-directory: ${{ env.CAQTDM_DIR }}
+        env:
+          QT_FORCE_STDERR_LOGGING: '1'
         run: |
           $env:PATH = (@(
            "$env:EPICS_BASE\bin\$env:EPICS_HOST_ARCH"
@@ -459,10 +461,7 @@ jobs:
            "$env:QTHOME\bin"
           ) -join ';') + ';' + $env:PATH
           
-          $env:QT_FORCE_STDERR_LOGGING = "1"
-          $env:QT_LOGGING_TO_CONSOLE = "1"
-          
-          ctest --test-dir (Join-Path $env:RUNNER_TEMP "caqtdm-cmake-build") --build-config Release --output-on-failure
+          ctest --test-dir (Join-Path $env:RUNNER_TEMP "caqtdm-cmake-build") --build-config Release --verbose
           if ($LASTEXITCODE -ne 0) { throw "Unit tests failed" }
 
       - name: Set packaging environment variables
