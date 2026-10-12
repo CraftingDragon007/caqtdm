@@ -310,6 +310,7 @@ else()
 endif()
 
 foreach(_test ${_all_tests})
+    set_target_properties(${_test} PROPERTIES WIN32_EXECUTABLE FALSE)
     add_test(NAME ${_test} COMMAND ${_test})
     set_tests_properties(${_test} PROPERTIES
         ENVIRONMENT "${_test_env}")
