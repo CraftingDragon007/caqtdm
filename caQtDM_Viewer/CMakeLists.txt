@@ -217,12 +217,22 @@ if(ANDROID)
             "${CAQTDM_ANDROID_TARGET_SDK_VERSION}")
     endif()
     if(CAQTDM_ANDROID_SSL_ROOT)
+        set(_android_ssl_suffix "")
+        if(CAQTDM_ANDROID_SSL_SUFFIX)
+            string(REGEX REPLACE "^_+" "" _android_ssl_suffix "${CAQTDM_ANDROID_SSL_SUFFIX}")
+            if(NOT _android_ssl_suffix MATCHES "^[A-Za-z0-9]+$")
+                message(FATAL_ERROR
+                    "CAQTDM_ANDROID_SSL_SUFFIX must contain only letters and digits (for example: 3)")
+            endif()
+            set(_android_ssl_suffix "_${_android_ssl_suffix}")
+        endif()
         set(_android_ssl_libs
-            "${CAQTDM_ANDROID_SSL_ROOT}/libcrypto.so"
-            "${CAQTDM_ANDROID_SSL_ROOT}/libssl.so")
+            "${CAQTDM_ANDROID_SSL_ROOT}/libcrypto${_android_ssl_suffix}.so"
+            "${CAQTDM_ANDROID_SSL_ROOT}/libssl${_android_ssl_suffix}.so")
         foreach(_ssl_lib ${_android_ssl_libs})
             if(NOT EXISTS "${_ssl_lib}")
-                message(FATAL_ERROR "Android SSL library not found: ${_ssl_lib}")
+                message(FATAL_ERROR
+                    "Android OpenSSL library not found: ${_ssl_lib} (CAQTDM_ANDROID_SSL_SUFFIX='${CAQTDM_ANDROID_SSL_SUFFIX}')")
             endif()
         endforeach()
         set_target_properties(caQtDM PROPERTIES QT_ANDROID_EXTRA_LIBS "${_android_ssl_libs}")
