@@ -462,38 +462,8 @@ jobs:
           $env:QT_FORCE_STDERR_LOGGING = "1"
           $env:QT_LOGGING_TO_CONSOLE = "1"
           
-          $buildDir = Join-Path $env:RUNNER_TEMP "caqtdm-cmake-build"
-          ctest --test-dir $buildDir --build-config Release --exclude-regex '^tst_bsread$' --output-on-failure
+          ctest --test-dir (Join-Path $env:RUNNER_TEMP "caqtdm-cmake-build") --build-config Release --output-on-failure
           if ($LASTEXITCODE -ne 0) { throw "Unit tests failed" }
-
-      - name: Run bsread unit test
-        shell: pwsh
-        working-directory: ${{ env.CAQTDM_DIR }}
-        run: |
-          $buildDir = Join-Path $env:RUNNER_TEMP "caqtdm-cmake-build"
-          ctest --test-dir $buildDir --build-config Release `
-            --tests-regex '^tst_bsread$' `
-            -VV -j 1 --timeout 120
-          if ($LASTEXITCODE -ne 0) { throw "bsread unit tests failed" }
-
-      - name: Run bsread executable directly
-        if: ${{ !cancelled() }}
-        timeout-minutes: 3
-        shell: pwsh
-        working-directory: ${{ env.CAQTDM_DIR }}
-        run: |
-          $env:QT_FORCE_STDERR_LOGGING = "1"
-          $env:PATH = (@(
-            "$env:EPICS_BASE\bin\$env:EPICS_HOST_ARCH"
-            "$env:ZMQBIN"
-            "$env:QWTHOME\lib"
-            "$env:CAQTDM_COLLECT"
-            "$env:CAQTDM_COLLECT\controlsystems"
-            "$env:QTHOME\bin"
-          ) -join ';') + ';' + $env:PATH
-          $testExe = Join-Path $env:CAQTDM_COLLECT "tst_bsread.exe"
-          & $testExe
-          if ($LASTEXITCODE -ne 0) { throw "Direct bsread unit test failed with exit code $LASTEXITCODE" }
 
       - name: Set packaging environment variables
         run: |
