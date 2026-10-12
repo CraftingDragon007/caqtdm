@@ -471,8 +471,18 @@ jobs:
         working-directory: ${{ env.CAQTDM_DIR }}
         run: |
           $buildDir = Join-Path $env:RUNNER_TEMP "caqtdm-cmake-build"
-          ctest --test-dir $buildDir --build-config Release --tests-regex '^tst_bsread$' -VV -j 1 --timeout 120 -- -v2
-          if ($LASTEXITCODE -ne 0) { throw "bsread unit tests failed" }
+          $logFile = Join-Path $env:RUNNER_TEMP "tst_bsread.log"
+          ctest --test-dir $buildDir --build-config Release `
+            --tests-regex '^tst_bsread$' `
+            -VV -j 1 --timeout 120 `
+            -- -v1 -o "${logFile},txt"
+          $testExitCode = $LASTEXITCODE
+          if (Test-Path $logFile) {
+            Get-Content -Path $logFile
+          } else {
+            Write-Warning "bsread test did not create $logFile"
+          }
+          if ($testExitCode -ne 0) { throw "bsread unit tests failed" }
 
       - name: Set packaging environment variables
         run: |
