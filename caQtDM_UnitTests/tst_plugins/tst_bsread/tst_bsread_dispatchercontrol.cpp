@@ -92,8 +92,9 @@ void Testbsread_dispatchercontrol::finishReplyConnectWorks()
     QCOMPARE(m_dispatchercontrol->bsreadconnections.count(), 1);
     QCOMPARE(m_dispatchercontrol->bsreadThreads.count(), 1);
     QVERIFY(m_dispatchercontrol->bsreadconnections.first());
-    QCOMPARE(QString(m_dispatchercontrol->bsreadconnections.first()->getConnectionPoint()),
-             QString("tcp://127.0.0.1:6000"));
+    bsread_Decode *firstConnection = m_dispatchercontrol->bsreadconnections.first();
+    QThread *firstThread = m_dispatchercontrol->bsreadThreads.first();
+    QCOMPARE(QString(firstConnection->getConnectionPoint()), QString("tcp://127.0.0.1:6000"));
     QVERIFY(m_dispatchercontrol->tobeRemoved.isEmpty());
 
     QByteArray rawSecond
@@ -115,6 +116,8 @@ void Testbsread_dispatchercontrol::finishReplyConnectWorks()
     QCOMPARE(m_dispatchercontrol->bsreadconnections.count(), 1);
     QCOMPARE(m_dispatchercontrol->bsreadThreads.count(), 1);
     QVERIFY(m_dispatchercontrol->bsreadconnections.first());
+    QVERIFY(m_dispatchercontrol->bsreadconnections.first() != firstConnection);
+    QVERIFY(m_dispatchercontrol->bsreadThreads.first() != firstThread);
     QCOMPARE(QString(m_dispatchercontrol->bsreadconnections.first()->getConnectionPoint()),
              QString("tcp://127.0.0.1:6001"));
 
