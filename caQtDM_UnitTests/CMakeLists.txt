@@ -302,7 +302,7 @@ if(WIN32)
     # ENVIRONMENT list at its semicolons and truncates PATH
     string(REPLACE ";" "\\;" _env_path "$ENV{PATH}")
     string(APPEND _path "\\;${_env_path}")
-    set(_test_env "QT_QPA_PLATFORM=offscreen;PATH=${_path}")
+    set(_test_env "QT_QPA_PLATFORM=offscreen;QT_FORCE_STDERR_LOGGING=1;PATH=${_path}")
 elseif(APPLE)
     set(_test_env "QT_QPA_PLATFORM=offscreen;DYLD_LIBRARY_PATH=${CAQTDM_COLLECT}:${CAQTDM_COLLECT}/designer:${CAQTDM_COLLECT}/controlsystems:${Epics_LIBRARY_DIR}:${Qwt_LIBRARY_DIR}:${CAQTDM_PYTHON_LIB_DIR};DYLD_FRAMEWORK_PATH=${Qwt_LIBRARY_DIR}")
 else()

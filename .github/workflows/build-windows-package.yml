@@ -482,6 +482,7 @@ jobs:
         shell: pwsh
         working-directory: ${{ env.CAQTDM_DIR }}
         run: |
+          $env:QT_FORCE_STDERR_LOGGING = "1"
           $env:PATH = (@(
             "$env:EPICS_BASE\bin\$env:EPICS_HOST_ARCH"
             "$env:ZMQBIN"
