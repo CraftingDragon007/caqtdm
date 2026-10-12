@@ -56,7 +56,7 @@ override_dh_auto_build:
 	cmake --build $(BUILD_DIR) --parallel $(shell nproc)
 
 override_dh_auto_test:
-	QT_QPA_PLATFORM=offscreen ctest --test-dir $(BUILD_DIR) --output-on-failure
+	QT_QPA_PLATFORM=offscreen ctest --test-dir $(BUILD_DIR) --verbose
 
 override_dh_auto_install:
 	# Install beginning

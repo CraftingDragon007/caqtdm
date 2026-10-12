@@ -357,7 +357,7 @@ ZMQLIB="/usr/lib64"
 %if 0%{?qt5}
 pushd %{_target_platform}-qt5
 export LD_LIBRARY_PATH="%{_builddir}/%{name}-%{version}/build/opt/caqtdm/lib/qt5:${EPICSLIB}:${ZMQLIB}:${LD_LIBRARY_PATH}"
-ctest --test-dir . --output-on-failure
+ctest --test-dir . --verbose
 popd
 %endif
 
@@ -375,7 +375,7 @@ EPICS_HOST_ARCH="linux-aarch64"
 EPICSLIB="${EPICS_BASE}/lib/${EPICS_HOST_ARCH}"
 %endif
 export LD_LIBRARY_PATH="%{_builddir}/%{name}-%{version}/build/opt/caqtdm/lib/qt6:${EPICSLIB}:${ZMQLIB}:${LD_LIBRARY_PATH}"
-ctest --test-dir . --output-on-failure
+ctest --test-dir . --verbose
 popd
 %endif
 

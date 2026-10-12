@@ -144,5 +144,5 @@ EOF
 }
 
 check() {
-    ctest --test-dir "$srcdir/caqtdm-build" --output-on-failure
+    ctest --test-dir "$srcdir/caqtdm-build" --verbose
 }
