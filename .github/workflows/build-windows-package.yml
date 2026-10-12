@@ -466,15 +466,12 @@ jobs:
           ctest --test-dir $buildDir --build-config Release --exclude-regex '^tst_bsread$' --output-on-failure
           if ($LASTEXITCODE -ne 0) { throw "Unit tests failed" }
 
-      - name: Debug bsread unit test
+      - name: Run bsread unit test
         shell: pwsh
         working-directory: ${{ env.CAQTDM_DIR }}
-        env:
-          QT_DEBUG_PLUGINS: '1'
-          QT_LOGGING_RULES: '*.debug=true'
         run: |
           $buildDir = Join-Path $env:RUNNER_TEMP "caqtdm-cmake-build"
-          ctest --test-dir $buildDir --build-config Release --tests-regex '^tst_bsread$' -VV -j 1 --timeout 120
+          ctest --test-dir $buildDir --build-config Release --tests-regex '^tst_bsread$' -VV -j 1 --timeout 120 -- -v2
           if ($LASTEXITCODE -ne 0) { throw "bsread unit tests failed" }
 
       - name: Set packaging environment variables

@@ -310,11 +310,7 @@ else()
 endif()
 
 foreach(_test ${_all_tests})
-    if(_test STREQUAL "tst_bsread")
-        add_test(NAME ${_test} COMMAND ${_test} -v1)
-    else()
-        add_test(NAME ${_test} COMMAND ${_test})
-    endif()
+    add_test(NAME ${_test} COMMAND ${_test})
     set_tests_properties(${_test} PROPERTIES
         ENVIRONMENT "${_test_env}")
 endforeach()
