@@ -26,6 +26,10 @@
 #include "tst_bsread_decode.h"
 #include "zmq.h"
 
+#include <QElapsedTimer>
+#include <QPointer>
+#include <QThread>
+
 void Testbsread_Decode::initTestCase()
 {
     // code to be executed before the first test function
@@ -53,6 +57,41 @@ void Testbsread_Decode::cleanup()
 
     delete m_decode;
     zmq_ctx_term(m_zmqContext);
+}
+
+void Testbsread_Decode::stopsIdleReceiver()
+{
+    QThread receiverThread;
+    QPointer<bsread_Decode> decoder(m_decode);
+    m_decode->setKnobData(Q_NULLPTR);
+    m_decode->moveToThread(&receiverThread);
+    QObject::connect(&receiverThread, &QThread::started, m_decode, &bsread_Decode::process);
+    QObject::connect(m_decode, &bsread_Decode::finished, &receiverThread,
+                     &QThread::quit, Qt::DirectConnection);
+    QObject::connect(&receiverThread, &QThread::finished, m_decode, &QObject::deleteLater);
+
+    receiverThread.start();
+    QElapsedTimer timer;
+    timer.start();
+    while (decoder && !decoder->getRunning_decode() && timer.elapsed() < 2000) {
+        QTest::qWait(10);
+    }
+    const bool started = decoder && decoder->getRunning_decode();
+    if (decoder) {
+        decoder->setTerminate();
+    }
+    receiverThread.quit();
+    bool stopped = receiverThread.wait(5000);
+    if (!stopped) {
+        zmq_ctx_shutdown(m_zmqContext);
+        stopped = receiverThread.wait(5000);
+    }
+    if (!stopped) {
+        qFatal("bsread decoder did not stop after context shutdown");
+    }
+    m_decode = Q_NULLPTR; // QThread::finished schedules deletion in the worker thread.
+    QVERIFY2(started, "bsread decoder never entered its receive loop");
+    QVERIFY2(decoder.isNull(), "bsread decoder was not deleted on thread completion");
 }
 
 void Testbsread_Decode::parsesMainHeader()

@@ -44,20 +44,16 @@ enum Alarms {NO_ALARM=0, MINOR_ALARM, MAJOR_ALARM, INVALID_ALARM, NOTCONNECTED=9
 
 
 bsread_Decode::bsread_Decode(void * Context,QString ConnectionPoint)
+    : context(Context), zmqsocket(Q_NULLPTR), StreamConnectionPoint(ConnectionPoint),
+      StreamConnectionType("push_pull"), running_decode(0), bsread_KnobDataP(Q_NULLPTR),
+      UpdaterPool(Q_NULLPTR), BlockPool(Q_NULLPTR), terminate(0)
 {
-   StreamConnectionPoint=ConnectionPoint;
-   StreamConnectionType="push_pull";
-   context=Context;
-   UpdaterPool=Q_NULLPTR;
-   BlockPool=Q_NULLPTR;
 }
 bsread_Decode::bsread_Decode(void * Context,QString ConnectionPoint,QString ConnectionType)
+    : context(Context), zmqsocket(Q_NULLPTR), StreamConnectionPoint(ConnectionPoint),
+      StreamConnectionType(ConnectionType), running_decode(0), bsread_KnobDataP(Q_NULLPTR),
+      UpdaterPool(Q_NULLPTR), BlockPool(Q_NULLPTR), terminate(0)
 {
-   StreamConnectionPoint=ConnectionPoint;
-   StreamConnectionType=ConnectionType;
-   context=Context;
-   UpdaterPool=Q_NULLPTR;
-   BlockPool=Q_NULLPTR;
 }
 
 bsread_Decode::~bsread_Decode()
@@ -71,10 +67,14 @@ bsread_Decode::~bsread_Decode()
 
 
 
-void bsread_Decode::bsread_createConnection(int rc)
+bool bsread_Decode::bsread_createConnection()
 {
     int value;
     qCDebug(bsreadLog) <<  "StreamConnectionType: "<<StreamConnectionType;
+    if (zmqsocket) {
+        zmq_close(zmqsocket);
+        zmqsocket = Q_NULLPTR;
+    }
     if (QString::compare(StreamConnectionType,"pub_sub",Qt::CaseInsensitive)==0){
         zmqsocket=zmq_socket(context, ZMQ_SUB);
     }else{
@@ -84,27 +84,47 @@ void bsread_Decode::bsread_createConnection(int rc)
 
     if (!zmqsocket) {
         qCCritical(bsreadLog) << "error in zmq_socket:" << zmq_strerror (errno);
+        return false;
     }
     value=1;
-    rc=zmq_setsockopt(zmqsocket,ZMQ_LINGER,&value,sizeof(value));
-    if (rc != 0) {
+    if (zmq_setsockopt(zmqsocket,ZMQ_LINGER,&value,sizeof(value)) != 0) {
         qCCritical(bsreadLog) << "error in zmq_setsockopt:" << zmq_strerror (errno) << StreamConnectionPoint;
+        zmq_close(zmqsocket);
+        zmqsocket = Q_NULLPTR;
+        return false;
     }
     value=2;
-    rc=zmq_setsockopt(zmqsocket,ZMQ_RCVHWM,&value,sizeof(value));
-    if (rc != 0) {
+    if (zmq_setsockopt(zmqsocket,ZMQ_RCVHWM,&value,sizeof(value)) != 0) {
         qCCritical(bsreadLog) << "error in zmq_setsockopt:" << zmq_strerror (errno) << StreamConnectionPoint;
+        zmq_close(zmqsocket);
+        zmqsocket = Q_NULLPTR;
+        return false;
+    }
+    value=250;
+    if (zmq_setsockopt(zmqsocket,ZMQ_RCVTIMEO,&value,sizeof(value)) != 0) {
+        qCCritical(bsreadLog) << "error setting receive timeout:" << zmq_strerror (errno) << StreamConnectionPoint;
+        zmq_close(zmqsocket);
+        zmqsocket = Q_NULLPTR;
+        return false;
     }
 
-    rc = zmq_connect (zmqsocket, StreamConnectionPoint.toLatin1().constData());
+    if (zmq_connect(zmqsocket, StreamConnectionPoint.toLatin1().constData()) != 0) {
+        qCCritical(bsreadLog) << "error in zmq_connect:" << zmq_strerror (errno) << StreamConnectionPoint;
+        zmq_close(zmqsocket);
+        zmqsocket = Q_NULLPTR;
+        return false;
+    }
 
     if (QString::compare(StreamConnectionType,"pub_sub",Qt::CaseInsensitive)==0){
-        rc=zmq_setsockopt( zmqsocket, ZMQ_SUBSCRIBE, "", 0 );
-        if (rc != 0) {
+        if (zmq_setsockopt(zmqsocket, ZMQ_SUBSCRIBE, "", 0) != 0) {
             qCCritical(bsreadLog) << "error in zmq_setsockopt:" << zmq_strerror (errno) << StreamConnectionPoint;
+            zmq_close(zmqsocket);
+            zmqsocket = Q_NULLPTR;
+            return false;
         }
     }
 
+    return true;
 }
 
 void bsread_Decode::process()
@@ -118,74 +138,97 @@ void bsread_Decode::process()
     size_t msg_size;
 
     rc = zmq_msg_init (&msg);
+    if (rc != 0) {
+        qCCritical(bsreadLog) << "error in zmq_msg_init:" << zmq_strerror(errno);
+        emit finished();
+        return;
+    }
 
     qCDebug(bsreadLog) << "bsreadDecode: ConnectionPoint :"<< StreamConnectionPoint << StreamConnectionType ;
     qCDebug(bsreadLog) << "bsreadDecode: start ThreadID" << QThread::currentThreadId();
 
-    bsread_createConnection(rc);
-    if (rc != 0) {
-        qCCritical(bsreadLog) << "error in zmq_connect:" << zmq_strerror (errno) << StreamConnectionPoint;
-        qCDebug(bsreadLog) << "bsreadPlugin: ConnectionPoint faild";
-        running_decode=false;
-    }else{
-        running_decode=true;
+    if (bsread_createConnection()) {
+        running_decode.storeRelease(1);
         channelcounter=0;
 
-        while (!terminate){
+        while (!terminate.loadAcquire()){
             rc = zmq_msg_recv (&msg,zmqsocket,ZMQ_DONTWAIT);
             if (rc > 0) {
                 notReceivedCounter=0;
                 setMainHeader((char*)zmq_msg_data(&msg),zmq_msg_size (&msg));
 
                 if (main_htype.contains("bsr_m")){
-                    zmq_getsockopt (zmqsocket, ZMQ_RCVMORE, &more, &more_size);
+                    if (zmq_getsockopt(zmqsocket, ZMQ_RCVMORE, &more, &more_size) != 0) {
+                        qCWarning(bsreadLog) << "error reading message parts:" << zmq_strerror(zmq_errno());
+                        setTerminate();
+                        break;
+                    }
                     if (more){
 
                         rc = zmq_msg_recv (&msg,zmqsocket,0);
                         if (rc < 0) {
-                            qCCritical(bsreadLog) << "error in zmq_recvmsg(Header):" << zmq_strerror (errno);
+                            qCWarning(bsreadLog) << "error in zmq_recvmsg(Header):" << zmq_strerror(zmq_errno());
+                            setTerminate();
+                            break;
                         }
                         if (QString::compare(last_hash, hash, Qt::CaseInsensitive)){
                             setHeader((char*)zmq_msg_data(&msg),zmq_msg_size (&msg));
                             last_hash=hash;
                         }
                         bsread_TransferHeaderData();
-                        zmq_getsockopt (zmqsocket, ZMQ_RCVMORE, &more, &more_size);
-                        while(more){
+                        if (zmq_getsockopt(zmqsocket, ZMQ_RCVMORE, &more, &more_size) != 0) {
+                            qCWarning(bsreadLog) << "error reading message parts:" << zmq_strerror(zmq_errno());
+                            setTerminate();
+                            break;
+                        }
+                        while(more && !terminate.loadAcquire()){
                             rc = zmq_msg_recv (&msg,zmqsocket,0);
                             if (rc < 0) {
-                                qCCritical(bsreadLog) << "error in zmq_recvmsg(Data):" << zmq_strerror (errno);
+                                qCWarning(bsreadLog) << "error in zmq_recvmsg(Data):" << zmq_strerror(zmq_errno());
+                                setTerminate();
+                                break;
                             }
                             msg_size=zmq_msg_size(&msg);
                             bsread_SetChannelData(zmq_msg_data(&msg),msg_size);
                             qCDebug(bsreadLog) << msg_size;
-                            zmq_getsockopt (zmqsocket, ZMQ_RCVMORE, &more, &more_size);
+                            if (zmq_getsockopt(zmqsocket, ZMQ_RCVMORE, &more, &more_size) != 0) {
+                                qCWarning(bsreadLog) << "error reading message parts:" << zmq_strerror(zmq_errno());
+                                setTerminate();
+                                break;
+                            }
 
                             if (more){
                                 rc = zmq_msg_recv (&msg,zmqsocket,0);
                                 if (rc < 0) {
-                                    qCCritical(bsreadLog) << "error in zmq_recvmsg(Timestamp):" << zmq_strerror (errno);
+                                    qCWarning(bsreadLog) << "error in zmq_recvmsg(Timestamp):" << zmq_strerror(zmq_errno());
+                                    setTerminate();
+                                    break;
                                 }
                                 msg_size=zmq_msg_size(&msg);
                                 bsread_SetChannelTimeStamp(zmq_msg_data(&msg));
-                                zmq_getsockopt (zmqsocket, ZMQ_RCVMORE, &more, &more_size);
+                                if (zmq_getsockopt(zmqsocket, ZMQ_RCVMORE, &more, &more_size) != 0) {
+                                    qCWarning(bsreadLog) << "error reading message parts:" << zmq_strerror(zmq_errno());
+                                    setTerminate();
+                                    break;
+                                }
                                 qCDebug(bsreadLog) << msg_size;
                             }
 
                         }
-                        bsread_EndofData();
+                        if (!terminate.loadAcquire()) {
+                            bsread_EndofData();
+                        }
                     }else{
                      if (main_htype.contains("bsr_reconnect")){
                          //StreamConnectionPoint=main_reconnect_adress;
-                         bsread_createConnection(rc);
-                         if (rc != 0) {
-                            qCCritical(bsreadLog) << "error in bsr_reconnect:" << zmq_strerror (errno) << StreamConnectionPoint;
-                            terminate=true;
+                         if (!bsread_createConnection()) {
+                            qCCritical(bsreadLog) << "error in bsr_reconnect:" << StreamConnectionPoint;
+                            setTerminate();
                          }
 
                      }
                      if (main_htype.contains("bsr_stop")){
-                        terminate=true;
+                        setTerminate();
                      }
 
 
@@ -197,33 +240,33 @@ void bsread_Decode::process()
 
                 }
             }else{
-                if (terminate){
+                if (terminate.loadAcquire() || (rc < 0 && zmq_errno() == ETERM)){
                     break;
-                }else{
-                    bsread_Delay();
                 }
-                if (zmq_errno()==EAGAIN){
-                    bsread_Delay();
+                if (rc < 0 && zmq_errno()==EAGAIN){
                     notReceivedCounter++;
                     if (notReceivedCounter>200){
                         qCDebug(bsreadLog) << "bsread ZMQ Data Timeout";
                         //bsread_DataTimeOut();
                         notReceivedCounter=0;
                     }
+                } else if (rc < 0 && zmq_errno()!=EINTR) {
+                    qCWarning(bsreadLog) << "error in zmq_recvmsg(Main Message):" << zmq_strerror(zmq_errno());
                 }
-
-                qCDebug(bsreadLog) << "error in zmq_recvmsg(Main Massage):" << zmq_strerror (errno);
+                bsread_Delay();
 
             }
 
         }
 
         bsread_DataTimeOut();
-        zmq_msg_close(&msg);
-        zmq_close(zmqsocket);
-
-
     }
+    zmq_msg_close(&msg);
+    if (zmqsocket) {
+        zmq_close(zmqsocket);
+        zmqsocket = Q_NULLPTR;
+    }
+    running_decode.storeRelease(0);
 
     emit finished();
     qCDebug(bsreadLog) << "bsreadDecode: finished ThreadID" << QThread::currentThreadId();
@@ -1011,7 +1054,7 @@ void bsread_Decode::bsread_EndofData()
 
 void bsread_Decode::setTerminate(bool doTerminate)
 {
-    terminate = doTerminate;
+    terminate.storeRelease(doTerminate ? 1 : 0);
 }
 
 void bsread_Decode::bsread_DataTimeOut(){
@@ -1082,7 +1125,7 @@ QString bsread_Decode::getConnectionPoint() const
 }
 bool bsread_Decode::getRunning_decode() const
 {
-    return running_decode;
+    return running_decode.loadAcquire() != 0;
 }
 MutexKnobData *bsread_Decode::getKnobData() const
 {

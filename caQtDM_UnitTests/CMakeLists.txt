@@ -307,12 +307,19 @@ else()
 endif()
 
 foreach(_test ${_all_tests})
-    add_test(NAME ${_test} COMMAND ${_test})
+    if(_test STREQUAL "tst_bsread")
+        add_test(NAME ${_test} COMMAND ${_test} -v1)
+    else()
+        add_test(NAME ${_test} COMMAND ${_test})
+    endif()
     set_tests_properties(${_test} PROPERTIES
         ENVIRONMENT "${_test_env}")
 endforeach()
 set_tests_properties(tst_qtcontrols PROPERTIES
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/caQtDM_UnitTests/tst_qtcontrols")
+if(TARGET tst_bsread)
+    set_tests_properties(tst_bsread PROPERTIES TIMEOUT 120)
+endif()
 
 caqtdm_apply_rpath(tst_viewer)
 caqtdm_apply_rpath(tst_qtcontrols)

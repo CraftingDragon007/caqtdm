@@ -44,6 +44,7 @@ private slots:
     void cleanup();
     void parsesMainHeader();
     void parsesHeader();
+    void stopsIdleReceiver();
 
 private:
     bsread_Decode *m_decode;

@@ -63,7 +63,7 @@ public:
     bool bsread_DataMonitorConnection(knobData *kData);
     bool bsread_DataMonitorUnConnect(knobData *kData);
     void setTerminate(bool doTerminate = true);
-    void bsread_createConnection(int rc);
+    bool bsread_createConnection();
     QString getStreamConnectionPoint() const;
 
 public slots:
@@ -80,7 +80,7 @@ public:
     void * zmqsocket;
     QString StreamConnectionPoint;
     QString StreamConnectionType;
-    bool running_decode;
+    QAtomicInt running_decode;
     QString ConnectionPoint;
     MutexKnobData * bsread_KnobDataP;
     size_t message_size;
@@ -113,7 +113,7 @@ public:
     void bsread_InitHeaderChannels();
     void bsread_TransferHeaderData();
     void bsread_EndofData();
-    bool terminate;
+    QAtomicInt terminate;
 
 
     void bsread_DataTimeOut();

@@ -692,15 +692,19 @@ void bsread_dispatchercontrol::finishReplyConnect()
                         bsreadconnections.last()->bsread_DataMonitorConnection(key,value);
                     }
 
-                bsreadconnections.last()->moveToThread(bsreadThreads.last());
                 qCDebug(bsreadLog) << "Create bsread_Decode:" << bsreadconnections.last();
                 bsreadconnections.last()->setTerminate(false);
+                // Reply tests inspect connection bookkeeping without a live stream.
+                // Their decoders must not start network loops during teardown.
+#ifndef UNIT_TESTING
+                bsreadconnections.last()->moveToThread(bsreadThreads.last());
                 connect(bsreadThreads.last(), SIGNAL(started()), bsreadconnections.last(), SLOT(process()));
-                connect(bsreadconnections.last(), SIGNAL(finished()), bsreadThreads.last(), SLOT(quit()));
+                connect(bsreadconnections.last(), SIGNAL(finished()), bsreadThreads.last(), SLOT(quit()), Qt::DirectConnection);
                 //connect(bsreadThreads.last(), SIGNAL(finished()), bsreadThreads.last(), SLOT(deleteLater()));
                 //connect(bsreadconnections.last(), SIGNAL(finished()), bsreadconnections.last(), SLOT(deleteLater()));
 
                 bsreadThreads.last()->start();
+#endif
                 cleanStreamConnections(1);
                 // Remove internal data processing flags
                 QMap<QString, QPointer<bsread_internalchannel> >::iterator i;

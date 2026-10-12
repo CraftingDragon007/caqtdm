@@ -131,7 +131,7 @@ int bsreadPlugin::initCommunicationLayer(MutexKnobData *data, MessageWindow *mes
             if (DispatcherThread){
                 Dispatcher->moveToThread(DispatcherThread);
                 connect(DispatcherThread, SIGNAL(started()), Dispatcher, SLOT(process()));
-                connect(Dispatcher, SIGNAL(finished()), DispatcherThread, SLOT(quit()));
+                connect(Dispatcher, SIGNAL(finished()), DispatcherThread, SLOT(quit()), Qt::DirectConnection);
                 DispatcherThread->start();
             }
         }
@@ -159,12 +159,9 @@ int bsreadPlugin::initCommunicationLayer(MutexKnobData *data, MessageWindow *mes
                 bsreadconnections.last()->moveToThread(bsreadThreads.last());
                 bsreadconnections.last()->setTerminate(false);
                 connect(bsreadThreads.last(), SIGNAL(started()), bsreadconnections.last(), SLOT(process()));
-                connect(bsreadconnections.last(), SIGNAL(finished()), bsreadThreads.last(), SLOT(quit()));
-                connect(bsreadThreads.last(), SIGNAL(finished()), bsreadThreads.last(), SLOT(deleteLater()));
-                connect(bsreadconnections.last(), SIGNAL(finished()), bsreadconnections.last(), SLOT(deleteLater()));
+                connect(bsreadconnections.last(), SIGNAL(finished()), bsreadThreads.last(), SLOT(quit()), Qt::DirectConnection);
                 bsreadThreads.last()->start();
                 msg="Connection started: ";
-                disconnect(bsreadconnections.last());
                 msg.append(BSREAD_ZMQ_ADDRS.at(i));
                 if(messagewindowP != (MessageWindow *) Q_NULLPTR) messagewindowP->postMsgEvent(QtDebugMsg,(char*) msg.toLatin1().constData());
             }
@@ -337,14 +334,16 @@ void bsreadPlugin::closeEvent(){
         DispatcherThread->wait();
         qCDebug(bsreadLog) << "end DispatcherThread ";
     }
-    if (bsreadThreads.count()>0){
-        bsreadconnections.last()->setTerminate();
-        bsreadThreads.last()->exit();
-        bsreadThreads.last()->wait(300);
-        if (bsreadThreads.last()->isRunning()){
-            bsreadThreads.last()->exit();
-            bsreadThreads.last()->wait(3000);
-        }
+    for (bsread_Decode *connection : bsreadconnections) {
+        connection->setTerminate();
+    }
+    for (QThread *thread : bsreadThreads) {
+        thread->quit();
+        thread->wait();
+    }
+    while (!bsreadThreads.isEmpty()) {
+        delete bsreadconnections.takeFirst();
+        delete bsreadThreads.takeFirst();
     }
     if (DispatcherThread){
         DispatcherThread->deleteLater();
