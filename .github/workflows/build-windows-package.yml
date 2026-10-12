@@ -476,6 +476,24 @@ jobs:
             -VV -j 1 --timeout 120
           if ($LASTEXITCODE -ne 0) { throw "bsread unit tests failed" }
 
+      - name: Run bsread executable directly
+        if: ${{ !cancelled() }}
+        timeout-minutes: 3
+        shell: pwsh
+        working-directory: ${{ env.CAQTDM_DIR }}
+        run: |
+          $env:PATH = (@(
+            "$env:EPICS_BASE\bin\$env:EPICS_HOST_ARCH"
+            "$env:ZMQBIN"
+            "$env:QWTHOME\lib"
+            "$env:CAQTDM_COLLECT"
+            "$env:CAQTDM_COLLECT\controlsystems"
+            "$env:QTHOME\bin"
+          ) -join ';') + ';' + $env:PATH
+          $testExe = Join-Path $env:CAQTDM_COLLECT "tst_bsread.exe"
+          & $testExe
+          if ($LASTEXITCODE -ne 0) { throw "Direct bsread unit test failed with exit code $LASTEXITCODE" }
+
       - name: Set packaging environment variables
         run: |
           echo ZMQ=${{ env.ZEROMQ_INSTALL_DIR }}\lib>> %GITHUB_ENV%
