@@ -55,6 +55,7 @@ set(CAQTDM_QWT_LIBNAME "qwt" CACHE STRING "Qwt library name (qwt, qwt-qt5, qwt-q
 
 set(CAQTDM_ZMQ_INCLUDE "" CACHE PATH "ZeroMQ include directory")
 set(CAQTDM_ZMQ_LIB "" CACHE PATH "ZeroMQ library directory")
+set(CAQTDM_ZMQ_BIN "" CACHE PATH "ZeroMQ runtime DLL directory (Windows tests)")
 set(CAQTDM_ZMQ_LIBRARY "" CACHE FILEPATH "ZeroMQ library or Windows import library file")
 set(CAQTDM_ANDROID_SSL_ROOT "" CACHE PATH "Directory containing Android libcrypto.so and libssl.so to package")
 set(CAQTDM_ANDROID_MIN_SDK_VERSION "" CACHE STRING "Minimum Android SDK version for the application package")
