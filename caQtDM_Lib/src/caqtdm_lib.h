@@ -434,7 +434,6 @@ public:
     void CameraWaveform(caCamera *widget, int curvNB, int curvType, int XorY, const knobData &data);
     void WaveTable(caWaveTable *widget, const knobData &data);
     void EnableDisableIO();
-    void UpdateMeter(caMeter *widget, const knobData &data);
     bool SoftPVusesItsself(QWidget* widget, QMap<QString, QString> map);
     void setCalcToNothing(QWidget* widget);
     bool Python_Error(QWidget *w, QString message);

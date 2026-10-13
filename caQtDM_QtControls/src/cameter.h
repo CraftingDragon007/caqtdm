@@ -40,10 +40,11 @@
 #include <qwt_dial_needle.h>
 #include <qwt_round_scale_draw.h>
 #include "alarmdefs.h"
+#include "caWidgetUpdateInterface.h"
 
 /* a simple meter */
 
-class QTCON_EXPORT caMeter : public QwtDial
+class QTCON_EXPORT caMeter : public QwtDial, public caWidgetUpdateInterface
 {
     Q_OBJECT
 
@@ -83,6 +84,12 @@ public:
 
     caMeter( QWidget *parent = 0 );
     ~caMeter();
+
+    void prepareMonitor() { setAlarmColors(NO_ALARM, true); }
+    bool needsAggregateAlarm() const override { return false; }
+    bool needsVisibilityUpdate() const override { return false; }
+    caWidgetUpdateResult applyChannelUpdate(const QString &units, const QString &value,
+                                            const knobData &data, short aggregateAlarm) override;
 
     QString getPV() const {return thisPV;}
     void setPV(QString const &newPV) {thisPV = newPV;}

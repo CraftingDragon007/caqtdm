@@ -2463,7 +2463,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
             nbMonitors++;
         }
 
-        meterWidget->setAlarmColors(NO_ALARM, true);
+        meterWidget->prepareMonitor();
 
         // insert dataindex list
         integerList.insert(0, nbMonitors);
@@ -5172,42 +5172,6 @@ void CaQtDM_Lib::UpdateGauge(EAbstractGauge *widget, const knobData &data)
     }
 }
 
-void CaQtDM_Lib::UpdateMeter(caMeter *widget, const knobData &data)
-{
-    if(data.edata.connected) {
-
-        if((widget->getLimitsMode() == caMeter::Channel) && (data.edata.initialize)) {
-            // HOPR and LOPR
-            if(data.edata.upper_disp_limit == data.edata.lower_disp_limit) {
-                // set some default
-                widget->setMaxValue(1000.0);
-                widget->setMinValue(0.0);
-            } else {
-                if(!qIsNaN(data.edata.lower_disp_limit)) {
-                    widget->setMinValue(data.edata.lower_disp_limit);
-                } else {
-                    widget->setMinValue(0.0);
-                }
-                if(!qIsNaN(data.edata.upper_disp_limit)) {
-                    widget->setMaxValue(data.edata.upper_disp_limit);
-                } else {
-                    widget->setMaxValue(1000.0);
-                }
-            }
-
-            widget->update();
-        }
-
-        int precMode = widget->getPrecisionMode();
-        if((precMode != caMeter::User) && (data.edata.initialize)) {
-            widget->setPrecision(data.edata.precision);
-            widget->updateMeter();
-        }
-        widget->setValueUnits(data.edata.rvalue, data.edata.units);
-    }
-
-}
-
 /**
  * updates my widgets through monitor and emit signal
  */
@@ -5410,24 +5374,6 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
             // set no connection color
         } else {
             SetColorsNotConnected(clockWidget);
-        }
-
-        // simple meter ==================================================================================================================
-    } else if (caMeter *meterWidget = qobject_cast<caMeter *>(w)) {
-        qCDebug(caMeterLog) << "we have a simple meter";
-
-        if(data.edata.connected) {
-            UpdateMeter(meterWidget, data);
-            // set colors when connected
-            // case of alarm mode
-            if (meterWidget->getColorMode() == caMeter::Alarm) {
-                meterWidget->setAlarmColors(data.edata.severity);
-                // case of static mode
-            } else {
-                SetColorsBack(meterWidget);
-            }
-        } else {
-            SetColorsNotConnected(meterWidget);
         }
 
        // replacemacro ==================================================================================================================

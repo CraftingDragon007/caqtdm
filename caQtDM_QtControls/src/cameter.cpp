@@ -42,6 +42,48 @@
 #include <qnumeric.h>
 #include <qwt_text.h>
 
+Q_LOGGING_CATEGORY(caMeterLog, "caqtdm.widgets.cameter")
+
+caWidgetUpdateResult caMeter::applyChannelUpdate(const QString &units, const QString &value,
+                                                 const knobData &data, short aggregateAlarm)
+{
+    Q_UNUSED(units);
+    Q_UNUSED(value);
+    Q_UNUSED(aggregateAlarm);
+    qCDebug(caMeterLog) << "we have a simple meter";
+
+    if (!data.edata.connected) {
+        setAlarmColors(NOTCONNECTED);
+        setProperty("Connect", false);
+        return {};
+    }
+
+    if (getLimitsMode() == Channel && data.edata.initialize) {
+        if (data.edata.upper_disp_limit == data.edata.lower_disp_limit) {
+            setMaxValue(1000.0);
+            setMinValue(0.0);
+        } else {
+            setMinValue(qIsNaN(data.edata.lower_disp_limit) ? 0.0 : data.edata.lower_disp_limit);
+            setMaxValue(qIsNaN(data.edata.upper_disp_limit) ? 1000.0 : data.edata.upper_disp_limit);
+        }
+        update();
+    }
+
+    if (getPrecisionMode() != User && data.edata.initialize) {
+        setPrecision(data.edata.precision);
+        updateMeter();
+    }
+    setValueUnits(data.edata.rvalue, data.edata.units);
+
+    if (getColorMode() == Alarm) {
+        setAlarmColors(data.edata.severity);
+    } else if (!property("Connect").toBool()) {
+        setNormalColors();
+        setProperty("Connect", true);
+    }
+    return {};
+}
+
 #if QWT_VERSION < 0x060100
 
 class myDialScaleDraw: public QwtDialScaleDraw
