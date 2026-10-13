@@ -184,6 +184,7 @@ set(QTCONTROLS_HEADERS
     ${_src}/caWidgetUpdateInterface.h
     ${_src}/caLabelUpdateMixin.h
     ${_src}/caVisibilityMonitorInterface.h
+    ${_src}/caNumericRuntimeMixin.h
     ${_src}/addevent.h
     ${_src}/animationcode.h
     ${_src}/hideobjectcode.h

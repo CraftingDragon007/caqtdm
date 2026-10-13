@@ -60,6 +60,7 @@
 #include "caWidgetInterface.h"
 #include "caWidgetUpdateInterface.h"
 #include "caVisibilityMonitorInterface.h"
+#include "caNumericRuntimeMixin.h"
 
 // we are using for calculations postfix of epics
 // therefore we need this include and also link with the epics libraries
@@ -2252,67 +2253,27 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         polylineWidget->setProperty("Taken", true);
 
         //==================================================================================================================
-    } else if (caApplyNumeric* applynumericWidget = qobject_cast<caApplyNumeric *>(w1)){
+    } else if (caNumericRuntimeInterface *numericWidget = dynamic_cast<caNumericRuntimeInterface *>(w1)) {
+        const int objectType = numericWidget->numericObjectType();
+        w1->setProperty("ObjectType", objectType);
 
-        qCDebug(caApplyNumericLog) << "create caAppyNumeric";
-        w1->setProperty("ObjectType", caApplyNumeric_Widget);
-
-        if(applynumericWidget->getPV().size() > 0) {
-            int num = addMonitor(myWidget, &kData, applynumericWidget->getPV(), w1, specData, map, &pv);
+        if (!numericWidget->numericPV().isEmpty()) {
+            const int num = addMonitor(myWidget, &kData, numericWidget->numericPV(), w1, specData, map, &pv);
             integerList.append(num);
-            applynumericWidget->setPV(pv);
-            connect(applynumericWidget, SIGNAL(clicked(double)), this, SLOT(Callback_EApplyNumeric(double)));
-            nbMonitors++;
+            numericWidget->setNumericPV(pv);
+            if (objectType == caApplyNumeric_Widget)
+                connect(w1, SIGNAL(clicked(double)), this, SLOT(Callback_EApplyNumeric(double)));
+            else if (objectType == caNumeric_Widget)
+                connect(w1, SIGNAL(valueChanged(double)), this, SLOT(Callback_ENumeric(double)));
+            else
+                connect(w1, SIGNAL(valueChanged(double)), this, SLOT(Callback_Spinbox(double)));
+            ++nbMonitors;
         }
-        if(applynumericWidget->isElevated()) applynumericWidget->raise();
+        if (numericWidget->numericIsElevated()) numericWidget->raiseNumeric();
 
-        // insert dataindex list
         integerList.insert(0, nbMonitors);
-        applynumericWidget->setProperty("MonitorList", integerList);
-
-        applynumericWidget->setProperty("Taken", true);
-
-        //==================================================================================================================
-    } else if (caNumeric* numericWidget = qobject_cast<caNumeric *>(w1)){
-
-        qCDebug(caNumericLog) << "create caNumeric";
-        w1->setProperty("ObjectType", caNumeric_Widget);
-
-        if(numericWidget->getPV().size() > 0) {
-            int num = addMonitor(myWidget, &kData, numericWidget->getPV(), w1, specData, map, &pv);
-            integerList.append(num);
-            numericWidget->setPV(pv);
-            connect(numericWidget, SIGNAL(valueChanged(double)), this, SLOT(Callback_ENumeric(double)));
-            nbMonitors++;
-        }
-        if(numericWidget->isElevated()) numericWidget->raise();
-
-        // insert dataindex list
-        integerList.insert(0, nbMonitors);
-        numericWidget->setProperty("MonitorList", integerList);
-
-        numericWidget->setProperty("Taken", true);
-
-        //==================================================================================================================
-    } else if (caSpinbox* spinboxWidget = qobject_cast<caSpinbox *>(w1)){
-
-        qCDebug(caSpinboxLog) << "create caSpinbox";
-        w1->setProperty("ObjectType", caSpinbox_Widget);
-
-        if(spinboxWidget->getPV().size() > 0) {
-            int num = addMonitor(myWidget, &kData, spinboxWidget->getPV(), w1, specData, map, &pv);
-            integerList.append(num);
-            spinboxWidget->setPV(pv);
-            connect(spinboxWidget, SIGNAL(valueChanged(double)), this, SLOT(Callback_Spinbox(double)));
-            nbMonitors++;
-        }
-        if(spinboxWidget->isElevated()) spinboxWidget->raise();
-
-        // insert dataindex list
-        integerList.insert(0, nbMonitors);
-        spinboxWidget->setProperty("MonitorList", integerList);
-
-        spinboxWidget->setProperty("Taken", true);
+        w1->setProperty("MonitorList", integerList);
+        w1->setProperty("Taken", true);
 
         //==================================================================================================================
     } else if (caMessageButton* messagebuttonWidget = qobject_cast<caMessageButton *>(w1)) {
@@ -5444,7 +5405,14 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
     if (caWidgetUpdateInterface *consumer = dynamic_cast<caWidgetUpdateInterface *>(w)) {
         const short alarm = data.edata.connected && consumer->needsAggregateAlarm()
                                 ? ComputeAlarm(w) : NO_ALARM;
-        consumer->applyChannelUpdate(units, String, data, alarm);
+        const caWidgetUpdateResult outcome = consumer->applyChannelUpdate(units, String, data, alarm);
+        if (!outcome.operatorError.isEmpty()) {
+            QByteArray error = outcome.operatorError.toLatin1();
+            if (outcome.logOperatorError)
+                postMessageAndLog(QtCriticalMsg, error.data(), caQtDMLibLog);
+            else
+                postMessage(QtCriticalMsg, error.data());
+        }
         if (data.edata.connected && consumer->needsVisibilityUpdate())
             setObjectVisibility(w, data.edata.rvalue);
     } else if (caWidgetInterface* wif = dynamic_cast<caWidgetInterface *>(w)) {
@@ -6143,93 +6111,6 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
             }
         } else {
             ledWidget->setAlarmColors(NOTCONNECTED);
-        }
-
-        // ApplyNumeric and Numeric =====================================================================================================
-    } else if (caApplyNumeric *applynumericWidget = qobject_cast<caApplyNumeric *>(w)) {
-        qCDebug(caApplyNumericLog) << "caApplyNumeric" << applynumericWidget->objectName() << data.pv << data.edata.monitorCount;
-
-        if(data.edata.connected) {
-            ComputeNumericMaxMinPrec(applynumericWidget, data);
-
-            int colorMode = applynumericWidget->getColorMode();
-            if(colorMode == caApplyNumeric::Static || colorMode == caApplyNumeric::Default) {
-                applynumericWidget->setConnectedColors(true);
-            } else {
-                applynumericWidget->setAlarmColors(data.edata.severity);
-            }
-
-            if(data.edata.fieldtype == caSTRING ||  data.edata.fieldtype ==  caCHAR) {
-                char asc[MAX_STRING_LENGTH];
-                snprintf(asc, MAX_STRING_LENGTH, "caApplyNumeric %s does not treat other then numerical values", qasc(w->objectName()));
-                postMessage(QtCriticalMsg, asc);
-                applynumericWidget->setEnabled(false);
-            } else {
-                applynumericWidget->silentSetValue(data.edata.rvalue);
-                applynumericWidget->setAccessW((bool) data.edata.accessW);
-                updateAccessCursor(applynumericWidget);
-            }
-
-        } else {
-            applynumericWidget->setConnectedColors(false);
-        }
-
-        // Numeric =====================================================================================================
-    } else if (caNumeric *numericWidget = qobject_cast<caNumeric *>(w)) {
-        qCDebug(caNumericLog) << "caNumeric" << numericWidget->objectName() << data.pv;
-
-        if(data.edata.connected) {
-            ComputeNumericMaxMinPrec(numericWidget, data);
-            numericWidget->setConnectedColors(true);
-
-            int colorMode = numericWidget->getColorMode();
-            if(colorMode == caNumeric::Static || colorMode == caNumeric::Default) {
-                numericWidget->setConnectedColors(true);
-            } else {
-                numericWidget->setAlarmColors(data.edata.severity);
-            }
-
-            if(data.edata.fieldtype == caSTRING ||  data.edata.fieldtype ==  caCHAR) {
-                char asc[MAX_STRING_LENGTH];
-                snprintf(asc, MAX_STRING_LENGTH, "caNumeric %s does not treat other then numerical values", qasc(w->objectName()));
-                postMessageAndLog(QtCriticalMsg, asc, caQtDMLibLog);
-                numericWidget->setEnabled(false);
-            } else {
-                numericWidget->silentSetValue(data.edata.rvalue);
-                numericWidget->setAccessW((bool) data.edata.accessW);
-                updateAccessCursor(numericWidget);
-            }
-
-        } else {
-            numericWidget->setConnectedColors(false);
-        }
-
-        // Numeric =====================================================================================================
-    } else if (caSpinbox *spinboxWidget = qobject_cast<caSpinbox *>(w)) {
-        qCDebug(caSpinboxLog) << "caSpinbox" << spinboxWidget->objectName() << data.pv;
-
-        if(data.edata.connected) {
-            ComputeNumericMaxMinPrec(spinboxWidget, data);
-            int colorMode = spinboxWidget->getColorMode();
-            if(colorMode == caSpinbox::Static || colorMode == caSpinbox::Default) {
-                spinboxWidget->setConnectedColors(true);
-            } else {
-                spinboxWidget->setAlarmColors(data.edata.severity);
-            }
-
-            if(data.edata.fieldtype == caSTRING || data.edata.fieldtype ==  caCHAR) {
-                char asc[MAX_STRING_LENGTH];
-                snprintf(asc, MAX_STRING_LENGTH, "caSpinbox %s does not treat other then numerical values", qasc(w->objectName()));
-                postMessageAndLog(QtCriticalMsg, asc, caQtDMLibLog);
-                spinboxWidget->setEnabled(false);
-            } else {
-                spinboxWidget->silentSetValue(data.edata.rvalue);
-                spinboxWidget->setAccessW((bool) data.edata.accessW);
-                updateAccessCursor(spinboxWidget);
-            }
-
-        } else {
-            spinboxWidget->setConnectedColors(false);
         }
 
         // Toggle =====================================================================================================
@@ -9503,119 +9384,8 @@ int CaQtDM_Lib::InitVisibility(QWidget* widget, knobData* kData, QMap<QString, Q
   */
 void CaQtDM_Lib::ComputeNumericMaxMinPrec(QWidget* widget, const knobData& data)
 {
-    double maxValue = 1.0, minValue = 0.0;
-    int precMode=0, limitsMode=0;
-    int width, prec, caMode = 0;
-    double maxAbsHoprLopr = 0.0;
-    bool fixedFormat = false;
-
-    if(data.edata.initialize) {
-
-        if (caApplyNumeric *applynumericWidget = qobject_cast<caApplyNumeric *>(widget)) {
-            precMode = applynumericWidget->getPrecisionMode();
-            limitsMode = applynumericWidget->getLimitsMode();
-            fixedFormat = applynumericWidget->getFixedFormat();
-            caMode = caApplyNumeric::Channel;
-        } else if (caNumeric *numericWidget = qobject_cast<caNumeric *>(widget)) {
-            precMode = numericWidget->getPrecisionMode();
-            limitsMode = numericWidget->getLimitsMode();
-            fixedFormat = numericWidget->getFixedFormat();
-            caMode = caNumeric::Channel;
-        } else if (caSpinbox *spinboxWidget = qobject_cast<caSpinbox *>(widget)) {
-            precMode = spinboxWidget->getPrecisionMode();
-            limitsMode = spinboxWidget->getLimitsMode();
-            fixedFormat = spinboxWidget->getFixedFormat();
-            caMode = caSpinbox::Channel;
-        }
-
-        if(limitsMode == caMode) {
-            if((data.edata.upper_disp_limit == data.edata.lower_disp_limit) ||
-                    (fabs(data.edata.upper_disp_limit - data.edata.lower_disp_limit) <= 0.001)) {
-                maxValue = 100000.0;
-                minValue = -100000.0;
-            } else {
-                maxValue = data.edata.upper_disp_limit;
-                minValue = data.edata.lower_disp_limit;
-            }
-        } else {
-
-            if (caApplyNumeric *applynumericWidget = qobject_cast<caApplyNumeric *>(widget)) {
-                maxValue = applynumericWidget->getMaxValue();
-                minValue = applynumericWidget->getMinValue();
-            } else if (caNumeric *numericWidget = qobject_cast<caNumeric *>(widget)) {
-                maxValue = numericWidget->getMaxValue();
-                minValue = numericWidget->getMinValue();
-            } else if (caSpinbox *spinboxWidget = qobject_cast<caSpinbox *>(widget)) {
-                maxValue = spinboxWidget->getMaxValue();
-                minValue = spinboxWidget->getMinValue();
-            }
-
-        }
-
-        if (caApplyNumeric *applynumericWidget = qobject_cast<caApplyNumeric *>(widget)) {
-            applynumericWidget->setMaxValue(maxValue);
-            applynumericWidget->setMinValue(minValue);
-        } else if (caNumeric *numericWidget = qobject_cast<caNumeric *>(widget)) {
-            numericWidget->setMaxValue(maxValue);
-            numericWidget->setMinValue(minValue);
-        } else if (caSpinbox *spinboxWidget = qobject_cast<caSpinbox *>(widget)) {
-            spinboxWidget->setMaxValue(maxValue);
-            spinboxWidget->setMinValue(minValue);
-        }
-
-        if(!fixedFormat) {
-            if(precMode == caMode) {
-                // the widget decides how many decimals it accepts from the
-                // channel; default 4 keeps existing panels as they were
-                int maxChannelPrec = 4;
-                if (caApplyNumeric *w = qobject_cast<caApplyNumeric *>(widget))    maxChannelPrec = w->getMaxChannelPrecision();
-                else if (caNumeric *w = qobject_cast<caNumeric *>(widget))         maxChannelPrec = w->getMaxChannelPrecision();
-                else if (caSpinbox *w = qobject_cast<caSpinbox *>(widget))         maxChannelPrec = w->getMaxChannelPrecision();
-
-                prec = data.edata.precision;
-                if(prec < 0) prec = 0;
-                if(prec > maxChannelPrec) prec = maxChannelPrec;
-                maxAbsHoprLopr= qMax(fabs(maxValue), fabs(minValue));
-                if(qIsFinite(data.edata.rvalue)) maxAbsHoprLopr = qMax(maxAbsHoprLopr, fabs(data.edata.rvalue));
-                if(maxAbsHoprLopr > 1.0) {
-                    width = (int)log10(maxAbsHoprLopr) + 2 + prec;
-                } else {
-                    width = 2 + prec;
-                }
-
-                if (caApplyNumeric *applynumericWidget = qobject_cast<caApplyNumeric *>(widget)) {
-                    qCDebug(caApplyNumericLog) << width-prec-1 << prec;
-                    applynumericWidget->setDigits(width-prec-1, prec);
-                } else if (caNumeric *numericWidget = qobject_cast<caNumeric *>(widget)) {
-                    qCDebug(caNumericLog) << width-prec-1 << prec;
-                    numericWidget->setDigits(width-prec-1, prec);
-                } else if (caSpinbox *spinboxWidget = qobject_cast<caSpinbox *>(widget)) {
-                    qCDebug(caSpinboxLog) << width-prec-1 << prec;
-                    spinboxWidget->setDigits(width-prec-1, prec);
-                }
-
-            } else {
-                maxAbsHoprLopr= qMax(fabs(maxValue), fabs(minValue));
-                // see above: the value may reach beyond the limits
-                if(qIsFinite(data.edata.rvalue)) maxAbsHoprLopr = qMax(maxAbsHoprLopr, fabs(data.edata.rvalue));
-
-                if(maxAbsHoprLopr > 1.0) {
-                    width = (int)log10(maxAbsHoprLopr) + 2 ;
-                } else {
-                    width = 2;
-                }
-
-                if (caApplyNumeric *applynumericWidget = qobject_cast<caApplyNumeric *>(widget)) {
-                    applynumericWidget->setIntDigits(width-1);
-                } else if (caNumeric *numericWidget = qobject_cast<caNumeric *>(widget)) {
-                    numericWidget->setIntDigits(width-1);
-                } else if (caSpinbox *spinboxWidget = qobject_cast<caSpinbox *>(widget)) {
-                    spinboxWidget->setIntDigits(width-1);
-                }
-
-            }
-        }
-    }
+    if (caNumericRuntimeInterface *numericWidget = dynamic_cast<caNumericRuntimeInterface *>(widget))
+        numericWidget->applyNumericLimits(data);
 }
 
 /**

@@ -29,8 +29,9 @@
 #include <QWidget>
 #include <qtcontrols_global.h>
 #include <snumeric.h>
+#include "caNumericRuntimeMixin.h"
 
-class QTCON_EXPORT caSpinbox : public SNumeric
+class QTCON_EXPORT caSpinbox : public SNumeric, public caNumericRuntimeMixin<caSpinbox>
 {
 Q_OBJECT
 
@@ -130,6 +131,8 @@ public slots:
     void setSpinValue(double v) {setValue(v);}
 
 private:
+    int numericObjectType() const override { return caSpinbox_Widget; }
+
     QString thisPV;
     bool thisAccessW;
     double thisMaximum, thisMinimum;

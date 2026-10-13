@@ -29,8 +29,9 @@
 #include <QWidget>
 #include <qtcontrols_global.h>
 #include <enumeric.h>
+#include "caNumericRuntimeMixin.h"
 
-class QTCON_EXPORT caNumeric : public ENumeric
+class QTCON_EXPORT caNumeric : public ENumeric, public caNumericRuntimeMixin<caNumeric>
 {
 Q_OBJECT
 
@@ -126,6 +127,9 @@ protected:
    void paintEvent(QPaintEvent *event);
 
 private:
+    int numericObjectType() const override { return caNumeric_Widget; }
+    bool preConnectColors() const override { return true; }
+
     QString thisPV;
     bool thisAccessW;
     double thisMaximum, thisMinimum;

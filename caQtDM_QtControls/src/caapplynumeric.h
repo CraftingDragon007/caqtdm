@@ -28,8 +28,9 @@
 
 #include <qtcontrols_global.h>
 #include <eapplynumeric.h>
+#include "caNumericRuntimeMixin.h"
 
-class QTCON_EXPORT caApplyNumeric : public EApplyNumeric
+class QTCON_EXPORT caApplyNumeric : public EApplyNumeric, public caNumericRuntimeMixin<caApplyNumeric>
 {
 
 Q_OBJECT
@@ -122,6 +123,9 @@ public slots:
     }
 
 private:
+int numericObjectType() const override { return caApplyNumeric_Widget; }
+bool logInvalidNumericType() const override { return false; }
+
 bool eventFilter(QObject *obj, QEvent *event);
 
 QString thisPV;
