@@ -12,6 +12,10 @@ class caLabelUpdateMixin : public caWidgetUpdateInterface
 public:
     enum ColorBehavior { StaticColors, AlarmColors, OtherColors };
 
+    virtual int labelObjectType() const = 0;
+    virtual QString labelText() const = 0;
+    virtual void setLabelText(const QString &text) = 0;
+
     bool needsAggregateAlarm() const override { return colorBehavior() == AlarmColors; }
     bool needsVisibilityUpdate() const override { return true; }
 

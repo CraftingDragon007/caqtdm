@@ -34,8 +34,10 @@
 #include <qtcontrols_global.h>
 #include "fontscalingwidget.h"
 #include "caLabelUpdateMixin.h"
+#include "caVisibilityMonitorInterface.h"
 
-class QTCON_EXPORT caLabelVertical : public QWidget, public FontScalingWidget, public caLabelUpdateMixin
+class QTCON_EXPORT caLabelVertical : public QWidget, public FontScalingWidget,
+                                    public caLabelUpdateMixin, public caVisibilityMonitorInterface
 {
     Q_OBJECT
 
@@ -119,6 +121,37 @@ protected:
     virtual QSize minimumSizeHint() const;
 
 private:
+    int labelObjectType() const override { return caLabelVertical_Widget; }
+    QString labelText() const override { return text(); }
+    void setLabelText(const QString &value) override { setText(value); }
+
+    Mode visibilityMode() const override { return static_cast<Mode>(getVisibility()); }
+    bool skipVisibilityMonitors() const override
+    {
+        return getVisibility() == StaticV && getColorMode() == Static;
+    }
+    QString visibilityChannel(int index) const override
+    {
+        switch (index) {
+        case 0: return getChannelA();
+        case 1: return getChannelB();
+        case 2: return getChannelC();
+        case 3: return getChannelD();
+        default: return QString();
+        }
+    }
+    void setVisibilityChannel(int index, const QString &pv) override
+    {
+        switch (index) {
+        case 0: setChannelA(pv); break;
+        case 1: setChannelB(pv); break;
+        case 2: setChannelC(pv); break;
+        case 3: setChannelD(pv); break;
+        }
+    }
+    QString visibilityExpression() const override { return getVisibilityCalc(); }
+    void setVisibilityExpression(const QString &value) override { setVisibilityCalc(value); }
+
     QWidget *labelWidget() override { return this; }
     ColorBehavior colorBehavior() const override
     {

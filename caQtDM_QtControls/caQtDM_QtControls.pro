@@ -302,6 +302,7 @@ HEADERS	+= \
     src/caWidgetInterface.h \
     src/caWidgetUpdateInterface.h \
     src/caLabelUpdateMixin.h \
+    src/caVisibilityMonitorInterface.h \
     src/addevent.h \
     src/animationcode.h \
     src/hideobjectcode.h
