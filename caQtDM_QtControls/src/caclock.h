@@ -37,8 +37,9 @@
 #include <qwt_round_scale_draw.h>
 #include <qtcontrols_global.h>
 #include "alarmdefs.h"
+#include "caWidgetUpdateInterface.h"
 
-class QTCON_EXPORT caClock : public QwtAnalogClock
+class QTCON_EXPORT caClock : public QwtAnalogClock, public caWidgetUpdateInterface
 {
     Q_OBJECT
 
@@ -86,6 +87,11 @@ public:
 
     void updateClock(QTime time);
     void setAlarmColors(short status, bool force = false);
+    void prepareMonitor() { setAlarmColors(NO_ALARM, true); }
+    bool needsAggregateAlarm() const override { return false; }
+    bool needsVisibilityUpdate() const override { return false; }
+    caWidgetUpdateResult applyChannelUpdate(const QString &units, const QString &value,
+                                            const knobData &data, short aggregateAlarm) override;
 
     enum colMode {Static, Alarm};
     colMode getColorMode() const { return thisColorMode; }

@@ -2423,7 +2423,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
             nbMonitors++;
         }
 
-        clockWidget->setAlarmColors(NO_ALARM, true);
+        clockWidget->prepareMonitor();
 
         // insert dataindex list
         integerList.insert(0, nbMonitors);
@@ -5362,19 +5362,6 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
         qCDebug(caFrameLog) << "we have a frame";
 
         setObjectVisibility(frameWidget, data.edata.rvalue);
-
-        // caClock ==================================================================================================================
-    } else if (caClock *clockWidget = qobject_cast<caClock *>(w)) {
-        if(data.edata.connected) {
-            if(clockWidget->getTimeType() == caClock::ReceiveTime) {
-                clockWidget->setAlarmColors(data.edata.severity);
-                QDateTime dattim = QDateTime::fromMSecsSinceEpoch(data.edata.actTimeMs);
-                clockWidget->updateClock(dattim.time());
-            }
-            // set no connection color
-        } else {
-            SetColorsNotConnected(clockWidget);
-        }
 
        // replacemacro ==================================================================================================================
      } else if(replaceMacro* replaceMacroWidget = qobject_cast<replaceMacro *>(w)) {

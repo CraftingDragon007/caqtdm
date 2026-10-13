@@ -30,6 +30,7 @@
 #endif
 
 #include "caclock.h"
+#include <QDateTime>
 #include <qwt_dial_needle.h>
 
 #if defined(_MSC_VER)
@@ -111,6 +112,26 @@ void caClock::updateClock(QTime time) {
     if(time == prevTime) return;
     prevTime = time;
     emit updateTime(time);
+}
+
+caWidgetUpdateResult caClock::applyChannelUpdate(const QString &units, const QString &value,
+                                                 const knobData &data, short aggregateAlarm)
+{
+    Q_UNUSED(units);
+    Q_UNUSED(value);
+    Q_UNUSED(aggregateAlarm);
+
+    if (data.edata.connected) {
+        if (getTimeType() == ReceiveTime) {
+            setAlarmColors(data.edata.severity);
+            const QDateTime dateTime = QDateTime::fromMSecsSinceEpoch(data.edata.actTimeMs);
+            updateClock(dateTime.time());
+        }
+    } else {
+        setAlarmColors(NOTCONNECTED);
+        setProperty("Connect", false);
+    }
+    return {};
 }
 
 void caClock::resizeEvent(QResizeEvent *e)
