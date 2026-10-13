@@ -62,6 +62,7 @@
 #include "caVisibilityMonitorInterface.h"
 #include "caNumericRuntimeMixin.h"
 #include "caStateWidgetRuntime.h"
+#include "caEnumSelectionRuntimeMixin.h"
 
 // we are using for calculations postfix of epics
 // therefore we need this include and also link with the epics libraries
@@ -1874,43 +1875,48 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         mimeWidget->setProperty("Taken", true);
 
         //==================================================================================================================
-    } else if(caMenu* menuWidget = qobject_cast<caMenu *>(w1)) {
-
-        qCDebug(caMenuLog) << "create caMenu";
-        w1->setProperty("ObjectType", caMenu_Widget);
+    } else if (caEnumSelectionRuntime *selection = dynamic_cast<caEnumSelectionRuntime *>(w1)) {
+        w1->setProperty("ObjectType", selection->selectionObjectType());
         QList<QVariant> integerList;
-        QString text = menuWidget->getPV();
+        if (qobject_cast<caMenu *>(w1)) qCDebug(caMenuLog) << "create caMenu";
+        else qCDebug(caChoiceLog) << "create caChoice";
+
+        QString text = selection->selectionPV();
         if(text.size() > 0) {
-            text =  treatMacro(map, text, &doNothing, w1->objectName());
-            specData[0] = 0;
+            text = treatMacro(map, text, &doNothing, w1->objectName());
+            if (selection->selectionUsesPrimarySpec()) {
+                specData[0] = 0;
+            }
             int num = addMonitor(myWidget, &kData, text, w1, specData, map, &pv);
             integerList.append(num);
+            if (caMenu *menuWidget = qobject_cast<caMenu *>(w1)) {
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-            connect(menuWidget, SIGNAL(activated(QString)), this, SLOT(Callback_MenuClicked(QString)));
+                connect(menuWidget, SIGNAL(activated(QString)), this, SLOT(Callback_MenuClicked(QString)));
 #else
-            connect(menuWidget, SIGNAL(textActivated(QString)), this, SLOT(Callback_MenuClicked(QString)));
+                connect(menuWidget, SIGNAL(textActivated(QString)), this, SLOT(Callback_MenuClicked(QString)));
 #endif
-            menuWidget->setPV(pv);
+            } else if (caChoice *choiceWidget = qobject_cast<caChoice *>(w1)) {
+                connect(choiceWidget, SIGNAL(clicked(QString)), this, SLOT(Callback_ChoiceClicked(QString)));
+            }
+            selection->setSelectionPV(pv);
             nbMonitors++;
         }
 
-        text = menuWidget->getMaskPV();
+        text = selection->selectionMaskPV();
         if(text.size() > 0) {
             text =  treatMacro(map, text, &doNothing, w1->objectName());
             specData[0] = 1;
             int num = addMonitor(myWidget, &kData, text, w1, specData, map, &pv);
             integerList.append(num);
-            menuWidget->setMaskPV(pv);
+            selection->setSelectionMaskPV(pv);
             nbMonitors++;
         }
 
-        if(menuWidget->isElevated()) menuWidget->raise();
+        if (selection->selectionIsElevated()) selection->raiseSelection();
 
-        // insert dataindex list
         integerList.insert(0, nbMonitors);
-        menuWidget->setProperty("MonitorList", integerList);
-
-        menuWidget->setProperty("Taken", true);
+        w1->setProperty("MonitorList", integerList);
+        w1->setProperty("Taken", true);
 
         //==================================================================================================================
     } else if(caCamera* cameraWidget = qobject_cast<caCamera *>(w1)) {
@@ -2034,30 +2040,6 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
             cameraWidget->setToolTip(tooltip);
 
         cameraWidget->setProperty("Taken", true);
-
-        //==================================================================================================================
-    } else if(caChoice* choiceWidget = qobject_cast<caChoice *>(w1)) {
-
-        qCDebug(caChoiceLog) << "create caChoice";
-        w1->setProperty("ObjectType", caChoice_Widget);
-
-        QString text = choiceWidget->getPV();
-        if(text.size() > 0) {
-            text =  treatMacro(map, text, &doNothing, w1->objectName());
-            int num = addMonitor(myWidget, &kData, text, w1, specData, map, &pv);
-            integerList.append(num);
-            connect(choiceWidget, SIGNAL(clicked(QString)), this, SLOT(Callback_ChoiceClicked(QString)));
-            choiceWidget->setPV(pv);
-            nbMonitors++;
-        }
-
-        if(choiceWidget->isElevated()) choiceWidget->raise();
-
-        // insert dataindex list
-        integerList.insert(0, nbMonitors);
-        choiceWidget->setProperty("MonitorList", integerList);
-
-        choiceWidget->setProperty("Taken", true);
 
         //==================================================================================================================
     } else if(caLabelUpdateMixin *labelWidget = dynamic_cast<caLabelUpdateMixin *>(w1)) {
@@ -5547,74 +5529,6 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
         qCDebug(caFrameLog) << "we have a frame";
 
         setObjectVisibility(frameWidget, data.edata.rvalue);
-
-        // caMenu ==================================================================================================================
-    } else if (caMenu *menuWidget = qobject_cast<caMenu *>(w)) {
-        qCDebug(caMenuLog) << "we have a menu" << data.pv << data.edata.connected << data.specData[0];
-
-        if(data.edata.connected) {
-            // set enum strings
-            if((data.edata.fieldtype == caENUM) && (data.specData[0] == 0)) {
-                QStringList stringlist = String.split((QChar)27);
-                menuWidget->populateCells(stringlist);
-                if(menuWidget->getLabelDisplay()) menuWidget->setCurrentIndex(0);
-                else {
-                    menuWidget->setIndex((int) data.edata.ivalue);
-                }
-
-            // when mask specified, use it
-            } else if(data.specData[0] == 1) {
-                switch (data.edata.fieldtype){
-                    case caINT:
-                    case caLONG:{
-                        menuWidget->setMaskValue(data.edata.ivalue);
-                        break;
-                    }
-                    default:{
-                        menuWidget->setMaskValue(data.edata.rvalue);
-                    }
-                }
-            }
-            if (menuWidget->getColorMode() == caMenu::Alarm) {
-                menuWidget->setAlarmColors(data.edata.severity);
-                qCDebug(caMenuLog) << "caMenu severity" << data.edata.severity;
-            } else {
-                SetColorsBack(menuWidget);
-            }
-
-        } else {
-            SetColorsNotConnected(menuWidget);
-        }
-        menuWidget->setAccessW(data.edata.accessW);
-        updateAccessCursor(menuWidget);
-
-        // caChoice ==================================================================================================================
-    } else if (caChoice *choiceWidget = qobject_cast<caChoice *>(w)) {
-        qCDebug(caChoiceLog) << "we have a choiceButton" << String << (int) data.edata.ivalue << choiceWidget;
-
-        if(data.edata.connected) {
-            QStringList stringlist = String.split((QChar)27);
-            // set enum strings
-            if(data.edata.fieldtype == caENUM) {
-                // at initialisatioon or when list changes
-                if((data.edata.initialize) || (stringlist != choiceWidget->getList())) {
-                    choiceWidget->populateCells(stringlist, (int) data.edata.ivalue);
-                    // otherwise just set value
-                } else {
-                    choiceWidget->setValue((int) data.edata.ivalue);
-                }
-                if (choiceWidget->getColorMode() == caChoice::Alarm) {
-                    choiceWidget->setAlarmColors(data.edata.severity);
-                    // case of static mode
-                } else {
-                    SetColorsBack(choiceWidget);
-                }
-            }
-        } else {
-            SetColorsNotConnected(choiceWidget);
-        }
-        choiceWidget->setAccessW(data.edata.accessW);
-        updateAccessCursor(choiceWidget);
 
         // caThermo ==================================================================================================================
     } else if (caThermo *thermoWidget = qobject_cast<caThermo *>(w)) {

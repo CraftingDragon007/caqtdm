@@ -24,6 +24,18 @@
  */
 
 #include "cachoice.h"
+
+bool caChoice::updateSelection(const QString &value, const knobData &data)
+{
+    qCDebug(caChoiceLog) << "we have a choiceButton" << value << int(data.edata.ivalue) << this;
+    if (data.edata.fieldtype != caENUM) return false;
+    const QStringList labels = value.split(QChar(27));
+    if (data.edata.initialize || labels != getList())
+        populateCells(labels, int(data.edata.ivalue));
+    else
+        setValue(int(data.edata.ivalue));
+    return true;
+}
 #include "alarmdefs.h"
 #include <QApplication>
 #include <QGridLayout>

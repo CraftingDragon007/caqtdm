@@ -27,8 +27,9 @@
 #define CAMENU_H
 #include <QComboBox>
 #include <qtcontrols_global.h>
+#include "caEnumSelectionRuntimeMixin.h"
 
-class QTCON_EXPORT caMenu : public QComboBox
+class QTCON_EXPORT caMenu : public QComboBox, public caEnumSelectionRuntimeMixin<caMenu>
 {
     Q_OBJECT
 
@@ -80,6 +81,11 @@ public:
 
     caMenu(QWidget *parent);
 
+    int selectionObjectType() const override { return caMenu_Widget; }
+    QString selectionMaskPV() const override { return getMaskPV(); }
+    void setSelectionMaskPV(const QString &pv) override { setMaskPV(pv); }
+    bool selectionUsesPrimarySpec() const override { return true; }
+
     int getAccessW() const {return thisAccessW;}
     void setAccessW(int access);
 
@@ -98,6 +104,8 @@ public slots:
 
 protected:
      virtual bool event(QEvent *);
+     bool updateSelection(const QString &value, const knobData &data) override;
+     void afterAlarmColors(const knobData &data) override;
 private:
     QString thisPV, thisMaskPV;
     QColor thisForeColor, oldForeColor;

@@ -187,6 +187,7 @@ set(QTCONTROLS_HEADERS
     ${_src}/caVisibilityMonitorInterface.h
     ${_src}/caNumericRuntimeMixin.h
     ${_src}/caStateWidgetRuntime.h
+    ${_src}/caEnumSelectionRuntimeMixin.h
     ${_src}/addevent.h
     ${_src}/animationcode.h
     ${_src}/hideobjectcode.h

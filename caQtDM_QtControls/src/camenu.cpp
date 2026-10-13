@@ -24,6 +24,27 @@
  */
 
 #include "camenu.h"
+
+bool caMenu::updateSelection(const QString &value, const knobData &data)
+{
+    qCDebug(caMenuLog) << "we have a menu" << data.pv << data.edata.connected << data.specData[0];
+    if (data.edata.fieldtype == caENUM && data.specData[0] == 0) {
+        populateCells(value.split(QChar(27)));
+        if (getLabelDisplay()) setCurrentIndex(0);
+        else setIndex(int(data.edata.ivalue));
+    } else if (data.specData[0] == 1) {
+        if (data.edata.fieldtype == caINT || data.edata.fieldtype == caLONG)
+            setMaskValue(data.edata.ivalue);
+        else
+            setMaskValue(data.edata.rvalue);
+    }
+    return true;
+}
+
+void caMenu::afterAlarmColors(const knobData &data)
+{
+    qCDebug(caMenuLog) << "caMenu severity" << data.edata.severity;
+}
 #include "alarmdefs.h"
 #include <QPainter>
 #include <QTimer>

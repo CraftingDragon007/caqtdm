@@ -31,10 +31,11 @@
 #include <qtcontrols_global.h>
 #include "epushbutton.h"
 #include "elabel.h"
+#include "caEnumSelectionRuntimeMixin.h"
 
 class QGridLayout;
 
-class QTCON_EXPORT caChoice : public QWidget
+class QTCON_EXPORT caChoice : public QWidget, public caEnumSelectionRuntimeMixin<caChoice>
 {
     Q_OBJECT
 
@@ -73,6 +74,9 @@ public:
     void setStacking(Stacking stacking);
 
     caChoice(QWidget *parent);
+
+    int selectionObjectType() const override { return caChoice_Widget; }
+    bool selectionUsesPrimarySpec() const override { return false; }
 
     QString getPV() const;
     void setPV(QString const &newPV);
@@ -126,6 +130,7 @@ public slots:
 protected:
     void arrangeCells(QStringList list, int indx);
     void resizeEvent(QResizeEvent *e);
+    bool updateSelection(const QString &value, const knobData &data) override;
 
 signals:
     void clicked(QString text);

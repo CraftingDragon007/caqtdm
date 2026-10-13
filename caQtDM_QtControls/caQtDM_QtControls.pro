@@ -306,6 +306,7 @@ HEADERS	+= \
     src/caVisibilityMonitorInterface.h \
     src/caNumericRuntimeMixin.h \
     src/caStateWidgetRuntime.h \
+    src/caEnumSelectionRuntimeMixin.h \
     src/addevent.h \
     src/animationcode.h \
     src/hideobjectcode.h
