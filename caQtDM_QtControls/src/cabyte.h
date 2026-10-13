@@ -30,10 +30,11 @@
 #include <QColor>
 #include <qtcontrols_global.h>
 #include <rectangle.h>
+#include "caByteRuntimeMixin.h"
 
 class QGridLayout;
 
-class QTCON_EXPORT caByte : public QWidget
+class QTCON_EXPORT caByte : public QWidget, public caByteRuntimeMixin<caByte>
 {
     Q_OBJECT
 
@@ -68,6 +69,8 @@ public:
     void setColorMode(colMode colormode) {thisColorMode = colormode;}
 
     caByte(QWidget *parent);
+
+    int byteObjectType() const override { return caByte_Widget; }
 
     QString getPV() const;
     void setPV(QString const &newPV);

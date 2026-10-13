@@ -64,6 +64,7 @@
 #include "caStateWidgetRuntime.h"
 #include "caEnumSelectionRuntimeMixin.h"
 #include "caRangeRuntimeMixin.h"
+#include "caByteRuntimeMixin.h"
 
 // we are using for calculations postfix of epics
 // therefore we need this include and also link with the epics libraries
@@ -2471,43 +2472,25 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         meterWidget->setProperty("Taken", true);
 
         //==================================================================================================================
-    } else if(caByte* byteWidget = qobject_cast<caByte *>(w1)) {
+    } else if (caByteRuntime *byteWidget = dynamic_cast<caByteRuntime *>(w1)) {
+        if (qobject_cast<caByteController *>(w1))
+            qCDebug(caByteControllerLog) << "create caByteController" << w1;
+        else
+            qCDebug(caByteLog) << "create caByte" << w1;
+        w1->setProperty("ObjectType", byteWidget->byteObjectType());
 
-        qCDebug(caByteLog) << "create caByte" << w1;
-        w1->setProperty("ObjectType", caByte_Widget);
-
-        if(byteWidget->getPV().size() > 0) {
-            int num = addMonitor(myWidget, &kData, byteWidget->getPV(), w1, specData, map, &pv);
+        if (!byteWidget->bytePV().isEmpty()) {
+            int num = addMonitor(myWidget, &kData, byteWidget->bytePV(), w1, specData, map, &pv);
             integerList.append(num);
-            byteWidget->setPV(pv);
+            byteWidget->setBytePV(pv);
+            if (caByteController *controller = qobject_cast<caByteController *>(w1))
+                connect(controller, SIGNAL(clicked(int)), this, SLOT(Callback_ByteControllerClicked(int)));
             nbMonitors++;
         }
 
-        // insert dataindex list
         integerList.insert(0, nbMonitors);
-        byteWidget->setProperty("MonitorList", integerList);
-
-        byteWidget->setProperty("Taken", true);
-
-        //==================================================================================================================
-    } else if(caByteController* bytecontrollerWidget = qobject_cast<caByteController *>(w1)) {
-
-        qCDebug(caByteControllerLog) << "create caByteController" << w1;
-        w1->setProperty("ObjectType", caByteController_Widget);
-
-        if(bytecontrollerWidget->getPV().size() > 0) {
-            int num = addMonitor(myWidget, &kData, bytecontrollerWidget->getPV(), w1, specData, map, &pv);
-            integerList.append(num);
-            bytecontrollerWidget->setPV(pv);
-            connect(bytecontrollerWidget, SIGNAL(clicked(int)), this, SLOT(Callback_ByteControllerClicked(int)));
-            nbMonitors++;
-        }
-
-        // insert dataindex list
-        integerList.insert(0, nbMonitors);
-        bytecontrollerWidget->setProperty("MonitorList", integerList);
-
-        bytecontrollerWidget->setProperty("Taken", true);
+        w1->setProperty("MonitorList", integerList);
+        w1->setProperty("Taken", true);
 
         //==================================================================================================================
     } else if(caInclude* includeWidget = qobject_cast<caInclude *>(w1)) {
@@ -5445,42 +5428,6 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
             }
         } else {
             SetColorsNotConnected(meterWidget);
-        }
-
-        // byte ==================================================================================================================
-    } else if (caByte *byteWidget = qobject_cast<caByte *>(w)) {
-
-        if(data.edata.connected) {
-            int colorMode = byteWidget->getColorMode();
-            if(colorMode == caByte::Static) {
-                if(!byteWidget->property("Connect").value<bool>()) {
-                    byteWidget->setProperty("Connect", true);
-                }
-                byteWidget->setValue(data.edata.ivalue);
-            } else if(colorMode == caByte::Alarm) {
-                byteWidget->setValue(data.edata.ivalue);
-                byteWidget->setAlarmColors(data.edata.severity);
-            }
-        } else {
-            SetColorsNotConnected(byteWidget);
-        }
-
-        // byte ==================================================================================================================
-    } else if (caByteController *bytecontrollerWidget = qobject_cast<caByteController *>(w)) {
-
-        if(data.edata.connected) {
-            int colorMode = bytecontrollerWidget->getColorMode();
-            if(colorMode == caByteController::Static) {
-                if(!bytecontrollerWidget->property("Connect").value<bool>()) {
-                    bytecontrollerWidget->setProperty("Connect", true);
-                }
-                bytecontrollerWidget->setValue(data.edata.ivalue);
-            } else if(colorMode == caByteController::Alarm) {
-                bytecontrollerWidget->setValue(data.edata.ivalue);
-                bytecontrollerWidget->setAlarmColors(data.edata.severity);
-            }
-        } else {
-            SetColorsNotConnected(bytecontrollerWidget);
         }
 
        // replacemacro ==================================================================================================================

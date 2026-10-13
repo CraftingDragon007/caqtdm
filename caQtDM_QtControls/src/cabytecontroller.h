@@ -32,10 +32,11 @@
 #include <QApplication>
 #include <qtcontrols_global.h>
 #include "epushbutton.h"
+#include "caByteRuntimeMixin.h"
 
 class QGridLayout;
 
-class QTCON_EXPORT caByteController : public QWidget
+class QTCON_EXPORT caByteController : public QWidget, public caByteRuntimeMixin<caByteController>
 {
     Q_OBJECT
 
@@ -76,6 +77,8 @@ public:
     void setColorMode(colMode colormode) {thisColorMode = colormode;}
 
     caByteController(QWidget *parent);
+
+    int byteObjectType() const override { return caByteController_Widget; }
 
     QString getPV() const;
     void setPV(QString const &newPV);
