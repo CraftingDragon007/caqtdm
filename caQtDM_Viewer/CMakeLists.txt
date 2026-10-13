@@ -202,8 +202,19 @@ if(IOS)
 endif()
 
 if(ANDROID)
+    # Keep Android assets in the custom package template for every build
+    # configuration. qmake deploys this file to /assets; CMake needs it under
+    # <QT_ANDROID_PACKAGE_SOURCE_DIR>/assets to expose it as assets:/...
+    set(_android_package_dir "${CMAKE_CURRENT_BINARY_DIR}/android-package")
+    file(COPY "${_src}/Android/" DESTINATION "${_android_package_dir}")
+    file(MAKE_DIRECTORY "${_android_package_dir}/assets")
+    configure_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/caQtDM_IOS_Config.xml"
+        "${_android_package_dir}/assets/caQtDM_IOS_Config.xml"
+        COPYONLY)
+
     set_target_properties(caQtDM PROPERTIES
-        QT_ANDROID_PACKAGE_SOURCE_DIR "${_src}/Android")
+        QT_ANDROID_PACKAGE_SOURCE_DIR "${_android_package_dir}")
     if(CAQTDM_ANDROID_MIN_SDK_VERSION)
         set_property(TARGET caQtDM PROPERTY QT_ANDROID_MIN_SDK_VERSION
             "${CAQTDM_ANDROID_MIN_SDK_VERSION}")
