@@ -28,13 +28,14 @@
 
 #include <QWidget>
 #include <qtcontrols_global.h>
+#include "caShapeRuntimeMixin.h"
 
 QT_BEGIN_NAMESPACE
 class QRect;
 class QSize;
 QT_END_NAMESPACE
 
-class QTCON_EXPORT caPolyLine : public QWidget
+class QTCON_EXPORT caPolyLine : public QWidget, public caShapeRuntimeMixin<caPolyLine>
 {
     Q_OBJECT
 
@@ -99,6 +100,8 @@ public:
     void setPolyStyle(PolyStyle style);
 
     caPolyLine(QWidget *parent = 0);
+    int shapeObjectType() const override { return caPolyLine_Widget; }
+    void logShapeUpdate(const knobData &) const {}
 
     void setPairs(const QString &newPairs);
     QString pairs() const;

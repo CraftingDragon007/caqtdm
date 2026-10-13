@@ -33,6 +33,11 @@
 
 Q_LOGGING_CATEGORY(caGraphicsLog, "caqtdm.widgets.cagraphics")
 
+void caGraphics::logShapeUpdate(const knobData &data) const
+{
+    qCDebug(caGraphicsLog) << "caGraphics" << objectName() << getColorMode() << data.pv;
+}
+
 caGraphics::caGraphics( QWidget *parent) :  QWidget(parent)
 {
     QSizePolicy policy( QSizePolicy::Preferred, QSizePolicy::Preferred );

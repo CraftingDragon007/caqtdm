@@ -29,10 +29,11 @@
 #include <QWidget>
 #include <QDebug>
 #include <qtcontrols_global.h>
+#include "caShapeRuntimeMixin.h"
 
 // would be so nice to get rid of my includes, however it would break the compatibility with former ui files, so I leave it like that
 // class  QTCON_EXPORT caGraphics : public caVisibility
-class  QTCON_EXPORT caGraphics : public QWidget
+class  QTCON_EXPORT caGraphics : public QWidget, public caShapeRuntimeMixin<caGraphics>
 {
     Q_OBJECT
 
@@ -90,6 +91,8 @@ public:
     enum colMode {Static=0, Alarm};
 
     caGraphics( QWidget *parent = 0 );
+    int shapeObjectType() const override { return caGraphics_Widget; }
+    void logShapeUpdate(const knobData &data) const;
 
     QColor getForeground() const {return thisForeColor;}
     void setForeground(QColor c);

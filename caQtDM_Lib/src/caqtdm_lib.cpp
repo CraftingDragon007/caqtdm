@@ -2207,35 +2207,20 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         multilinestringWidget->setProperty("Taken", true);
 
         //==================================================================================================================
-    } else if(caGraphics* graphicsWidget = qobject_cast<caGraphics *>(w1)) {
+    } else if (caShapeRuntime *shapeWidget = dynamic_cast<caShapeRuntime *>(w1)) {
+        if (shapeWidget->shapeObjectType() == caGraphics_Widget)
+            qCDebug(caGraphicsLog) << "create caGraphics";
+        else
+            qCDebug(caPolyLineLog) << "create caPolyLine";
+        w1->setProperty("ObjectType", shapeWidget->shapeObjectType());
 
-        QString text;
-        qCDebug(caGraphicsLog) << "create caGraphics";
-        w1->setProperty("ObjectType", caGraphics_Widget);
-
-        text= graphicsWidget->toolTip();
-        if(reaffectText(map, &text, w1))  graphicsWidget->setToolTip(text);
-        text= graphicsWidget->statusTip();
-        if(reaffectText(map, &text, w1))  graphicsWidget->setStatusTip(text);
-
-
-        nbMonitors = InitVisibility(w1, &kData, map, specData, "");
-        graphicsWidget->setProperty("Taken", true);
-
-        //==================================================================================================================
-    } else if(caPolyLine* polylineWidget = qobject_cast<caPolyLine *>(w1)) {
-
-        QString text;
-        qCDebug(caPolyLineLog) << "create caPolyLine";
-        w1->setProperty("ObjectType", caPolyLine_Widget);
-
-        text= polylineWidget->toolTip();
-        if(reaffectText(map, &text, w1))  polylineWidget->setToolTip(text);
-        text= polylineWidget->statusTip();
-        if(reaffectText(map, &text, w1))  polylineWidget->setStatusTip(text);
+        QString text = w1->toolTip();
+        if (reaffectText(map, &text, w1)) w1->setToolTip(text);
+        text = w1->statusTip();
+        if (reaffectText(map, &text, w1)) w1->setStatusTip(text);
 
         nbMonitors = InitVisibility(w1, &kData, map, specData, "");
-        polylineWidget->setProperty("Taken", true);
+        w1->setProperty("Taken", true);
 
         //==================================================================================================================
     } else if (caNumericRuntimeInterface *numericWidget = dynamic_cast<caNumericRuntimeInterface *>(w1)) {
@@ -5585,57 +5570,6 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
             multilinestringWidget->setTextLine("");
             multilinestringWidget->setAlarmColors(NOTCONNECTED, 0.0, bg, fg);        \
             multilinestringWidget->setProperty("Connect", false);
-        }
-
-        // Graphics ==================================================================================================================
-    } else if (caGraphics *graphicsWidget = qobject_cast<caGraphics *>(w)) {
-        qCDebug(caGraphicsLog) << "caGraphics" << graphicsWidget->objectName() << graphicsWidget->getColorMode() << data.pv;
-
-        if(data.edata.connected) {
-            int colorMode = graphicsWidget->getColorMode();
-            if(colorMode == caGraphics::Static) {
-                // done at initialisation, we have to set it back after no connect
-                if(!graphicsWidget->property("Connect").value<bool>()) {
-                    QColor fg = graphicsWidget->property("FColor").value<QColor>();
-                    QColor lg = graphicsWidget->property("LColor").value<QColor>();
-                    graphicsWidget->setForeground(fg);
-                    graphicsWidget->setLineColor(lg);
-                    graphicsWidget->setProperty("Connect", true);
-                }
-            } else if(colorMode == caGraphics::Alarm) {
-                short status = ComputeAlarm(w);
-                graphicsWidget->setAlarmColors(status);
-            }
-
-            setObjectVisibility(graphicsWidget, data.edata.rvalue);
-
-        } else {
-            SetColorsNotConnected(graphicsWidget);
-        }
-
-        // Polyline ==================================================================================================================
-    } else if (caPolyLine *polylineWidget = qobject_cast<caPolyLine *>(w)) {
-
-        if(data.edata.connected) {
-            int colorMode = polylineWidget->getColorMode();
-            if(colorMode == caPolyLine::Static) {
-                // done at initialisation, we have to set it back after no connect
-                if(!polylineWidget->property("Connect").value<bool>()) {
-                    QColor fg = polylineWidget->property("FColor").value<QColor>();
-                    QColor lg = polylineWidget->property("LColor").value<QColor>();
-                    polylineWidget->setForeground(fg);
-                    polylineWidget->setLineColor(lg);
-                    polylineWidget->setProperty("Connect", true);
-                }
-            } else if(colorMode == caPolyLine::Alarm) {
-                short status = ComputeAlarm(w);
-                polylineWidget->setAlarmColors(status);
-            }
-
-            setObjectVisibility(polylineWidget, data.edata.rvalue);
-
-        } else {
-            SetColorsNotConnected(polylineWidget);
         }
 
         // cartesian plot ==================================================================================================================
