@@ -37,8 +37,9 @@
 #endif
 #include <qwt_scale_draw.h>
 #include <qwt_scale_engine.h>
+#include "caRangeRuntimeMixin.h"
 
-class QTCON_EXPORT caThermo : public QwtThermoMarker
+class QTCON_EXPORT caThermo : public QwtThermoMarker, public caRangeRuntimeMixin<caThermo>
 {
     Q_OBJECT
 
@@ -125,6 +126,11 @@ public:
 
     caThermo(QWidget *parent);
 
+    int rangeObjectType() const override { return caThermo_Widget; }
+    void prepareRange() override;
+    bool rangeIsElevated() override { return false; }
+    void raiseRange() override {}
+
     QString setScaleLabel (double value) const;
     void setFormat(int prec);
 
@@ -141,6 +147,7 @@ public slots:
     }
 
 protected:
+    bool applyRangeValue(const knobData &data) override;
     virtual bool event(QEvent *);
     virtual void drawLiquid ( QPainter *, const QRect & ) const;
 

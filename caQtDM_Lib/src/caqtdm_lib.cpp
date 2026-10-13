@@ -63,6 +63,7 @@
 #include "caNumericRuntimeMixin.h"
 #include "caStateWidgetRuntime.h"
 #include "caEnumSelectionRuntimeMixin.h"
+#include "caRangeRuntimeMixin.h"
 
 // we are using for calculations postfix of epics
 // therefore we need this include and also link with the epics libraries
@@ -2387,26 +2388,26 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         bitnamesWidget->setProperty("Taken", true);
 
         //==================================================================================================================
-    } else if(caSlider* sliderWidget = qobject_cast<caSlider *>(w1)) {
+    } else if (caRangeRuntime *rangeWidget = dynamic_cast<caRangeRuntime *>(w1)) {
+        if (qobject_cast<caSlider *>(w1)) qCDebug(caSliderLog) << "create caSlider";
+        else qCDebug(caThermoLog) << "create caThermo";
+        w1->setProperty("ObjectType", rangeWidget->rangeObjectType());
 
-        qCDebug(caSliderLog) << "create caSlider";
-        w1->setProperty("ObjectType", caSlider_Widget);
-
-        if(sliderWidget->getPV().size() > 0) {
-            int num = addMonitor(myWidget, &kData, sliderWidget->getPV(), w1, specData, map, &pv);
+        if (!rangeWidget->rangePV().isEmpty()) {
+            int num = addMonitor(myWidget, &kData, rangeWidget->rangePV(), w1, specData, map, &pv);
             integerList.append(num);
-            sliderWidget->setPV(pv);
-            connect(sliderWidget, SIGNAL(valueChanged(double)), this, SLOT(Callback_SliderValueChanged(double)));
+            rangeWidget->setRangePV(pv);
+            if (caSlider *sliderWidget = qobject_cast<caSlider *>(w1))
+                connect(sliderWidget, SIGNAL(valueChanged(double)), this, SLOT(Callback_SliderValueChanged(double)));
             nbMonitors++;
         }
 
-        if(sliderWidget->isElevated())sliderWidget->raise();
+        rangeWidget->prepareRange();
+        if (rangeWidget->rangeIsElevated()) rangeWidget->raiseRange();
 
-        // insert dataindex list
         integerList.insert(0, nbMonitors);
-        sliderWidget->setProperty("MonitorList", integerList);
-
-        sliderWidget->setProperty("Taken", true);
+        w1->setProperty("MonitorList", integerList);
+        w1->setProperty("Taken", true);
 
         //==================================================================================================================
     } else if(caClock* clockWidget = qobject_cast<caClock *>(w1)) {
@@ -2428,33 +2429,6 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         clockWidget->setProperty("MonitorList", integerList);
 
         clockWidget->setProperty("Taken", true);
-
-        //==================================================================================================================
-    } else if(caThermo* thermoWidget = qobject_cast<caThermo *>(w1)) {
-
-        qCDebug(caThermoLog) << "create caThermo";
-        w1->setProperty("ObjectType", caThermo_Widget);
-
-        if(thermoWidget->getPV().size() > 0) {
-            int num = addMonitor(myWidget, &kData, thermoWidget->getPV(), w1, specData, map, &pv);
-            integerList.append(num);
-            thermoWidget->setPV(pv);
-            nbMonitors++;
-        }
-        // for an opposite direction, invert maximum and minimum
-
-        if(thermoWidget->getDirection() == caThermo::Down || thermoWidget->getDirection() == caThermo::Left) {
-            double max = thermoWidget->maxValue();
-            double min = thermoWidget->minValue();
-            thermoWidget->setMinValue(max);
-            thermoWidget->setMaxValue(min);
-        }
-
-        // insert dataindex list
-        integerList.insert(0, nbMonitors);
-        thermoWidget->setProperty("MonitorList", integerList);
-
-        thermoWidget->setProperty("Taken", true);
 
         //==================================================================================================================
     } else if(caLinearGauge* lineargaugeWidget = qobject_cast<caLinearGauge *>(w1)) {
@@ -5529,105 +5503,6 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
         qCDebug(caFrameLog) << "we have a frame";
 
         setObjectVisibility(frameWidget, data.edata.rvalue);
-
-        // caThermo ==================================================================================================================
-    } else if (caThermo *thermoWidget = qobject_cast<caThermo *>(w)) {
-        qCDebug(caThermoLog) << "we have a thermometer";
-
-        if(data.edata.connected) {
-            bool channelLimitsEnabled = false;
-            if(thermoWidget->getLimitsMode() == caThermo::Channel) channelLimitsEnabled= true;
-            // take limits from channel, in case of user limits these should already been set
-            if((channelLimitsEnabled) && (data.edata.initialize) ) {
-                // when limits are the same, do nothing
-                if(data.edata.upper_disp_limit != data.edata.lower_disp_limit) {
-                    if(thermoWidget->getDirection() == caThermo::Down  || thermoWidget->getDirection() == caThermo::Left) {
-                        thermoWidget->setMinValue(data.edata.upper_disp_limit);
-                        thermoWidget->setMaxValue(data.edata.lower_disp_limit);
-                    } else {
-                        thermoWidget->setMaxValue(data.edata.upper_disp_limit);
-                        thermoWidget->setMinValue(data.edata.lower_disp_limit);
-                    }
-                }
-            }
-            thermoWidget->setValue(data.edata.rvalue);
-
-            // set colors when connected
-            // case of alarm mode
-            if ((thermoWidget->getColorMode() == caThermo::Alarm_Default) || (thermoWidget->getColorMode() == caThermo::Alarm_Static)) {
-                if(channelLimitsEnabled) {
-                    thermoWidget->setAlarmColors(data.edata.severity);
-                } else {
-                    thermoWidget->setUserAlarmColors(data.edata.rvalue);
-                }
-
-                // case of static mode
-            } else {
-                SetColorsBack(thermoWidget);
-            }
-            int precMode = thermoWidget->getPrecisionMode();
-            if((precMode != caThermo::User) && (data.edata.initialize)) thermoWidget->setPrecision(data.edata.precision);
-
-            // set no connection color
-        } else {
-            SetColorsNotConnected(thermoWidget);
-        }
-
-        // caSlider ==================================================================================================================
-    } else if (caSlider *sliderWidget = qobject_cast<caSlider *>(w)) {
-
-        if(data.edata.connected) {
-            bool highChannelLimitEnabled = false;
-            bool lowChannelLimitEnabled = false;
-            bool channelLimitsEnabled = false;
-            if(sliderWidget->getHighLimitMode() == caSlider::Channel) highChannelLimitEnabled= true;
-            if(sliderWidget->getLowLimitMode()  == caSlider::Channel) lowChannelLimitEnabled= true;
-            if(highChannelLimitEnabled && lowChannelLimitEnabled) channelLimitsEnabled = true;
-
-            // take limits from channel, in case of user limits these should already been set
-            if((highChannelLimitEnabled || lowChannelLimitEnabled) && data.edata.initialize ) {
-                // when limits are the same, do nothing
-                if(data.edata.upper_disp_limit != data.edata.lower_disp_limit) {
-                    disconnect(w, SIGNAL(valueChanged (double)), 0, 0);
-                    if((highChannelLimitEnabled)) sliderWidget->setMaxValue(data.edata.upper_disp_limit);
-                    if((lowChannelLimitEnabled))  sliderWidget->setMinValue(data.edata.lower_disp_limit);
-                    connect(w, SIGNAL(valueChanged(double)), this, SLOT(Callback_SliderValueChanged(double)));
-                }
-            }
-
-            sliderWidget->setCtrlMaximum(data.edata.upper_ctrl_limit);
-            sliderWidget->setCtrlMinimum(data.edata.lower_ctrl_limit);
-
-            // disconnect signal to prevent from firing again
-            disconnect(w, SIGNAL(valueChanged (double)), 0, 0);
-            sliderWidget->setSliderValue(data.edata.rvalue);
-            // reconnect signal
-            connect(w, SIGNAL(valueChanged(double)), this, SLOT(Callback_SliderValueChanged(double)));
-
-            sliderWidget->setAccessW((bool) data.edata.accessW);
-            updateAccessCursor(sliderWidget);
-
-            // set colors when connected
-            // case of alarm mode
-            if ((sliderWidget->getColorMode() == caSlider::Alarm_Default) || (sliderWidget->getColorMode() == caSlider::Alarm_Static)) {
-                if(channelLimitsEnabled) {
-                    sliderWidget->setAlarmColors(data.edata.severity);
-                } else {
-                    sliderWidget->setUserAlarmColors(data.edata.rvalue);
-                }
-
-                // case of static, default mode
-            } else {
-                SetColorsBack(sliderWidget);
-            }
-
-            int precMode = sliderWidget->getPrecisionMode();
-            if((precMode != caSlider::User) && (data.edata.initialize)) sliderWidget->setPrecision(data.edata.precision);
-
-            // set no connection color
-        } else {
-            SetColorsNotConnected(sliderWidget);
-        }
 
         // caClock ==================================================================================================================
     } else if (caClock *clockWidget = qobject_cast<caClock *>(w)) {

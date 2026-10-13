@@ -38,6 +38,7 @@
 #include <QMouseEvent>
 #include <QApplication>
 #include <QPainter>
+#include <QSignalBlocker>
 #include <qnumeric.h>
 #include "qwt_scale_draw.h"
 #include "alarmdefs.h"
@@ -51,6 +52,29 @@
 #endif
 
 Q_LOGGING_CATEGORY(caSliderLog, "caqtdm.widgets.caslider")
+
+bool caSlider::applyRangeValue(const knobData &data)
+{
+    const bool highChannelLimitEnabled = getHighLimitMode() == Channel;
+    const bool lowChannelLimitEnabled = getLowLimitMode() == Channel;
+    if ((highChannelLimitEnabled || lowChannelLimitEnabled) && data.edata.initialize &&
+        data.edata.upper_disp_limit != data.edata.lower_disp_limit) {
+        const QSignalBlocker blocker(this);
+        if (highChannelLimitEnabled) setMaxValue(data.edata.upper_disp_limit);
+        if (lowChannelLimitEnabled) setMinValue(data.edata.lower_disp_limit);
+    }
+
+    setCtrlMaximum(data.edata.upper_ctrl_limit);
+    setCtrlMinimum(data.edata.lower_ctrl_limit);
+    {
+        const QSignalBlocker blocker(this);
+        setSliderValue(data.edata.rvalue);
+    }
+    setAccessW(bool(data.edata.accessW));
+    if (hasFocus())
+        QCoreApplication::postEvent(this, new QEvent(QEvent::Enter));
+    return highChannelLimitEnabled && lowChannelLimitEnabled;
+}
 
 // I need to overload the scaleengine of qwt in order to get the upper and lower scale ticks drawn
 class mySliderScaleEngine: public QwtLinearScaleEngine

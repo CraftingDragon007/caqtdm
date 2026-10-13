@@ -39,8 +39,9 @@
 #include <qwt_scale_engine.h>
 
 #include <QTimer>
+#include "caRangeRuntimeMixin.h"
 
-class QTCON_EXPORT caSlider : public QwtSlider
+class QTCON_EXPORT caSlider : public QwtSlider, public caRangeRuntimeMixin<caSlider>
 {
     Q_OBJECT
 
@@ -165,6 +166,11 @@ public:
 
     caSlider(QWidget *parent);
 
+    int rangeObjectType() const override { return caSlider_Widget; }
+    void prepareRange() override {}
+    bool rangeIsElevated() override { return isElevated(); }
+    void raiseRange() override { raise(); }
+
     void setAlarmColors(short status);
     void setUserAlarmColors(double val);
     void setColors(QColor bg, QColor fg);
@@ -195,6 +201,7 @@ private slots:
     void repeater();
 
 protected:
+    bool applyRangeValue(const knobData &data) override;
     virtual void mousePressEvent(QMouseEvent *e);
     virtual void mouseReleaseEvent(QMouseEvent *e);
     virtual void mouseMoveEvent(QMouseEvent *e);

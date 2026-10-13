@@ -307,6 +307,7 @@ HEADERS	+= \
     src/caNumericRuntimeMixin.h \
     src/caStateWidgetRuntime.h \
     src/caEnumSelectionRuntimeMixin.h \
+    src/caRangeRuntimeMixin.h \
     src/addevent.h \
     src/animationcode.h \
     src/hideobjectcode.h

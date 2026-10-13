@@ -49,6 +49,34 @@
 
 Q_LOGGING_CATEGORY(caThermoLog, "caqtdm.widgets.cathermo")
 
+void caThermo::prepareRange()
+{
+    if (getDirection() == Down || getDirection() == Left) {
+        const double maximum = maxValue();
+        const double minimum = minValue();
+        setMinValue(maximum);
+        setMaxValue(minimum);
+    }
+}
+
+bool caThermo::applyRangeValue(const knobData &data)
+{
+    qCDebug(caThermoLog) << "we have a thermometer";
+    const bool channelLimitsEnabled = getLimitsMode() == Channel;
+    if (channelLimitsEnabled && data.edata.initialize &&
+        data.edata.upper_disp_limit != data.edata.lower_disp_limit) {
+        if (getDirection() == Down || getDirection() == Left) {
+            setMinValue(data.edata.upper_disp_limit);
+            setMaxValue(data.edata.lower_disp_limit);
+        } else {
+            setMaxValue(data.edata.upper_disp_limit);
+            setMinValue(data.edata.lower_disp_limit);
+        }
+    }
+    setValue(data.edata.rvalue);
+    return channelLimitsEnabled;
+}
+
 // I need to overload the scaleengine of qwt in order to get the upper and lower scale ticks drawn
 class myThermoScaleEngine: public QwtLinearScaleEngine
 {
