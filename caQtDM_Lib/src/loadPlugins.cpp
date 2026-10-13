@@ -25,6 +25,9 @@
 
 #include <QDebug>
 #include <QDir>
+#ifdef CAQTDM_INSTALL_LIBDIR
+#include <QFileInfo>
+#endif
 #include "loadPlugins.h"
 #include "qtdefinitions.h"
 #include "pathdefinitions.h"
@@ -61,6 +64,10 @@ bool loadPlugins::loadAll(QMap<QString, ControlsInterface*> &interfaces, MutexKn
     QStringList paths = pluginPath.split(pathSeparator);
 
     for(int i=0; i< paths.count(); i++) {
+#ifdef CAQTDM_INSTALL_LIBDIR
+        if (paths[i].isEmpty())
+            continue;
+#endif
         QString path = paths[i] + "/controlsystems";
         allPaths.append(path);
      }
@@ -75,9 +82,16 @@ bool loadPlugins::loadAll(QMap<QString, ControlsInterface*> &interfaces, MutexKn
     alternativePath.append("/controlsystems");
     allPaths.append(alternativePath);
 #ifdef CAQTDM_INSTALL_LIBDIR
+    // CMake installs may expose the viewer through a symlink in another bin directory.
+    // Keep the launch directory above for compatibility, then try the real executable.
+    QString applicationDir = QFileInfo(qApp->applicationFilePath()).canonicalPath();
+    if (applicationDir.isEmpty())
+        applicationDir = qApp->applicationDirPath();
+    else if (applicationDir != qApp->applicationDirPath())
+        allPaths.append(QDir(applicationDir).filePath("controlsystems"));
     QString installLibDir = QString::fromUtf8(CAQTDM_INSTALL_LIBDIR);
     if (QDir::isRelativePath(installLibDir))
-        installLibDir = QDir(qApp->applicationDirPath()).absoluteFilePath(installLibDir);
+        installLibDir = QDir(applicationDir).absoluteFilePath(installLibDir);
     allPaths.append(QDir(installLibDir).filePath("controlsystems"));
 #endif
     allPaths.append(QLibraryInfo::location(QLibraryInfo::PluginsPath).append("/controlsystems"));
