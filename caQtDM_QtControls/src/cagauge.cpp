@@ -28,10 +28,99 @@
 #include <QPaintEvent>
 #include <QApplication>
 #include <eng_notation.h>
+#include <qnumeric.h>
 
 #define MIN_FONT_SIZE 3
 
 Q_LOGGING_CATEGORY(caGaugeLog, "caqtdm.widgets.cagauge")
+Q_LOGGING_CATEGORY(caLinearGaugeLog, "caqtdm.widgets.calineargauge")
+Q_LOGGING_CATEGORY(caCircularGaugeLog, "caqtdm.widgets.cacirculargauge")
+
+void caLinearGauge::logGaugeUpdate() const
+{
+    qCDebug(caLinearGaugeLog) << "we have a linear gauge";
+}
+
+void caCircularGauge::logGaugeUpdate() const
+{
+    qCDebug(caCircularGaugeLog) << "we have a linear gauge";
+}
+
+caWidgetUpdateResult caAbstractGauge::applyChannelUpdate(const QString &units, const QString &value,
+                                                         const knobData &data, short aggregateAlarm)
+{
+    Q_UNUSED(units);
+    Q_UNUSED(value);
+    Q_UNUSED(aggregateAlarm);
+    logGaugeUpdate();
+
+    if (!data.edata.connected) {
+        if (isConnected()) setConnected(false);
+        return {};
+    }
+    if (!isConnected()) setConnected(true);
+
+    updateGaugeValue(data);
+    return {};
+}
+
+void caAbstractGauge::updateGaugeValue(const knobData &data)
+{
+    if (!data.edata.connected) return;
+
+    double maxval = 1000.0;
+    double minval = 0.0;
+    if (getDisplayLimits() == Channel_Limits && data.edata.initialize) {
+        if (data.edata.upper_disp_limit == data.edata.lower_disp_limit) {
+            setMaxValue(1000.0);
+            setMinValue(0.0);
+        } else {
+            if (!qIsNaN(data.edata.lower_disp_limit)) {
+                setMinValue(data.edata.lower_disp_limit);
+                minval = data.edata.lower_disp_limit;
+            } else {
+                setMinValue(0.0);
+            }
+            if (!qIsNaN(data.edata.upper_disp_limit)) {
+                setMaxValue(data.edata.upper_disp_limit);
+                maxval = data.edata.upper_disp_limit;
+            } else {
+                setMaxValue(1000.0);
+            }
+        }
+        update();
+    } else {
+        maxval = maxValue();
+        minval = minValue();
+    }
+
+    if (getAlarmLimits() == Channel_Alarms && data.edata.initialize) {
+        if (data.edata.lower_alarm_limit == data.edata.upper_alarm_limit) {
+            setLowError(minval);
+            setHighError(maxval);
+        } else {
+            setLowError(qIsNaN(data.edata.lower_alarm_limit) ? minval : data.edata.lower_alarm_limit);
+            setHighError(qIsNaN(data.edata.upper_alarm_limit) ? maxval : data.edata.upper_alarm_limit);
+        }
+        if (data.edata.lower_warning_limit == data.edata.upper_warning_limit) {
+            setLowWarning(minval);
+            setHighWarning(maxval);
+        } else {
+            setLowWarning(qIsNaN(data.edata.lower_warning_limit) ? minval : data.edata.lower_warning_limit);
+            setHighWarning(qIsNaN(data.edata.upper_warning_limit) ? maxval : data.edata.upper_warning_limit);
+        }
+    } else if (getAlarmLimits() == None && data.edata.initialize) {
+        maxval = maxValue();
+        minval = minValue();
+        setLowError(minval);
+        setHighError(maxval);
+        setLowWarning(minval);
+        setHighWarning(maxval);
+    }
+
+    setValue(data.edata.rvalue);
+    update();
+}
 
 caAbstractGauge::caAbstractGauge(QWidget *parent) : EAbstractGauge(parent)
 {

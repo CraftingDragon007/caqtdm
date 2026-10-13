@@ -27,8 +27,9 @@
 #define _CAGAUGE_H
 #include <qtcontrols_global.h>
 #include <egauge.h>
+#include "caWidgetUpdateInterface.h"
 
-class QTCON_EXPORT caAbstractGauge : public EAbstractGauge
+class QTCON_EXPORT caAbstractGauge : public EAbstractGauge, public caWidgetUpdateInterface
 {
  Q_OBJECT
  Q_PROPERTY(QString channel READ getPV WRITE setPV)
@@ -41,6 +42,16 @@ public:
 
         QString getPV() const;
         void setPV(QString const &newPV);
+
+        bool needsAggregateAlarm() const override { return false; }
+        bool needsVisibilityUpdate() const override { return false; }
+        caWidgetUpdateResult applyChannelUpdate(const QString &units, const QString &value,
+                                                const knobData &data, short aggregateAlarm) override;
+        void updateGaugeValue(const knobData &data);
+        virtual int gaugeObjectType() const = 0;
+
+  protected:
+        virtual void logGaugeUpdate() const = 0;
 	
   private:
 
@@ -73,6 +84,7 @@ public:
 	
         caLinearGauge(QWidget * = NULL, Qt::Orientation=Qt::Vertical);
         ~caLinearGauge(){}
+        int gaugeObjectType() const override { return caLinearGauge_Widget; }
 
         void setOrientation(Qt::Orientation o){ m_orientation = o; configure(); update(); }
         Qt::Orientation orientation(){ return m_orientation; }
@@ -90,6 +102,7 @@ public slots:
     }
 
 protected:
+    void logGaugeUpdate() const override;
 	void paintEvent(QPaintEvent *);
 	void drawColorBar(QPainter *);
 	void drawScale(QPainter *);
@@ -119,6 +132,7 @@ Q_PROPERTY(QString label READ label WRITE setLabel)
 public:
         caCircularGauge(QWidget * = NULL);
         ~caCircularGauge(){}
+        int gaugeObjectType() const override { return caCircularGauge_Widget; }
 
     void setValueDisplayed(bool b){ m_valueDisplayed = b; update(); }
     bool isValueDisplayed(){ return m_valueDisplayed; }
@@ -127,6 +141,7 @@ public:
     QString label(){ return m_label; }
 	
 protected:
+    void logGaugeUpdate() const override;
 	void paintEvent(QPaintEvent *);
 	void drawColorBar(QPainter *);
 	void drawScale(QPainter *);

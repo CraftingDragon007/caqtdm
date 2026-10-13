@@ -140,7 +140,7 @@ public:
 
     void allowResizing(bool allowresize);
     void ComputeNumericMaxMinPrec(QWidget* widget, const knobData &data);
-    void UpdateGauge(EAbstractGauge *w, const knobData &data);
+    void UpdateGauge(EAbstractGauge *widget, const knobData &data);
     ControlsInterface * getControlInterface(QString plugininterface);
 
     static QList<QSharedPointer<caHMIConfigTransferItem>> externalHmiConfigList;

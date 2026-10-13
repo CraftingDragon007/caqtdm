@@ -2431,42 +2431,23 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         clockWidget->setProperty("Taken", true);
 
         //==================================================================================================================
-    } else if(caLinearGauge* lineargaugeWidget = qobject_cast<caLinearGauge *>(w1)) {
+    } else if (caAbstractGauge *gaugeWidget = qobject_cast<caAbstractGauge *>(w1)) {
+        if (qobject_cast<caLinearGauge *>(w1))
+            qCDebug(caLinearGaugeLog) << "create lineargauge for" << gaugeWidget->getPV();
+        else
+            qCDebug(caCircularGaugeLog) << "create circulargauge for" << gaugeWidget->getPV();
+        w1->setProperty("ObjectType", gaugeWidget->gaugeObjectType());
 
-        qCDebug(caLinearGaugeLog) << "create lineargauge for" << lineargaugeWidget->getPV();
-        w1->setProperty("ObjectType", caLinearGauge_Widget);
-
-        if(lineargaugeWidget->getPV().size() > 0) {
-            int num = addMonitor(myWidget, &kData, lineargaugeWidget->getPV(), w1, specData, map, &pv);
+        if (!gaugeWidget->getPV().isEmpty()) {
+            int num = addMonitor(myWidget, &kData, gaugeWidget->getPV(), w1, specData, map, &pv);
             integerList.append(num);
-            lineargaugeWidget->setPV(pv);
+            gaugeWidget->setPV(pv);
             nbMonitors++;
         }
 
-        // insert dataindex list
         integerList.insert(0, nbMonitors);
-        lineargaugeWidget->setProperty("MonitorList", integerList);
-
-        lineargaugeWidget->setProperty("Taken", true);
-
-        //==================================================================================================================
-    } else if(caCircularGauge* circulargaugeWidget = qobject_cast<caCircularGauge *>(w1)) {
-
-        qCDebug(caCircularGaugeLog) << "create circulargauge for" << circulargaugeWidget->getPV();
-        w1->setProperty("ObjectType", caCircularGauge_Widget);
-
-        if(circulargaugeWidget->getPV().size() > 0) {
-            int num = addMonitor(myWidget, &kData, circulargaugeWidget->getPV(), w1, specData, map, &pv);
-            integerList.append(num);
-            circulargaugeWidget->setPV(pv);
-            nbMonitors++;
-        }
-
-        // insert dataindex list
-        integerList.insert(0, nbMonitors);
-        circulargaugeWidget->setProperty("MonitorList", integerList);
-
-        circulargaugeWidget->setProperty("Taken", true);
+        w1->setProperty("MonitorList", integerList);
+        w1->setProperty("Taken", true);
 
         //==================================================================================================================
     } else if(caMeter* meterWidget = qobject_cast<caMeter *>(w1)) {
@@ -5200,80 +5181,11 @@ short CaQtDM_Lib::ComputeAlarm(QWidget *w)
     return status;
 }
 
-/**
-  * update of linear and circular widget (they have common properties)
-  */
-
 void CaQtDM_Lib::UpdateGauge(EAbstractGauge *widget, const knobData &data)
 {
-    if(data.edata.connected) {
-        double maxval = 1000.0;
-        double minval = 0.0;
-
-        if((widget->getDisplayLimits() == EAbstractGauge::Channel_Limits) && (data.edata.initialize)) {
-            // HOPR and LOPR
-            if(data.edata.upper_disp_limit == data.edata.lower_disp_limit) {
-                // set some default
-                widget->setMaxValue(1000.0);
-                widget->setMinValue(0.0);
-                maxval = 1000.0;
-                minval = 0.0;
-            } else {
-                if(!qIsNaN(data.edata.lower_disp_limit)) {
-                    widget->setMinValue(data.edata.lower_disp_limit);
-                    minval = data.edata.lower_disp_limit;
-                } else {
-                    widget->setMinValue(0.0);
-                    minval = 0.0;
-                }
-                if(!qIsNaN(data.edata.upper_disp_limit)) {
-                    widget->setMaxValue(data.edata.upper_disp_limit);
-                    maxval = data.edata.upper_disp_limit;
-                } else {
-                    widget->setMaxValue(1000.0);
-                    maxval = 1000;
-                }
-            }
-
-            widget->update();
-        } else {
-            maxval = widget->maxValue();
-            minval = widget->minValue();
-        }
-
-        if((widget->getAlarmLimits() == EAbstractGauge::Channel_Alarms) && (data.edata.initialize)) {
-            // when no alarms defined
-            if(data.edata.lower_alarm_limit == data.edata.upper_alarm_limit) {
-                // set limits to extreme values
-                widget->setLowError(minval);
-                widget->setHighError(maxval);
-            } else {
-                if(!qIsNaN(data.edata.lower_alarm_limit)) widget->setLowError(data.edata.lower_alarm_limit); else  widget->setLowError(minval);
-                if(!qIsNaN(data.edata.upper_alarm_limit)) widget->setHighError(data.edata.upper_alarm_limit); else widget->setHighError(maxval);
-            }
-
-            if(data.edata.lower_warning_limit == data.edata.upper_warning_limit) {
-                // set limits to extreme values
-                widget->setLowWarning(minval);
-                widget->setHighWarning(maxval);
-            } else {
-                if(!qIsNaN(data.edata.lower_warning_limit)) widget->setLowWarning(data.edata.lower_warning_limit); else  widget->setLowWarning(minval);
-                if(!qIsNaN(data.edata.upper_warning_limit)) widget->setHighWarning(data.edata.upper_warning_limit); else  widget->setHighWarning(maxval);
-            }
-        } else if((widget->getAlarmLimits() == EAbstractGauge::None) && (data.edata.initialize)) {
-
-            maxval = widget->maxValue();
-            minval = widget->minValue();
-
-            widget->setLowError(minval);
-            widget->setHighError(maxval);
-            widget->setLowWarning(minval);
-            widget->setHighWarning(maxval);
-        }
-
-        widget->setValue(data.edata.rvalue);
-        widget->update();
-
+    if (data.edata.connected) {
+        if (caAbstractGauge *gauge = qobject_cast<caAbstractGauge *>(widget))
+            gauge->updateGaugeValue(data);
     }
 }
 
@@ -5515,30 +5427,6 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
             // set no connection color
         } else {
             SetColorsNotConnected(clockWidget);
-        }
-
-        // linear gauge (like thermometer) ==================================================================================================================
-    } else if (caLinearGauge *lineargaugeWidget = qobject_cast<caLinearGauge *>(w)) {
-        qCDebug(caLinearGaugeLog) << "we have a linear gauge";
-        Q_UNUSED(lineargaugeWidget);
-        EAbstractGauge *gauge =  qobject_cast<EAbstractGauge *>(w);
-        if(data.edata.connected) {
-            if(!gauge->isConnected()) gauge->setConnected(true);
-            UpdateGauge(gauge, data);
-        } else {
-            if(gauge->isConnected()) gauge->setConnected(false);
-        }
-
-        // circular gauge  ==================================================================================================================
-    } else if (caCircularGauge *circulargaugeWidget = qobject_cast<caCircularGauge *>(w)) {
-        qCDebug(caCircularGaugeLog) << "we have a linear gauge";
-        Q_UNUSED(circulargaugeWidget);
-        EAbstractGauge *gauge =  qobject_cast<EAbstractGauge *>(w);
-        if(data.edata.connected) {
-            if(!gauge->isConnected()) gauge->setConnected(true);
-            UpdateGauge(gauge, data);
-        } else {
-            if(gauge->isConnected()) gauge->setConnected(false);
         }
 
         // simple meter ==================================================================================================================

@@ -711,10 +711,10 @@ void limitsDialog::applyClicked()
             abstractgaugeWidget->setHighError(max);
         }
         knobData *kPtr = monData->getMutexKnobDataPV(abstractgaugeWidget, thisPV);
-        CaQtDM_Lib *compute = (CaQtDM_Lib *) abstractgaugeWidget;
         if(kPtr != (knobData*) Q_NULLPTR) {
             kPtr->edata.initialize = true;
-            compute->UpdateGauge(abstractgaugeWidget, *kPtr);
+            if (caAbstractGauge *gauge = qobject_cast<caAbstractGauge *>(abstractgaugeWidget))
+                gauge->updateGaugeValue(*kPtr);
             kPtr->edata.initialize = false;
         }
         abstractgaugeWidget->setValueFormat(getFormatFromPrecision(prec));
