@@ -61,6 +61,7 @@
 #include "caWidgetUpdateInterface.h"
 #include "caVisibilityMonitorInterface.h"
 #include "caNumericRuntimeMixin.h"
+#include "caStateWidgetRuntime.h"
 
 // we are using for calculations postfix of epics
 // therefore we need this include and also link with the epics libraries
@@ -2326,29 +2327,38 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         messagebuttonWidget->setProperty("Taken", true);
 
         //==================================================================================================================
-    } else if(caToggleButton* togglebuttonWidget = qobject_cast<caToggleButton *>(w1)) {
+    } else if (caStateWidgetRuntime *stateWidget = dynamic_cast<caStateWidgetRuntime *>(w1)) {
+        w1->setProperty("ObjectType", stateWidget->stateObjectType());
 
-        qCDebug(caToggleButtonLog) << "create caToggleButton";
-        w1->setProperty("ObjectType", caToggleButton_Widget);
+        if (caToggleButton *togglebuttonWidget = qobject_cast<caToggleButton *>(w1)) {
+            qCDebug(caToggleButtonLog) << "create caToggleButton";
+            connect(togglebuttonWidget, SIGNAL(toggleButtonSignal(bool)), this, SLOT(Callback_ToggleButton(bool)));
+        } else {
+            qCDebug(caLedLog) << "create caLed";
+        }
 
-        connect(togglebuttonWidget, SIGNAL(toggleButtonSignal(bool)), this, SLOT(Callback_ToggleButton(bool)));
+        if (stateWidget->monitorEmptyPV() || !stateWidget->statePV().isEmpty()) {
+            const int num = addMonitor(myWidget, &kData, stateWidget->statePV(), w1, specData, map, &pv);
+            integerList.append(num);
+            stateWidget->setStatePV(pv);
+            nbMonitors++;
+        }
 
-        int num = addMonitor(myWidget, &kData, togglebuttonWidget->getPV(), w1, specData, map, &pv);
-        integerList.append(num);
-        togglebuttonWidget->setPV(pv);
-        nbMonitors++;
+        if (caToggleButton *togglebuttonWidget = qobject_cast<caToggleButton *>(w1)) {
+            QString text = treatMacro(map, togglebuttonWidget->text(), &doNothing, w1->objectName());
+            text.replace(QString::fromWCharArray(L"\u00A6"), " ");
+            togglebuttonWidget->setText(text);
+            if (togglebuttonWidget->isElevated()) togglebuttonWidget->raise();
+        } else {
+            QString text = w1->toolTip();
+            if (reaffectText(map, &text, w1)) w1->setToolTip(text);
+            text = w1->statusTip();
+            if (reaffectText(map, &text, w1)) w1->setStatusTip(text);
+        }
 
-        QString text =  treatMacro(map, togglebuttonWidget->text(), &doNothing, w1->objectName());
-        text.replace(QString::fromWCharArray(L"\u00A6"), " ");    // replace Â¦ with a blanc (was used in macros for creating blancs)
-        togglebuttonWidget->setText(text);
-
-        if(togglebuttonWidget->isElevated()) togglebuttonWidget->raise();
-
-        // insert dataindex list
         integerList.insert(0, nbMonitors);
-        togglebuttonWidget->setProperty("MonitorList", integerList);
-
-        togglebuttonWidget->setProperty("Taken", true);
+        w1->setProperty("MonitorList", integerList);
+        w1->setProperty("Taken", true);
 
         //==================================================================================================================
     } else if(caScriptButton* scriptbuttonWidget = qobject_cast<caScriptButton *>(w1)) {
@@ -2371,31 +2381,6 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         if(scriptbuttonWidget->isElevated()) scriptbuttonWidget->raise();
 
         scriptbuttonWidget->setProperty("Taken", true);
-
-        //==================================================================================================================
-    } else if(caLed* ledWidget = qobject_cast<caLed *>(w1)) {
-
-        QString text;
-        qCDebug(caLedLog) << "create caLed";
-        w1->setProperty("ObjectType", caLed_Widget);
-
-        if(ledWidget->getPV().size() > 0) {
-            int num = addMonitor(myWidget, &kData, ledWidget->getPV(), w1, specData, map, &pv);
-            integerList.append(num);
-            ledWidget->setPV(pv);
-            nbMonitors++;
-        }
-
-        text= ledWidget->toolTip();
-        if(reaffectText(map, &text, w1))  ledWidget->setToolTip(text);
-        text= ledWidget->statusTip();
-        if(reaffectText(map, &text, w1))  ledWidget->setStatusTip(text);
-
-        // insert dataindex list
-        integerList.insert(0, nbMonitors);
-        ledWidget->setProperty("MonitorList", integerList);
-
-        ledWidget->setProperty("Taken", true);
 
         //==================================================================================================================
     } else if(caBitnames* bitnamesWidget = qobject_cast<caBitnames *>(w1)) {
@@ -6096,44 +6081,6 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
             SetColorsNotConnected(polylineWidget);
         }
 
-        // Led ==================================================================================================================
-    } else if (caLed *ledWidget = qobject_cast<caLed *>(w)) {
-        qCDebug(caLedLog) << "led" << ledWidget->objectName();
-        Qt::CheckState state = Qt::Unchecked;
-
-        if(data.edata.connected) {
-            int colorMode = ledWidget->getColorMode();
-            if(colorMode == caLed::Static) {
-                getStatesToggleAndLed(ledWidget, data, String, state);
-                ledWidget->setState(state);
-            } else {
-                ledWidget->setAlarmColors(data.edata.severity);
-            }
-        } else {
-            ledWidget->setAlarmColors(NOTCONNECTED);
-        }
-
-        // Toggle =====================================================================================================
-    } else if (caToggleButton *togglebuttonWidget = qobject_cast<caToggleButton *>(w)) {
-        qCDebug(caToggleButtonLog) << "caToggleButton" << togglebuttonWidget->objectName() << data.pv;
-        Qt::CheckState state = Qt::Unchecked;
-
-        if(data.edata.connected) {
-            int colorMode = togglebuttonWidget->getColorMode();
-            if(colorMode == caToggleButton::Alarm) {
-                togglebuttonWidget->setAlarmColors(data.edata.severity);
-            } else {
-                SetColorsBack(togglebuttonWidget);
-            }
-
-            getStatesToggleAndLed(togglebuttonWidget, data, String, state);
-            togglebuttonWidget->setState(state);
-            togglebuttonWidget->setAccessW((bool) data.edata.accessW);
-            updateAccessCursor(togglebuttonWidget);
-        } else {
-            SetColorsNotConnected(togglebuttonWidget);
-        }
-
         // cartesian plot ==================================================================================================================
     } else if (caCartesianPlot *cartesianplotWidget = qobject_cast<caCartesianPlot *>(w)) {
         qCDebug(caCartesianPlotLog) << "caCartesianPlot" << cartesianplotWidget->objectName() << data.pv << data.specData[0] << data.specData[1]  << data.specData[2];
@@ -6832,71 +6779,6 @@ void CaQtDM_Lib::WaterFall(caWaterfallPlot *widget, const knobData &data)
     default:
         datamutex->unlock();
         break;
-    }
-}
-
-void CaQtDM_Lib::getStatesToggleAndLed(QWidget *widget, const knobData &data, const QString &String, Qt::CheckState &state)
-{
-    QString trueString, falseString;
-    bool ok1, ok2;
-    if (caLed *ledWidget = qobject_cast<caLed *>(widget)) {
-        trueString = ledWidget->getTrueValue().trimmed();
-        falseString = ledWidget->getFalseValue().trimmed();
-    } else if(caToggleButton *togglebuttonWidget = qobject_cast<caToggleButton *>(widget)) {
-        trueString = togglebuttonWidget->getTrueValue().trimmed();
-        falseString = togglebuttonWidget->getFalseValue().trimmed();
-    }
-
-    if(data.edata.fieldtype == caINT || data.edata.fieldtype == caLONG) {
-        int trueValue = trueString.toInt(&ok1);
-        int falseValue = falseString.toInt(&ok2);
-        if(ok1 && trueValue == data.edata.ivalue) {
-            state = Qt::Checked;
-        } else if(ok2 && falseValue == data.edata.ivalue) {
-            state = Qt::Unchecked;
-        } else {
-            state = Qt::PartiallyChecked;
-        }
-    } else if(data.edata.fieldtype == caFLOAT || data.edata.fieldtype == caDOUBLE ) {
-        double trueValue = trueString.toDouble(&ok1);
-        double falseValue = falseString.toDouble(&ok2);
-        if(ok1 && trueValue == data.edata.rvalue) {
-            state = Qt::Checked;
-        } else if(ok2 && falseValue == data.edata.rvalue) {
-            state = Qt::Unchecked;
-        } else {
-            state = Qt::PartiallyChecked;
-        }
-    } else if(data.edata.fieldtype == caENUM || data.edata.fieldtype == caSTRING|| data.edata.fieldtype == caCHAR) {
-        int trueValue = trueString.toInt(&ok1);
-        int falseValue = falseString.toInt(&ok2);
-        state = Qt::PartiallyChecked;
-
-        QString str = "";
-        QStringList list;
-        list = String.split((QChar)27);
-
-        if((int) data.edata.ivalue < list.count()  && (list.count() > 0))  str = list.at((int) data.edata.ivalue);
-
-        // integer value given
-        if(ok1) {
-            if(trueValue == data.edata.ivalue) {
-                state = Qt::Checked;
-            }
-            // string value
-        } else {
-            if(trueString.compare(str) == 0) state = Qt::Checked;
-        }
-
-        // integer value given
-        if(ok2) {
-            if(falseValue == data.edata.ivalue) {
-                state = Qt::Unchecked;
-            }
-            // string value
-        } else {
-            if(falseString.compare(str) == 0) state = Qt::Unchecked;
-        }
     }
 }
 

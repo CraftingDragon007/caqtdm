@@ -37,6 +37,7 @@ set(QTCONTROLS_SOURCES
     ${_src}/catextentry.cpp
     ${_src}/calineedit.cpp
     ${_src}/caled.cpp
+    ${_src}/caStateWidgetRuntime.cpp
     ${_src}/eled.cpp
     ${_src}/cabitnames.cpp
     ${_src}/eflag.cpp
@@ -185,6 +186,7 @@ set(QTCONTROLS_HEADERS
     ${_src}/caLabelUpdateMixin.h
     ${_src}/caVisibilityMonitorInterface.h
     ${_src}/caNumericRuntimeMixin.h
+    ${_src}/caStateWidgetRuntime.h
     ${_src}/addevent.h
     ${_src}/animationcode.h
     ${_src}/hideobjectcode.h

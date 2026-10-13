@@ -32,8 +32,9 @@
 #include <QEvent>
 #include <qtcontrols_global.h>
 #include <fontscalingwidget.h>
+#include "caStateWidgetRuntime.h"
 
-class QTCON_EXPORT caToggleButton : public QCheckBox, public FontScalingWidget
+class QTCON_EXPORT caToggleButton : public QCheckBox, public FontScalingWidget, public caStateWidgetRuntime
 {
     Q_OBJECT
 
@@ -79,6 +80,13 @@ public:
     void setAlarmColors(short status);
     void setColors(QColor bg, QColor fg);
     void setNormalColors();
+
+    int stateObjectType() const override;
+    QString statePV() const override { return getPV(); }
+    void setStatePV(const QString &pv) override { setPV(pv); }
+    bool monitorEmptyPV() const override { return true; }
+    caWidgetUpdateResult applyChannelUpdate(const QString &units, const QString &value,
+                                            const knobData &data, short aggregateAlarm) override;
 
     QString getPV() const;
     void setPV(QString const &newPV);

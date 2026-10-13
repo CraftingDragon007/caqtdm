@@ -25,6 +25,27 @@
 
 #include "caled.h"
 #include "alarmdefs.h"
+#include "qtdefinitions.h"
+
+Q_LOGGING_CATEGORY(caLedLog, "caqtdm.widgets.caled")
+
+int caLed::stateObjectType() const { return caLed_Widget; }
+
+caWidgetUpdateResult caLed::applyChannelUpdate(const QString &units, const QString &value,
+                                               const knobData &data, short aggregateAlarm)
+{
+    Q_UNUSED(units);
+    Q_UNUSED(aggregateAlarm);
+    qCDebug(caLedLog) << "led" << objectName();
+    if (!data.edata.connected) {
+        setAlarmColors(NOTCONNECTED);
+    } else if (getColorMode() == Static) {
+        setState(decodeState(getTrueValue(), getFalseValue(), data, value));
+    } else {
+        setAlarmColors(data.edata.severity);
+    }
+    return {};
+}
 
 caLed::caLed(QWidget *parent) : ELed(parent)
 {

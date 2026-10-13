@@ -29,8 +29,9 @@
 #include <QWidget>
 #include <qtcontrols_global.h>
 #include <eled.h>
+#include "caStateWidgetRuntime.h"
 
-class QTCON_EXPORT caLed : public ELed
+class QTCON_EXPORT caLed : public ELed, public caStateWidgetRuntime
 {
     Q_OBJECT
 
@@ -81,6 +82,13 @@ public:
     void setState(Qt::CheckState state);
 
     void setAlarmColors(short status);
+
+    int stateObjectType() const override;
+    QString statePV() const override { return getPV(); }
+    void setStatePV(const QString &pv) override { setPV(pv); }
+    bool monitorEmptyPV() const override { return false; }
+    caWidgetUpdateResult applyChannelUpdate(const QString &units, const QString &value,
+                                            const knobData &data, short aggregateAlarm) override;
 
     QString getTrueValue() const {return thisTrueValue;}
     void setTrueValue(QString const &trueValue) {thisTrueValue = trueValue;}

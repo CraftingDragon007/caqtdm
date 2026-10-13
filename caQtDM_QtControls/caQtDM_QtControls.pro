@@ -114,6 +114,7 @@ SOURCES	+= \
     src/catextentry.cpp \
     src/calineedit.cpp \
     src/caled.cpp \
+    src/caStateWidgetRuntime.cpp \
     src/eled.cpp \
     src/cabitnames.cpp \
     src/eflag.cpp \
@@ -304,6 +305,7 @@ HEADERS	+= \
     src/caLabelUpdateMixin.h \
     src/caVisibilityMonitorInterface.h \
     src/caNumericRuntimeMixin.h \
+    src/caStateWidgetRuntime.h \
     src/addevent.h \
     src/animationcode.h \
     src/hideobjectcode.h

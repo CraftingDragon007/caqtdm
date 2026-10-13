@@ -31,8 +31,36 @@
 #include <QStyleOptionFrame>
 #include <QKeyEvent>
 #include <QStyle>
+#include "qtdefinitions.h"
 
 Q_LOGGING_CATEGORY(caToggleButtonLog, "caqtdm.widgets.catogglebutton")
+
+int caToggleButton::stateObjectType() const { return caToggleButton_Widget; }
+
+caWidgetUpdateResult caToggleButton::applyChannelUpdate(const QString &units, const QString &value,
+                                                        const knobData &data, short aggregateAlarm)
+{
+    Q_UNUSED(units);
+    Q_UNUSED(aggregateAlarm);
+    qCDebug(caToggleButtonLog) << "caToggleButton" << objectName() << data.pv;
+    if (!data.edata.connected) {
+        setAlarmColors(NOTCONNECTED);
+        setProperty("Connect", false);
+        return {};
+    }
+
+    if (getColorMode() == Alarm) {
+        setAlarmColors(data.edata.severity);
+    } else if (!property("Connect").toBool()) {
+        setNormalColors();
+        setProperty("Connect", true);
+    }
+    setState(decodeState(getTrueValue(), getFalseValue(), data, value));
+    setAccessW(bool(data.edata.accessW));
+    if (hasFocus())
+        QCoreApplication::postEvent(this, new QEvent(QEvent::Enter));
+    return {};
+}
 
 caToggleButton::caToggleButton(QWidget *parent) : QCheckBox(parent), FontScalingWidget(this)
 {
