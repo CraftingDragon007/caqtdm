@@ -33,8 +33,9 @@
 #include <QPropertyAnimation>
 #include <qtcontrols_global.h>
 #include "fontscalingwidget.h"
+#include "caLabelUpdateMixin.h"
 
-class QTCON_EXPORT caLabelVertical : public QWidget, public FontScalingWidget
+class QTCON_EXPORT caLabelVertical : public QWidget, public FontScalingWidget, public caLabelUpdateMixin
 {
     Q_OBJECT
 
@@ -118,6 +119,18 @@ protected:
     virtual QSize minimumSizeHint() const;
 
 private:
+    QWidget *labelWidget() override { return this; }
+    ColorBehavior colorBehavior() const override
+    {
+        return thisColorMode == Alarm ? AlarmColors : StaticColors;
+    }
+    void restoreLabelColors(const QColor &foreground, const QColor &background) override
+    {
+        setForeground(foreground);
+        setBackground(background);
+    }
+    void setLabelAlarmColors(short status) override { setAlarmColors(status); }
+
     float rotation;
     QString thisText;
     QColor thisForeColor;

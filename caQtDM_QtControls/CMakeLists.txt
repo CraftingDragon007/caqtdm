@@ -181,6 +181,8 @@ set(QTCONTROLS_HEADERS
     ${_src}/calabelvertical.h
     ${_src}/camimedisplay.h
     ${_src}/caWidgetInterface.h
+    ${_src}/caWidgetUpdateInterface.h
+    ${_src}/caLabelUpdateMixin.h
     ${_src}/addevent.h
     ${_src}/animationcode.h
     ${_src}/hideobjectcode.h

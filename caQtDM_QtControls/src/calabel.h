@@ -28,8 +28,9 @@
 
 #include <qtcontrols_global.h>
 #include <ELabel>
+#include "caLabelUpdateMixin.h"
 
-class QTCON_EXPORT caLabel : public ESimpleLabel
+class QTCON_EXPORT caLabel : public ESimpleLabel, public caLabelUpdateMixin
 {
     Q_OBJECT
 
@@ -93,6 +94,20 @@ public slots:
     }
 
 private:
+    QWidget *labelWidget() override { return this; }
+    ColorBehavior colorBehavior() const override
+    {
+        if (thisColorMode == Alarm) return AlarmColors;
+        if (thisColorMode == Static) return StaticColors;
+        return OtherColors;
+    }
+    void restoreLabelColors(const QColor &foreground, const QColor &background) override
+    {
+        setForeground(foreground);
+        setBackground(background);
+    }
+    void setLabelAlarmColors(short status) override { setAlarmColors(status); }
+
     QColor thisForeColor, thisForeColorOld;
     QColor thisBackColor, thisBackColorOld;
     QColor thisBorderColor, thisBorderColorOld;

@@ -300,6 +300,8 @@ HEADERS	+= \
     src/calabelvertical.h \
     src/camimedisplay.h \
     src/caWidgetInterface.h \
+    src/caWidgetUpdateInterface.h \
+    src/caLabelUpdateMixin.h \
     src/addevent.h \
     src/animationcode.h \
     src/hideobjectcode.h

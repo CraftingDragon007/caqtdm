@@ -58,6 +58,7 @@
 
 // interfacing widgets, handling their own data acquisition ... (thanks zai)
 #include "caWidgetInterface.h"
+#include "caWidgetUpdateInterface.h"
 
 // we are using for calculations postfix of epics
 // therefore we need this include and also link with the epics libraries
@@ -5452,8 +5453,14 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
         return;
     }
 
-    // any caWidget with caWidgetInterface
-    if (caWidgetInterface* wif = dynamic_cast<caWidgetInterface *>(w)) {
+    // New update capability first; retain the legacy widget interface for other users.
+    if (caWidgetUpdateInterface *consumer = dynamic_cast<caWidgetUpdateInterface *>(w)) {
+        const short alarm = data.edata.connected && consumer->needsAggregateAlarm()
+                                ? ComputeAlarm(w) : NO_ALARM;
+        consumer->applyChannelUpdate(units, String, data, alarm);
+        if (data.edata.connected && consumer->needsVisibilityUpdate())
+            setObjectVisibility(w, data.edata.rvalue);
+    } else if (caWidgetInterface* wif = dynamic_cast<caWidgetInterface *>(w)) {
         wif->caDataUpdate(units, String, data);
     }
 
@@ -5502,58 +5509,6 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
                     }
                 }
             }
-        }
-
-        // caLabel ==================================================================================================================
-    } else if(caLabel *labelWidget = qobject_cast<caLabel *>(w)) {
-        qCDebug(caLabelLog) << "we have a label";
-
-        if(data.edata.connected) {
-            int colorMode = labelWidget->getColorMode();
-            if(colorMode == caLabel::Static) {
-                // done at initialisation, we have to set it back after no connect
-                if(!labelWidget->property("Connect").value<bool>()) {
-                    QColor fg = labelWidget->property("FColor").value<QColor>();
-                    QColor bg = labelWidget->property("BColor").value<QColor>();
-                    labelWidget->setForeground(fg);
-                    labelWidget->setBackground(bg);
-                    labelWidget->setProperty("Connect", true);
-                }
-            } else if(colorMode == caLabel::Alarm) {
-                short status = ComputeAlarm(w);
-                labelWidget->setAlarmColors(status);
-            }
-
-            setObjectVisibility(labelWidget, data.edata.rvalue);
-
-        } else {
-            SetColorsNotConnected(labelWidget);
-        }
-
-        // caLabelVertical ==================================================================================================================
-    } else if(caLabelVertical *labelverticalWidget = qobject_cast<caLabelVertical *>(w)) {
-        qCDebug(caLabelVerticalLog) << "we have a label";
-
-        if(data.edata.connected) {
-            int colorMode = labelverticalWidget->getColorMode();
-            if(colorMode == caLabelVertical::Static) {
-                // done at initialisation, we have to set it back after no connect
-                if(!labelverticalWidget->property("Connect").value<bool>()) {
-                    QColor fg = labelverticalWidget->property("FColor").value<QColor>();
-                    QColor bg = labelverticalWidget->property("BColor").value<QColor>();
-                    labelverticalWidget->setForeground(fg);
-                    labelverticalWidget->setBackground(bg);
-                    labelverticalWidget->setProperty("Connect", true);
-                }
-            } else if(colorMode == caLabelVertical::Alarm) {
-                short status = ComputeAlarm(w);
-                labelverticalWidget->setAlarmColors(status);
-            }
-
-            setObjectVisibility(labelverticalWidget, data.edata.rvalue);
-
-        } else {
-            SetColorsNotConnected(labelverticalWidget);
         }
 
         // caInclude ==================================================================================================================
