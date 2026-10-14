@@ -5415,65 +5415,6 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
             cartesianplotWidget->setProperty("Connect", false);
         }
 
-        // waterfall plot ==================================================================================================================
-    } else if (caWaterfallPlot *waterfallplotWidget = qobject_cast<caWaterfallPlot *>(w)) {
-        qCDebug(caWaterfallPlotLog) << "caWaterfallPlot" << waterfallplotWidget->objectName() << data.pv;
-
-        int pvType = data.specData[0];      // waveform=0; Count=1
-        int countRequested = data.specData[1];
-
-        if(data.edata.connected) {
-
-            if(pvType == 1) {
-                qCDebug(caWaterfallPlotLog) << "count channel" << data.edata.rvalue << qRound(data.edata.rvalue);
-                if(data.edata.rvalue >= 0.5) waterfallplotWidget->setCountNumber(qRound(data.edata.rvalue));
-                waterfallplotWidget->setCountReceived(true);
-            } else if(waterfallplotWidget->getCountReceived() || !countRequested) {
-
-                // scale first time on first curve
-                if(data.edata.initialize) {
-
-                    double min = waterfallplotWidget->getIntensityMin();
-                    double max = waterfallplotWidget->getIntensityMax();
-
-                    if((waterfallplotWidget->getIntensityScalingMin() == caWaterfallPlot::Channel) && (waterfallplotWidget->getIntensityScalingMax() == caWaterfallPlot::Channel)) {
-                        qCDebug(caWaterfallPlotLog) << "channels" <<  data.edata.lower_disp_limit << data.edata.upper_disp_limit;
-                        if(data.edata.lower_disp_limit < data.edata.upper_disp_limit) {
-                            waterfallplotWidget->setIntensityMin(data.edata.lower_disp_limit);
-                            waterfallplotWidget->setIntensityMax(data.edata.upper_disp_limit);
-                        } else {
-                            waterfallplotWidget->setIntensityMin(0.0);
-                            waterfallplotWidget->setIntensityMax(10.0);
-                        }
-                    } else if(waterfallplotWidget->getIntensityScalingMin() == caWaterfallPlot::Channel) {
-                        qCDebug(caWaterfallPlotLog) << "channel1" ;
-                        if(data.edata.lower_disp_limit < max) {
-                            waterfallplotWidget->setIntensityMin(data.edata.lower_disp_limit);
-                        }
-                    }  else if(waterfallplotWidget->getIntensityScalingMax() == caWaterfallPlot::Channel) {
-                        qCDebug(caWaterfallPlotLog) << "channel2" ;
-                        if(data.edata.upper_disp_limit > min) {
-                            waterfallplotWidget->setIntensityMax(data.edata.upper_disp_limit);
-                        }
-                    }
-                    waterfallplotWidget->InitData(data.edata.valueCount);
-                }
-
-                // value(s)
-                if((data.edata.valueCount > 0) && (data.edata.dataB != (void*) Q_NULLPTR)) {
-                    WaterFall(waterfallplotWidget, data);
-                } else {
-                    double p = data.edata.rvalue;
-                    waterfallplotWidget->setData(&p, 1);
-                    waterfallplotWidget->displayData();
-                }
-            }
-
-            // not connected
-        } else {
-
-        }
-
         // stripchart ==================================================================================================================
     } else if(caStripPlot *stripplotWidget = qobject_cast<caStripPlot *>(w)) {
 
@@ -5811,53 +5752,6 @@ void CaQtDM_Lib::CameraWaveform(caCamera *widget, int curvNB, int curvType, int 
         int16_t* P = ( int16_t*) data.edata.dataB;
         widget->setData(P, data.edata.valueCount, curvNB, curvType, XorY);
         datamutex->unlock();
-    }
-        break;
-    default:
-        datamutex->unlock();
-        break;
-    }
-}
-
-void CaQtDM_Lib::WaterFall(caWaterfallPlot *widget, const knobData &data)
-{
-    QMutex *datamutex;
-    datamutex = (QMutex*) data.mutex;
-    datamutex->lock();
-    switch(data.edata.fieldtype) {
-    case caFLOAT: {
-        float* P = (float*) data.edata.dataB;
-        widget->setData(P, data.edata.valueCount);
-        datamutex->unlock();
-        widget->displayData();
-    }
-        break;
-    case caDOUBLE: {
-        double* P = (double*) data.edata.dataB;
-        widget->setData(P, data.edata.valueCount);
-        datamutex->unlock();
-        widget->displayData();
-    }
-        break;
-    case caLONG: {
-        int32_t* P = (int32_t*) data.edata.dataB;
-        widget->setData(P, data.edata.valueCount);
-        datamutex->unlock();
-        widget->displayData();
-    }
-        break;
-    case caINT: {
-        int16_t* P = (int16_t*) data.edata.dataB;
-        widget->setData(P, data.edata.valueCount);
-        datamutex->unlock();
-        widget->displayData();
-    }
-        break;
-    case caENUM: {
-        int16_t* P = ( int16_t*) data.edata.dataB;
-        widget->setData(P, data.edata.valueCount);
-        datamutex->unlock();
-        widget->displayData();
     }
         break;
     default:

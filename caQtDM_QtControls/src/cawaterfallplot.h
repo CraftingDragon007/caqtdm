@@ -57,6 +57,7 @@
 #include <qtcontrols_global.h>
 
 #include "colormaps.h"
+#include "caWidgetUpdateInterface.h"
 
 #define MAXCOLUMNS 500
 
@@ -196,7 +197,7 @@ public:
 };
 
 
-class QTCON_EXPORT caWaterfallPlot: public QWidget
+class QTCON_EXPORT caWaterfallPlot: public QWidget, public caWidgetUpdateInterface
 {
     Q_OBJECT
 
@@ -248,6 +249,11 @@ public:
 
     caWaterfallPlot(QWidget * = NULL);
     ~caWaterfallPlot();
+
+    bool needsAggregateAlarm() const override { return false; }
+    bool needsVisibilityUpdate() const override { return false; }
+    caWidgetUpdateResult applyChannelUpdate(const QString &units, const QString &value,
+                                            const knobData &data, short aggregateAlarm) override;
 
     void GausCurv(double middle);
 

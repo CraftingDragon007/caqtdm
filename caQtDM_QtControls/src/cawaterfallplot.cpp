@@ -28,8 +28,94 @@
 #endif
 
 #include "cawaterfallplot.h"
+#include <QMutexLocker>
 
 Q_LOGGING_CATEGORY(caWaterfallPlotLog, "caqtdm.widgets.cawaterfallplot")
+
+caWidgetUpdateResult caWaterfallPlot::applyChannelUpdate(const QString &units, const QString &value,
+                                                         const knobData &data, short aggregateAlarm)
+{
+    Q_UNUSED(units);
+    Q_UNUSED(value);
+    Q_UNUSED(aggregateAlarm);
+
+    qCDebug(caWaterfallPlotLog) << "caWaterfallPlot" << objectName() << data.pv;
+    if (!data.edata.connected)
+        return {};
+
+    const int pvType = data.specData[0];       // waveform=0; count=1
+    const int countRequested = data.specData[1];
+    if (pvType == 1) {
+        qCDebug(caWaterfallPlotLog) << "count channel" << data.edata.rvalue << qRound(data.edata.rvalue);
+        if (data.edata.rvalue >= 0.5)
+            setCountNumber(qRound(data.edata.rvalue));
+        setCountReceived(true);
+        return {};
+    }
+
+    if (!getCountReceived() && countRequested)
+        return {};
+
+    if (data.edata.initialize) {
+        const double min = getIntensityMin();
+        const double max = getIntensityMax();
+        if (getIntensityScalingMin() == Channel && getIntensityScalingMax() == Channel) {
+            qCDebug(caWaterfallPlotLog) << "channels" << data.edata.lower_disp_limit << data.edata.upper_disp_limit;
+            if (data.edata.lower_disp_limit < data.edata.upper_disp_limit) {
+                setIntensityMin(data.edata.lower_disp_limit);
+                setIntensityMax(data.edata.upper_disp_limit);
+            } else {
+                setIntensityMin(0.0);
+                setIntensityMax(10.0);
+            }
+        } else if (getIntensityScalingMin() == Channel) {
+            qCDebug(caWaterfallPlotLog) << "channel1";
+            if (data.edata.lower_disp_limit < max)
+                setIntensityMin(data.edata.lower_disp_limit);
+        } else if (getIntensityScalingMax() == Channel) {
+            qCDebug(caWaterfallPlotLog) << "channel2";
+            if (data.edata.upper_disp_limit > min)
+                setIntensityMax(data.edata.upper_disp_limit);
+        }
+        InitData(data.edata.valueCount);
+    }
+
+    if (data.edata.valueCount > 0 && data.edata.dataB != nullptr) {
+        bool hasVector = false;
+        {
+            QMutexLocker lock(static_cast<QMutex *>(data.mutex));
+            switch (data.edata.fieldtype) {
+            case caFLOAT:
+                setData(static_cast<float *>(data.edata.dataB), data.edata.valueCount);
+                hasVector = true;
+                break;
+            case caDOUBLE:
+                setData(static_cast<double *>(data.edata.dataB), data.edata.valueCount);
+                hasVector = true;
+                break;
+            case caLONG:
+                setData(static_cast<int32_t *>(data.edata.dataB), data.edata.valueCount);
+                hasVector = true;
+                break;
+            case caINT:
+            case caENUM:
+                setData(static_cast<int16_t *>(data.edata.dataB), data.edata.valueCount);
+                hasVector = true;
+                break;
+            default:
+                break;
+            }
+        }
+        if (hasVector)
+            displayData();
+    } else {
+        double scalar = data.edata.rvalue;
+        setData(&scalar, 1);
+        displayData();
+    }
+
+    return {};
+}
 
 __inline double gauss(double x)
 {
