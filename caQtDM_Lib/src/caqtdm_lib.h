@@ -429,7 +429,6 @@ public:
     void resizeSpecials(QString className, QWidget *widget, QVariantList list, double factX, double factY);
     void shellCommand(QString command);
 
-    void Cartesian(caCartesianPlot *widget, int curvNB, int curvType, int XorY, const knobData &data);
     void CameraWaveform(caCamera *widget, int curvNB, int curvType, int XorY, const knobData &data);
     void EnableDisableIO();
     bool SoftPVusesItsself(QWidget* widget, QMap<QString, QString> map);

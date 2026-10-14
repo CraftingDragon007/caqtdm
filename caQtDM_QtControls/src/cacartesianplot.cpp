@@ -34,8 +34,139 @@
 #include <QClipboard>
 #include <QtCore>
 #include <QGuiApplication>
+#include <QMutexLocker>
+#include <cstring>
 
 Q_LOGGING_CATEGORY(caCartesianPlotLog, "caqtdm.widgets.cacartesianplot")
+
+void caCartesianPlot::prepareAppearance()
+{
+    setForeground(getForeground());
+    setBackground(getBackground());
+    setScaleColor(getScaleColor());
+    setGridColor(getGridColor());
+}
+
+void caCartesianPlot::prepareCurveAppearance(int curve)
+{
+    setColor(getColor(curve), curve);
+    setStyle(getStyle(curve), curve);
+    setSymbol(getSymbol(curve), curve);
+}
+
+caWidgetUpdateResult caCartesianPlot::applyChannelUpdate(const QString &units, const QString &value,
+                                                         const knobData &data, short aggregateAlarm)
+{
+    Q_UNUSED(units);
+    Q_UNUSED(value);
+    Q_UNUSED(aggregateAlarm);
+    const int curve = data.specData[0];
+    const int curveType = data.specData[1];
+    const int channel = data.specData[2];
+    qCDebug(caCartesianPlotLog) << "caCartesianPlot" << objectName() << data.pv
+                                << curve << curveType << channel;
+
+    caWidgetUpdateResult result;
+    if (!data.edata.connected) {
+        if (std::strstr(data.pluginName, "archive") == nullptr) {
+            setCountNumber(0);
+            setWhiteColors();
+            setProperty("Connect", false);
+        }
+        return result;
+    }
+
+    if (data.edata.initialize && curve == 0 && channel <= CH_Y) {
+        if (channel == CH_X && getXscaling() == Channel) {
+            if (data.edata.lower_disp_limit != data.edata.upper_disp_limit) {
+                setScaleX(data.edata.lower_disp_limit, data.edata.upper_disp_limit);
+            } else {
+                result.operatorWarning = QString("PV <%1> (x axis) in widget <%2> is set to channel scaling, but the channel limits are invalid. Therefore, the x axis scaling for the widget is reset to auto.")
+                                             .arg(QString::fromLatin1(data.pv), objectName());
+                qCWarning(caCartesianPlotLog).noquote() << result.operatorWarning;
+                setXscaling(Auto);
+            }
+        } else if (channel == CH_Y && getYscaling() == Channel) {
+            if (data.edata.lower_disp_limit != data.edata.upper_disp_limit) {
+                setScaleY(data.edata.lower_disp_limit, data.edata.upper_disp_limit);
+            } else {
+                result.operatorWarning = QString("PV <%1> (y axis) in widget <%2> is set to channel scaling, but the channel limits are invalid. Therefore, the y axis scaling for the widget is reset to auto.")
+                                             .arg(QString::fromLatin1(data.pv), objectName());
+                qCWarning(caCartesianPlotLog).noquote() << result.operatorWarning;
+                setYscaling(Auto);
+            }
+        }
+    }
+
+    if (channel == CH_Xscale || channel == CH_Yscale) {
+        if (channel == CH_Xscale)
+            setScaleXlimits(data.edata.rvalue, curve);
+        else
+            setScaleYlimits(data.edata.rvalue, curve);
+        qCDebug(caCartesianPlotLog) << "scale monitor from" << data.pv << data.edata.rvalue
+                                    << "min/max" << curve << "scale" << channel;
+    }
+
+    if (!property("Connect").toBool()) {
+        setProperty("Connect", true);
+        setAllProperties();
+    }
+
+    if (channel == CH_X || channel == CH_Y) {
+        if (data.edata.valueCount > 0 && data.edata.dataB != nullptr) {
+            bool hasVector = false;
+            {
+                QMutexLocker lock(static_cast<QMutex *>(data.mutex));
+                switch (data.edata.fieldtype) {
+                case caFLOAT:
+                    setData(static_cast<float *>(data.edata.dataB), data.edata.valueCount, curve, curveType, channel);
+                    hasVector = true;
+                    break;
+                case caDOUBLE:
+                    setData(static_cast<double *>(data.edata.dataB), data.edata.valueCount, curve, curveType, channel);
+                    hasVector = true;
+                    break;
+                case caLONG:
+                    setData(static_cast<int32_t *>(data.edata.dataB), data.edata.valueCount, curve, curveType, channel);
+                    hasVector = true;
+                    break;
+                case caINT:
+                case caENUM:
+                    setData(static_cast<int16_t *>(data.edata.dataB), data.edata.valueCount, curve, curveType, channel);
+                    hasVector = true;
+                    break;
+                case caCHAR:
+                    setData(static_cast<int8_t *>(data.edata.dataB), data.edata.valueCount, curve, curveType, channel);
+                    hasVector = true;
+                    break;
+                default:
+                    break;
+                }
+            }
+            if (hasVector)
+                displayData(curve, curveType);
+        } else {
+            double scalar = data.edata.rvalue;
+            setData(&scalar, 1, curve, curveType, channel);
+            displayData(curve, curveType);
+        }
+    } else if (channel == CH_Trigger) {
+        for (int i = 0; i < curveCount; ++i) {
+            double unused = 0.0;
+            setData(&unused, 1, i, curveType, channel);
+            displayData(i, curveType);
+        }
+    } else if (channel == CH_Count) {
+        qCDebug(caCartesianPlotLog) << "count channel" << data.edata.rvalue << qRound(data.edata.rvalue);
+        if (data.edata.rvalue >= 0.5)
+            setCountNumber(qRound(data.edata.rvalue));
+    } else if (channel == CH_Erase) {
+        if ((getEraseMode() == ifnotzero && int(data.edata.rvalue) != 0) ||
+            (getEraseMode() == ifzero && int(data.edata.rvalue) == 0))
+            erasePlots();
+    }
+    return result;
+}
 
 caCartesianPlot::caCartesianPlot(QWidget *parent) : QwtPlot(parent)
 {

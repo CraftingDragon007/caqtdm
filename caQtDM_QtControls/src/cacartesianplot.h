@@ -59,8 +59,9 @@
 #include <stdint.h>
 #include <limits>
 #include "caPropHandleDefs.h"
+#include "caWidgetUpdateInterface.h"
 
-class QTCON_EXPORT caCartesianPlot : public QwtPlot
+class QTCON_EXPORT caCartesianPlot : public QwtPlot, public caWidgetUpdateInterface
 {
     Q_OBJECT
 
@@ -160,6 +161,12 @@ class QTCON_EXPORT caCartesianPlot : public QwtPlot
     Q_PROPERTY(QString styleSheet READ styleSheet WRITE noStyle DESIGNABLE false)
 
 public:
+    bool needsAggregateAlarm() const override { return false; }
+    bool needsVisibilityUpdate() const override { return false; }
+    caWidgetUpdateResult applyChannelUpdate(const QString &units, const QString &value,
+                                            const knobData &data, short aggregateAlarm) override;
+    void prepareAppearance();
+    void prepareCurveAppearance(int curve);
 #include "caPropHandle.h"
 
     double getSymbolsizeFactor() {return symbolSizeFactor;}

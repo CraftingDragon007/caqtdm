@@ -8,6 +8,7 @@
 struct caWidgetUpdateResult
 {
     QString operatorError;
+    QString operatorWarning;
     bool logOperatorError = false;
 };
 

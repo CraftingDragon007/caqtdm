@@ -2988,10 +2988,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         tooltip.append(ToolTipPrefix);
 
         // do this while the order has to be correct
-        cartesianplotWidget->setForeground(cartesianplotWidget->getForeground());
-        cartesianplotWidget->setBackground(cartesianplotWidget->getBackground());
-        cartesianplotWidget->setScaleColor(cartesianplotWidget->getScaleColor());
-        cartesianplotWidget->setGridColor(cartesianplotWidget->getGridColor());
+        cartesianplotWidget->prepareAppearance();
 
         // reaffect special dynamic strings to be used for the archive plots (secondsPast, secondsUpdate, nrOfBins)
         // should have been done with a new method, however stay compatible with existing caQtDM
@@ -3020,9 +3017,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
             QStringList thisString = cartesianplotWidget->getPV(i).split(";");
 
 
-            cartesianplotWidget->setColor(cartesianplotWidget->getColor(i), i);
-            cartesianplotWidget->setStyle(cartesianplotWidget->getStyle(i), i);
-            cartesianplotWidget->setSymbol(cartesianplotWidget->getSymbol(i), i);
+            cartesianplotWidget->prepareCurveAppearance(i);
 
             if(thisString.count() >= 2 && thisString.at(0).trimmed().length() > 0 && thisString.at(1).trimmed().length() > 0) {
                 specData[0] = i; // curve number
@@ -5141,6 +5136,10 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
             else
                 postMessage(QtCriticalMsg, error.data());
         }
+        if (!outcome.operatorWarning.isEmpty()) {
+            QByteArray warning = outcome.operatorWarning.toLatin1();
+            postMessage(QtWarningMsg, warning.data());
+        }
         if ((data.edata.connected || consumer->visibilityOnDisconnect()) &&
             consumer->needsVisibilityUpdate())
             setObjectVisibility(w, data.edata.rvalue);
@@ -5284,99 +5283,6 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
                 // when the include is packed into a scroll area, set the scrollbars too
                 ResizeScrollBars(includeWidget, factX * (maximumX + adjustMargin), factY * (maximumY + adjustMargin));
             }
-        }
-
-        // cartesian plot ==================================================================================================================
-    } else if (caCartesianPlot *cartesianplotWidget = qobject_cast<caCartesianPlot *>(w)) {
-        qCDebug(caCartesianPlotLog) << "caCartesianPlot" << cartesianplotWidget->objectName() << data.pv << data.specData[0] << data.specData[1]  << data.specData[2];
-
-        int curvNB = data.specData[0];    // curve or scale number
-        int curvType = data.specData[1];  // Xonly, Yonly, XY_both;
-        int XorY = data.specData[2];      // X=0; Y=1, Trigger=2, Count=3, Erase=4, Scale=5/6;
-
-        // when scaling is by channel, limits have to be different, otherwise auto will be set
-        // when scaling is user, then limits were already set and will not change
-        // when scaling is auto, then nothing will be done
-        // when scaling is given by pv's, the limits will be given by these
-
-        if(data.edata.connected) {
-            // scale first time on first curve
-            if(data.edata.initialize && curvNB == 0 && XorY <= caCartesianPlot::CH_Y) {
-                if(XorY == caCartesianPlot::CH_X && cartesianplotWidget->getXscaling() == caCartesianPlot::Channel) {
-                    if(data.edata.lower_disp_limit != data.edata.upper_disp_limit) {
-                        cartesianplotWidget->setScaleX(data.edata.lower_disp_limit, data.edata.upper_disp_limit);
-                    } else {
-                        char asc[MAX_STRING_LENGTH];
-                        snprintf(asc, MAX_STRING_LENGTH, "PV <%s> (x axis) in widget <%s> is set to channel scaling, but the channel limits are invalid. Therefore, the x axis scaling for the widget is reset to auto.", data.pv, qasc(w->objectName()));
-                        postMessageAndLog(QtWarningMsg, asc, caCartesianPlotLog);
-                        cartesianplotWidget->setXscaling(caCartesianPlot::Auto);
-                    }
-                } else if(XorY == caCartesianPlot::CH_Y && cartesianplotWidget->getYscaling() == caCartesianPlot::Channel) {
-                    if(data.edata.lower_disp_limit != data.edata.upper_disp_limit) {
-                        cartesianplotWidget->setScaleY(data.edata.lower_disp_limit, data.edata.upper_disp_limit);
-                    } else {
-                        char asc[MAX_STRING_LENGTH];
-                        snprintf(asc, MAX_STRING_LENGTH, "PV <%s> (y axis) in widget <%s> is set to channel scaling, but the channel limits are invalid. Therefore, the y axis scaling for the widget is reset to auto.", data.pv, qasc(w->objectName()));
-                        postMessageAndLog(QtWarningMsg, asc, caCartesianPlotLog);
-                        cartesianplotWidget->setYscaling(caCartesianPlot::Auto);
-                    }
-                }
-            }
-
-            // monitor for scale will change the above set limits
-            if((XorY == caCartesianPlot::CH_Xscale) || (XorY == caCartesianPlot::CH_Yscale)) {
-                if(XorY == caCartesianPlot::CH_Xscale) {
-                    cartesianplotWidget->setScaleXlimits(data.edata.rvalue, curvNB);
-                } else {
-                    cartesianplotWidget->setScaleYlimits(data.edata.rvalue, curvNB);
-                }
-                qCDebug(caCartesianPlotLog) << "scale monitor from" << data.pv << data.edata.rvalue << "min/max" << data.specData[0] << "scale" << XorY;
-            }
-
-            if(!cartesianplotWidget->property("Connect").value<bool>()) {
-                cartesianplotWidget->setProperty("Connect", true);
-                cartesianplotWidget->setAllProperties();
-            }
-
-            // value(s)
-            if(XorY == caCartesianPlot::CH_X || XorY == caCartesianPlot::CH_Y) {
-                // data from vector
-                if(data.edata.valueCount > 0 && data.edata.dataB != (void*) Q_NULLPTR) {
-                    Cartesian(cartesianplotWidget, curvNB, curvType, XorY, data);
-                    // data from value
-                } else {
-                    double p = data.edata.rvalue;
-                    cartesianplotWidget->setData(&p, 1, curvNB, curvType, XorY);
-                    cartesianplotWidget->displayData(curvNB, curvType);
-                }
-
-                // trigger channel
-            } else if(XorY == caCartesianPlot::CH_Trigger) {
-                for(int i=0; i < caCartesianPlot::curveCount; i++) {
-                    double p;
-                    cartesianplotWidget->setData(&p, 1, i, curvType, XorY);
-                    cartesianplotWidget->displayData(i, curvType);
-                }
-
-                // count channel
-            } else if(XorY == caCartesianPlot::CH_Count) {
-                qCDebug(caCartesianPlotLog) << "count channel" << data.edata.rvalue << qRound(data.edata.rvalue);
-                if(data.edata.rvalue >= 0.5) cartesianplotWidget->setCountNumber(qRound(data.edata.rvalue));
-
-                // erase channel
-            } else if(XorY == caCartesianPlot::CH_Erase) {
-                if(cartesianplotWidget->getEraseMode() == caCartesianPlot::ifnotzero) {
-                    if((int) data.edata.rvalue != 0) cartesianplotWidget->erasePlots();
-                } else if(cartesianplotWidget->getEraseMode() == caCartesianPlot::ifzero){
-                    if((int) data.edata.rvalue == 0) cartesianplotWidget->erasePlots();
-                }
-            }
-
-            // not connected
-        } else if(strstr(data.pluginName, "archive") == (char*) Q_NULLPTR) {
-            cartesianplotWidget->setCountNumber(0);
-            cartesianplotWidget->setWhiteColors();
-            cartesianplotWidget->setProperty("Connect", false);
         }
 
         // animated gif ==================================================================================================================
@@ -5578,60 +5484,6 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
     } else {
         // something else (user defined monitors with non ca imageWidgets ?) ==============================================
         qCWarning(caQtDMLibLog) << "unrecognized widget" << w->metaObject()->className();
-    }
-}
-
-void CaQtDM_Lib::Cartesian(caCartesianPlot *widget, int curvNB, int curvType, int XorY, const knobData &data)
-{
-    QMutex *datamutex;
-    datamutex = (QMutex*) data.mutex;
-    datamutex->lock();
-    switch(data.edata.fieldtype) {
-    case caFLOAT: {
-        float* P = (float*) data.edata.dataB;
-        widget->setData(P, data.edata.valueCount, curvNB, curvType, XorY);
-        datamutex->unlock();
-        widget->displayData(curvNB, curvType);
-    }
-        break;
-    case caDOUBLE: {
-        double* P = (double*) data.edata.dataB;
-        widget->setData(P, data.edata.valueCount, curvNB, curvType, XorY);
-        datamutex->unlock();
-        widget->displayData(curvNB, curvType);
-    }
-        break;
-    case caLONG: {
-        int32_t* P = (int32_t*) data.edata.dataB;
-        widget->setData(P, data.edata.valueCount,curvNB, curvType, XorY);
-        datamutex->unlock();
-        widget->displayData(curvNB, curvType);
-    }
-        break;
-    case caINT: {
-        int16_t* P = (int16_t*) data.edata.dataB;
-        widget->setData(P, data.edata.valueCount, curvNB, curvType, XorY);
-        datamutex->unlock();
-        widget->displayData(curvNB, curvType);
-    }
-        break;
-    case caCHAR: {
-        int8_t* P = (int8_t*) data.edata.dataB;
-        widget->setData(P, data.edata.valueCount, curvNB, curvType, XorY);
-        datamutex->unlock();
-        widget->displayData(curvNB, curvType);
-    }
-        break;
-    case caENUM: {
-        int16_t* P = ( int16_t*) data.edata.dataB;
-        widget->setData(P ,data.edata.valueCount, curvNB, curvType, XorY);
-        datamutex->unlock();
-        widget->displayData(curvNB, curvType);
-    }
-        break;
-    default:
-        datamutex->unlock();
-        break;
     }
 }
 
