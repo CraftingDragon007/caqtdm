@@ -3373,21 +3373,17 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         w1->setProperty("ObjectType", caTable_Widget);
 
         QStringList vars = tableWidget->getPVS().split(";", SKIP_EMPTY_PARTS);
-        tableWidget->setColumnCount(3);
-        tableWidget->setRowCount(vars.count());
+        tableWidget->prepareMonitors(vars.count());
 
         // go through the pvs and add monitor
         for(int i=0; i< vars.count(); i++) {
             pv = vars.at(i);
             if(pv.size() > 0) {
-                QTableWidgetItem *item;
                 specData[0] = i;            // table row
                 int num = addMonitor(myWidget, &kData, pv, w1, specData, map, &pv);
                 integerList.append(num);
                 nbMonitors++;
-                item = new QTableWidgetItem(pv);
-                item->setTextAlignment(Qt::AlignAbsolute | Qt:: AlignLeft);
-                tableWidget->setItem(i,0, item);
+                tableWidget->setResolvedRowPV(i, pv);
             }
         }
         tableWidget->setColumnSizes(tableWidget->getColumnSizes());
@@ -5603,33 +5599,6 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
             } else {
 
             }
-        }
-
-        // table with pv name, value and unit==========================================================================
-    } else if(caTable *tableWidget = qobject_cast<caTable *>(w)) {
-
-        int row= data.specData[0];
-
-        if(data.edata.connected) {
-            // enum string
-            if(data.edata.fieldtype == caENUM || data.edata.fieldtype == caSTRING) {
-                int colorMode = tableWidget->getColorMode();
-                if(colorMode == caTable::Alarm) {
-                    tableWidget->displayText(row, 1, data.edata.severity, String);
-                } else {
-                    tableWidget->displayText(row, 1, 0, String);
-                }
-                // double
-            } else {
-                if(data.edata.initialize) {
-                    tableWidget->setFormat(row, data.edata.precision);
-                }
-                tableWidget->setValue(row, 1, data.edata.severity, data.edata.rvalue, data.edata.units);
-            }
-
-        } else {
-            tableWidget->displayText(row, 1, NOTCONNECTED, "NC");
-            tableWidget->displayText(row, 2, NOTCONNECTED, "NC");
         }
 
         // alarm handler tree: routed by specData[0] inside the widget=========================================

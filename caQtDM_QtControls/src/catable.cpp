@@ -107,6 +107,38 @@ caTable::caTable(QWidget *parent) : QTableWidget(parent)
     setFocusPolicy(Qt::ClickFocus);
 }
 
+void caTable::prepareMonitors(int rows)
+{
+    setColumnCount(3);
+    setRowCount(rows);
+}
+
+void caTable::setResolvedRowPV(int row, const QString &pv)
+{
+    QTableWidgetItem *item = new QTableWidgetItem(pv);
+    item->setTextAlignment(Qt::AlignAbsolute | Qt::AlignLeft);
+    setItem(row, 0, item);
+}
+
+caWidgetUpdateResult caTable::applyChannelUpdate(const QString &units, const QString &value,
+                                                 const knobData &data, short aggregateAlarm)
+{
+    Q_UNUSED(units);
+    Q_UNUSED(aggregateAlarm);
+    const int row = data.specData[0];
+    if (!data.edata.connected) {
+        displayText(row, 1, NOTCONNECTED, "NC");
+        displayText(row, 2, NOTCONNECTED, "NC");
+    } else if (data.edata.fieldtype == caENUM || data.edata.fieldtype == caSTRING) {
+        displayText(row, 1, getColorMode() == Alarm ? data.edata.severity : 0, value);
+    } else {
+        if (data.edata.initialize)
+            setFormat(row, data.edata.precision);
+        setValue(row, 1, data.edata.severity, data.edata.rvalue, data.edata.units);
+    }
+    return {};
+}
+
 void caTable::cellclicked(int row, int col)
 {
     Q_UNUSED(row);

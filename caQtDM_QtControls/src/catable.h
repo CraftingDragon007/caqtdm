@@ -32,10 +32,11 @@
 #include <qtcontrols_global.h>
 
 #include "caPropHandleDefs.h"
+#include "caWidgetUpdateInterface.h"
 
 typedef char string40[40];
 
-class QTCON_EXPORT caTable : public QTableWidget
+class QTCON_EXPORT caTable : public QTableWidget, public caWidgetUpdateInterface
 {
     Q_OBJECT
 
@@ -68,6 +69,12 @@ public:
     void noStyle(QString style) {Q_UNUSED(style);}
 
     caTable(QWidget *parent);
+    void prepareMonitors(int rowCount);
+    void setResolvedRowPV(int row, const QString &pv);
+    bool needsAggregateAlarm() const override { return false; }
+    bool needsVisibilityUpdate() const override { return false; }
+    caWidgetUpdateResult applyChannelUpdate(const QString &units, const QString &value,
+                                            const knobData &data, short aggregateAlarm) override;
 
     enum colMode {Static=0, Alarm};
     colMode getColorMode() const { return thisColorMode; }
