@@ -28,8 +28,9 @@
 
 #include <qtcontrols_global.h>
 #include <eflag.h>
+#include "caWidgetUpdateInterface.h"
 
-class QTCON_EXPORT caBitnames : public EFlag
+class QTCON_EXPORT caBitnames : public EFlag, public caWidgetUpdateInterface
 {
     Q_OBJECT
 
@@ -62,6 +63,10 @@ public:
     void noStyle(QString style) {Q_UNUSED(style);}
 
     caBitnames(QWidget *parent);
+    bool needsAggregateAlarm() const override { return false; }
+    bool needsVisibilityUpdate() const override { return false; }
+    caWidgetUpdateResult applyChannelUpdate(const QString &units, const QString &value,
+                                            const knobData &data, short aggregateAlarm) override;
 
     QString getEnumPV() const;
     void setEnumPV(QString const &newPV);

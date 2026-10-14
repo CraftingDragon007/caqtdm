@@ -5910,21 +5910,6 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
             wavetableWidget->setStringList(list, NOTCONNECTED, list.size());
         }
 
-        // bitnames table with text and coloring according the value=========================================================
-    } else if (caBitnames *bitnamesWidget = qobject_cast<caBitnames *>(w)) {
-        if(data.edata.connected) {
-            // set enum strings
-            if(data.edata.fieldtype == caENUM) {
-                bitnamesWidget->setEnumStrings(String);
-            } else if(data.edata.fieldtype == caINT || data.edata.fieldtype == caLONG) {
-                bitnamesWidget->setValue((int) data.edata.ivalue);
-            } else if(data.edata.fieldtype == caFLOAT || data.edata.fieldtype == caDOUBLE ) {
-                bitnamesWidget->setValue(qRound(data.edata.rvalue));
-            }
-        } else {
-            // todo
-        }
-
         // camera =========================================================
     } else if (caCamera *cameraWidget = qobject_cast<caCamera *>(w)) {
 

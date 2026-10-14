@@ -47,6 +47,23 @@ caBitnames::caBitnames(QWidget *parent) : EFlag(parent)
     setValue(0);
 }
 
+caWidgetUpdateResult caBitnames::applyChannelUpdate(const QString &units, const QString &value,
+                                                    const knobData &data, short aggregateAlarm)
+{
+    Q_UNUSED(units);
+    Q_UNUSED(aggregateAlarm);
+
+    if (data.edata.connected) {
+        if (data.edata.fieldtype == caENUM)
+            setEnumStrings(value);
+        else if (data.edata.fieldtype == caINT || data.edata.fieldtype == caLONG)
+            setValue(int(data.edata.ivalue));
+        else if (data.edata.fieldtype == caFLOAT || data.edata.fieldtype == caDOUBLE)
+            setValue(qRound(data.edata.rvalue));
+    }
+    return {};
+}
+
 QString caBitnames::getEnumPV() const
 {
     return thisEnumPV;
