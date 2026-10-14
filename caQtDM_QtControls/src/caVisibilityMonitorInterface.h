@@ -16,6 +16,7 @@ public:
     virtual void setVisibilityChannel(int index, const QString &pv) = 0;
     virtual QString visibilityExpression() const = 0;
     virtual void setVisibilityExpression(const QString &expression) = 0;
+    virtual bool applyVisibilityResult(bool visible) { (void)visible; return false; }
 };
 
 #endif // CAVISIBILITYMONITORINTERFACE_H

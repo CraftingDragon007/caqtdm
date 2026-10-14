@@ -27,6 +27,8 @@
 
 #include "caframe.h"
 
+Q_LOGGING_CATEGORY(caFrameLog, "caqtdm.widgets.caframe")
+
 caFrame::caFrame(QWidget *parent) : QFrame(parent)
 {
     thisBackColor = Qt::gray;
@@ -34,6 +36,46 @@ caFrame::caFrame(QWidget *parent) : QFrame(parent)
     setVisibility(StaticV);
     setVisibilityMode(All);
     setBackground(thisBackColor);
+}
+
+QString caFrame::visibilityChannel(int index) const
+{
+    switch (index) {
+    case 0: return getChannelA();
+    case 1: return getChannelB();
+    case 2: return getChannelC();
+    case 3: return getChannelD();
+    default: return QString();
+    }
+}
+
+void caFrame::setVisibilityChannel(int index, const QString &pv)
+{
+    switch (index) {
+    case 0: setChannelA(pv); break;
+    case 1: setChannelB(pv); break;
+    case 2: setChannelC(pv); break;
+    case 3: setChannelD(pv); break;
+    default: break;
+    }
+}
+
+bool caFrame::applyVisibilityResult(bool visible)
+{
+    if (getVisibilityMode() != Background) return false;
+    setAutoFillBackground(visible);
+    return true;
+}
+
+caWidgetUpdateResult caFrame::applyChannelUpdate(const QString &units, const QString &value,
+                                                 const knobData &data, short aggregateAlarm)
+{
+    Q_UNUSED(units);
+    Q_UNUSED(value);
+    Q_UNUSED(data);
+    Q_UNUSED(aggregateAlarm);
+    qCDebug(caFrameLog) << "we have a frame";
+    return {};
 }
 
 

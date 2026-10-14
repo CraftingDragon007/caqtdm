@@ -4634,14 +4634,7 @@ int CaQtDM_Lib::setObjectVisibility(QWidget *w, double value)
             visible = CalcVisibility(w, result, valid);
             break;
         }
-    } else if(caFrame *frameWidget = qobject_cast<caFrame *>(w)) {
-        // treat visibility if defined
-        ComputeVisibility(caFrame, frameWidget)
-        if(frameWidget->getVisibilityMode() == caFrame::Background) {
-            if(visible) frameWidget->setAutoFillBackground(true);
-            else frameWidget->setAutoFillBackground(false);
-            return visible;
-        }
+        if (visibilityWidget->applyVisibilityResult(visible)) return visible;
     } else if (caInclude *includeWidget = qobject_cast<caInclude *>(w)) {
         // treat visibility if defined
         ComputeVisibility(caInclude, includeWidget)
@@ -4671,9 +4664,6 @@ int CaQtDM_Lib::setObjectVisibility(QWidget *w, double value)
 void CaQtDM_Lib::setCalcToNothing(QWidget* w) {
     if (caVisibilityMonitorInterface *visibilityWidget = dynamic_cast<caVisibilityMonitorInterface *>(w)) {
         visibilityWidget->setVisibilityExpression(QString());
-    }
-    else if(caFrame *frame = qobject_cast<caFrame *>(w)) {
-        frame->setVisibilityCalc("");
     }
     else if(caInclude *include = qobject_cast<caInclude *>(w)) {
         include->setVisibilityCalc("");
@@ -4769,9 +4759,6 @@ bool CaQtDM_Lib::CalcVisibility(QWidget *w, double &result, bool &valid)
 
     if (caVisibilityMonitorInterface *visibilityWidget = dynamic_cast<caVisibilityMonitorInterface *>(w)) {
         calcQString = visibilityWidget->visibilityExpression();
-    }
-    else if(caFrame *frame = qobject_cast<caFrame *>(w)) {
-        calcQString = frame->getVisibilityCalc();
     }
     else if(caInclude *include = qobject_cast<caInclude *>(w)) {
         calcQString = include->getVisibilityCalc();
@@ -5194,7 +5181,8 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
             else
                 postMessage(QtCriticalMsg, error.data());
         }
-        if (data.edata.connected && consumer->needsVisibilityUpdate())
+        if ((data.edata.connected || consumer->visibilityOnDisconnect()) &&
+            consumer->needsVisibilityUpdate())
             setObjectVisibility(w, data.edata.rvalue);
     } else if (caWidgetInterface* wif = dynamic_cast<caWidgetInterface *>(w)) {
         wif->caDataUpdate(units, String, data);
@@ -5337,12 +5325,6 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
                 ResizeScrollBars(includeWidget, factX * (maximumX + adjustMargin), factY * (maximumY + adjustMargin));
             }
         }
-
-        // caFrame ==================================================================================================================
-    } else if(caFrame *frameWidget = qobject_cast<caFrame *>(w)) {
-        qCDebug(caFrameLog) << "we have a frame";
-
-        setObjectVisibility(frameWidget, data.edata.rvalue);
 
         // cartesian plot ==================================================================================================================
     } else if (caCartesianPlot *cartesianplotWidget = qobject_cast<caCartesianPlot *>(w)) {
@@ -8359,10 +8341,6 @@ int CaQtDM_Lib::InitVisibility(QWidget* widget, knobData* kData, QMap<QString, Q
         if(includeWidget->getVisibility() == caInclude::StaticV) return 0;
         getVisibilityChannels(includeWidget);
         visibilityCalc = includeWidget->getVisibilityCalc();
-    } else if (caFrame *frameWidget = qobject_cast<caFrame *>(widget)) {
-        if(frameWidget->getVisibility() == caFrame::StaticV) return 0;
-        getVisibilityChannels(frameWidget);
-        visibilityCalc = frameWidget->getVisibilityCalc();
     } else {
         qCWarning(caQtDMLibLog) << "widget has not been defined for visibility";
         return 0;
@@ -8383,8 +8361,6 @@ int CaQtDM_Lib::InitVisibility(QWidget* widget, knobData* kData, QMap<QString, Q
                 replaceVisibilityChannels(polylineWidget)
             } else if (caInclude *includeWidget = qobject_cast<caInclude *>(widget)) {
                 replaceVisibilityChannels(includeWidget)
-            } else if (caFrame *frameWidget = qobject_cast<caFrame *>(widget)) {
-                replaceVisibilityChannels(frameWidget)
             }
 
             tooltip.append(pv);
@@ -8435,10 +8411,6 @@ int CaQtDM_Lib::InitVisibility(QWidget* widget, knobData* kData, QMap<QString, Q
         includeWidget->setVisibilityCalc(text);
         includeWidget->setProperty("MonitorList", monitorList);
         includeWidget->setProperty("IndexList", indexList);
-    } else if (caFrame *frameWidget = qobject_cast<caFrame *>(widget)) {
-        frameWidget->setVisibilityCalc(text);
-        frameWidget->setProperty("MonitorList", monitorList);
-        frameWidget->setProperty("IndexList", indexList);
     }
 
     // when no monitors we have a static visibility calculation, except for cacalc

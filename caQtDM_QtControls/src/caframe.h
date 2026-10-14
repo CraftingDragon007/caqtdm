@@ -28,8 +28,11 @@
 
 #include <QFrame>
 #include <qtcontrols_global.h>
+#include "caVisibilityMonitorInterface.h"
+#include "caWidgetUpdateInterface.h"
 
-class QTCON_EXPORT caFrame : public QFrame
+class QTCON_EXPORT caFrame : public QFrame, public caVisibilityMonitorInterface,
+                             public caWidgetUpdateInterface
 {
     Q_OBJECT
     Q_PROPERTY(QString macro READ getMacro WRITE setMacro)
@@ -92,6 +95,21 @@ public:
 
 
     caFrame(QWidget * parent = 0);
+
+    caVisibilityMonitorInterface::Mode visibilityMode() const override
+    { return static_cast<caVisibilityMonitorInterface::Mode>(thisVisibility); }
+    bool skipVisibilityMonitors() const override { return thisVisibility == StaticV; }
+    QString visibilityChannel(int index) const override;
+    void setVisibilityChannel(int index, const QString &pv) override;
+    QString visibilityExpression() const override { return getVisibilityCalc(); }
+    void setVisibilityExpression(const QString &expression) override { setVisibilityCalc(expression); }
+    bool applyVisibilityResult(bool visible) override;
+
+    bool needsAggregateAlarm() const override { return false; }
+    bool needsVisibilityUpdate() const override { return true; }
+    bool visibilityOnDisconnect() const override { return true; }
+    caWidgetUpdateResult applyChannelUpdate(const QString &units, const QString &value,
+                                            const knobData &data, short aggregateAlarm) override;
 
     QString getMacro() const {return thisMacro;}
     void setMacro(QString const &newMacro) {thisMacro = newMacro;}

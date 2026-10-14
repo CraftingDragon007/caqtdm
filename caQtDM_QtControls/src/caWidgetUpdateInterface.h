@@ -19,6 +19,7 @@ public:
 
     virtual bool needsAggregateAlarm() const = 0;
     virtual bool needsVisibilityUpdate() const = 0;
+    virtual bool visibilityOnDisconnect() const { return false; }
     virtual caWidgetUpdateResult applyChannelUpdate(const QString &units, const QString &value,
                                                     const knobData &data, short aggregateAlarm) = 0;
 };
