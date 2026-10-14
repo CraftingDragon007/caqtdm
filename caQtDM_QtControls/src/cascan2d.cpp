@@ -26,9 +26,46 @@
 
 #include <QtGui>
 #include <QApplication>
+#include <QMutexLocker>
 #include "cascan2d.h"
 
 Q_LOGGING_CATEGORY(caScan2DLog, "caqtdm.widgets.cascan2d")
+
+caWidgetUpdateResult caScan2D::applyChannelUpdate(const QString &units, const QString &value,
+                                                  const knobData &data, short aggregateAlarm)
+{
+    Q_UNUSED(units);
+    Q_UNUSED(aggregateAlarm);
+    const int channel = data.specData[0];
+    qCDebug(caScan2DLog) << "Callback_UpdateWidget: caScan2D" << data.pv
+                         << data.edata.connected << channel;
+    if (!data.edata.connected)
+        return {};
+
+    switch (channel) {
+    case 0: {
+        QMutexLocker lock(static_cast<QMutex *>(data.mutex));
+        newArray(data.edata.dataSize, static_cast<float *>(data.edata.dataB));
+        break;
+    }
+    case 1: setWidth(static_cast<int>(data.edata.rvalue)); break;
+    case 2: setHeight(static_cast<int>(data.edata.rvalue)); break;
+    case 5: updateMin(static_cast<int>(data.edata.rvalue)); break;
+    case 6: updateMax(static_cast<int>(data.edata.rvalue)); break;
+    case 11: setXCPT(static_cast<int>(data.edata.rvalue)); break;
+    case 12: setYCPT(static_cast<int>(data.edata.rvalue)); break;
+    case 13: setXNEWDATA(static_cast<int>(data.edata.rvalue)); break;
+    case 14: setYNEWDATA(static_cast<int>(data.edata.rvalue)); break;
+    case 15: setSAVEDATA_PATH(value); break;
+    case 16: setSAVEDATA_SUBDIR(value); break;
+    case 17: setSAVEDATA_FILENAME(value); break;
+    case 18: case 19: case 20: case 21:
+        dataProcessing(data.edata.rvalue, channel - 18);
+        break;
+    default: break;
+    }
+    return {};
+}
 
 caScan2D::caScan2D(QWidget *parent) : QWidget(parent)
 {

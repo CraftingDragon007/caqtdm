@@ -52,11 +52,12 @@
 
 #include "colormaps.h"
 #include "caPropHandleDefs.h"
+#include "caWidgetUpdateInterface.h"
 
 #define XMAXPTS 1000
 #define YMAXPTS 1000
 
-class QTCON_EXPORT caScan2D : public QWidget
+class QTCON_EXPORT caScan2D : public QWidget, public caWidgetUpdateInterface
 {
     Q_OBJECT
 
@@ -128,6 +129,11 @@ public:
 
     caScan2D(QWidget *parent = 0);
     ~caScan2D();
+
+    bool needsAggregateAlarm() const override { return false; }
+    bool needsVisibilityUpdate() const override { return false; }
+    caWidgetUpdateResult applyChannelUpdate(const QString &units, const QString &value,
+                                            const knobData &data, short aggregateAlarm) override;
 
     void updateImage(const QImage &image, bool valuesPresent[], double values[], double scaleFactor);
     void getROI(QPointF &P1, QPointF &P2);

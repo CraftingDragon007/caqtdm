@@ -5379,51 +5379,6 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
     } else if(caAlarmTree *alarmTree = qobject_cast<caAlarmTree *>(w)) {
         alarmTree->dataUpdate(String, data);
 
-        // scan2d =========================================================
-    } else if (caScan2D *scan2dWidget = qobject_cast<caScan2D *>(w)) {
-
-        qCDebug(caScan2DLog) << "Callback_UpdateWidget: caScan2D" << data.pv << data.edata.connected << data.specData[0];
-        if (data.edata.connected) {
-            switch (data.specData[0]) {
-            case 1:        // width channel
-                scan2dWidget->setWidth((int) data.edata.rvalue); break;
-            case 2: // height channel
-                scan2dWidget->setHeight((int) data.edata.rvalue); break;
-            case 5: // minimum level channel if present
-                scan2dWidget->updateMin((int) data.edata.rvalue); break;
-            case 6: // maximum level channel if present
-                scan2dWidget->updateMax((int) data.edata.rvalue); break;
-            case 11: // XCPT
-                scan2dWidget->setXCPT((int) data.edata.rvalue); break;
-            case 12: // YCPT
-                scan2dWidget->setYCPT((int) data.edata.rvalue); break;
-            case 13: // XNEWDATA
-                scan2dWidget->setXNEWDATA((int) data.edata.rvalue); break;
-            case 14: // YNEWDATA
-                scan2dWidget->setYNEWDATA((int) data.edata.rvalue); break;
-            case 15: // SAVEDATA_PATH
-                scan2dWidget->setSAVEDATA_PATH(String); break;
-            case 16: // SAVEDATA_SUBDIR
-                scan2dWidget->setSAVEDATA_SUBDIR(String); break;
-            case 17: // SAVEDATA_FILENAME
-                scan2dWidget->setSAVEDATA_FILENAME(String); break;
-            case 18:  // value1 if present
-                scan2dWidget->dataProcessing(data.edata.rvalue, 0); break;
-            case 19: // value 2 if present
-                scan2dWidget->dataProcessing(data.edata.rvalue, 1); break;
-            case 20: // value3 if present
-                scan2dWidget->dataProcessing(data.edata.rvalue, 2); break;
-            case 21: // value4 if present
-                scan2dWidget->dataProcessing(data.edata.rvalue, 3); break;
-            case 0: // data channel
-                scan2dWidget->newArray(data.edata.dataSize, (float*) data.edata.dataB); break;
-            default: // ?
-                break;
-            }
-        } else {
-            //scan2dWidget->showDisconnected();
-        }
-
     } else if (caHMIConfig *cahmiConfigWidget = qobject_cast<caHMIConfig*>(w)) {
         Q_UNUSED(cahmiConfigWidget)
     } else if (wmSignalRescale *wmSignalRescaleWidget = qobject_cast<wmSignalRescale*>(w)) {
