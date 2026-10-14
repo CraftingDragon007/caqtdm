@@ -45,6 +45,7 @@
 #include <QWidget>
 #include <qtcontrols_global.h>
 #include "knobData.h"
+#include "caWidgetUpdateInterface.h"
 
 class AlhTreeModel;
 class caShellCommand;
@@ -61,7 +62,7 @@ class QSplitter;
 class QTimer;
 class QTreeView;
 
-class QTCON_EXPORT caAlarmTree : public QWidget
+class QTCON_EXPORT caAlarmTree : public QWidget, public caWidgetUpdateInterface
 {
     Q_OBJECT
     Q_ENUMS(CommandMode)
@@ -94,6 +95,11 @@ public:
 
     explicit caAlarmTree(QWidget *parent = Q_NULLPTR);
     ~caAlarmTree();
+
+    bool needsAggregateAlarm() const override { return false; }
+    bool needsVisibilityUpdate() const override { return false; }
+    caWidgetUpdateResult applyChannelUpdate(const QString &units, const QString &value,
+                                            const knobData &data, short aggregateAlarm) override;
 
     void noStyle(QString style) { Q_UNUSED(style); }
 

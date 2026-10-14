@@ -5375,10 +5375,6 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
             }
         }
 
-        // alarm handler tree: routed by specData[0] inside the widget=========================================
-    } else if(caAlarmTree *alarmTree = qobject_cast<caAlarmTree *>(w)) {
-        alarmTree->dataUpdate(String, data);
-
     } else if (caHMIConfig *cahmiConfigWidget = qobject_cast<caHMIConfig*>(w)) {
         Q_UNUSED(cahmiConfigWidget)
     } else if (wmSignalRescale *wmSignalRescaleWidget = qobject_cast<wmSignalRescale*>(w)) {

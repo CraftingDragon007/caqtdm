@@ -1083,6 +1083,15 @@ QString caAlarmTree::valueText(const QString &String, const knobData &data) cons
 }
 
 // called by caQtDM_Lib (Callback_UpdateWidget) for every monitored pv
+caWidgetUpdateResult caAlarmTree::applyChannelUpdate(const QString &units, const QString &value,
+                                                     const knobData &data, short aggregateAlarm)
+{
+    Q_UNUSED(units);
+    Q_UNUSED(aggregateAlarm);
+    dataUpdate(value, data);
+    return {};
+}
+
 void caAlarmTree::dataUpdate(const QString &String, const knobData &data)
 {
     const int sd = data.specData[0];
