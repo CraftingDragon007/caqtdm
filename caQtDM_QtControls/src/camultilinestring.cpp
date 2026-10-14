@@ -100,6 +100,59 @@ caMultiLineString::caMultiLineString(QWidget *parent) : QPlainTextEdit(parent), 
     setFocusPolicy(Qt::ClickFocus);
 }
 
+void caMultiLineString::prepareMonitor()
+{
+    setCursor(QCursor());
+    setReadOnly(true);
+}
+
+caWidgetUpdateResult caMultiLineString::applyChannelUpdate(const QString &units, const QString &value,
+                                                           const knobData &data, short aggregateAlarm)
+{
+    Q_UNUSED(units);
+    Q_UNUSED(aggregateAlarm);
+    qCDebug(caMultiLineStringLog) << "we have a multilinedit" << this
+                                 << data.edata.rvalue << data.edata.ivalue;
+
+    const QColor bg = property("BColor").value<QColor>();
+    const QColor fg = property("FColor").value<QColor>();
+    if (!data.edata.connected) {
+        setTextLine("");
+        setAlarmColors(NOTCONNECTED, 0.0, bg, fg);
+        setProperty("Connect", false);
+        return {};
+    }
+
+    if (data.edata.fieldtype != caENUM && data.edata.fieldtype != caSTRING &&
+        data.edata.fieldtype != caCHAR) {
+        setTextLine("not supported");
+        return {};
+    }
+
+    const colMode colorMode = getColorMode();
+    if (colorMode == Static || colorMode == Default) {
+        if (!property("Connect").toBool()) {
+            setAlarmColors(data.edata.severity, double(data.edata.ivalue), bg, fg);
+            setProperty("Connect", true);
+        }
+    } else {
+        setAlarmColors(data.edata.severity, double(data.edata.ivalue), bg, fg);
+    }
+
+    qCDebug(caMultiLineStringLog) << this << value << data.pv
+                                 << int(data.edata.ivalue) << data.edata.valueCount;
+    if (data.edata.fieldtype == caCHAR && data.edata.nelm == 1) {
+        setTextLine(QString(QChar(int(data.edata.ivalue))));
+    } else if (data.edata.fieldtype == caCHAR) {
+        setTextLine(value);
+    } else {
+        QString lines = value;
+        lines.replace(QChar(27), QChar(13));
+        setTextLine(lines);
+    }
+    return {};
+}
+
 QString caMultiLineString::getPV() const
 {
     return thisPV;

@@ -2186,10 +2186,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         w1->setProperty("ObjectType", caMultiLineString_Widget);
 
         if(multilinestringWidget->getPV().size() > 0) {
-            multilinestringWidget->setCursor(QCursor());
-            multilinestringWidget->setReadOnly(true);
-
-            //multilinestringWidget->setAlignment(lineeditWidget->alignment());
+            multilinestringWidget->prepareMonitor();
             int num = addMonitor(myWidget, &kData, multilinestringWidget->getPV(), w1, specData, map, &pv);
             integerList.append(num);
             multilinestringWidget->setPV(pv);
@@ -5497,62 +5494,6 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
             if (caTextEntry *textentryWidget = qobject_cast<caTextEntry *>(w)) {
                 textentryWidget->updateText(lineeditWidget->text());
             }
-        }
-
-        // multilinestring ====================================================================================================
-    } else if (caMultiLineString *multilinestringWidget = qobject_cast<caMultiLineString *>(w)) {
-
-        qCDebug(caMultiLineStringLog) << "we have a multilinedit" << multilinestringWidget << data.edata.rvalue <<  data.edata.ivalue;
-
-        QColor bg = multilinestringWidget->property("BColor").value<QColor>();
-        QColor fg = multilinestringWidget->property("FColor").value<QColor>();
-
-        if(data.edata.connected) {
-            QString separator((QChar)27);
-            QString CR((QChar)13);
-
-            // enum string
-            if(data.edata.fieldtype == caENUM || data.edata.fieldtype == caSTRING || data.edata.fieldtype == caCHAR) {
-
-                int colorMode = multilinestringWidget->getColorMode();
-                if(colorMode == caMultiLineString::Static || colorMode == caMultiLineString::Default) { // done at initialisation
-                    if(!multilinestringWidget->property("Connect").value<bool>()) {                    // but was disconnected before
-                        multilinestringWidget->setAlarmColors(data.edata.severity, (double) data.edata.ivalue, bg, fg);
-                        multilinestringWidget->setProperty("Connect", true);
-                    }
-                } else {
-                    multilinestringWidget->setAlarmColors(data.edata.severity, (double) data.edata.ivalue, bg, fg);
-                }
-
-                qCDebug(caMultiLineStringLog) << multilinestringWidget << String << data.pv << (int) data.edata.ivalue << data.edata.valueCount;
-
-                // an enum
-                if(data.edata.fieldtype == caENUM) {
-                    QString enumList = String;
-                    enumList.replace(separator, CR);
-                    multilinestringWidget->setTextLine(enumList);
-
-                // just one char
-                } else if((data.edata.fieldtype == caCHAR) && (data.edata.nelm == 1)) {
-                    QString str = QString(QChar((int) data.edata.ivalue));
-                    multilinestringWidget->setTextLine(str);
-
-                // one or more strings, or a char array
-                } else if(data.edata.fieldtype == caCHAR){
-                    multilinestringWidget->setTextLine(String);
-                } else if(data.edata.fieldtype == caSTRING) {
-                    QString List = String;
-                    List.replace(separator, CR);
-                    multilinestringWidget->setTextLine(List);
-                }
-            } else {
-                multilinestringWidget->setTextLine("not supported");
-            }
-
-        } else {
-            multilinestringWidget->setTextLine("");
-            multilinestringWidget->setAlarmColors(NOTCONNECTED, 0.0, bg, fg);        \
-            multilinestringWidget->setProperty("Connect", false);
         }
 
         // cartesian plot ==================================================================================================================

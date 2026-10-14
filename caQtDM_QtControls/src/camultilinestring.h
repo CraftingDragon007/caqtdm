@@ -29,8 +29,10 @@
 #include <QPlainTextEdit>
 #include <qtcontrols_global.h>
 #include <fontscalingwidget.h>
+#include "caWidgetUpdateInterface.h"
 
-class QTCON_EXPORT caMultiLineString : public QPlainTextEdit, public FontScalingWidget
+class QTCON_EXPORT caMultiLineString : public QPlainTextEdit, public FontScalingWidget,
+                                       public caWidgetUpdateInterface
 {
     Q_OBJECT
 
@@ -89,6 +91,12 @@ public:
 
     caMultiLineString( QWidget *parent = 0 );
      ~caMultiLineString(){}
+
+    void prepareMonitor();
+    bool needsAggregateAlarm() const override { return false; }
+    bool needsVisibilityUpdate() const override { return false; }
+    caWidgetUpdateResult applyChannelUpdate(const QString &units, const QString &value,
+                                            const knobData &data, short aggregateAlarm) override;
 
     QString getDocumentTitle() { return "";}
     Shape getFrameShape() {return NoFrame;}
