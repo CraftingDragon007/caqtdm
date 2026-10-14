@@ -33,8 +33,9 @@
 #include <QEvent>
 #include <qtcontrols_global.h>
 #include <epushbutton.h>
+#include "caWidgetUpdateInterface.h"
 
-class QTCON_EXPORT caMessageButton : public EPushButton
+class QTCON_EXPORT caMessageButton : public EPushButton, public caWidgetUpdateInterface
 {
 
     Q_OBJECT
@@ -60,6 +61,10 @@ public:
     void noStyle(QString style) {Q_UNUSED(style);}
 
     caMessageButton(QWidget *parent);
+    bool needsAggregateAlarm() const override { return false; }
+    bool needsVisibilityUpdate() const override { return false; }
+    caWidgetUpdateResult applyChannelUpdate(const QString &units, const QString &value,
+                                            const knobData &data, short aggregateAlarm) override;
 
     enum colMode {Static=0, Alarm, Default};
 

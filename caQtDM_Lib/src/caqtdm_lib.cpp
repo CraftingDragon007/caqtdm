@@ -6042,32 +6042,6 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
             //scan2dWidget->showDisconnected();
         }
 
-        // messagebutton, yust treat access ==========================================================================
-    } else if (caMessageButton *messagebuttonWidget = qobject_cast<caMessageButton *>(w)) {
-
-        if(data.edata.connected) {
-
-            if (messagebuttonWidget->getColorMode() == caMessageButton::Alarm) {
-                messagebuttonWidget->setAlarmColors(data.edata.severity);
-                // case of static mode
-            } else {
-                SetColorsBack(messagebuttonWidget);
-            }
-            // enable or disable this button
-            if(data.specData[0] == 1) {
-                if((data.edata.rvalue != 0) || (data.edata.ivalue != 0)) {
-                    messagebuttonWidget->setEnabled(false);
-                } else {
-                    messagebuttonWidget->setEnabled(true);
-                }
-            }
-
-        } else {
-            SetColorsNotConnected(messagebuttonWidget);
-        }
-        messagebuttonWidget->setAccessW((bool) data.edata.accessW);
-        updateAccessCursor(messagebuttonWidget);
-
     } else if (caHMIConfig *cahmiConfigWidget = qobject_cast<caHMIConfig*>(w)) {
         Q_UNUSED(cahmiConfigWidget)
     } else if (wmSignalRescale *wmSignalRescaleWidget = qobject_cast<wmSignalRescale*>(w)) {

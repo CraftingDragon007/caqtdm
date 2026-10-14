@@ -163,6 +163,33 @@ void caMessageButton::setAccessW(bool access)
      _AccessW = access;
 }
 
+caWidgetUpdateResult caMessageButton::applyChannelUpdate(const QString &units, const QString &value,
+                                                         const knobData &data, short aggregateAlarm)
+{
+    Q_UNUSED(units);
+    Q_UNUSED(value);
+    Q_UNUSED(aggregateAlarm);
+
+    if (data.edata.connected) {
+        if (getColorMode() == Alarm) {
+            setAlarmColors(data.edata.severity);
+        } else if (!property("Connect").toBool()) {
+            setNormalColors();
+            setProperty("Connect", true);
+        }
+        if (data.specData[0] == 1)
+            setEnabled(data.edata.rvalue == 0 && data.edata.ivalue == 0);
+    } else {
+        setAlarmColors(NOTCONNECTED);
+        setProperty("Connect", false);
+    }
+
+    setAccessW(bool(data.edata.accessW));
+    if (hasFocus())
+        QCoreApplication::postEvent(this, new QEvent(QEvent::Enter));
+    return {};
+}
+
 bool caMessageButton::eventFilter(QObject *obj, QEvent *event)
 {
     if (event->type() == QEvent::Enter) {
