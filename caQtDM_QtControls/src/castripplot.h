@@ -71,8 +71,9 @@ class QwtPlotCurve;
 #endif
 
 #include "caPropHandleDefs.h"
+#include "caWidgetUpdateInterface.h"
 
-class QTCON_EXPORT caStripPlot : public QwtPlot
+class QTCON_EXPORT caStripPlot : public QwtPlot, public caWidgetUpdateInterface
 {
     Q_OBJECT
 
@@ -223,6 +224,13 @@ public:
 
     caStripPlot(QWidget * = 0);
     ~caStripPlot();
+
+    bool needsAggregateAlarm() const override { return false; }
+    bool needsVisibilityUpdate() const override { return false; }
+    caWidgetUpdateResult applyChannelUpdate(const QString &units, const QString &value,
+                                            const knobData &data, short aggregateAlarm) override;
+    int prepareCurves(const QStringList &channels);
+    void prepareCurveMonitor(int curve);
 
     void defineCurves(QStringList titles, units unit, double period, int width, int nb);
     void setData(qint64 nowMs, double Y, int curvIndex);

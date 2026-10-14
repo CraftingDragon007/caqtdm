@@ -62,6 +62,88 @@
 
 Q_LOGGING_CATEGORY(caStripPlotLog, "caqtdm.widgets.castripplot")
 
+int caStripPlot::prepareCurves(const QStringList &channels)
+{
+    const int curveCount = qMin(int(channels.count()), int(MAXCURVES));
+    QStringList extraLegend;
+    const QVariant legendData = property("Legend");
+    if (legendData.isValid()) {
+        if (legendData.type() == QVariant::StringList)
+            extraLegend = legendData.value<QStringList>();
+        if (legendData.type() == QVariant::String) {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+            extraLegend = legendData.value<QString>().split(";", QString::KeepEmptyParts);
+#else
+            extraLegend = legendData.value<QString>().split(";", Qt::KeepEmptyParts);
+#endif
+        }
+    }
+    qCDebug(caStripPlotLog) << "extra_legend" << extraLegend << extraLegend.count();
+
+    QStringList legend;
+    if (extraLegend.count() > 0) {
+        for (int i = 0; i < curveCount; ++i) {
+            qCDebug(caStripPlotLog) << "legend for" << legend;
+            if (i < extraLegend.count() && !extraLegend.at(i).isEmpty())
+                legend.append(extraLegend.at(i));
+            else
+                legend.append(channels.at(i));
+        }
+    } else {
+        legend = channels;
+    }
+
+    qCDebug(caStripPlotLog) << "legend" << legend;
+    if (curveCount > 0)
+        defineCurves(legend, getUnits(), getPeriod(), width(), curveCount);
+    return curveCount;
+}
+
+void caStripPlot::prepareCurveMonitor(int curve)
+{
+    if (curve == 0)
+        setYscale(getYaxisLimitsMin(curve), getYaxisLimitsMax(curve));
+    showCurve(curve, true);
+}
+
+caWidgetUpdateResult caStripPlot::applyChannelUpdate(const QString &units, const QString &value,
+                                                     const knobData &data, short aggregateAlarm)
+{
+    Q_UNUSED(units);
+    Q_UNUSED(value);
+    Q_UNUSED(aggregateAlarm);
+    if (!data.edata.connected)
+        return {};
+
+    const int curve = data.specData[1];
+    if (data.edata.initialize) {
+        if (getYscalingMin(curve) == Channel)
+            setYaxisLimitsMin(curve, data.edata.lower_disp_limit);
+        if (getYscalingMax(curve) == Channel)
+            setYaxisLimitsMax(curve, data.edata.upper_disp_limit);
+        if (getYaxisLimitsMin(curve) == getYaxisLimitsMax(curve)) {
+            setYaxisLimitsMin(curve, 0.0);
+            setYaxisLimitsMax(curve, 10.0);
+        }
+        // Redisplay the legend with the current limits.
+        resize(geometry().width() + 1, geometry().height());
+        resize(geometry().width() - 1, geometry().height());
+    }
+
+    switch (data.edata.fieldtype) {
+    case caINT:
+    case caLONG:
+        setData(data.edata.actTimeMs, data.edata.ivalue, curve);
+        break;
+    default:
+        setData(data.edata.actTimeMs, data.edata.rvalue, curve);
+        break;
+    }
+    if (data.edata.initialize)
+        startPlot();
+    return {};
+}
+
 caStripPlot::~caStripPlot() {
 
     emit timerThreadStop();

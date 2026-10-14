@@ -3285,7 +3285,6 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         w1->setProperty("ObjectType", caStripPlot_Widget);
 
         QString text, title;
-        QStringList extra_legend,legend;
 
         // addmonitor normally will add a tooltip to show the pv; however here we have more than one pv
         QString tooltip;
@@ -3296,53 +3295,18 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         stripplotWidget->setPVS(text);
         QStringList vars = text.split(";", SKIP_EMPTY_PARTS);
 
-        int NumberOfCurves = min(vars.count(), caStripPlot::MAXCURVES);
+        const int NumberOfCurves = stripplotWidget->prepareCurves(vars);
 
-// look for a description replacement for the Legend of stripplot
-
-        QVariant legenddata = w1->property("Legend");
-        if (legenddata.isValid()) {
-            if (legenddata.type()==QVariant::StringList)
-                extra_legend = legenddata.value<QStringList>();
-
-            if (legenddata.type()==QVariant::String)
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-                extra_legend = legenddata.value<QString>().split(";",QString::KeepEmptyParts);
-#else
-                extra_legend = legenddata.value<QString>().split(";",Qt::KeepEmptyParts);
-#endif
-
-        }
-        qCDebug(caStripPlotLog) << "extra_legend" << extra_legend << extra_legend.count();
-        if (extra_legend.count()>0){
-            for(int i=0; i< NumberOfCurves; i++) {
-                qCDebug(caStripPlotLog) << "legend for" << legend;
-                if (i<extra_legend.count()){
-                    QString element=extra_legend.at(i);
-                    if (!element.isNull() && !element.isEmpty()){
-                        legend.append(element);
-                    } else legend.append(vars.at(i));
-                }else legend.append(vars.at(i));
-
-            }
-        }else legend=vars;
-
-// go through the defined curves and add monitor
-
-        qCDebug(caStripPlotLog) << "legend" << legend;
-        if(NumberOfCurves > 0) stripplotWidget->defineCurves(legend, stripplotWidget->getUnits(), stripplotWidget->getPeriod(),  stripplotWidget->width(),  NumberOfCurves);
+        // Go through the defined curves and add monitors.
         for(int i=0; i< NumberOfCurves; i++) {
             pv = vars.at(i).trimmed();
             if(pv.size() > 0) {
-                if(i==0) {  // user defaults, will be redefined when limits from channel
-                    stripplotWidget->setYscale(stripplotWidget->getYaxisLimitsMin(i), stripplotWidget->getYaxisLimitsMax(i));
-                }
                 specData[1] = i;            // curve number
                 specData[0] = vars.count(); // number of curves
                 int num = addMonitor(myWidget, &kData, pv, w1, specData, map, &pv);
                 integerList.append(num);
                 nbMonitors++;
-                stripplotWidget->showCurve(i, true);
+                stripplotWidget->prepareCurveMonitor(i);
 
                 tooltip.append(pv);
                 tooltip.append("<br>");
@@ -5413,47 +5377,6 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
             cartesianplotWidget->setCountNumber(0);
             cartesianplotWidget->setWhiteColors();
             cartesianplotWidget->setProperty("Connect", false);
-        }
-
-        // stripchart ==================================================================================================================
-    } else if(caStripPlot *stripplotWidget = qobject_cast<caStripPlot *>(w)) {
-
-        int actPlot= data.specData[1];
-        if(data.edata.connected) {
-
-            // scaling
-            if(data.edata.initialize) {
-                if(stripplotWidget->getYscalingMin(actPlot) == caStripPlot::Channel) {
-                    stripplotWidget->setYaxisLimitsMin(actPlot, data.edata.lower_disp_limit);
-                }
-                if(stripplotWidget->getYscalingMax(actPlot) == caStripPlot::Channel) {
-                    stripplotWidget->setYaxisLimitsMax(actPlot, data.edata.upper_disp_limit);
-                }
-                if(stripplotWidget->getYaxisLimitsMin(actPlot) == stripplotWidget->getYaxisLimitsMax(actPlot)) {
-                    stripplotWidget->setYaxisLimitsMin(actPlot, 0.0);
-                    stripplotWidget->setYaxisLimitsMax(actPlot, 10.0);
-                }
-                // do this for redisplaying legend with correct limits
-                stripplotWidget->resize(stripplotWidget->geometry().width()+1, stripplotWidget->geometry().height());
-                stripplotWidget->resize(stripplotWidget->geometry().width()-1, stripplotWidget->geometry().height());
-            }
-
-
-            switch (data.edata.fieldtype){
-                case caINT:
-                case caLONG:{
-                    stripplotWidget->setData(data.edata.actTimeMs, data.edata.ivalue, actPlot);
-                    break;
-                }
-                default:{
-                    stripplotWidget->setData(data.edata.actTimeMs, data.edata.rvalue, actPlot);
-                }
-            }
-
-            if(data.edata.initialize) {
-                stripplotWidget->startPlot();
-            }
-
         }
 
         // animated gif ==================================================================================================================
