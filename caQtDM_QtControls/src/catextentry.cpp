@@ -47,6 +47,21 @@ caTextEntry::caTextEntry(QWidget *parent) : caLineEdit(parent)
     setAcceptDrops(true);
 }
 
+caWidgetUpdateResult caTextEntry::applyChannelUpdate(const QString &units, const QString &value,
+                                                     const knobData &data, short aggregateAlarm)
+{
+    const caWidgetUpdateResult result = caLineEdit::applyChannelUpdate(units, value, data, aggregateAlarm);
+    if (data.edata.connected) {
+        if (data.specData[0] == 0) {
+            setAccessW(bool(data.edata.accessW));
+            if (hasFocus())
+                QCoreApplication::postEvent(this, new QEvent(QEvent::Enter));
+        }
+        updateText(text());
+    }
+    return result;
+}
+
 void caTextEntry::setValue(double v)
 {
     setText(QString::number(v));

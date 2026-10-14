@@ -126,6 +126,92 @@ caLineEdit::caLineEdit(QWidget *parent) : QLineEdit(parent), FontScalingWidget(t
     installEventFilter(this);
 }
 
+void caLineEdit::prepareReadOnlyMonitor()
+{
+    setCursor(QCursor());
+    setReadOnly(true);
+}
+
+caWidgetUpdateResult caLineEdit::applyChannelUpdate(const QString &units, const QString &value,
+                                                    const knobData &data, short aggregateAlarm)
+{
+    Q_UNUSED(aggregateAlarm);
+    qCDebug(caLineEditLog) << "we have a linedit or textentry" << this
+                           << data.edata.rvalue << data.edata.ivalue;
+
+    const QColor bg = property("BColor").value<QColor>();
+    const QColor fg = property("FColor").value<QColor>();
+    if (data.edata.connected && data.specData[0] == 1)
+        appendUnits(value);
+
+    if (data.edata.connected && data.specData[0] == 0) {
+        setDatatype(data.edata.fieldtype);
+        if (data.edata.fieldtype == caENUM || data.edata.fieldtype == caSTRING ||
+            data.edata.fieldtype == caCHAR) {
+            setValueType(false);
+            if (getColorMode() == Static || getColorMode() == Default) {
+                if (!property("Connect").toBool()) {
+                    setAlarmColors(data.edata.severity, double(data.edata.ivalue), bg, fg);
+                    setProperty("Connect", true);
+                }
+            } else {
+                setAlarmColors(data.edata.severity, double(data.edata.ivalue), bg, fg);
+            }
+
+            const QStringList list = value.split(QChar(27));
+            qCDebug(caLineEditLog) << this << value << list << data.pv
+                                   << int(data.edata.ivalue) << data.edata.valueCount;
+            if (data.edata.fieldtype == caENUM) {
+                const int index = int(data.edata.ivalue);
+                if (list.isEmpty() || index >= list.count()) {
+                    setTextLine(QString::number(index));
+                } else if (index < 0) {
+                    setTextLine("???");
+                } else if (list.at(index).trimmed().isEmpty() || getFormatType() == enumeric) {
+                    setTextLine(QString::number(index));
+                } else {
+                    setTextLine(list.at(index));
+                }
+            } else if (data.edata.fieldtype == caCHAR && data.edata.nelm == 1) {
+                if (getFormatType() == string)
+                    setTextLine(QString(QChar(int(data.edata.ivalue))));
+                else
+                    setValue(data.edata.ivalue, "");
+            } else if (data.edata.nelm == 1) {
+                setTextLine(value);
+            } else if (!list.isEmpty()) {
+                setTextLine(list.at(0));
+            }
+        } else {
+            setValueType(true);
+            const bool integer = data.edata.fieldtype == caINT || data.edata.fieldtype == caLONG;
+            const double numericValue = integer ? double(data.edata.ivalue) : data.edata.rvalue;
+            if (getColorMode() == Static || getColorMode() == Default) {
+                if (!property("Connect").toBool()) {
+                    setAlarmColors(data.edata.severity, numericValue, bg, fg);
+                    setProperty("Connect", true);
+                }
+            } else {
+                setAlarmColors(data.edata.severity, numericValue, bg, fg);
+            }
+
+            if (getLimitsMode() == Channel) {
+                setMaxValue(data.edata.upper_disp_limit);
+                setMinValue(data.edata.lower_disp_limit);
+            }
+            if (getPrecisionMode() != User && data.edata.initialize)
+                setFormat(data.edata.precision);
+            setValue(numericValue, units);
+        }
+    } else if (data.specData[0] == 0) {
+        setValueType(false);
+        setTextLine("");
+        setAlarmColors(NOTCONNECTED, 0.0, bg, fg);
+        setProperty("Connect", false);
+    }
+    return {};
+}
+
 void caLineEdit::setFromTextEntry()
 {
     connect(this, SIGNAL(textChanged(const QString&)), this, SLOT(rescaleFont(const QString&)));

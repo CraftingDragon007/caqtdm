@@ -30,8 +30,10 @@
 #include <QPainter>
 #include <qtcontrols_global.h>
 #include <fontscalingwidget.h>
+#include "caWidgetUpdateInterface.h"
 
-class QTCON_EXPORT caLineEdit : public QLineEdit, public FontScalingWidget
+class QTCON_EXPORT caLineEdit : public QLineEdit, public FontScalingWidget,
+                                 public caWidgetUpdateInterface
 {
     Q_PROPERTY(QString channel READ getPV WRITE setPV)
 
@@ -80,6 +82,12 @@ public:
 
     caLineEdit( QWidget *parent = 0 );
      ~caLineEdit(){}
+
+    void prepareReadOnlyMonitor();
+    bool needsAggregateAlarm() const override { return false; }
+    bool needsVisibilityUpdate() const override { return false; }
+    caWidgetUpdateResult applyChannelUpdate(const QString &units, const QString &value,
+                                            const knobData &data, short aggregateAlarm) override;
 
     bool getUnitsEnabled() const { return thisUnitMode; }
     void setUnitsEnabled(bool thisUnitMode);

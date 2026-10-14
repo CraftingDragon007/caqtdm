@@ -50,6 +50,8 @@ class QTCON_EXPORT caTextEntry : public caLineEdit
 
 public:
     caTextEntry( QWidget *parent = 0 );
+    caWidgetUpdateResult applyChannelUpdate(const QString &units, const QString &value,
+                                            const knobData &data, short aggregateAlarm) override;
     bool getAccessW() const {return _AccessW;}
     void setAccessW(bool access);
     void updateText(const QString &text);
