@@ -40,6 +40,7 @@
 #include <QFutureSynchronizer>
 #endif
 #include "cacamera.h"
+#include <QMutexLocker>
 
 #define ZLIB_BYTE Bytef
 #define ZLIB_ULONG uLongf
@@ -57,6 +58,69 @@
 //#include "ittnotify.h"
 
 Q_LOGGING_CATEGORY(caCameraLog, "caqtdm.widgets.cacamera")
+
+caWidgetUpdateResult caCamera::applyChannelUpdate(const QString &units, const QString &value,
+                                                  const knobData &data, short aggregateAlarm)
+{
+    Q_UNUSED(units);
+    Q_UNUSED(aggregateAlarm);
+    caWidgetUpdateResult result;
+    const int channel = data.specData[0];
+    qCDebug(caCameraLog) << data.pv << data.edata.connected << channel;
+
+    if (!data.edata.connected) {
+        if (channel < 15)
+            showDisconnected();
+        return result;
+    }
+
+    switch (channel) {
+    case 0: {
+        QMutexLocker lock(static_cast<QMutex *>(data.mutex));
+        showImage(data.edata.dataSize, static_cast<char *>(data.edata.dataB), data.edata.fieldtype);
+        break;
+    }
+    case 1: setWidth(static_cast<int>(data.edata.rvalue)); break;
+    case 2: setHeight(static_cast<int>(data.edata.rvalue)); break;
+    case 3:
+        if (testDecodemodeStr(value))
+            setDecodemodeStr(value);
+        else
+            result.operatorDebug = QString("camera mode %1 from pv %2 not recognized")
+                                       .arg(value, getPV_ColormodeChannel());
+        break;
+    case 4:
+        if (testPackingmodeStr(value))
+            setPackingmodeStr(value);
+        else
+            result.operatorDebug = QString("camera packing mode %1 from pv %2 not recognized")
+                                       .arg(value, getPV_PackingmodeChannel());
+        break;
+    case 5: updateMin(static_cast<int>(data.edata.rvalue)); break;
+    case 6: updateMax(static_cast<int>(data.edata.rvalue)); break;
+    case 7: case 8: case 9: case 10:
+        dataProcessing(data.edata.rvalue, channel - 7);
+        break;
+    case 15: case 16:
+        if (data.edata.valueCount > 0 && data.edata.dataB != nullptr) {
+            QMutexLocker lock(static_cast<QMutex *>(data.mutex));
+            const int axis = channel == 15 ? 1 : 0;
+            switch (data.edata.fieldtype) {
+            case caFLOAT: setData(static_cast<float *>(data.edata.dataB), data.edata.valueCount, 0, 0, axis); break;
+            case caDOUBLE: setData(static_cast<double *>(data.edata.dataB), data.edata.valueCount, 0, 0, axis); break;
+            case caLONG: setData(static_cast<int32_t *>(data.edata.dataB), data.edata.valueCount, 0, 0, axis); break;
+            case caINT: case caENUM:
+                setData(static_cast<int16_t *>(data.edata.dataB), data.edata.valueCount, 0, 0, axis);
+                break;
+            case caCHAR: setData(static_cast<int8_t *>(data.edata.dataB), data.edata.valueCount, 0, 0, axis); break;
+            default: break;
+            }
+        }
+        break;
+    default: break;
+    }
+    return result;
+}
 
 char caTypeStr[7][20] = {"caSTRING", "caINT", "caFLOAT", "caENUM", "caCHAR", "caLONG", "caDOUBLE"};
 

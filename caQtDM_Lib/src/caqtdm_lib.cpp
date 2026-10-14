@@ -5140,6 +5140,10 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
             QByteArray warning = outcome.operatorWarning.toLatin1();
             postMessage(QtWarningMsg, warning.data());
         }
+        if (!outcome.operatorDebug.isEmpty()) {
+            QByteArray message = outcome.operatorDebug.toLatin1();
+            postMessageAndLog(QtDebugMsg, message.data(), caQtDMLibLog);
+        }
         if ((data.edata.connected || consumer->visibilityOnDisconnect()) &&
             consumer->needsVisibilityUpdate())
             setObjectVisibility(w, data.edata.rvalue);
@@ -5375,61 +5379,6 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
     } else if(caAlarmTree *alarmTree = qobject_cast<caAlarmTree *>(w)) {
         alarmTree->dataUpdate(String, data);
 
-        // camera =========================================================
-    } else if (caCamera *cameraWidget = qobject_cast<caCamera *>(w)) {
-
-        qCDebug(caCameraLog) << data.pv << data.edata.connected << data.specData[0];
-        if(data.edata.connected) {
-            if(data.specData[0] == 1) {        // width channel
-                cameraWidget->setWidth((int) data.edata.rvalue);
-            } else if(data.specData[0] == 2) { // height channel
-                cameraWidget->setHeight((int) data.edata.rvalue);
-            } else if(data.specData[0] == 3) { // mode overwrite channel if present
-                if(cameraWidget->testDecodemodeStr(String)) cameraWidget->setDecodemodeStr(String);
-                else  {
-                    char asc[MAX_STRING_LENGTH];
-                    snprintf(asc, MAX_STRING_LENGTH, "camera mode %s from pv %s not recognized", qasc(String), qasc(cameraWidget->getPV_ColormodeChannel()));
-                    postMessageAndLog(QtDebugMsg, asc, caQtDMLibLog);
-                }
-            } else if(data.specData[0] == 4) { // packing mode overwrite channel if present
-                if(cameraWidget->testPackingmodeStr(String)) cameraWidget->setPackingmodeStr(String);
-                else  {
-                    char asc[MAX_STRING_LENGTH];
-                    snprintf(asc,MAX_STRING_LENGTH, "camera packing mode %s from pv %s not recognized", qasc(String), qasc(cameraWidget->getPV_PackingmodeChannel()));
-                    postMessageAndLog(QtDebugMsg, asc, caQtDMLibLog);
-                }
-            } else if(data.specData[0] == 5) { // minimum level channel if present
-                cameraWidget->updateMin((int) data.edata.rvalue);
-            } else if(data.specData[0] == 6) { // maximum level channel if present
-                cameraWidget->updateMax((int) data.edata.rvalue);
-            } else if(data.specData[0] == 7) { // value1 if present
-                cameraWidget->dataProcessing(data.edata.rvalue, 0);
-            } else if(data.specData[0] == 8) { // value2 if present
-                cameraWidget->dataProcessing(data.edata.rvalue, 1);
-            } else if(data.specData[0] == 9) { // value3 if present
-                cameraWidget->dataProcessing(data.edata.rvalue, 2);
-            } else if(data.specData[0] == 10) { // value4 if present
-                cameraWidget->dataProcessing(data.edata.rvalue, 3);
-            } else if(data.specData[0] == 0) { // data channel
-                QMutex *datamutex;
-                datamutex = (QMutex*) data.mutex;
-                datamutex->lock();
-                cameraWidget->showImage(data.edata.dataSize, (char*) data.edata.dataB, data.edata.fieldtype);
-                datamutex->unlock();
-            } else if(data.specData[0] == 15) {
-                if(data.edata.valueCount > 0 && data.edata.dataB != (void*) Q_NULLPTR) {
-                    CameraWaveform(cameraWidget, 0, 0, 1, data);
-                }
-            } else if(data.specData[0] == 16) {
-                if(data.edata.valueCount > 0 && data.edata.dataB != (void*) Q_NULLPTR) {
-                    CameraWaveform(cameraWidget, 0, 0, 0, data);
-                }
-            }
-        } else if(data.specData[0] < 15){
-            cameraWidget->showDisconnected();
-            // todo
-        }
-
         // scan2d =========================================================
     } else if (caScan2D *scan2dWidget = qobject_cast<caScan2D *>(w)) {
 
@@ -5484,54 +5433,6 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
     } else {
         // something else (user defined monitors with non ca imageWidgets ?) ==============================================
         qCWarning(caQtDMLibLog) << "unrecognized widget" << w->metaObject()->className();
-    }
-}
-
-void CaQtDM_Lib::CameraWaveform(caCamera *widget, int curvNB, int curvType, int XorY, const knobData &data)
-{
-    QMutex *datamutex;
-    datamutex = (QMutex*) data.mutex;
-    datamutex->lock();
-    switch(data.edata.fieldtype) {
-    case caFLOAT: {
-        float* P = (float*) data.edata.dataB;
-        widget->setData(P, data.edata.valueCount, curvNB, curvType, XorY);
-        datamutex->unlock();
-    }
-        break;
-    case caDOUBLE: {
-        double* P = (double*) data.edata.dataB;
-        widget->setData(P, data.edata.valueCount, curvNB, curvType, XorY);
-        datamutex->unlock();
-    }
-        break;
-    case caLONG: {
-        int32_t* P = (int32_t*) data.edata.dataB;
-        widget->setData(P, data.edata.valueCount,curvNB, curvType, XorY);
-        datamutex->unlock();
-    }
-        break;
-    case caINT: {
-        int16_t* P = (int16_t*) data.edata.dataB;
-        widget->setData(P, data.edata.valueCount, curvNB, curvType, XorY);
-        datamutex->unlock();
-    }
-        break;
-    case caCHAR: {
-        int8_t* P = (int8_t*) data.edata.dataB;
-        widget->setData(P, data.edata.valueCount, curvNB, curvType, XorY);
-        datamutex->unlock();
-    }
-        break;
-    case caENUM: {
-        int16_t* P = ( int16_t*) data.edata.dataB;
-        widget->setData(P, data.edata.valueCount, curvNB, curvType, XorY);
-        datamutex->unlock();
-    }
-        break;
-    default:
-        datamutex->unlock();
-        break;
     }
 }
 

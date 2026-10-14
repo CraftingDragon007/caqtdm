@@ -59,6 +59,7 @@
 
 #include "colormaps.h"
 #include "caPropHandleDefs.h"
+#include "caWidgetUpdateInterface.h"
 
 struct SyncMinMax{
     uint Max[2];
@@ -67,7 +68,7 @@ struct SyncMinMax{
     QMutex * imageLock;
 };
 
-class QTCON_EXPORT caCamera : public QWidget
+class QTCON_EXPORT caCamera : public QWidget, public caWidgetUpdateInterface
 {
     Q_OBJECT
 
@@ -145,6 +146,11 @@ public:
 
     caCamera(QWidget *parent = 0);
     ~caCamera();
+
+    bool needsAggregateAlarm() const override { return false; }
+    bool needsVisibilityUpdate() const override { return false; }
+    caWidgetUpdateResult applyChannelUpdate(const QString &units, const QString &value,
+                                            const knobData &data, short aggregateAlarm) override;
 
     void updateImage(const QImage &image, bool valuesPresent[], double values[], double scaleFactor,
                      QVarLengthArray<double> X, QVarLengthArray<double> Y);
