@@ -34,10 +34,11 @@
 #include <QTimer>
 #include <stdint.h>
 #include <qtcontrols_global.h>
+#include "caWidgetUpdateInterface.h"
 
 typedef char string40[40];
 
-class QTCON_EXPORT caWaveTable : public QTableWidget
+class QTCON_EXPORT caWaveTable : public QTableWidget, public caWidgetUpdateInterface
 {
     Q_OBJECT
     Q_PROPERTY(int rowCount READ rowCount WRITE setRowCount DESIGNABLE false)
@@ -74,6 +75,11 @@ public:
     //void noStyle(QString style) {Q_UNUSED(style);}
 
     caWaveTable(QWidget *parent);
+
+    bool needsAggregateAlarm() const override { return false; }
+    bool needsVisibilityUpdate() const override { return false; }
+    caWidgetUpdateResult applyChannelUpdate(const QString &units, const QString &value,
+                                            const knobData &data, short aggregateAlarm) override;
 
     enum FormatType {decimal, exponential, compact, hexadecimal, octal, string ,user_defined_format};
     enum DataType {doubles, longs, characters, strings};

@@ -5605,51 +5605,6 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
     } else if(caAlarmTree *alarmTree = qobject_cast<caAlarmTree *>(w)) {
         alarmTree->dataUpdate(String, data);
 
-        // table for waveform values==========================================================================
-    } else if(caWaveTable *wavetableWidget = qobject_cast<caWaveTable *>(w)) {
-
-        if(data.edata.connected) {
-            // data from vector
-            if(data.specData[0] == 0) {
-                if(data.edata.valueCount > 0 && data.edata.dataB != (void*) Q_NULLPTR) {
-                    if((wavetableWidget->getPrecisionMode() != caWaveTable::User) && (data.edata.initialize)) {
-                        wavetableWidget->setActualPrecision(data.edata.precision);
-                    }
-                    if(data.edata.fieldtype == caSTRING) {
-                        QStringList list;
-                        list = String.split((QChar)27);
-                        wavetableWidget->setStringList(list, data.edata.status, list.size());
-                    } else {
-                        WaveTable(wavetableWidget, data);
-                    }
-                } else {
-                    QStringList list;
-                    for(int i=0; i<qMax(1,wavetableWidget->getNumberOfRows()); i++) {
-                        for(int j=0; j<wavetableWidget->getNumberOfColumns(); j++) list.append("????");
-                    }
-                    wavetableWidget->setStringList(list, NOTCONNECTED, list.size());
-                }
-            } else if(data.specData[0] == 1) {
-                QStringList list;
-                list = String.split((QChar)27);
-                // here we have to be carefull, while a waveform will give you an index to
-                // a list ("STRING", "CHAR", "UCHAR", "SHORT", "USHORT", "LONG", "ULONG", "FLOAT", "DOUBLE", "ENUM")
-                // however it could be something else
-                if (data.edata.connected && (data.edata.ivalue>=0)){
-                 if(data.edata.ivalue < list.count()) wavetableWidget->setDataType(list.at(data.edata.ivalue));
-                }
-            }
-
-            wavetableWidget->setAccessW(data.edata.accessW);
-
-        } else if(data.specData[0] == 0){
-            QStringList list;
-            for(int i=0; i<qMax(1,wavetableWidget->getNumberOfRows()); i++) {
-                for(int j=0; j<wavetableWidget->getNumberOfColumns(); j++) list.append("NC");
-            }
-            wavetableWidget->setStringList(list, NOTCONNECTED, list.size());
-        }
-
         // camera =========================================================
     } else if (caCamera *cameraWidget = qobject_cast<caCamera *>(w)) {
 
@@ -5863,50 +5818,6 @@ void CaQtDM_Lib::CameraWaveform(caCamera *widget, int curvNB, int curvType, int 
         break;
     }
 }
-
-void CaQtDM_Lib::WaveTable(caWaveTable *widget, const knobData &data)
-{
-    QMutex *datamutex;
-    datamutex = (QMutex*) data.mutex;
-    datamutex->lock();
-
-    switch(data.edata.fieldtype) {
-    case caFLOAT: {
-        float* P = (float*) data.edata.dataB;
-        widget->setData(P, data.edata.severity, data.edata.valueCount);
-        datamutex->unlock();
-    }
-        break;
-    case caDOUBLE: {
-        double* P = (double*) data.edata.dataB;
-        widget->setData(P, data.edata.severity, data.edata.valueCount);
-        datamutex->unlock();
-    }
-        break;
-    case caLONG: {
-        int32_t* P = (int32_t*) data.edata.dataB;
-        widget->setData(P, data.edata.severity, data.edata.valueCount);
-        datamutex->unlock();
-    }
-        break;
-    case caINT: {
-        int16_t* P = (int16_t*) data.edata.dataB;
-        widget->setData(P, data.edata.severity, data.edata.valueCount);
-        datamutex->unlock();
-    }
-        break;
-    case caCHAR: {
-        char * P = (char*) data.edata.dataB;
-        widget->setData(P, data.edata.severity, data.edata.valueCount);
-        datamutex->unlock();
-    }
-        break;
-    default:
-        datamutex->unlock();
-        break;
-    }
-}
-
 
 void CaQtDM_Lib::WaterFall(caWaterfallPlot *widget, const knobData &data)
 {

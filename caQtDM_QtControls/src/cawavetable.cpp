@@ -36,6 +36,7 @@
 #include <QApplication>
 #include <QGuiApplication>
 #include <QClipboard>
+#include <QMutexLocker>
 #include <qnumeric.h>
 #include "cawavetable.h"
 #include "cawavetablemodel.h"
@@ -52,6 +53,68 @@ Q_DECLARE_METATYPE(QtMsgType)
 #endif
 
 Q_LOGGING_CATEGORY(caWaveTableLog, "caqtdm.widgets.cawavetable")
+
+caWidgetUpdateResult caWaveTable::applyChannelUpdate(const QString &units, const QString &value,
+                                                     const knobData &data, short aggregateAlarm)
+{
+    Q_UNUSED(units);
+    Q_UNUSED(aggregateAlarm);
+
+    if (data.edata.connected) {
+        if (data.specData[0] == 0) {
+            if (data.edata.valueCount > 0 && data.edata.dataB != nullptr) {
+                if (getPrecisionMode() != User && data.edata.initialize)
+                    setActualPrecision(data.edata.precision);
+
+                if (data.edata.fieldtype == caSTRING) {
+                    const QStringList list = value.split(QChar(27));
+                    setStringList(list, data.edata.status, list.size());
+                } else {
+                    QMutexLocker lock(static_cast<QMutex *>(data.mutex));
+                    switch (data.edata.fieldtype) {
+                    case caFLOAT:
+                        setData(static_cast<float *>(data.edata.dataB), data.edata.severity, data.edata.valueCount);
+                        break;
+                    case caDOUBLE:
+                        setData(static_cast<double *>(data.edata.dataB), data.edata.severity, data.edata.valueCount);
+                        break;
+                    case caLONG:
+                        setData(static_cast<int32_t *>(data.edata.dataB), data.edata.severity, data.edata.valueCount);
+                        break;
+                    case caINT:
+                        setData(static_cast<int16_t *>(data.edata.dataB), data.edata.severity, data.edata.valueCount);
+                        break;
+                    case caCHAR:
+                        setData(static_cast<char *>(data.edata.dataB), data.edata.severity, data.edata.valueCount);
+                        break;
+                    default:
+                        break;
+                    }
+                }
+            } else {
+                QStringList list;
+                for (int i = 0; i < qMax(1, getNumberOfRows()); ++i)
+                    for (int j = 0; j < getNumberOfColumns(); ++j)
+                        list.append("????");
+                setStringList(list, NOTCONNECTED, list.size());
+            }
+        } else if (data.specData[0] == 1) {
+            const QStringList list = value.split(QChar(27));
+            // A waveform supplies an index into its type list; other values are possible.
+            if (data.edata.ivalue >= 0 && data.edata.ivalue < list.count())
+                setDataType(list.at(data.edata.ivalue));
+        }
+        setAccessW(data.edata.accessW);
+    } else if (data.specData[0] == 0) {
+        QStringList list;
+        for (int i = 0; i < qMax(1, getNumberOfRows()); ++i)
+            for (int j = 0; j < getNumberOfColumns(); ++j)
+                list.append("NC");
+        setStringList(list, NOTCONNECTED, list.size());
+    }
+
+    return {};
+}
 
 caWaveTable::caWaveTable(QWidget *parent) : QTableWidget(parent)
 {
