@@ -79,6 +79,29 @@ replaceMacro::replaceMacro(QWidget *parent) : QWidget(parent)
     setForm(Value);
 }
 
+caWidgetUpdateResult replaceMacro::applyChannelUpdate(const QString &units, const QString &value,
+                                                      const knobData &data, short aggregateAlarm)
+{
+    Q_UNUSED(units);
+    Q_UNUSED(aggregateAlarm);
+
+    if (data.edata.connected) {
+        if (data.edata.fieldtype == caENUM) {
+            const QStringList values = value.split(QChar(27));
+            if (data.edata.initialize || values != getValueList())
+                updateValueList(values);
+            if (!property("Connect").toBool()) {
+                setNormalColors();
+                setProperty("Connect", true);
+            }
+        }
+    } else {
+        setAlarmColors(NOTCONNECTED);
+        setProperty("Connect", false);
+    }
+    return {};
+}
+
 QString replaceMacro::getKey() const {
     if(thisForm == Value) {
         return comboKeys.at(macroKeyListCombo->currentIndex());

@@ -5348,23 +5348,6 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
 
         setObjectVisibility(frameWidget, data.edata.rvalue);
 
-       // replacemacro ==================================================================================================================
-     } else if(replaceMacro* replaceMacroWidget = qobject_cast<replaceMacro *>(w)) {
-
-        if(data.edata.connected) {
-            QStringList stringlist = String.split((QChar)27);
-            // set enum strings
-            if(data.edata.fieldtype == caENUM) {
-                // at initialisation or when list changes
-                if((data.edata.initialize) || (stringlist != replaceMacroWidget->getValueList())) {
-                    replaceMacroWidget->updateValueList(stringlist);
-                }
-                SetColorsBack(replaceMacroWidget);
-            }
-        } else {
-            SetColorsNotConnected(replaceMacroWidget);
-        }
-
         // lineEdit and textEntry ====================================================================================================
     } else if (caLineEdit *lineeditWidget = qobject_cast<caLineEdit *>(w)) {
 

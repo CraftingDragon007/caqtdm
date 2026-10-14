@@ -35,9 +35,10 @@
 
 #include <qtcontrols_global.h>
 #include "caPropHandleDefs.h"
+#include "caWidgetUpdateInterface.h"
 
 
-class QTCON_EXPORT replaceMacro : public QWidget
+class QTCON_EXPORT replaceMacro : public QWidget, public caWidgetUpdateInterface
 {
     Q_OBJECT
     Q_PROPERTY(bool reloadOnChange READ getReloadOnChange WRITE setReloadOnChange)
@@ -76,6 +77,10 @@ public:
     enum colMode {Default, Static};
 
     replaceMacro( QWidget *parent = 0 );
+    bool needsAggregateAlarm() const override { return false; }
+    bool needsVisibilityUpdate() const override { return false; }
+    caWidgetUpdateResult applyChannelUpdate(const QString &units, const QString &value,
+                                            const knobData &data, short aggregateAlarm) override;
 
     colMode getColorMode() const { return thisColorMode; }
     void setColorMode(colMode colormode) {thisColorMode = colormode; setColors(thisBackColor, thisForeColor);}
