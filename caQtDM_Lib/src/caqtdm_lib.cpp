@@ -147,40 +147,6 @@
 #endif
 
 // used for calculating visibility for several types of widgets
-#define ComputeVisibility(x, obj)  {  \
-    switch(obj->getVisibility()) { \
-    case x::StaticV:\
-    return true;\
-    break; \
-    case x::IfNotZero: \
-    visible = (value != 0.0?true:false); \
-    break;\
-    case x::IfZero:\
-    visible = (value == 0.0?true:false);\
-    break;\
-    case x::Calc:\
-    visible = CalcVisibility(obj, result, valid);\
-    break;\
-    }}
-
-// used for calculating visibility for several types of widgets
-#define GetDefinedCalcString(x, obj, strng)  {  \
-    switch(obj->getVisibility()) { \
-    case x::StaticV:\
-    strng = "static"; \
-    break; \
-    case x::IfNotZero: \
-    strng = "IfNotZero"; \
-    break;\
-    case x::IfZero:\
-    strng = "IfZero"; \
-    break;\
-    case x::Calc:\
-    strng = obj->getVisibilityCalc();\
-    break;\
-    }}
-
-
 // used for interfacing epics routines with (pv, text, ...)
 #define QStringsToChars(x,y,z) \
     char param1[MAXPVLEN], param2[MAX_STRING_LENGTH], param3[80]; \
@@ -4440,18 +4406,6 @@ int CaQtDM_Lib::setObjectVisibility(QWidget *w, double value)
             break;
         }
         if (visibilityWidget->applyVisibilityResult(visible)) return visible;
-    } else if (caInclude *includeWidget = qobject_cast<caInclude *>(w)) {
-        // treat visibility if defined
-        ComputeVisibility(caInclude, includeWidget)
-    } else if (caGraphics *graphicsWidget = qobject_cast<caGraphics *>(w)) {
-        // treat visibility if defined
-        ComputeVisibility(caGraphics, graphicsWidget)
-    } else if(caImage *imageWidget = qobject_cast<caImage *>(w)) {
-        // treat visibility if defined
-        ComputeVisibility(caImage, imageWidget)
-    } else if(caPolyLine *polyLineWidget = qobject_cast<caPolyLine *>(w)) {
-        // treat visibility if defined
-        ComputeVisibility(caPolyLine, polyLineWidget)
     }
 
     if(!visible) {
@@ -4469,18 +4423,6 @@ int CaQtDM_Lib::setObjectVisibility(QWidget *w, double value)
 void CaQtDM_Lib::setCalcToNothing(QWidget* w) {
     if (caVisibilityMonitorInterface *visibilityWidget = dynamic_cast<caVisibilityMonitorInterface *>(w)) {
         visibilityWidget->setVisibilityExpression(QString());
-    }
-    else if(caInclude *include = qobject_cast<caInclude *>(w)) {
-        include->setVisibilityCalc("");
-    }
-    else if(caImage *image = qobject_cast<caImage *>(w)) {
-        image->setVisibilityCalc("");
-    }
-    else if(caGraphics *graphic = qobject_cast<caGraphics *>(w)) {
-        graphic->setVisibilityCalc("");
-    }
-    else if(caPolyLine *line = qobject_cast<caPolyLine *>(w)) {
-        line->setVisibilityCalc("");
     }
     else if(caCalc *calc = qobject_cast<caCalc *>(w)) {
         calc->setCalc("");
@@ -4564,18 +4506,6 @@ bool CaQtDM_Lib::CalcVisibility(QWidget *w, double &result, bool &valid)
 
     if (caVisibilityMonitorInterface *visibilityWidget = dynamic_cast<caVisibilityMonitorInterface *>(w)) {
         calcQString = visibilityWidget->visibilityExpression();
-    }
-    else if(caInclude *include = qobject_cast<caInclude *>(w)) {
-        calcQString = include->getVisibilityCalc();
-    }
-    else if(caImage *image = qobject_cast<caImage *>(w)) {
-        calcQString = image->getVisibilityCalc();
-    }
-    else if(caGraphics *graphic = qobject_cast<caGraphics *>(w)) {
-        calcQString = graphic->getVisibilityCalc();
-    }
-    else if(caPolyLine *line = qobject_cast<caPolyLine *>(w)) {
-        calcQString = line->getVisibilityCalc();
     }
     else if(caCalc *calc = qobject_cast<caCalc *>(w)) {
         calcQString = calc->getCalc();
@@ -6521,31 +6451,12 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
         }
         MonitorList.insert(0, nbMonitors);
 
-    } else if(caImage* imageWidget = qobject_cast<caImage *>(w)) {
-        GetDefinedCalcString(caImage, imageWidget, calcString);
-        imageString =imageWidget->getImageCalc();
-
-    } else if(caFrame* frameWidget = qobject_cast<caFrame *>(w)) {
-        GetDefinedCalcString(caFrame, frameWidget, calcString);
-
-    } else if(caInclude* includeWidget = qobject_cast<caInclude *>(w)) {
-        GetDefinedCalcString(caInclude, includeWidget, calcString);
-
-    } else if(caLabel* labelWidget = qobject_cast<caLabel *>(w)) {
-        GetDefinedCalcString(caLabel, labelWidget, calcString);
-
-    } else if(caLabelVertical* labelverticalWidget = qobject_cast<caLabelVertical *>(w)) {
-        GetDefinedCalcString(caLabelVertical, labelverticalWidget, calcString);
-
-    } else if(caGraphics* graphicsWidget = qobject_cast<caGraphics *>(w)) {
-        GetDefinedCalcString(caGraphics, graphicsWidget, calcString);
-        if(graphicsWidget->getColorMode() == caGraphics::Alarm) qstrncpy(colMode, "Alarm", sizeof(colMode));
-        else qstrncpy(colMode, "Static", sizeof(colMode));
-
-    } else if(caPolyLine* polylineWidget = qobject_cast<caPolyLine *>(w)) {
-        GetDefinedCalcString(caPolyLine, polylineWidget, calcString);
-        if(polylineWidget->getColorMode() == caPolyLine::Alarm) qstrncpy(colMode, "Alarm", sizeof(colMode));
-        else qstrncpy(colMode, "Static", sizeof(colMode));
+    } else if(caVisibilityMonitorInterface *visibilityWidget = dynamic_cast<caVisibilityMonitorInterface *>(w)) {
+        calcString = visibilityWidget->visibilityDescription();
+        if (caImage *imageWidget = qobject_cast<caImage *>(w))
+            imageString = imageWidget->getImageCalc();
+        if (caShapeRuntime *shapeWidget = dynamic_cast<caShapeRuntime *>(w))
+            qstrncpy(colMode, shapeWidget->needsAggregateAlarm() ? "Alarm" : "Static", sizeof(colMode));
 
     } else if(caCalc* calcWidget = qobject_cast<caCalc *>(w)) {
         calcString = calcWidget->getCalc();
@@ -7427,22 +7338,6 @@ int CaQtDM_Lib::InitVisibility(QWidget* widget, knobData* kData, QMap<QString, Q
     } else if (caCalc *calcWidget = qobject_cast<caCalc *>(widget)) {
         getVisibilityChannels(calcWidget);
         visibilityCalc = calcWidget->getCalc();
-    } else if (caImage *imageWidget = qobject_cast<caImage *>(widget)) {
-        // while caImage uses also ImageCalc, we do not skip this, even when visibility = StaticV
-        getVisibilityChannels(imageWidget);
-        visibilityCalc = imageWidget->getVisibilityCalc();
-    } else if (caGraphics *graphicsWidget = qobject_cast<caGraphics *>(widget)) {
-        if(graphicsWidget->getVisibility() == caGraphics::StaticV && graphicsWidget->getColorMode() == caGraphics::Static) return 0;
-        getVisibilityChannels(graphicsWidget);
-        visibilityCalc = graphicsWidget->getVisibilityCalc();
-    } else if (caPolyLine *polylineWidget = qobject_cast<caPolyLine *>(widget)) {
-        if(polylineWidget->getVisibility() == caPolyLine::StaticV && polylineWidget->getColorMode() == caPolyLine::Static) return 0;
-        getVisibilityChannels(polylineWidget);
-        visibilityCalc = polylineWidget->getVisibilityCalc();
-    } else if (caInclude *includeWidget = qobject_cast<caInclude *>(widget)) {
-        if(includeWidget->getVisibility() == caInclude::StaticV) return 0;
-        getVisibilityChannels(includeWidget);
-        visibilityCalc = includeWidget->getVisibilityCalc();
     } else {
         qCWarning(caQtDMLibLog) << "widget has not been defined for visibility";
         return 0;
@@ -7455,14 +7350,6 @@ int CaQtDM_Lib::InitVisibility(QWidget* widget, knobData* kData, QMap<QString, Q
                 visibilityWidget->setVisibilityChannel(i, pv);
             } else if (caCalc *calcWidget = qobject_cast<caCalc *>(widget)) {
                replaceVisibilityChannels(calcWidget)
-            } else if (caImage *imageWidget = qobject_cast<caImage *>(widget)) {
-                replaceVisibilityChannels(imageWidget)
-            } else if (caGraphics *graphicsWidget = qobject_cast<caGraphics *>(widget)) {
-                replaceVisibilityChannels(graphicsWidget)
-            } else if (caPolyLine *polylineWidget = qobject_cast<caPolyLine *>(widget)) {
-                replaceVisibilityChannels(polylineWidget)
-            } else if (caInclude *includeWidget = qobject_cast<caInclude *>(widget)) {
-                replaceVisibilityChannels(includeWidget)
             }
 
             tooltip.append(pv);
@@ -7497,22 +7384,6 @@ int CaQtDM_Lib::InitVisibility(QWidget* widget, knobData* kData, QMap<QString, Q
         calcWidget->setCalc(text);
         calcWidget->setProperty("MonitorList", monitorList);
         calcWidget->setProperty("IndexList", indexList);
-    } else if (caImage *imageWidget = qobject_cast<caImage *>(widget)) {
-        imageWidget->setVisibilityCalc(text);
-        imageWidget->setProperty("MonitorList", monitorList);
-        imageWidget->setProperty("IndexList", indexList);
-    } else if (caGraphics *graphicsWidget = qobject_cast<caGraphics *>(widget)) {
-        graphicsWidget->setVisibilityCalc(text);
-        graphicsWidget->setProperty("MonitorList", monitorList);
-        graphicsWidget->setProperty("IndexList", indexList);
-    } else if (caPolyLine *polylineWidget = qobject_cast<caPolyLine *>(widget)) {
-        polylineWidget->setVisibilityCalc(text);
-        polylineWidget->setProperty("MonitorList", monitorList);
-        polylineWidget->setProperty("IndexList", indexList);
-    } else if (caInclude *includeWidget = qobject_cast<caInclude *>(widget)) {
-        includeWidget->setVisibilityCalc(text);
-        includeWidget->setProperty("MonitorList", monitorList);
-        includeWidget->setProperty("IndexList", indexList);
     }
 
     // when no monitors we have a static visibility calculation, except for cacalc

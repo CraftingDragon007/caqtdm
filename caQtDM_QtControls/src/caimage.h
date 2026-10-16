@@ -34,8 +34,9 @@
 #include <QResizeEvent>
 #include <qtcontrols_global.h>
 #include "messageQueue.h"
+#include "caVisibilityMonitorInterface.h"
 
-class QTCON_EXPORT caImage : public QWidget
+class QTCON_EXPORT caImage : public QWidget, public caVisibilityRuntimeMixin<caImage>
 {
 
     Q_OBJECT

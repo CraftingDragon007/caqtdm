@@ -29,13 +29,15 @@
 #include <QWidget>
 #include <qtcontrols_global.h>
 #include "caShapeRuntimeMixin.h"
+#include "caVisibilityMonitorInterface.h"
 
 QT_BEGIN_NAMESPACE
 class QRect;
 class QSize;
 QT_END_NAMESPACE
 
-class QTCON_EXPORT caPolyLine : public QWidget, public caShapeRuntimeMixin<caPolyLine>
+class QTCON_EXPORT caPolyLine : public QWidget, public caShapeRuntimeMixin<caPolyLine>,
+                                public caVisibilityRuntimeMixin<caPolyLine>
 {
     Q_OBJECT
 
@@ -62,6 +64,8 @@ class QTCON_EXPORT caPolyLine : public QWidget, public caShapeRuntimeMixin<caPol
 
 public:
     void noStyle(QString style) {Q_UNUSED(style);}
+    bool skipVisibilityMonitors() const override
+    { return getVisibility() == StaticV && getColorMode() == Static; }
 
     enum LineStyle {Solid = 0, Dash, BigDash};
     enum colMode {Static=0, Alarm};

@@ -30,10 +30,12 @@
 #include <QDebug>
 #include <qtcontrols_global.h>
 #include "caShapeRuntimeMixin.h"
+#include "caVisibilityMonitorInterface.h"
 
 // would be so nice to get rid of my includes, however it would break the compatibility with former ui files, so I leave it like that
 // class  QTCON_EXPORT caGraphics : public caVisibility
-class  QTCON_EXPORT caGraphics : public QWidget, public caShapeRuntimeMixin<caGraphics>
+class  QTCON_EXPORT caGraphics : public QWidget, public caShapeRuntimeMixin<caGraphics>,
+                                 public caVisibilityRuntimeMixin<caGraphics>
 {
     Q_OBJECT
 
@@ -79,6 +81,8 @@ class  QTCON_EXPORT caGraphics : public QWidget, public caShapeRuntimeMixin<caGr
 
 public:
     void noStyle(QString style) {Q_UNUSED(style);}
+    bool skipVisibilityMonitors() const override
+    { return getVisibility() == StaticV && getColorMode() == Static; }
 
     enum LineStyle {Solid = 0, Dash, BigDash};
     enum FillStyle {Filled = 0, Outline};

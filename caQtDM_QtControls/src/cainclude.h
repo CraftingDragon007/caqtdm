@@ -32,6 +32,7 @@
 #include <qtcontrols_global.h>
 
 #include "caPropHandleDefs.h"
+#include "caVisibilityMonitorInterface.h"
 
 #define PRC 1
 
@@ -39,7 +40,7 @@
    #include "uiconverter.h"
 #endif
 
-class  QTCON_EXPORT caInclude : public QWidget
+class  QTCON_EXPORT caInclude : public QWidget, public caVisibilityRuntimeMixin<caInclude>
 {
     Q_OBJECT
 
@@ -97,6 +98,7 @@ public:
 #include "caPropHandle.h"
 
     void noStyle(QString style) {Q_UNUSED(style);}
+    bool skipVisibilityMonitors() const override { return getVisibility() == StaticV; }
 
     enum myShapes {NoFrame=0, Box, Panel};
 
