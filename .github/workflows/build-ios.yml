@@ -16,6 +16,7 @@ env:
   EPICS_VERSION: R7.0.10
   IOS_DEPLOYMENT_TARGET: '18.0'
   QT_ROOT: ${{ github.workspace }}/.ci-cache/Qt
+  QT_HOST_ROOT: ${{ github.workspace }}/.ci-cache/Qt/6.12.0/macos-host
   QT_IOS_DEVICE_ROOT: ${{ github.workspace }}/.ci-cache/Qt/6.12.0/ios-device
   QT_IOS_SIMULATOR_ROOT: ${{ github.workspace }}/.ci-cache/Qt/6.12.0/ios-simulator-arm64
   OPENSSL_IOS_ROOT: ${{ github.workspace }}/.ci-cache/openssl-ios
@@ -42,7 +43,7 @@ jobs:
         run: bash ci/ios/resolve-openssl.sh
 
   build-qt-host:
-    name: Build Qt 6.12.0 host tools
+    name: Build Qt 6.12.0 macOS host
     runs-on: macos-15
     permissions:
       contents: read
@@ -66,14 +67,19 @@ jobs:
           echo "host_key=xcode${XCODE_VERSION}" >> "$GITHUB_OUTPUT"
           echo "key=xcode${XCODE_VERSION}-ios${IOS_SDK}-sim${SIM_SDK}" >> "$GITHUB_OUTPUT"
 
-      - name: Restore Qt host tools and source cache
+      - name: Restore installed Qt host
         id: cache-host
         uses: actions/cache@v5
         with:
-          path: |
-            ${{ runner.temp }}/qt-build-host
-            ${{ env.QT_ROOT }}/${{ env.QT_VERSION }}/source
-          key: qt-ios-host-v2-${{ runner.os }}-${{ runner.arch }}-qt${{ env.QT_VERSION }}-${{ steps.toolchain.outputs.host_key }}-${{ hashFiles('ci/ios/build-qt-host.sh') }}
+          path: ${{ env.QT_HOST_ROOT }}
+          key: qt-ios-host-v3-${{ runner.os }}-${{ runner.arch }}-qt${{ env.QT_VERSION }}-${{ steps.toolchain.outputs.host_key }}-${{ hashFiles('ci/ios/build-qt-host.sh') }}
+
+      - name: Restore Qt source
+        if: steps.cache-host.outputs.cache-hit != 'true'
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.QT_ROOT }}/${{ env.QT_VERSION }}/source
+          key: qt-ios-source-v1-qt${{ env.QT_VERSION }}
 
       - name: Ensure build tools
         if: steps.cache-host.outputs.cache-hit != 'true'
@@ -83,17 +89,15 @@ jobs:
           command -v cmake || ci_error 'cmake is not installed'
           if ! command -v ninja >/dev/null; then brew install ninja; fi
 
-      - name: Build Qt host tools
+      - name: Build and install Qt host
         if: steps.cache-host.outputs.cache-hit != 'true'
         run: bash ci/ios/build-qt-host.sh
 
-      - name: Verify Qt host tools and source
+      - name: Verify installed Qt host
         run: |
           set -euo pipefail
           source ci/ios/checks.sh
-          host_root="${RUNNER_TEMP}/qt-build-host"
-          bash ci/ios/verify-qt-host.sh "${host_root}"
-          require_file "${QT_ROOT}/${QT_VERSION}/source/qt-everywhere-src-${QT_VERSION}/configure"
+          bash ci/ios/verify-qt-host.sh "${QT_HOST_ROOT}"
 
   build-qt-ios:
     name: Build Qt 6.12.0 ${{ matrix.name }} SDK
@@ -129,33 +133,41 @@ jobs:
           require_equal "${actual_toolchain}" "${{ needs.build-qt-host.outputs.toolchain_key }}" 'Qt host toolchain'
           {
             echo "QT_TARGET_ROOT=${QT_ROOT}/${QT_VERSION}/${{ matrix.qt_install_target }}"
-            echo "QT_HOST_ROOT=${RUNNER_TEMP}/qt-build-host"
             echo "OPENSSL_VERSION=${{ needs.resolve-openssl.outputs.version }}"
             echo "OPENSSL_COMMIT_SHA=${{ needs.resolve-openssl.outputs.commit_sha }}"
             echo "OPENSSL_PREFIX=${OPENSSL_IOS_ROOT}/${{ needs.resolve-openssl.outputs.version }}/${{ matrix.openssl_install_target }}"
           } >> "$GITHUB_ENV"
 
-      - name: Restore Qt host tools and source cache
+      - name: Restore installed Qt host
         uses: actions/cache@v5
         with:
-          path: |
-            ${{ runner.temp }}/qt-build-host
-            ${{ env.QT_ROOT }}/${{ env.QT_VERSION }}/source
-          key: qt-ios-host-v2-${{ runner.os }}-${{ runner.arch }}-qt${{ env.QT_VERSION }}-${{ needs.build-qt-host.outputs.host_key }}-${{ hashFiles('ci/ios/build-qt-host.sh') }}
+          path: ${{ env.QT_HOST_ROOT }}
+          key: qt-ios-host-v3-${{ runner.os }}-${{ runner.arch }}-qt${{ env.QT_VERSION }}-${{ needs.build-qt-host.outputs.host_key }}-${{ hashFiles('ci/ios/build-qt-host.sh') }}
 
       - name: Verify restored Qt host tools
         run: |
           set -euo pipefail
           source ci/ios/checks.sh
           bash ci/ios/verify-qt-host.sh "${QT_HOST_ROOT}"
-          require_file "${QT_ROOT}/${QT_VERSION}/source/qt-everywhere-src-${QT_VERSION}/configure"
 
       - name: Restore Qt iOS SDK cache
         id: cache-qt-target
         uses: actions/cache@v5
         with:
           path: ${{ env.QT_ROOT }}/${{ env.QT_VERSION }}/${{ matrix.qt_install_target }}
-          key: qt-ios-target-v2-${{ runner.os }}-${{ runner.arch }}-qt${{ env.QT_VERSION }}-${{ matrix.qt_install_target }}-${{ needs.build-qt-host.outputs.toolchain_key }}-ios${{ env.IOS_DEPLOYMENT_TARGET }}-openssl${{ needs.resolve-openssl.outputs.version }}-${{ needs.resolve-openssl.outputs.commit_sha }}-${{ hashFiles('ci/ios/build-qt-host.sh', 'ci/ios/build-qt-target.sh', 'ci/ios/build-openssl.sh') }}
+          key: qt-ios-target-v3-${{ runner.os }}-${{ runner.arch }}-qt${{ env.QT_VERSION }}-${{ matrix.qt_install_target }}-${{ needs.build-qt-host.outputs.toolchain_key }}-ios${{ env.IOS_DEPLOYMENT_TARGET }}-openssl${{ needs.resolve-openssl.outputs.version }}-${{ needs.resolve-openssl.outputs.commit_sha }}-${{ hashFiles('ci/ios/build-qt-host.sh', 'ci/ios/build-qt-target.sh', 'ci/ios/build-openssl.sh') }}
+
+      - name: Restore Qt source
+        if: steps.cache-qt-target.outputs.cache-hit != 'true'
+        id: cache-qt-source
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.QT_ROOT }}/${{ env.QT_VERSION }}/source
+          key: qt-ios-source-v1-qt${{ env.QT_VERSION }}
+
+      - name: Download Qt source if needed
+        if: steps.cache-qt-target.outputs.cache-hit != 'true'
+        run: bash ci/ios/ensure-qt-source.sh
 
       - name: Restore OpenSSL iOS cache
         id: cache-openssl
@@ -301,25 +313,22 @@ jobs:
           set -euo pipefail
           {
             echo "QT_TARGET_ROOT=${QT_ROOT}/${QT_VERSION}/${{ matrix.qt_install_target }}"
-            echo "QT_HOST_ROOT=${RUNNER_TEMP}/qt-build-host"
             echo "QWT_ROOT=${GITHUB_WORKSPACE}/.ci-cache/qwt-${{ matrix.epics_arch }}"
             echo "OPENSSL_PREFIX=${OPENSSL_IOS_ROOT}/${{ needs.resolve-openssl.outputs.version }}/${{ matrix.openssl_install_target }}"
             echo "XCODE_DESTINATION=${{ matrix.xcode_destination }}"
           } >> "$GITHUB_ENV"
 
-      - name: Restore Qt host tools and source cache
+      - name: Restore installed Qt host
         uses: actions/cache@v5
         with:
-          path: |
-            ${{ runner.temp }}/qt-build-host
-            ${{ env.QT_ROOT }}/${{ env.QT_VERSION }}/source
-          key: qt-ios-host-v2-${{ runner.os }}-${{ runner.arch }}-qt${{ env.QT_VERSION }}-${{ needs.build-qt-host.outputs.host_key }}-${{ hashFiles('ci/ios/build-qt-host.sh') }}
+          path: ${{ env.QT_HOST_ROOT }}
+          key: qt-ios-host-v3-${{ runner.os }}-${{ runner.arch }}-qt${{ env.QT_VERSION }}-${{ needs.build-qt-host.outputs.host_key }}-${{ hashFiles('ci/ios/build-qt-host.sh') }}
 
       - name: Restore Qt iOS SDK cache
         uses: actions/cache@v5
         with:
           path: ${{ env.QT_ROOT }}/${{ env.QT_VERSION }}/${{ matrix.qt_install_target }}
-          key: qt-ios-target-v2-${{ runner.os }}-${{ runner.arch }}-qt${{ env.QT_VERSION }}-${{ matrix.qt_install_target }}-${{ needs.build-qt-host.outputs.toolchain_key }}-ios${{ env.IOS_DEPLOYMENT_TARGET }}-openssl${{ needs.resolve-openssl.outputs.version }}-${{ needs.resolve-openssl.outputs.commit_sha }}-${{ hashFiles('ci/ios/build-qt-host.sh', 'ci/ios/build-qt-target.sh', 'ci/ios/build-openssl.sh') }}
+          key: qt-ios-target-v3-${{ runner.os }}-${{ runner.arch }}-qt${{ env.QT_VERSION }}-${{ matrix.qt_install_target }}-${{ needs.build-qt-host.outputs.toolchain_key }}-ios${{ env.IOS_DEPLOYMENT_TARGET }}-openssl${{ needs.resolve-openssl.outputs.version }}-${{ needs.resolve-openssl.outputs.commit_sha }}-${{ hashFiles('ci/ios/build-qt-host.sh', 'ci/ios/build-qt-target.sh', 'ci/ios/build-openssl.sh') }}
 
       - name: Restore OpenSSL iOS cache
         uses: actions/cache@v5
@@ -338,9 +347,9 @@ jobs:
           set -euo pipefail
           source ci/ios/checks.sh
           bash ci/ios/verify-qt-host.sh "${QT_HOST_ROOT}"
-          require_file "${QT_ROOT}/${QT_VERSION}/source/qt-everywhere-src-${QT_VERSION}/configure"
           require_executable "${QT_TARGET_ROOT}/bin/qmake"
           require_executable "${QT_TARGET_ROOT}/bin/qt-cmake"
+          require_equal "$("${QT_TARGET_ROOT}/bin/qmake" -query QT_VERSION)" "${QT_VERSION}" 'Qt target version'
           require_dir "${QT_TARGET_ROOT}/lib/QtCore.framework"
           require_dir "${QT_TARGET_ROOT}/lib/QtPositioning.framework"
           require_dir "${QT_TARGET_ROOT}/lib/QtOpcUa.framework"
@@ -360,25 +369,6 @@ jobs:
           for lib in ca Com dbCore dbRecStd nt pvAccess pvAccessCA pvAccessIOC pvaClient pvData pvDatabase qsrv; do
             require_file "${EPICS_BASE}/lib/${{ matrix.epics_arch }}/lib${lib}.a"
           done
-
-      - name: Fix Qt host tool aliases
-        run: |
-          set -euo pipefail
-
-          for tool in qmake qtpaths; do
-            bin="${QT_HOST_ROOT}/bin/${tool}"
-            versioned="${QT_HOST_ROOT}/bin/${tool}6"
-
-            test -x "${bin}"
-
-            if [[ ! -e "${versioned}" && ! -L "${versioned}" ]]; then
-              ln -s "${tool}" "${versioned}"
-            fi
-
-            test -x "${versioned}"
-          done
-
-          "${QT_TARGET_ROOT}/bin/qmake" -query QT_VERSION
 
       - name: Cache Qwt
         id: cache-qwt
