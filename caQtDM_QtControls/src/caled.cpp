@@ -47,6 +47,22 @@ caWidgetUpdateResult caLed::applyChannelUpdate(const QString &units, const QStri
     return {};
 }
 
+void caLed::captureResizeBaseline()
+{
+    originalLedWidth = ledWidth();
+    originalLedHeight = ledHeight();
+}
+
+void caLed::resizeLed(double factX, double factY)
+{
+    double width = originalLedWidth * factX;
+    double height = originalLedHeight * factY;
+    if (width < 1.0) width = 1.0;
+    if (height < 1.0) height = 1.0;
+    setLedHeight(qRound(height));
+    setLedWidth(qRound(width));
+}
+
 caLed::caLed(QWidget *parent) : ELed(parent)
 {
     thisBitNr = 0;

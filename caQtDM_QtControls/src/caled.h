@@ -81,6 +81,10 @@ public:
 
     void setState(Qt::CheckState state);
 
+    // Preserve and scale the LED's internal indicator size with display resizing.
+    void captureResizeBaseline();
+    void resizeLed(double factX, double factY);
+
     void setAlarmColors(short status);
 
     int stateObjectType() const override;
@@ -110,6 +114,8 @@ private:
     QColor thisFalseColor, thisTrueColor, thisUndefinedColor, thisBorderColor;
     colMode thisColorMode;
     QString thisTrueValue, thisFalseValue;
+    int originalLedWidth = 0;
+    int originalLedHeight = 0;
 };
 
 #endif
