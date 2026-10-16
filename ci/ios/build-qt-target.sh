@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+source "$(dirname "${BASH_SOURCE[0]}")/checks.sh"
 
 run_with_heartbeat() {
   local label="$1"
@@ -19,6 +20,9 @@ run_with_heartbeat() {
   wait "${command_pid}" || result=$?
   kill "${heartbeat_pid}" 2>/dev/null || true
   wait "${heartbeat_pid}" 2>/dev/null || true
+  if (( result != 0 )); then
+    echo "::error::${label} failed with exit code ${result}" >&2
+  fi
   return "${result}"
 }
 
@@ -41,9 +45,9 @@ esac
 qt_source="${QT_ROOT}/${QT_VERSION}/source/qt-everywhere-src-${QT_VERSION}"
 qt_host_root="${RUNNER_TEMP}/qt-build-host"
 build_dir="${RUNNER_TEMP}/qt-build-${target}"
-test -d "${qt_source}"
-test -x "${qt_host_root}/bin/qopcuaxmldatatypes2cpp"
-test -f "${openssl_prefix}/lib/libssl.a"
+require_dir "${qt_source}"
+bash "${GITHUB_WORKSPACE}/ci/ios/verify-qt-host.sh" "${qt_host_root}"
+require_file "${openssl_prefix}/lib/libssl.a"
 mkdir -p "${build_dir}"
 cd "${build_dir}"
 
@@ -64,7 +68,7 @@ echo "::group::Configure Qt ${QT_VERSION} for ${target}"
   -DOPENSSL_USE_STATIC_LIBS=ON \
   -DFEATURE_open62541_security=ON
 summary_file="${build_dir}/config.summary"
-test -f "${summary_file}"
+require_file "${summary_file}"
 if ! grep -Eq 'Open62541 security support[.[:space:]]+yes' "${summary_file}"; then
   cat "${summary_file}"
   echo "Open62541 security support was not enabled for ${target}" >&2

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+source "$(dirname "${BASH_SOURCE[0]}")/checks.sh"
 
 target="$1"
 case "${target}" in
@@ -28,7 +29,7 @@ if [ ! -s "${openssl_archive}" ]; then
     "https://github.com/openssl/openssl/archive/${OPENSSL_COMMIT_SHA}.tar.gz" \
     -o "${openssl_archive}"
 fi
-test -s "${openssl_archive}"
+require_nonempty_file "${openssl_archive}"
 mkdir -p "${openssl_source}"
 tar -xzf "${openssl_archive}" -C "${openssl_source}" --strip-components=1
 cd "${openssl_source}"

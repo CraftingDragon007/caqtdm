@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+source "$(dirname "${BASH_SOURCE[0]}")/checks.sh"
 
 run_with_heartbeat() {
   local label="$1"
@@ -19,6 +20,9 @@ run_with_heartbeat() {
   wait "${command_pid}" || result=$?
   kill "${heartbeat_pid}" 2>/dev/null || true
   wait "${heartbeat_pid}" 2>/dev/null || true
+  if (( result != 0 )); then
+    echo "::error::${label} failed with exit code ${result}" >&2
+  fi
   return "${result}"
 }
 
@@ -35,13 +39,13 @@ echo "::group::Download Qt ${QT_VERSION} source"
 curl --fail --location --show-error --retry 3 --progress-bar \
   --write-out $'\nHTTP %{http_code}; downloaded %{size_download} bytes in %{time_total}s\n' \
   "${qt_url}" -o "${qt_archive}"
-test -s "${qt_archive}"
+require_nonempty_file "${qt_archive}"
 shasum -a 256 "${qt_archive}"
 echo "::endgroup::"
 
 echo "::group::Extract Qt ${QT_VERSION} source"
 tar -xf "${qt_archive}" -C "${qt_source_root}"
-test -d "${qt_source}"
+require_dir "${qt_source}"
 echo "::endgroup::"
 
 qt_host_submodules='qtbase,qt5compat,qtsvg,qttools,qtimageformats,qtpositioning,qtopcua'
@@ -55,7 +59,5 @@ echo "::group::Configure Qt ${QT_VERSION} host tools"
 echo "::endgroup::"
 echo "::group::Build Qt host tools"
 run_with_heartbeat "Build Qt host tools" cmake --build . --target host_tools --parallel
-test -x "${qt_host_root}/bin/qmake"
-test -x "${qt_host_root}/bin/qopcuaxmldatatypes2cpp"
-test -f "${qt_host_root}/lib/cmake/Qt6OpcUaTools/Qt6OpcUaToolsConfig.cmake"
+bash "${GITHUB_WORKSPACE}/ci/ios/verify-qt-host.sh" "${qt_host_root}"
 echo "::endgroup::"

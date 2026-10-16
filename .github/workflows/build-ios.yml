@@ -58,7 +58,8 @@ jobs:
         id: toolchain
         run: |
           set -euo pipefail
-          test "$(uname -m)" = arm64
+          source ci/ios/checks.sh
+          require_equal "$(uname -m)" arm64 'Runner architecture'
           XCODE_VERSION="$(xcodebuild -version | awk '/^Xcode / {print $2}')"
           IOS_SDK="$(xcrun --sdk iphoneos --show-sdk-version)"
           SIM_SDK="$(xcrun --sdk iphonesimulator --show-sdk-version)"
@@ -78,7 +79,8 @@ jobs:
         if: steps.cache-host.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
-          command -v cmake
+          source ci/ios/checks.sh
+          command -v cmake || ci_error 'cmake is not installed'
           if ! command -v ninja >/dev/null; then brew install ninja; fi
 
       - name: Build Qt host tools
@@ -88,11 +90,10 @@ jobs:
       - name: Verify Qt host tools and source
         run: |
           set -euo pipefail
+          source ci/ios/checks.sh
           host_root="${RUNNER_TEMP}/qt-build-host"
-          test -x "${host_root}/bin/qmake"
-          test -x "${host_root}/bin/qopcuaxmldatatypes2cpp"
-          test -f "${host_root}/lib/cmake/Qt6OpcUaTools/Qt6OpcUaToolsConfig.cmake"
-          test -f "${QT_ROOT}/${QT_VERSION}/source/qt-everywhere-src-${QT_VERSION}/configure"
+          bash ci/ios/verify-qt-host.sh "${host_root}"
+          require_file "${QT_ROOT}/${QT_VERSION}/source/qt-everywhere-src-${QT_VERSION}/configure"
 
   build-qt-ios:
     name: Build Qt 6.12.0 ${{ matrix.name }} SDK
@@ -122,9 +123,10 @@ jobs:
       - name: Select target directories and verify toolchain
         run: |
           set -euo pipefail
-          test "$(uname -m)" = arm64
+          source ci/ios/checks.sh
+          require_equal "$(uname -m)" arm64 'Runner architecture'
           actual_toolchain="xcode$(xcodebuild -version | awk '/^Xcode / {print $2}')-ios$(xcrun --sdk iphoneos --show-sdk-version)-sim$(xcrun --sdk iphonesimulator --show-sdk-version)"
-          test "${actual_toolchain}" = "${{ needs.build-qt-host.outputs.toolchain_key }}"
+          require_equal "${actual_toolchain}" "${{ needs.build-qt-host.outputs.toolchain_key }}" 'Qt host toolchain'
           {
             echo "QT_TARGET_ROOT=${QT_ROOT}/${QT_VERSION}/${{ matrix.qt_install_target }}"
             echo "QT_HOST_ROOT=${RUNNER_TEMP}/qt-build-host"
@@ -144,10 +146,9 @@ jobs:
       - name: Verify restored Qt host tools
         run: |
           set -euo pipefail
-          test -x "${QT_HOST_ROOT}/bin/qmake"
-          test -x "${QT_HOST_ROOT}/bin/qopcuaxmldatatypes2cpp"
-          test -f "${QT_HOST_ROOT}/lib/cmake/Qt6OpcUaTools/Qt6OpcUaToolsConfig.cmake"
-          test -f "${QT_ROOT}/${QT_VERSION}/source/qt-everywhere-src-${QT_VERSION}/configure"
+          source ci/ios/checks.sh
+          bash ci/ios/verify-qt-host.sh "${QT_HOST_ROOT}"
+          require_file "${QT_ROOT}/${QT_VERSION}/source/qt-everywhere-src-${QT_VERSION}/configure"
 
       - name: Restore Qt iOS SDK cache
         id: cache-qt-target
@@ -167,7 +168,8 @@ jobs:
         if: steps.cache-qt-target.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
-          command -v cmake
+          source ci/ios/checks.sh
+          command -v cmake || ci_error 'cmake is not installed'
           if ! command -v ninja >/dev/null; then brew install ninja; fi
 
       - name: Build OpenSSL for ${{ matrix.name }}
@@ -177,10 +179,11 @@ jobs:
       - name: Verify OpenSSL archive
         run: |
           set -euo pipefail
-          test -f "${OPENSSL_PREFIX}/include/openssl/ssl.h"
+          source ci/ios/checks.sh
+          require_file "${OPENSSL_PREFIX}/include/openssl/ssl.h"
           for lib in ssl crypto; do
-            test -s "${OPENSSL_PREFIX}/lib/lib${lib}.a"
-            lipo -archs "${OPENSSL_PREFIX}/lib/lib${lib}.a" | grep -qw arm64
+            require_nonempty_file "${OPENSSL_PREFIX}/lib/lib${lib}.a"
+            require_arch "${OPENSSL_PREFIX}/lib/lib${lib}.a" arm64
           done
 
       - name: Build Qt for ${{ matrix.name }}
@@ -190,15 +193,16 @@ jobs:
       - name: Verify Qt iOS SDK
         run: |
           set -euo pipefail
-          test -x "${QT_TARGET_ROOT}/bin/qmake"
-          test -x "${QT_TARGET_ROOT}/bin/qt-cmake"
+          source ci/ios/checks.sh
+          require_executable "${QT_TARGET_ROOT}/bin/qmake"
+          require_executable "${QT_TARGET_ROOT}/bin/qt-cmake"
           for module in QtCore QtCore5Compat QtUiTools QtSvg QtPositioning QtOpcUa QtSerialBus; do
-            test -d "${QT_TARGET_ROOT}/lib/${module}.framework"
+            require_dir "${QT_TARGET_ROOT}/lib/${module}.framework"
           done
-          test -f "${QT_TARGET_ROOT}/plugins/opcua/libopen62541_backend.a"
-          test -f "${QT_TARGET_ROOT}/mkspecs/modules/qt_plugin_open62541_backend.pri"
-          test -f "${QT_TARGET_ROOT}/lib/cmake/Qt6Core/Qt6CoreConfig.cmake"
-          lipo -archs "${QT_TARGET_ROOT}/lib/QtCore.framework/QtCore" | grep -qw arm64
+          require_file "${QT_TARGET_ROOT}/plugins/opcua/libopen62541_backend.a"
+          require_file "${QT_TARGET_ROOT}/mkspecs/modules/qt_plugin_open62541_backend.pri"
+          require_file "${QT_TARGET_ROOT}/lib/cmake/Qt6Core/Qt6CoreConfig.cmake"
+          require_arch "${QT_TARGET_ROOT}/lib/QtCore.framework/QtCore" arm64
 
   build-epics:
     name: Build EPICS 7.0.10 for iOS SDKs
@@ -216,7 +220,8 @@ jobs:
         id: toolchain
         run: |
           set -euo pipefail
-          test "$(uname -m)" = arm64
+          source ci/ios/checks.sh
+          require_equal "$(uname -m)" arm64 'Runner architecture'
           XCODE_VERSION="$(xcodebuild -version | awk '/^Xcode / {print $2}')"
           IOS_SDK="$(xcrun --sdk iphoneos --show-sdk-version)"
           SIM_SDK="$(xcrun --sdk iphonesimulator --show-sdk-version)"
@@ -253,12 +258,13 @@ jobs:
       - name: Verify EPICS target archives
         run: |
           set -euo pipefail
+          source ci/ios/checks.sh
           for arch in ios-arm ios-sim-arm64; do
             for lib in ca Com dbCore dbRecStd nt pvAccess pvAccessCA pvAccessIOC pvaClient pvData pvDatabase qsrv; do
-              test -f "${EPICS_BASE}/lib/${arch}/lib${lib}.a"
-              lipo -archs "${EPICS_BASE}/lib/${arch}/lib${lib}.a" | grep -qw arm64
+              require_file "${EPICS_BASE}/lib/${arch}/lib${lib}.a"
+              require_arch "${EPICS_BASE}/lib/${arch}/lib${lib}.a" arm64
             done
-            nm -g "${EPICS_BASE}/lib/${arch}/libCom.a" | grep -E ' T _osdTimeGetCurrent$'
+            nm -g "${EPICS_BASE}/lib/${arch}/libCom.a" | grep -E ' T _osdTimeGetCurrent$' || ci_error "Missing _osdTimeGetCurrent in ${EPICS_BASE}/lib/${arch}/libCom.a"
           done
 
   build-ios:
@@ -330,30 +336,29 @@ jobs:
       - name: Verify cached dependencies
         run: |
           set -euo pipefail
-          test -x "${QT_HOST_ROOT}/bin/qmake"
-          test -x "${QT_HOST_ROOT}/bin/qopcuaxmldatatypes2cpp"
-          test -f "${QT_HOST_ROOT}/lib/cmake/Qt6OpcUaTools/Qt6OpcUaToolsConfig.cmake"
-          test -f "${QT_ROOT}/${QT_VERSION}/source/qt-everywhere-src-${QT_VERSION}/configure"
-          test -x "${QT_TARGET_ROOT}/bin/qmake"
-          test -x "${QT_TARGET_ROOT}/bin/qt-cmake"
-          test -d "${QT_TARGET_ROOT}/lib/QtCore.framework"
-          test -d "${QT_TARGET_ROOT}/lib/QtPositioning.framework"
-          test -d "${QT_TARGET_ROOT}/lib/QtOpcUa.framework"
-          test -d "${QT_TARGET_ROOT}/lib/QtSerialBus.framework"
-          test -f "${QT_TARGET_ROOT}/plugins/opcua/libopen62541_backend.a"
-          test -f "${QT_TARGET_ROOT}/mkspecs/modules/qt_plugin_open62541_backend.pri"
-          test -f "${QT_TARGET_ROOT}/lib/cmake/Qt6Core/Qt6CoreConfig.cmake"
-          lipo -archs "${QT_TARGET_ROOT}/lib/QtCore.framework/QtCore" | grep -qw arm64
-          test -f "${OPENSSL_PREFIX}/include/openssl/ssl.h"
-          test -s "${OPENSSL_PREFIX}/lib/libssl.a"
-          test -s "${OPENSSL_PREFIX}/lib/libcrypto.a"
-          lipo -archs "${OPENSSL_PREFIX}/lib/libssl.a" | grep -qw arm64
-          lipo -archs "${OPENSSL_PREFIX}/lib/libcrypto.a" | grep -qw arm64
+          source ci/ios/checks.sh
+          bash ci/ios/verify-qt-host.sh "${QT_HOST_ROOT}"
+          require_file "${QT_ROOT}/${QT_VERSION}/source/qt-everywhere-src-${QT_VERSION}/configure"
+          require_executable "${QT_TARGET_ROOT}/bin/qmake"
+          require_executable "${QT_TARGET_ROOT}/bin/qt-cmake"
+          require_dir "${QT_TARGET_ROOT}/lib/QtCore.framework"
+          require_dir "${QT_TARGET_ROOT}/lib/QtPositioning.framework"
+          require_dir "${QT_TARGET_ROOT}/lib/QtOpcUa.framework"
+          require_dir "${QT_TARGET_ROOT}/lib/QtSerialBus.framework"
+          require_file "${QT_TARGET_ROOT}/plugins/opcua/libopen62541_backend.a"
+          require_file "${QT_TARGET_ROOT}/mkspecs/modules/qt_plugin_open62541_backend.pri"
+          require_file "${QT_TARGET_ROOT}/lib/cmake/Qt6Core/Qt6CoreConfig.cmake"
+          require_arch "${QT_TARGET_ROOT}/lib/QtCore.framework/QtCore" arm64
+          require_file "${OPENSSL_PREFIX}/include/openssl/ssl.h"
+          require_nonempty_file "${OPENSSL_PREFIX}/lib/libssl.a"
+          require_nonempty_file "${OPENSSL_PREFIX}/lib/libcrypto.a"
+          require_arch "${OPENSSL_PREFIX}/lib/libssl.a" arm64
+          require_arch "${OPENSSL_PREFIX}/lib/libcrypto.a" arm64
           ACTUAL_TOOLCHAIN="xcode$(xcodebuild -version | awk '/^Xcode / {print $2}')-ios$(xcrun --sdk iphoneos --show-sdk-version)-sim$(xcrun --sdk iphonesimulator --show-sdk-version)"
-          test "${ACTUAL_TOOLCHAIN}" = "${{ needs.build-qt-host.outputs.toolchain_key }}"
-          test "${ACTUAL_TOOLCHAIN}" = "${{ needs.build-epics.outputs.toolchain_key }}"
+          require_equal "${ACTUAL_TOOLCHAIN}" "${{ needs.build-qt-host.outputs.toolchain_key }}" 'Qt host toolchain'
+          require_equal "${ACTUAL_TOOLCHAIN}" "${{ needs.build-epics.outputs.toolchain_key }}" 'EPICS toolchain'
           for lib in ca Com dbCore dbRecStd nt pvAccess pvAccessCA pvAccessIOC pvaClient pvData pvDatabase qsrv; do
-            test -f "${EPICS_BASE}/lib/${{ matrix.epics_arch }}/lib${lib}.a"
+            require_file "${EPICS_BASE}/lib/${{ matrix.epics_arch }}/lib${lib}.a"
           done
 
       - name: Cache Qwt
@@ -374,7 +379,8 @@ jobs:
       - name: Export caQtDM build environment
         run: |
           set -euo pipefail
-          test -s "${QWT_ROOT}/lib/libqwt.a"
+          source ci/ios/checks.sh
+          require_nonempty_file "${QWT_ROOT}/lib/libqwt.a"
           {
             echo "QTHOME=${QT_TARGET_ROOT}"
             echo "QWTHOME=${QWT_ROOT}"
@@ -407,6 +413,7 @@ jobs:
         working-directory: ${{ runner.temp }}/caqtdm-build
         run: |
           set -euo pipefail
+          source "${GITHUB_WORKSPACE}/ci/ios/checks.sh"
           SDKROOT="$(xcrun --sdk ${{ matrix.sdk }} --show-sdk-path)" \
             "${QTHOME}/bin/qmake" all.pro \
             "CONFIG+=${{ matrix.sdk }}" \
@@ -425,9 +432,9 @@ jobs:
           )
           SDKROOT="$(xcrun --sdk ${{ matrix.sdk }} --show-sdk-path)" \
             make -j"$(sysctl -n hw.ncpu)"
-          test -s "${CAQTDM_COLLECT}/libprcParser.a"
-          test -s "${CAQTDM_COLLECT}/libalhParser.a"
-          test -s "caQtDM_Plugins/modbus/libmodbus_plugin.a"
+          require_nonempty_file "${CAQTDM_COLLECT}/libprcParser.a"
+          require_nonempty_file "${CAQTDM_COLLECT}/libalhParser.a"
+          require_nonempty_file "caQtDM_Plugins/modbus/libmodbus_plugin.a"
           (
             cd caQtDM_Viewer
             SDKROOT="$(xcrun --sdk ${{ matrix.sdk }} --show-sdk-path)" \
@@ -448,26 +455,7 @@ jobs:
         working-directory: ${{ runner.temp }}/caqtdm-build
         run: |
           set -euo pipefail
-          APP="$(find caQtDM_Viewer -type d -name 'caQtDM.app' -print -quit)"
-          test -n "${APP}"
-          EXECUTABLE="${APP}/caQtDM"
-          test -x "${EXECUTABLE}"
-          lipo -archs "${EXECUTABLE}" | grep -qw arm64
-          BUILD_INFO="$(xcrun vtool -show-build "${EXECUTABLE}")"
-          echo "${BUILD_INFO}"
-          awk -v expected="${IOS_DEPLOYMENT_TARGET}" '$1 == "minos" && $2 == expected { found=1 } END { exit !found }' <<< "${BUILD_INFO}"
-          if [ "${{ matrix.sdk }}" = "iphoneos" ]; then
-            grep -q 'platform IOS$' <<< "${BUILD_INFO}"
-          else
-            grep -q 'platform IOSSIMULATOR$' <<< "${BUILD_INFO}"
-          fi
-          /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "${APP}/Info.plist" | grep -qx 'ch.psi.caQtDM'
-          test -f "${APP}/caQtDM_IOS_Config.xml"
-          test -f "${APP}/fonts/lucida-sans-typewriter.ttf"
-          /usr/libexec/PlistBuddy -c 'Print :NSLocationWhenInUseUsageDescription' "${APP}/Info.plist" | grep -q .
-          /usr/libexec/PlistBuddy -c 'Print :NSLocalNetworkUsageDescription' "${APP}/Info.plist" | grep -q .
-          test -f "${QT_TARGET_ROOT}/plugins/opcua/libopen62541_backend.a"
-          strings "${EXECUTABLE}" | grep -F 'SecurityPolicy#Basic256Sha256' >/dev/null
+          APP="$(bash "${GITHUB_WORKSPACE}/ci/ios/verify-app.sh" caQtDM_Viewer '${{ matrix.sdk }}' "${QT_TARGET_ROOT}" "${IOS_DEPLOYMENT_TARGET}")"
           mkdir -p "${GITHUB_WORKSPACE}/artifacts"
           ditto -c -k --sequesterRsrc --keepParent "${APP}" \
             "${GITHUB_WORKSPACE}/artifacts/caQtDM-${{ matrix.epics_arch }}.zip"
@@ -527,26 +515,7 @@ jobs:
         run: |
           set -euo pipefail
           CMAKE_BUILD_DIR="${RUNNER_TEMP}/caqtdm-cmake-${{ matrix.epics_arch }}"
-          APP="$(find "${CMAKE_BUILD_DIR}" -type d -name 'caQtDM.app' -print -quit)"
-          test -n "${APP}"
-          EXECUTABLE="${APP}/caQtDM"
-          test -x "${EXECUTABLE}"
-          lipo -archs "${EXECUTABLE}" | grep -qw arm64
-          BUILD_INFO="$(xcrun vtool -show-build "${EXECUTABLE}")"
-          echo "${BUILD_INFO}"
-          awk -v expected="${IOS_DEPLOYMENT_TARGET}" '$1 == "minos" && $2 == expected { found=1 } END { exit !found }' <<< "${BUILD_INFO}"
-          if [ "${{ matrix.sdk }}" = "iphoneos" ]; then
-            grep -q 'platform IOS$' <<< "${BUILD_INFO}"
-          else
-            grep -q 'platform IOSSIMULATOR$' <<< "${BUILD_INFO}"
-          fi
-          /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "${APP}/Info.plist" | grep -qx 'ch.psi.caQtDM'
-          test -f "${APP}/caQtDM_IOS_Config.xml"
-          test -f "${APP}/fonts/lucida-sans-typewriter.ttf"
-          /usr/libexec/PlistBuddy -c 'Print :NSLocationWhenInUseUsageDescription' "${APP}/Info.plist" | grep -q .
-          /usr/libexec/PlistBuddy -c 'Print :NSLocalNetworkUsageDescription' "${APP}/Info.plist" | grep -q .
-          test -f "${QT_TARGET_ROOT}/plugins/opcua/libopen62541_backend.a"
-          strings "${EXECUTABLE}" | grep -F 'SecurityPolicy#Basic256Sha256' >/dev/null
+          APP="$(bash ci/ios/verify-app.sh "${CMAKE_BUILD_DIR}" '${{ matrix.sdk }}' "${QT_TARGET_ROOT}" "${IOS_DEPLOYMENT_TARGET}")"
           mkdir -p "${GITHUB_WORKSPACE}/artifacts"
           ditto -c -k --sequesterRsrc --keepParent "${APP}" \
             "${GITHUB_WORKSPACE}/artifacts/caQtDM-cmake-${{ matrix.epics_arch }}.zip"

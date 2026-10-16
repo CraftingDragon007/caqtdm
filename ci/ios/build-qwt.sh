@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+source "$(dirname "${BASH_SOURCE[0]}")/checks.sh"
 
 sdk="$1"
 qwt_prefix="$2"
@@ -24,4 +25,4 @@ SDKROOT="$(xcrun --sdk "${sdk}" --show-sdk-path)" \
 SDKROOT="$(xcrun --sdk "${sdk}" --show-sdk-path)" \
   CODE_SIGNING_ALLOWED=NO make -j"$(sysctl -n hw.ncpu)"
 make install
-test -f "${qwt_prefix}/lib/libqwt.a"
+require_file "${qwt_prefix}/lib/libqwt.a"
