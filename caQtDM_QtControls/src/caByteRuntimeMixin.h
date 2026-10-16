@@ -12,6 +12,7 @@ public:
     virtual int byteObjectType() const = 0;
     virtual QString bytePV() const = 0;
     virtual void setBytePV(const QString &pv) = 0;
+    virtual bool byteUsesAlarmColorMode() const = 0;
 };
 
 template <typename Widget>
@@ -22,6 +23,10 @@ public:
     bool needsVisibilityUpdate() const override { return false; }
     QString bytePV() const override { return widget()->getPV(); }
     void setBytePV(const QString &pv) override { widget()->setPV(pv); }
+    bool byteUsesAlarmColorMode() const override
+    {
+        return widget()->getColorMode() == Widget::Alarm;
+    }
 
     caWidgetUpdateResult applyChannelUpdate(const QString &units, const QString &value,
                                             const knobData &data, short aggregateAlarm) override

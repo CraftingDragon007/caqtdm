@@ -15,6 +15,7 @@ public:
     virtual void prepareRange() = 0;
     virtual bool rangeIsElevated() = 0;
     virtual void raiseRange() = 0;
+    virtual bool rangeUsesAlarmColorMode() const = 0;
 };
 
 template <typename Widget>
@@ -25,6 +26,11 @@ public:
     bool needsVisibilityUpdate() const override { return false; }
     QString rangePV() const override { return widget()->getPV(); }
     void setRangePV(const QString &pv) override { widget()->setPV(pv); }
+    bool rangeUsesAlarmColorMode() const override
+    {
+        return widget()->getColorMode() == Widget::Alarm_Default ||
+               widget()->getColorMode() == Widget::Alarm_Static;
+    }
 
     caWidgetUpdateResult applyChannelUpdate(const QString &units, const QString &value,
                                             const knobData &data, short aggregateAlarm) override

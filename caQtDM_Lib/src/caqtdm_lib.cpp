@@ -6511,8 +6511,6 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
             knobData *kPtr = mutexKnobDataP->GetMutexKnobDataPtr(dataIndex);
             if(kPtr != (knobData *) Q_NULLPTR) Precision =  kPtr->edata.precision;
         }
-        if((sliderWidget->getColorMode() == caSlider::Alarm_Default) || (sliderWidget->getColorMode() == caSlider::Alarm_Static)) qstrncpy(colMode, "Alarm", sizeof(colMode));
-        else qstrncpy(colMode, "Static", sizeof(colMode));
 
     } else if(caThermo* thermoWidget = qobject_cast<caThermo *>(w)) {
         if(thermoWidget->getLimitsMode() == caThermo::User) {
@@ -6531,17 +6529,6 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
                }
             }
         }
-        if((thermoWidget->getColorMode() == caThermo::Alarm_Default) || (thermoWidget->getColorMode() == caThermo::Alarm_Static)) qstrncpy(colMode, "Alarm", sizeof(colMode));
-        else qstrncpy(colMode, "Static", sizeof(colMode));
-
-    } else if(caByte* byteWidget = qobject_cast<caByte *>(w)) {
-        if(byteWidget->getColorMode() == caByte::Alarm) qstrncpy(colMode, "Alarm", sizeof(colMode));
-        else qstrncpy(colMode, "Static", sizeof(colMode));
-
-    } else if(caByteController* bytecontrollerWidget = qobject_cast<caByteController *>(w)) {
-        if(bytecontrollerWidget->getColorMode() == caByteController::Alarm) qstrncpy(colMode, "Alarm", sizeof(colMode));
-        else qstrncpy(colMode, "Static", sizeof(colMode));
-
     } else if(caScriptButton* scriptbuttonWidget =  qobject_cast< caScriptButton *>(w)) {
         Q_UNUSED(scriptbuttonWidget);
         // add action : kill associated process if running
@@ -6565,6 +6552,12 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
         }
         myMenu.addAction(RELOADWINDOW);
         myMenu.addAction(INCLUDES);
+    }
+
+    if (caRangeRuntime *rangeWidget = dynamic_cast<caRangeRuntime *>(w)) {
+        qstrncpy(colMode, rangeWidget->rangeUsesAlarmColorMode() ? "Alarm" : "Static", sizeof(colMode));
+    } else if (caByteRuntime *byteWidget = dynamic_cast<caByteRuntime *>(w)) {
+        qstrncpy(colMode, byteWidget->byteUsesAlarmColorMode() ? "Alarm" : "Static", sizeof(colMode));
     }
 
     // add some more actions
