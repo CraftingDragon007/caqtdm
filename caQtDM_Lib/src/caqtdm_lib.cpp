@@ -5210,87 +5210,42 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
         // animated gif ==================================================================================================================
     } else if(caImage *imageWidget = qobject_cast<caImage *>(w)) {
 
-        double valueArray[MAX_CALC_INPUTS];
-        char post[calcstring_length];
-        char calcString[calcstring_length];
-        long status;
-        short errnum;
-        double result;
-
         qCDebug(caImageLog) << "we have a image" << imageWidget << data.edata.fieldtype << data.edata.dataSize << String;
-
-        if(!data.edata.connected) {
-            imageWidget->setInvalid(Qt::white);
-            return;
-        } else {
-            imageWidget->setValid();
-        }
+        imageWidget->updateConnection(data.edata.connected);
+        if (!data.edata.connected) return;
 
         // treat visibility if defined, do nothing when not visible
         if(!setObjectVisibility(imageWidget, data.edata.rvalue)) return; // do nothing when not visible
 
-        // treat image frame number, if non dynamic image, do nothing
-        if(imageWidget->getFrameCount() <= 1) {
-            return;
-            // empty calc string, animation was already set
-        } else if(imageWidget->getImageCalc().size() == 0) {
-            return;
-        } else {
-            // any monitors ?
-            QVariant var=imageWidget->property("MonitorList");
-            QVariantList list = var.toList();
-            int nbMonitors = list.at(0).toInt();
-            qCDebug(caImageLog) << imageWidget << "number of monitors" << nbMonitors;
-            if(nbMonitors > 0)  {
+        if (!imageWidget->usesCalculatedFrame()) return;
+        const QVariantList list = imageWidget->property("MonitorList").toList();
+        if (list.isEmpty()) return;
+        const int nbMonitors = list.at(0).toInt();
+        qCDebug(caImageLog) << imageWidget << "number of monitors" << nbMonitors;
+        if (nbMonitors > 0) {
+            char post[calcstring_length];
+            char calcString[calcstring_length];
+            short errnum;
+            double result = 0.0;
+            double valueArray[MAX_CALC_INPUTS] = {};
+            qCDebug(caImageLog) << "get calc string:" << imageWidget->getImageCalc();
+            qstrncpy(calcString, qasc(imageWidget->getImageCalc()), calcstring_length);
 
-                // get calc string
-                qCDebug(caImageLog) << "get calc string:" << imageWidget->getImageCalc();
-                qstrncpy(calcString, (char*) qasc(imageWidget->getImageCalc()),calcstring_length);
-
-                // scan and get the channels
-                for(int i=0; i < 4; i++) valueArray[i] = 0.0;
-                for(int i=0; i< nbMonitors;i++) {
-                    knobData *ptr = mutexKnobDataP->GetMutexKnobDataPtr(list.at(i+1).toInt());
-                    if(ptr != (knobData *) Q_NULLPTR) {
-                        // when connected
-                        if(ptr->edata.connected) {
-                            if (ptr->edata.fieldtype == caINT) {
-                                valueArray[i] = ptr->edata.ivalue;
-                            } else {
-                                valueArray[i] = ptr->edata.rvalue;
-                            }
-                        } else {
-                            valueArray[i] = 0.0;
-                        }
-                    }
-                }
-
-                status = postfix(calcString, post, &errnum);
-                if(status) {
-                    imageWidget->setInvalid(Qt::black);
-                    qCDebug(caImageLog) << "invalid calc 1" << calcString;
-                }
-
-                // Perform the calculation
-                status = calcPerform(valueArray, &result, post);
-                if(!status) {
-                    // Result is valid, convert to frame number
-                    if(result < 0.0) {
-                        imageWidget->setInvalid(Qt::black);
-                        qCDebug(caImageLog) << "no valid frame";
-                    } else {
-                        qCDebug(caImageLog) << "frame ok=" << (int)(result +.5);
-                        imageWidget->setFrame((int)(result +.5));
-                    }
-                } else {
-                    qCDebug(caImageLog) << "invalid calc 2";
-                    imageWidget->setInvalid(Qt::black);
-                }
-
-                // no monitors
-            } else {
-
+            const int count = qMin(nbMonitors, qMin(static_cast<int>(list.size()) - 1, MAX_CALC_INPUTS));
+            for (int i = 0; i < count; ++i) {
+                knobData *ptr = mutexKnobDataP->GetMutexKnobDataPtr(list.at(i + 1).toInt());
+                if (ptr && ptr->edata.connected)
+                    valueArray[i] = ptr->edata.fieldtype == caINT ? ptr->edata.ivalue : ptr->edata.rvalue;
             }
+
+            if (postfix(calcString, post, &errnum)) {
+                qCDebug(caImageLog) << "invalid calc 1" << calcString;
+                imageWidget->applyCalculatedFrame(false, 0.0);
+                return;
+            }
+            const bool valid = !calcPerform(valueArray, &result, post);
+            if (!valid) qCDebug(caImageLog) << "invalid calc 2";
+            imageWidget->applyCalculatedFrame(valid, result);
         }
 
     } else if (caHMIConfig *cahmiConfigWidget = qobject_cast<caHMIConfig*>(w)) {

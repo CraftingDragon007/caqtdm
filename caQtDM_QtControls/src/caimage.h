@@ -82,6 +82,9 @@ public:
     }
 
     int getFrameCount();
+    void updateConnection(bool connected);
+    bool usesCalculatedFrame();
+    void applyCalculatedFrame(bool valid, double value);
     void startMovie();
     void setInvalid(QColor c);
     void setValid();

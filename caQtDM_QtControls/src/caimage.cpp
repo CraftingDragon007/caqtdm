@@ -32,6 +32,32 @@
 
 Q_LOGGING_CATEGORY(caImageLog, "caqtdm.widgets.caimage")
 
+void caImage::updateConnection(bool connected)
+{
+    if (connected)
+        setValid();
+    else
+        setInvalid(Qt::white);
+}
+
+bool caImage::usesCalculatedFrame()
+{
+    return getFrameCount() > 1 && !thisImageCalc.isEmpty();
+}
+
+void caImage::applyCalculatedFrame(bool valid, double value)
+{
+    if (!valid || value < 0.0) {
+        if (valid)
+            qCDebug(caImageLog) << "no valid frame";
+        setInvalid(Qt::black);
+        return;
+    }
+    const int frame = static_cast<int>(value + .5);
+    qCDebug(caImageLog) << "frame ok=" << frame;
+    setFrame(frame);
+}
+
 caImage::caImage(QWidget* parent) : QWidget(parent)
 {
     messagequeue = new messageQueue();
