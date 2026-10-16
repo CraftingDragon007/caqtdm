@@ -35,10 +35,12 @@
 #include <stdint.h>
 #include <qtcontrols_global.h>
 #include "caWidgetUpdateInterface.h"
+#include "caTableResizeRuntimeMixin.h"
 
 typedef char string40[40];
 
-class QTCON_EXPORT caWaveTable : public QTableWidget, public caWidgetUpdateInterface
+class QTCON_EXPORT caWaveTable : public QTableWidget, public caWidgetUpdateInterface,
+                                 public caTableResizeRuntimeMixin<caWaveTable>
 {
     Q_OBJECT
     Q_PROPERTY(int rowCount READ rowCount WRITE setRowCount DESIGNABLE false)

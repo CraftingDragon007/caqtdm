@@ -191,6 +191,7 @@ set(QTCONTROLS_HEADERS
     ${_src}/caRangeRuntimeMixin.h
     ${_src}/caByteRuntimeMixin.h
     ${_src}/caShapeRuntimeMixin.h
+    ${_src}/caTableResizeRuntimeMixin.h
     ${_src}/addevent.h
     ${_src}/animationcode.h
     ${_src}/hideobjectcode.h

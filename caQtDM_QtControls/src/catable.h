@@ -33,10 +33,12 @@
 
 #include "caPropHandleDefs.h"
 #include "caWidgetUpdateInterface.h"
+#include "caTableResizeRuntimeMixin.h"
 
 typedef char string40[40];
 
-class QTCON_EXPORT caTable : public QTableWidget, public caWidgetUpdateInterface
+class QTCON_EXPORT caTable : public QTableWidget, public caWidgetUpdateInterface,
+                             public caTableResizeRuntimeMixin<caTable>
 {
     Q_OBJECT
 

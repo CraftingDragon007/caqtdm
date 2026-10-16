@@ -65,6 +65,7 @@
 #include "caEnumSelectionRuntimeMixin.h"
 #include "caRangeRuntimeMixin.h"
 #include "caByteRuntimeMixin.h"
+#include "caTableResizeRuntimeMixin.h"
 
 // we are using for calculations postfix of epics
 // therefore we need this include and also link with the epics libraries
@@ -8103,53 +8104,10 @@ void CaQtDM_Lib::resizeSpecials(QString className, QWidget *widget, QVariantList
         }
     }
 
-    else if(!className.compare("caTable")) {
-        caTable *table = (caTable *) widget;
-
-        QFont f = table->font();
-        qreal fontSize = fontResize(factX, factY, list, 4);
-        f.setPointSize(qRound(fontSize));
-
-        table->setUpdatesEnabled(false);
-        for(int i = 0; i < table->rowCount(); ++i) {
-            for(int j = 0; j < table->columnCount(); ++j) {
-                QTableWidgetItem* selectedItem = table->item(i, j);
-                if(selectedItem != (QTableWidgetItem*) Q_NULLPTR) selectedItem->setFont(f);
-            }
-        }
-        table->setValueFont(f);
-        table->verticalHeader()->setDefaultSectionSize((int) (qMin(factX, factY)*20));
-
-        QString styleSheet("QHeaderView { font-size: %1pt; }");
-        styleSheet = styleSheet.arg( qRound(fontSize));
-        table->horizontalHeader()->setStyleSheet(styleSheet);
-        table->verticalHeader()->setStyleSheet(styleSheet);
-        table->setUpdatesEnabled(true);
-    }
-
-    else if(!className.compare("caWaveTable")) {
-        caWaveTable *table = (caWaveTable *) widget;
-
-        QFont f = table->font();
-        qreal fontSize = fontResize(factX, factY, list, 4);
-        f.setPointSize(qRound(fontSize));
-
-        table->setUpdatesEnabled(false);
-        for(int i = 0; i < table->rowCount(); ++i) {
-            for(int j = 0; j < table->columnCount(); ++j) {
-                QTableWidgetItem* selectedItem = table->item(i, j);
-                if(selectedItem != (QTableWidgetItem*) Q_NULLPTR) selectedItem->setFont(f);
-            }
-        }
-        table->setValueFont(f);
-        table->verticalHeader()->setDefaultSectionSize((int) (qMin(factX, factY)*20));
-
-        QString styleSheet("QHeaderView { font-size: %1pt; }");
-        styleSheet = styleSheet.arg( qRound(fontSize));
-        table->horizontalHeader()->setStyleSheet(styleSheet);
-        table->verticalHeader()->setStyleSheet(styleSheet);
-
-        table->setUpdatesEnabled(true);
+    else if(caTableResizeRuntime *table = dynamic_cast<caTableResizeRuntime *>(widget)) {
+        const qreal fontSize = fontResize(factX, factY, list, 4);
+        const int rowHeight = (int) (qMin(factX, factY)*20);
+        table->resizeTablePresentation(fontSize, rowHeight);
     }
 
     else if(!className.compare("QLabel")) {
