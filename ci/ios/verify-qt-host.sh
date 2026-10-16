@@ -4,9 +4,13 @@ source "$(dirname "${BASH_SOURCE[0]}")/checks.sh"
 
 host_root="${1:?Usage: verify-qt-host.sh HOST_INSTALL_ROOT}"
 host_bin="${host_root}/bin"
+host_libexec="${host_root}/libexec"
 
-for tool in qmake qmake6 qtpaths qtpaths6 moc rcc qopcuaxmldatatypes2cpp; do
+for tool in qmake qmake6 qtpaths qtpaths6 qopcuaxmldatatypes2cpp; do
   require_executable "${host_bin}/${tool}"
+done
+for tool in moc rcc; do
+  require_executable "${host_libexec}/${tool}"
 done
 
 require_file "${host_root}/lib/cmake/Qt6/Qt6Config.cmake"
