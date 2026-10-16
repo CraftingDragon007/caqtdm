@@ -18,14 +18,14 @@ case "${target}" in
 esac
 
 openssl_prefix="${OPENSSL_IOS_ROOT}/${OPENSSL_VERSION}/${target}"
-openssl_archive="${RUNNER_TEMP}/openssl-${OPENSSL_TAG_SHA}.tar.gz"
+openssl_archive="${RUNNER_TEMP}/openssl-${OPENSSL_COMMIT_SHA}.tar.gz"
 openssl_source="${RUNNER_TEMP}/openssl-${target}"
 
-echo "Downloading OpenSSL ${OPENSSL_VERSION} (${OPENSSL_TAG_SHA}) for ${target}"
+echo "Downloading OpenSSL ${OPENSSL_VERSION} (${OPENSSL_COMMIT_SHA}) for ${target}"
 if [ ! -s "${openssl_archive}" ]; then
   curl --fail --location --show-error --retry 3 --progress-bar \
     --write-out $'\nHTTP %{http_code}; downloaded %{size_download} bytes in %{time_total}s\n' \
-    "https://github.com/openssl/openssl/archive/${OPENSSL_TAG_SHA}.tar.gz" \
+    "https://github.com/openssl/openssl/archive/${OPENSSL_COMMIT_SHA}.tar.gz" \
     -o "${openssl_archive}"
 fi
 test -s "${openssl_archive}"
