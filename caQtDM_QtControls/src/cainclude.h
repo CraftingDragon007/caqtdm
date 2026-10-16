@@ -156,6 +156,7 @@ public:
     QFrame* getIncludeFrame() {return frame;}
     QHBoxLayout* getIncludeboxLayout(){return boxLayout;}
     QGridLayout* getIncludegridLayout(){return gridLayout;}
+    void setupRuntimeFrame();
     myShapes getFrameShape() const {return thisFrameShape;}
     void setFrameShape(myShapes shape) {thisFrameShape = shape; thisFrameUpdate = true; setFileName(newFileName);}
     QFrame::Shadow getFrameShadow() const {return thisFrameShadow;}

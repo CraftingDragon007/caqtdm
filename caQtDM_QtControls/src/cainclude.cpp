@@ -96,6 +96,56 @@ caInclude::PositionUpdateResult caInclude::updatePositionChannel(QWidget *child,
     return result;
 }
 
+void caInclude::setupRuntimeFrame()
+{
+    if (boxLayout) {
+        SETMARGIN_QT456(boxLayout, 0);
+        boxLayout->setSpacing(0);
+    }
+    if (gridLayout) {
+        gridLayout->setContentsMargins(0, 0, 0, 0);
+        SETMARGIN_QT456(gridLayout, 0);
+        gridLayout->setVerticalSpacing(getSpacingVertical());
+        gridLayout->setHorizontalSpacing(getSpacingHorizontal());
+    }
+
+    QColor lightColor = thisFrameColor.lighter();
+    QColor darkColor = thisFrameColor.darker();
+    QPalette framePalette = palette();
+    framePalette.setColor(QPalette::WindowText, thisFrameColor);
+    framePalette.setColor(QPalette::Light, lightColor);
+    framePalette.setColor(QPalette::Dark, darkColor);
+    framePalette.setColor(QPalette::Window, thisFrameColor);
+
+    if (boxLayout) {
+        setLayout(boxLayout);
+        boxLayout->addWidget(frame);
+    }
+    if (gridLayout) frame->setLayout(gridLayout);
+
+    frame->setFrameShadow(thisFrameShadow);
+    frame->setLineWidth(thisFrameLineWidth);
+    frame->setPalette(framePalette);
+    frame->setGeometry(geometry());
+    frame->move(0, 0);
+
+    switch (thisFrameShape) {
+    case NoFrame:
+        frame->setFrameShape(QFrame::NoFrame);
+        break;
+    case Box:
+        frame->setFrameShape(QFrame::Box);
+#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
+        SETMARGIN_QT456(gridLayout, thisFrameLineWidth);
+#endif
+        break;
+    case Panel:
+    default:
+        frame->setFrameShape(QFrame::Panel);
+        break;
+    }
+}
+
 caInclude::caInclude(QWidget *parent) : QWidget(parent)
 {
     thisLoadedWidgets.clear();

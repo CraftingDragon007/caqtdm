@@ -2493,60 +2493,9 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         QUiLoader loader;
         bool prcFile = false;
 
-        QHBoxLayout *m_boxLayout = includeWidget->getIncludeboxLayout();//new QHBoxLayout;
-        if (m_boxLayout) SETMARGIN_QT456(m_boxLayout,0);
-        if (m_boxLayout) m_boxLayout->setSpacing(0);
-        QFrame *frame = includeWidget->getIncludeFrame();//new QFrame();
-        // define a layout for adding the includes
-        QGridLayout *gridLayout =  includeWidget->getIncludegridLayout();//new QGridLayout;
-        if(gridLayout){
-            gridLayout->setContentsMargins(0,0,0,0);
-            SETMARGIN_QT456(gridLayout,0);
-            gridLayout->setVerticalSpacing(spacingVertical);
-            gridLayout->setHorizontalSpacing(spacingHorizontal);
-        }
-
-        QColor thisFrameColor= includeWidget->getFrameColor();
-        QColor thisLightColor = thisFrameColor.lighter();
-        QColor thisDarkColor = thisFrameColor.darker();
-
-        QPalette thisPalette = includeWidget->palette();
-        thisPalette.setColor(QPalette::WindowText, thisFrameColor);
-        thisPalette.setColor(QPalette::Light, thisLightColor);
-        thisPalette.setColor(QPalette::Dark, thisDarkColor);
-        thisPalette.setColor(QPalette::Window, thisFrameColor);
-        if (m_boxLayout) includeWidget->setLayout(m_boxLayout);
-        if (m_boxLayout) m_boxLayout->addWidget(frame);
-
-        if(gridLayout) frame->setLayout(gridLayout);
-
-
-        frame->setFrameShadow(includeWidget->getFrameShadow());
-        frame->setLineWidth(includeWidget->getFrameLineWidth());
-        frame->setPalette(thisPalette);
-        frame->setGeometry(includeWidget->geometry());
-        frame->move(0,0);
-
-
-
-
-        //  we set the shape and in case of box, we have to set margins correctly
-        switch(includeWidget->getFrameShape()) {
-            case caInclude::NoFrame:
-                  frame->setFrameShape(QFrame::NoFrame);
-                  break;
-            case caInclude::Box:
-                  frame->setFrameShape(QFrame::Box);
-#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
-                  SETMARGIN_QT456(gridLayout,includeWidget->getFrameLineWidth());
-#endif
-                  break;
-            case caInclude::Panel:
-                  frame->setFrameShape(QFrame::Panel);
-                  break;
-            default:
-                 frame->setFrameShape(QFrame::Panel);
-        }
+        includeWidget->setupRuntimeFrame();
+        QFrame *frame = includeWidget->getIncludeFrame();
+        QGridLayout *gridLayout = includeWidget->getIncludegridLayout();
 
         nbMonitors = InitVisibility(w1, &kData, map, specData, "");
 
