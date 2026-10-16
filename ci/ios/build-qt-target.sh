@@ -48,6 +48,22 @@ build_dir="${RUNNER_TEMP}/qt-build-${target}"
 require_dir "${qt_source}"
 bash "${GITHUB_WORKSPACE}/ci/ios/verify-qt-host.sh" "${qt_host_root}"
 require_file "${openssl_prefix}/lib/libssl.a"
+
+# Qt 6.11+ cross-configure stops auto-deriving the host CMake package dir from
+# QT_HOST_PATH and instead requires QT_HOST_PATH_CMAKE_DIR. The host is a
+# developer build tree (see build-qt-host.sh), not a standard install, so the
+# auto-detection (top-level "lib/cmake") no longer finds it. Resolve the real
+# cmake dir from Qt6OpcUaToolsConfig.cmake, a file whose presence
+# verify-qt-host.sh already asserted.
+if ! host_cmake_dir="$(print_host_cmake_dir "${qt_host_root}")"; then
+  ci_error "Cannot derive host Qt cmake dir under ${qt_host_root}; cannot set QT_HOST_PATH_CMAKE_DIR"
+fi
+require_dir "${host_cmake_dir}"
+echo "::group::Host Qt CMake dir"
+echo "QT_HOST_PATH=${qt_host_root}"
+echo "QT_HOST_PATH_CMAKE_DIR=${host_cmake_dir}"
+echo "::endgroup::"
+
 mkdir -p "${build_dir}"
 cd "${build_dir}"
 
@@ -66,7 +82,8 @@ echo "::group::Configure Qt ${QT_VERSION} for ${target}"
   -DCMAKE_OSX_DEPLOYMENT_TARGET="${IOS_DEPLOYMENT_TARGET}" \
   -DOPENSSL_ROOT_DIR="${openssl_prefix}" \
   -DOPENSSL_USE_STATIC_LIBS=ON \
-  -DFEATURE_open62541_security=ON
+  -DFEATURE_open62541_security=ON \
+  -DQT_HOST_PATH_CMAKE_DIR="${host_cmake_dir}"
 summary_file="${build_dir}/config.summary"
 require_file "${summary_file}"
 if ! grep -Eq 'Open62541 security support[.[:space:]]+yes' "${summary_file}"; then

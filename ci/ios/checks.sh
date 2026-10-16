@@ -35,3 +35,14 @@ require_arch() {
   [[ " ${arches} " == *" ${arch} "* ]] || ci_error "$file: expected architecture $arch, found ${arches}"
 }
 
+# Print the CMake package dir ("cmake" directory holding the Qt6* per-module
+# config subdirs) of a Qt build tree, located from Qt6OpcUaToolsConfig.cmake.
+# Returns non-zero if not found. Needed because Qt >= 6.11 cross-configure no
+# longer auto-derives QT_HOST_PATH_CMAKE_DIR from a developer build tree.
+print_host_cmake_dir() {
+  local root="${1:?Usage: print_host_cmake_dir HOST_ROOT}" pkg
+  pkg="$(find "${root}" -name Qt6OpcUaToolsConfig.cmake -type f -print -quit)"
+  [[ -n "${pkg}" ]] || return 1
+  (cd "$(dirname "$(dirname "${pkg}")")" && pwd)
+}
+
