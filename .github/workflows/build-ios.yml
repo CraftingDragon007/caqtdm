@@ -244,6 +244,7 @@ jobs:
           set -euo pipefail
           test -x "${QT_HOST_ROOT}/bin/qmake"
           test -x "${QT_TARGET_ROOT}/bin/qmake"
+          test -x "${QT_TARGET_ROOT}/bin/qt-cmake"
           test -d "${QT_TARGET_ROOT}/lib/QtCore.framework"
           test -d "${QT_TARGET_ROOT}/lib/QtPositioning.framework"
           test -d "${QT_TARGET_ROOT}/lib/QtOpcUa.framework"
@@ -380,4 +381,83 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: caQtDM-${{ matrix.epics_arch }}-${{ github.sha }}
-          path: artifacts/*.zip
+          path: artifacts/caQtDM-${{ matrix.epics_arch }}.zip
+
+      - name: Configure caQtDM with CMake for ${{ matrix.name }}
+        run: |
+          set -euo pipefail
+          CMAKE_BUILD_DIR="${RUNNER_TEMP}/caqtdm-cmake-${{ matrix.epics_arch }}"
+          "${QT_TARGET_ROOT}/bin/qt-cmake" \
+            -S "${GITHUB_WORKSPACE}" \
+            -B "${CMAKE_BUILD_DIR}" \
+            -G Xcode \
+            -DCMAKE_OSX_SYSROOT='${{ matrix.sdk }}' \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET="${IOS_DEPLOYMENT_TARGET}" \
+            -DCMAKE_XCODE_GENERATE_SCHEME=ON \
+            -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED=NO \
+            -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED=NO \
+            -DQT_HOST_PATH="${QT_HOST_ROOT}" \
+            -DCAQTDM_EPICS_BASE="${EPICS_BASE}" \
+            -DCAQTDM_EPICS_HOST_ARCH='${{ matrix.epics_arch }}' \
+            -DCAQTDM_QWT_HOME="${QWT_ROOT}" \
+            -DCAQTDM_QWT_INCLUDE="${QWT_ROOT}/include" \
+            -DCAQTDM_QWT_LIB="${QWT_ROOT}/lib" \
+            -DCAQTDM_QWT_LIBNAME=qwt \
+            -DCAQTDM_BUILD_GPS=ON \
+            -DCAQTDM_BUILD_MODBUS=ON \
+            -DCAQTDM_BUILD_OPCUA=ON \
+            -DCAQTDM_PYTHONCALC=OFF \
+            -DCAQTDM_WEB=OFF \
+            -DCAQTDM_WITH_TESTS=OFF \
+            -DCAQTDM_NORPATH=ON
+
+      - name: Build caQtDM with CMake for ${{ matrix.name }}
+        run: |
+          set -euo pipefail
+          CMAKE_BUILD_DIR="${RUNNER_TEMP}/caqtdm-cmake-${{ matrix.epics_arch }}"
+          xcodebuild build \
+            -project "${CMAKE_BUILD_DIR}/caQtDM.xcodeproj" \
+            -scheme caQtDM \
+            -configuration Release \
+            -sdk '${{ matrix.sdk }}' \
+            -destination "${XCODE_DESTINATION}" \
+            -destination-timeout 1 \
+            ENABLE_ONLY_ACTIVE_RESOURCES=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=
+
+      - name: Verify and archive CMake app
+        run: |
+          set -euo pipefail
+          CMAKE_BUILD_DIR="${RUNNER_TEMP}/caqtdm-cmake-${{ matrix.epics_arch }}"
+          APP="$(find "${CMAKE_BUILD_DIR}" -type d -name 'caQtDM.app' -print -quit)"
+          test -n "${APP}"
+          EXECUTABLE="${APP}/caQtDM"
+          test -x "${EXECUTABLE}"
+          lipo -archs "${EXECUTABLE}" | grep -qw arm64
+          BUILD_INFO="$(xcrun vtool -show-build "${EXECUTABLE}")"
+          echo "${BUILD_INFO}"
+          awk -v expected="${IOS_DEPLOYMENT_TARGET}" '$1 == "minos" && $2 == expected { found=1 } END { exit !found }' <<< "${BUILD_INFO}"
+          if [ "${{ matrix.sdk }}" = "iphoneos" ]; then
+            grep -q 'platform IOS$' <<< "${BUILD_INFO}"
+          else
+            grep -q 'platform IOSSIMULATOR$' <<< "${BUILD_INFO}"
+          fi
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "${APP}/Info.plist" | grep -qx 'ch.psi.caQtDM'
+          test -f "${APP}/caQtDM_IOS_Config.xml"
+          test -f "${APP}/fonts/lucida-sans-typewriter.ttf"
+          /usr/libexec/PlistBuddy -c 'Print :NSLocationWhenInUseUsageDescription' "${APP}/Info.plist" | grep -q .
+          /usr/libexec/PlistBuddy -c 'Print :NSLocalNetworkUsageDescription' "${APP}/Info.plist" | grep -q .
+          test -f "${QT_TARGET_ROOT}/plugins/opcua/libopen62541_backend.a"
+          strings "${EXECUTABLE}" | grep -F 'SecurityPolicy#Basic256Sha256' >/dev/null
+          mkdir -p "${GITHUB_WORKSPACE}/artifacts"
+          ditto -c -k --sequesterRsrc --keepParent "${APP}" \
+            "${GITHUB_WORKSPACE}/artifacts/caQtDM-cmake-${{ matrix.epics_arch }}.zip"
+
+      - name: Upload CMake app artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: caQtDM-cmake-${{ matrix.epics_arch }}-${{ github.sha }}
+          path: artifacts/caQtDM-cmake-${{ matrix.epics_arch }}.zip
