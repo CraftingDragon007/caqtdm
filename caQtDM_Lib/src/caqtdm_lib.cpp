@@ -2477,14 +2477,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
     } else if(caInclude* includeWidget = qobject_cast<caInclude *>(w1)) {
 
         qCDebug(caIncludeLog) << "create caInclude" << w1;
-        int maximumX=1;
-        int maximumY=1;
-        int posX=0;
-        int posY = 0;
-        int maxRows = 0;
-        int row = 0;
-        int maxColumns=0;
-        int column = 0;
+        caInclude::RuntimeChildPlacement placement;
         w1->setProperty("ObjectType", caInclude_Widget);
 
         QWidget *thisW = (QWidget *) Q_NULLPTR;
@@ -2492,8 +2485,6 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         bool prcFile = false;
 
         includeWidget->setupRuntimeFrame();
-        QFrame *frame = includeWidget->getIncludeFrame();
-        QGridLayout *gridLayout = includeWidget->getIncludegridLayout();
 
         nbMonitors = InitVisibility(w1, &kData, map, specData, "");
 
@@ -2708,81 +2699,25 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
                     // seems to be ok
                 } else {
                     includeWidgetList.append(thisW);
-                    includeWidget->appendChildToList(thisW);
-
-                    includeWidget->update_geometrysave();
-                    // add includeWidget to the gui
-                    if(includeWidget->getStacking() == caInclude::Row) {
-                        if(gridLayout) gridLayout->addWidget(thisW, j, 0);
-                        row++;
-                        maxRows = row;
-                        maxColumns = 1;
-                    } else if(includeWidget->getStacking() == caInclude::Column) {
-                       if(gridLayout) gridLayout->addWidget(thisW, 0, j);
-                       column++;
-                       maxColumns = column;
-                       maxRows = 1;
-                    } else if(includeWidget->getStacking() == caInclude::RowColumn) {
-                        if(row >= includeWidget->getMaxLines()) {
-                            row=0;
-                            column++;
-                        }
-                        if(gridLayout) gridLayout->addWidget(thisW, row, column);
-                        row++;
-                        if(row > maxRows) maxRows = row;
-                        maxColumns = column + 1;
-                    } else if(includeWidget->getStacking() == caInclude::ColumnRow) {
-                        if(column >= includeWidget->getMaxColumns()) {
-                            row++;
-                            column=0;
-                        }
-                        if(gridLayout) gridLayout->addWidget(thisW, row, column);
-                        column++;
-                        if(column > maxColumns) maxColumns = column;
-                        maxRows = row + 1;
-                    } else {
-                        thisW->setParent(frame);
-
-                        qCDebug(caIncludeLog) << "Frame: "<< frame->children();
-                        qCDebug(caIncludeLog) << "thisW: "<< thisW->children();
-                        QString pos;
-                        posX=0;
-                        posY=0;
-                        if(!includeWidget->getXposition(j, posX, thisW->width(), pos)) {
-                            specData[0] = 1;   // x position
-                            specData[1] = j;   // actual position in array;
-                            specData[2] = adjustMargin;
-                            memcpy(&specData[3], &thisW, sizeof(QWidget*));
-                            int num = addMonitor(myWidget, &kData, pos, w1, specData, map, &pv);
-                            integerList.append(num);
-                            nbMonitors++;
-                        }
-
-                        if(!includeWidget->getYposition(j, posY, thisW->height(), pos)) {
-                            specData[0] = 2;   // x position
-                            specData[1] = j;   // actual position in array;
-                            specData[2] = adjustMargin;
-                            memcpy(&specData[3], &thisW, sizeof(QWidget*));
-                            int num = addMonitor(myWidget, &kData, pos, w1, specData, map, &pv);
-                            integerList.append(num);
-                            nbMonitors++;
-                        }
-
-                        int xpos = qRound((double) posX * includeWidget->getXcorrection());
-                        int ypos = qRound((double) posY * includeWidget->getYcorrection());
-                        thisW->move(xpos + adjustMargin/2, ypos + adjustMargin/2);
-
-                        int maxX = xpos + thisW->width();
-                        int maxY = ypos + thisW->height();
-                        if(maxX > maximumX) maximumX = maxX;
-                        if(maxY > maximumY) maximumY = maxY;
-
-
-                        qCDebug(caIncludeLog)<< "caInclude Pos:"<< xpos << ypos<<posX<<includeWidget->getXcorrection()<<pos <<xpos + adjustMargin/2 << includeWidget->width()<<includeWidget->height();
-
+                    includeWidget->placeRuntimeChild(thisW, j, placement);
+                    if (placement.xIsChannel) {
+                        specData[0] = 1;   // x position
+                        specData[1] = j;   // actual position in array;
+                        specData[2] = adjustMargin;
+                        memcpy(&specData[3], &thisW, sizeof(QWidget*));
+                        int num = addMonitor(myWidget, &kData, placement.xChannel, w1, specData, map, &pv);
+                        integerList.append(num);
+                        nbMonitors++;
                     }
-                    //frame->setLayout(gridLayout);
-                    //includeWidget->setLineSize(0);
+                    if (placement.yIsChannel) {
+                        specData[0] = 2;   // y position
+                        specData[1] = j;   // actual position in array;
+                        specData[2] = adjustMargin;
+                        memcpy(&specData[3], &thisW, sizeof(QWidget*));
+                        int num = addMonitor(myWidget, &kData, placement.yChannel, w1, specData, map, &pv);
+                        integerList.append(num);
+                        nbMonitors++;
+                    }
                     level++;
                     //create a stack of the cainclude_path to work properly with recursion
                     QString cainclude_path_stacked = cainclude_path;
@@ -2833,7 +2768,8 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         }
 
         const QSize includeSize = includeWidget->adjustRuntimeSize(
-            thisW, prcFile, maxRows, maxColumns, maximumX, maximumY);
+            thisW, prcFile, placement.maxRows, placement.maxColumns,
+            placement.maximumX, placement.maximumY);
         if (includeSize.isValid())
             ResizeScrollBars(includeWidget, includeSize.width(), includeSize.height());
 

@@ -167,6 +167,71 @@ QSize caInclude::adjustRuntimeSize(QWidget *lastChild, bool convertedFile,
     return size;
 }
 
+void caInclude::placeRuntimeChild(QWidget *child, int index, RuntimeChildPlacement &placement)
+{
+    appendChildToList(child);
+    update_geometrysave();
+    placement.xIsChannel = false;
+    placement.yIsChannel = false;
+    placement.xChannel.clear();
+    placement.yChannel.clear();
+
+    if (getStacking() == Row) {
+        if (gridLayout) gridLayout->addWidget(child, index, 0);
+        ++placement.row;
+        placement.maxRows = placement.row;
+        placement.maxColumns = 1;
+    } else if (getStacking() == Column) {
+        if (gridLayout) gridLayout->addWidget(child, 0, index);
+        ++placement.column;
+        placement.maxColumns = placement.column;
+        placement.maxRows = 1;
+    } else if (getStacking() == RowColumn) {
+        if (placement.row >= getMaxLines()) {
+            placement.row = 0;
+            ++placement.column;
+        }
+        if (gridLayout) gridLayout->addWidget(child, placement.row, placement.column);
+        ++placement.row;
+        if (placement.row > placement.maxRows) placement.maxRows = placement.row;
+        placement.maxColumns = placement.column + 1;
+    } else if (getStacking() == ColumnRow) {
+        if (placement.column >= getMaxColumns()) {
+            ++placement.row;
+            placement.column = 0;
+        }
+        if (gridLayout) gridLayout->addWidget(child, placement.row, placement.column);
+        ++placement.column;
+        if (placement.column > placement.maxColumns) placement.maxColumns = placement.column;
+        placement.maxRows = placement.row + 1;
+    } else {
+        child->setParent(frame);
+        qCDebug(caIncludeLog) << "Frame: " << frame->children();
+        qCDebug(caIncludeLog) << "thisW: " << child->children();
+
+        int posX = 0;
+        int posY = 0;
+        QString position;
+        placement.xIsChannel = !getXposition(index, posX, child->width(), position);
+        if (placement.xIsChannel) placement.xChannel = position;
+        placement.yIsChannel = !getYposition(index, posY, child->height(), position);
+        if (placement.yIsChannel) placement.yChannel = position;
+
+        const int xpos = qRound(static_cast<double>(posX) * getXcorrection());
+        const int ypos = qRound(static_cast<double>(posY) * getYcorrection());
+        child->move(xpos + getMargin() / 2, ypos + getMargin() / 2);
+
+        const int maxX = xpos + child->width();
+        const int maxY = ypos + child->height();
+        if (maxX > placement.maximumX) placement.maximumX = maxX;
+        if (maxY > placement.maximumY) placement.maximumY = maxY;
+
+        qCDebug(caIncludeLog) << "cainclude Pos:" << xpos << ypos << posX
+                             << getXcorrection() << position << xpos + getMargin() / 2
+                             << width() << height();
+    }
+}
+
 caInclude::caInclude(QWidget *parent) : QWidget(parent)
 {
     thisLoadedWidgets.clear();

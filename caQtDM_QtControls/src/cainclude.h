@@ -159,6 +159,19 @@ public:
     void setupRuntimeFrame();
     QSize adjustRuntimeSize(QWidget *lastChild, bool convertedFile,
                             int rows, int columns, int maximumX, int maximumY);
+    struct RuntimeChildPlacement {
+        int row = 0;
+        int column = 0;
+        int maxRows = 0;
+        int maxColumns = 0;
+        int maximumX = 1;
+        int maximumY = 1;
+        bool xIsChannel = false;
+        bool yIsChannel = false;
+        QString xChannel;
+        QString yChannel;
+    };
+    void placeRuntimeChild(QWidget *child, int index, RuntimeChildPlacement &placement);
     myShapes getFrameShape() const {return thisFrameShape;}
     void setFrameShape(myShapes shape) {thisFrameShape = shape; thisFrameUpdate = true; setFileName(newFileName);}
     QFrame::Shadow getFrameShadow() const {return thisFrameShadow;}
