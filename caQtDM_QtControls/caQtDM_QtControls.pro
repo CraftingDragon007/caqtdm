@@ -312,6 +312,7 @@ HEADERS	+= \
     src/caShapeRuntimeMixin.h \
     src/caTableResizeRuntimeMixin.h \
     src/caPlotResizeRuntimeMixin.h \
+    src/caColorMapContextMenuRuntime.h \
     src/addevent.h \
     src/animationcode.h \
     src/hideobjectcode.h

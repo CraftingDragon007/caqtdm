@@ -60,6 +60,7 @@
 #include "colormaps.h"
 #include "caPropHandleDefs.h"
 #include "caWidgetUpdateInterface.h"
+#include "caColorMapContextMenuRuntime.h"
 
 struct SyncMinMax{
     uint Max[2];
@@ -68,7 +69,8 @@ struct SyncMinMax{
     QMutex * imageLock;
 };
 
-class QTCON_EXPORT caCamera : public QWidget, public caWidgetUpdateInterface
+class QTCON_EXPORT caCamera : public QWidget, public caWidgetUpdateInterface,
+                              public caColorMapContextMenuRuntime
 {
     Q_OBJECT
 
@@ -135,6 +137,33 @@ public:
     enum zoom {No=0, Yes};
 
     enum colormap {as_is = 0, color_to_mono, mono_to_wavelength, mono_to_hot, mono_to_heat, mono_to_jet, mono_to_custom};
+
+    void addFitToSizeContextAction(QMenu &menu, const QString &fitToSizeLabel) const override
+    {
+        addFitToSizeAction(menu, fitToSizeLabel, true, getFitToSize() == Yes);
+    }
+    void addColorMapContextActions(QMenu &menu, const QStringList &labels) const override
+    {
+        addColorMapActions(menu, labels);
+    }
+    bool handleColorMapContextAction(const QString &text, const QStringList &labels,
+                                     const QString &fitToSizeLabel) override
+    {
+        switch (resolveAction(text, labels, fitToSizeLabel)) {
+        case ToggleFitToSize:
+            setFitToSize(getFitToSize() == Yes ? No : Yes);
+            return true;
+        case Wavelength: setColormap(mono_to_wavelength); return true;
+        case Hot: setColormap(mono_to_hot); return true;
+        case Heat: setColormap(mono_to_heat); return true;
+        case Jet: setColormap(mono_to_jet); return true;
+        case Custom: setColormap(mono_to_custom); return true;
+        case Grey: setColormap(color_to_mono); return true;
+        case AsIs: setColormap(as_is); return true;
+        case Unhandled: return false;
+        }
+        return false;
+    }
 
     enum colormode {Mono,Mono12p,Mono10p,Mono10Packed,Mono8, RGB1_CA, RGB2_CA, RGB3_CA, BayerRG_8, BayerGB_8, BayerGR_8, BayerBG_8, BayerRG_12, BayerGB_12, BayerGR_12, BayerBG_12, RGB_8 ,BGR_8 ,RGBA_8 ,BGRA_8 , YUV444, YUV422, YUV411, YUV421};
 

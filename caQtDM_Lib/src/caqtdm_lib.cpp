@@ -66,6 +66,7 @@
 #include "caRangeRuntimeMixin.h"
 #include "caByteRuntimeMixin.h"
 #include "caTableResizeRuntimeMixin.h"
+#include "caColorMapContextMenuRuntime.h"
 
 // we are using for calculations postfix of epics
 // therefore we need this include and also link with the epics libraries
@@ -244,16 +245,6 @@
     "<resources/> " \
     "<connections/> " \
     "</ui>"
-
-#define addColorTableActions \
-    myMenu.addAction(GETINFO); \
-    myMenu.addAction(SETASIS); \
-    myMenu.addAction(SETGREY); \
-    myMenu.addAction(SETWAVELEN); \
-    myMenu.addAction(SETHOT); \
-    myMenu.addAction(SETHEAT); \
-    myMenu.addAction(SETJET); \
-    myMenu.addAction(SETCUSTOM); \
 
 //===============================================================================================
 #define calcstring_length 256
@@ -6354,6 +6345,8 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
 #endif
 
     QMenu myMenu;
+    const QStringList colorMapActions = caColorMapContextMenuRuntime::colorMapLabels(
+        SETASIS, SETGREY, SETWAVELEN, SETHOT, SETHEAT, SETJET, SETCUSTOM);
     QPoint cursorPos =QCursor::pos() ;
     QString ClassName;
     QString ObjectName;
@@ -6573,27 +6566,10 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
         wif->createContextMenu(myMenu);
 
         // for the camera cameraWidget
-    } else if(caCamera * cameraWidget = qobject_cast< caCamera *>(w)) {
-        QAction *menuAction;
-        menuAction = myMenu.addAction(TOGGLESIZE);
-        menuAction->setCheckable(true);
-        if(cameraWidget->getFitToSize() == caCamera::Yes) menuAction->setChecked(true);
-        else  menuAction->setChecked(false);
-        addColorTableActions;
-
-        // for the scan2d scan2dWidget
-    } else if(caScan2D * scan2dWidget = qobject_cast< caScan2D *>(w)) {
-        QAction *menuAction;
-        menuAction = myMenu.addAction(TOGGLESIZE);
-        menuAction->setCheckable(true);
-        if(scan2dWidget->getFitToSize() == caScan2D::Yes) menuAction->setChecked(true);
-        else  menuAction->setChecked(false);
-        addColorTableActions;
-
-        // for the waterfall waterfallplotWidget
-    } else if(caWaterfallPlot * waterfallplotWidget = qobject_cast< caWaterfallPlot *>(w)) {
-        Q_UNUSED(waterfallplotWidget);
-        addColorTableActions;
+    } else if(caColorMapContextMenuRuntime *colorMapMenu = dynamic_cast<caColorMapContextMenuRuntime *>(w)) {
+        colorMapMenu->addFitToSizeContextAction(myMenu, TOGGLESIZE);
+        myMenu.addAction(GETINFO);
+        colorMapMenu->addColorMapContextActions(myMenu, colorMapActions);
 
         // for the slider
     } else if(caSlider * sliderWidget = qobject_cast< caSlider *>(w)) {
@@ -6670,6 +6646,7 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
     connect(this, &CaQtDM_Lib::Signal_Closing, &myMenu, &QWidget::close);
     QAction* selectedItem = myMenu.exec(cursorPos);
 
+    caColorMapContextMenuRuntime *colorMapMenu = dynamic_cast<caColorMapContextMenuRuntime *>(w);
     if (selectedItem) {
         if(selectedItem->text().contains(KILLPROCESS)) {
             if(caScriptButton* scriptbuttonWidget =  qobject_cast< caScriptButton *>(w)) {
@@ -6691,50 +6668,13 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
                 messageWindowP->activateWindow();
             }
 
-        } else  if(selectedItem->text().contains(TOGGLESIZE)) {
-            if(caCamera * cameraWidget = qobject_cast< caCamera *>(w)) {
-                if(cameraWidget->getFitToSize() == caCamera::Yes) cameraWidget->setFitToSize(caCamera::No);
-                else cameraWidget->setFitToSize(caCamera::Yes);
-            }
-            else if(caScan2D * scan2dWidget = qobject_cast< caScan2D *>(w)) {
-                if(scan2dWidget->getFitToSize() == caScan2D::Yes) scan2dWidget->setFitToSize(caScan2D::No);
-                else scan2dWidget->setFitToSize(caScan2D::Yes);
-            }
-
-        } else  if(selectedItem->text().contains(SETWAVELEN)) {
-            if(caCamera * cameraWidget = qobject_cast< caCamera *>(w)) cameraWidget->setColormap(caCamera::mono_to_wavelength);
-            else if(caScan2D * scan2dWidget = qobject_cast< caScan2D *>(w)) scan2dWidget->setColormap(caScan2D::spectrum_wavelength);
-            else if(caWaterfallPlot * waterfallplotWidget = qobject_cast< caWaterfallPlot *>(w)) waterfallplotWidget->setColormap(caWaterfallPlot::spectrum_wavelength);
-
-        } else  if(selectedItem->text().contains(SETHOT)) {
-            if(caCamera * cameraWidget = qobject_cast< caCamera *>(w)) cameraWidget->setColormap(caCamera::mono_to_hot);
-            else if(caScan2D * scan2dWidget = qobject_cast< caScan2D *>(w)) scan2dWidget->setColormap(caScan2D::spectrum_hot);
-            else if(caWaterfallPlot * waterfallplotWidget = qobject_cast< caWaterfallPlot *>(w)) waterfallplotWidget->setColormap(caWaterfallPlot::spectrum_hot);
-
-        } else  if(selectedItem->text().contains(SETHEAT)) {
-            if(caCamera * cameraWidget = qobject_cast< caCamera *>(w)) cameraWidget->setColormap(caCamera::mono_to_heat);
-            else if(caScan2D * scan2dWidget = qobject_cast< caScan2D *>(w)) scan2dWidget->setColormap(caScan2D::spectrum_heat);
-            else if(caWaterfallPlot * waterfallplotWidget = qobject_cast< caWaterfallPlot *>(w)) waterfallplotWidget->setColormap(caWaterfallPlot::spectrum_heat);
-
-        } else  if(selectedItem->text().contains(SETJET)) {
-            if(caCamera * cameraWidget = qobject_cast< caCamera *>(w)) cameraWidget->setColormap(caCamera::mono_to_jet);
-            else if(caScan2D * scan2dWidget = qobject_cast< caScan2D *>(w)) scan2dWidget->setColormap(caScan2D::spectrum_jet);
-            else if(caWaterfallPlot * waterfallplotWidget = qobject_cast< caWaterfallPlot *>(w)) waterfallplotWidget->setColormap(caWaterfallPlot::spectrum_jet);
-
-        } else  if(selectedItem->text().contains(SETCUSTOM)) {
-            if(caCamera * cameraWidget = qobject_cast< caCamera *>(w)) cameraWidget->setColormap(caCamera::mono_to_custom);
-            else if(caScan2D * scan2dWidget = qobject_cast< caScan2D *>(w)) scan2dWidget->setColormap(caScan2D::spectrum_custom);
-            else if(caWaterfallPlot * waterfallplotWidget = qobject_cast< caWaterfallPlot *>(w)) waterfallplotWidget->setColormap(caWaterfallPlot::spectrum_custom);
-
-        } else  if(selectedItem->text().contains(SETGREY)) {
-            if(caCamera * cameraWidget = qobject_cast< caCamera *>(w)) cameraWidget->setColormap(caCamera::color_to_mono);
-            else if(caScan2D * scan2dWidget = qobject_cast< caScan2D *>(w)) scan2dWidget->setColormap(caScan2D::grey);
-            else if(caWaterfallPlot * waterfallplotWidget = qobject_cast< caWaterfallPlot *>(w)) waterfallplotWidget->setColormap(caWaterfallPlot::grey);
-
-        } else  if(selectedItem->text().contains(SETASIS)) {
-            if(caCamera * cameraWidget = qobject_cast< caCamera *>(w)) cameraWidget->setColormap(caCamera::as_is);
-            else if(caScan2D * scan2dWidget = qobject_cast< caScan2D *>(w)) scan2dWidget->setColormap(caScan2D::grey);
-            else if(caWaterfallPlot * waterfallplotWidget = qobject_cast< caWaterfallPlot *>(w)) waterfallplotWidget->setColormap(caWaterfallPlot::grey);
+        } else if(caColorMapContextMenuRuntime::resolveAction(
+                      selectedItem->text(), colorMapActions, TOGGLESIZE)
+                  != caColorMapContextMenuRuntime::Unhandled) {
+            if (colorMapMenu)
+                colorMapMenu->handleColorMapContextAction(selectedItem->text(), colorMapActions, TOGGLESIZE);
+            // The widget owns fit-size and colormap changes; the dispatcher keeps legacy
+            // action priority and still owns GETINFO and monitor lookup.
 
         } else  if(selectedItem->text().contains(INCLUDES)) {
             QString info;

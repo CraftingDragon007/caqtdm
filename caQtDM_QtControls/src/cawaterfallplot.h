@@ -58,6 +58,7 @@
 
 #include "colormaps.h"
 #include "caWidgetUpdateInterface.h"
+#include "caColorMapContextMenuRuntime.h"
 
 #define MAXCOLUMNS 500
 
@@ -197,7 +198,8 @@ public:
 };
 
 
-class QTCON_EXPORT caWaterfallPlot: public QWidget, public caWidgetUpdateInterface
+class QTCON_EXPORT caWaterfallPlot: public QWidget, public caWidgetUpdateInterface,
+                                    public caColorMapContextMenuRuntime
 {
     Q_OBJECT
 
@@ -245,6 +247,31 @@ public:
     enum intensityScaling {Channel, User};
 
     enum colormap {grey=0, spectrum_wavelength, spectrum_hot, spectrum_heat, spectrum_jet, spectrum_custom};
+
+    void addFitToSizeContextAction(QMenu &menu, const QString &fitToSizeLabel) const override
+    {
+        addFitToSizeAction(menu, fitToSizeLabel, false, false);
+    }
+    void addColorMapContextActions(QMenu &menu, const QStringList &labels) const override
+    {
+        addColorMapActions(menu, labels);
+    }
+    bool handleColorMapContextAction(const QString &text, const QStringList &labels,
+                                     const QString &fitToSizeLabel) override
+    {
+        switch (resolveAction(text, labels, fitToSizeLabel)) {
+        case Wavelength: setColormap(spectrum_wavelength); return true;
+        case Hot: setColormap(spectrum_hot); return true;
+        case Heat: setColormap(spectrum_heat); return true;
+        case Jet: setColormap(spectrum_jet); return true;
+        case Custom: setColormap(spectrum_custom); return true;
+        case Grey:
+        case AsIs: setColormap(grey); return true;
+        case ToggleFitToSize:
+        case Unhandled: return false;
+        }
+        return false;
+    }
     enum Properties { customcolormap = 0, discretecolormap};
 
     caWaterfallPlot(QWidget * = NULL);

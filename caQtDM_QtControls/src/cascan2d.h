@@ -53,11 +53,13 @@
 #include "colormaps.h"
 #include "caPropHandleDefs.h"
 #include "caWidgetUpdateInterface.h"
+#include "caColorMapContextMenuRuntime.h"
 
 #define XMAXPTS 1000
 #define YMAXPTS 1000
 
-class QTCON_EXPORT caScan2D : public QWidget, public caWidgetUpdateInterface
+class QTCON_EXPORT caScan2D : public QWidget, public caWidgetUpdateInterface,
+                              public caColorMapContextMenuRuntime
 {
     Q_OBJECT
 
@@ -125,6 +127,33 @@ public:
     enum zoom {No=0, Yes};
 
     enum colormap {grey=0, spectrum_wavelength, spectrum_hot, spectrum_heat, spectrum_jet, spectrum_custom};
+
+    void addFitToSizeContextAction(QMenu &menu, const QString &fitToSizeLabel) const override
+    {
+        addFitToSizeAction(menu, fitToSizeLabel, true, getFitToSize() == Yes);
+    }
+    void addColorMapContextActions(QMenu &menu, const QStringList &labels) const override
+    {
+        addColorMapActions(menu, labels);
+    }
+    bool handleColorMapContextAction(const QString &text, const QStringList &labels,
+                                     const QString &fitToSizeLabel) override
+    {
+        switch (resolveAction(text, labels, fitToSizeLabel)) {
+        case ToggleFitToSize:
+            setFitToSize(getFitToSize() == Yes ? No : Yes);
+            return true;
+        case Wavelength: setColormap(spectrum_wavelength); return true;
+        case Hot: setColormap(spectrum_hot); return true;
+        case Heat: setColormap(spectrum_heat); return true;
+        case Jet: setColormap(spectrum_jet); return true;
+        case Custom: setColormap(spectrum_custom); return true;
+        case Grey:
+        case AsIs: setColormap(grey); return true;
+        case Unhandled: return false;
+        }
+        return false;
+    }
     enum Properties { customcolormap = 0, discretecolormap};
 
     caScan2D(QWidget *parent = 0);
