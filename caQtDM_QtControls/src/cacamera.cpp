@@ -59,6 +59,115 @@
 
 Q_LOGGING_CATEGORY(caCameraLog, "caqtdm.widgets.cacamera")
 
+QList<caCamera::ChannelSetupRequest> caCamera::channelSetupRequests()
+{
+    QList<ChannelSetupRequest> requests;
+    const QString fields[] = {
+        getPV_Data(), getPV_Width(), getPV_Height(), getPV_ColormodeChannel(),
+        getPV_PackingmodeChannel(), getMinLevel(), getMaxLevel()
+    };
+    const bool enabled[] = {
+        true, true, true, true, true, isAlphaMinLevel(), isAlphaMaxLevel()
+    };
+
+    for (int i = 0; i < 7; ++i) {
+        if (!fields[i].isEmpty() && enabled[i]) {
+            ChannelSetupRequest request;
+            request.kind = ChannelSetupRequest::Field;
+            request.fieldIndex = i;
+            request.specId = i;
+            request.component = -1;
+            request.pv = fields[i];
+            requests.append(request);
+        }
+    }
+
+    const auto appendRoiRequests = [&requests](const QString &value, int fieldIndex,
+                                                ChannelSetupRequest::Kind kind, int specOffset) {
+        const QStringList components = value.split(";");
+        if (components.size() < 4)
+            return;
+        for (int j = 0; j < 4; ++j) {
+            if (components.at(j).trimmed().isEmpty())
+                return;
+        }
+        for (int j = 0; j < 4; ++j) {
+            ChannelSetupRequest request;
+            request.kind = kind;
+            request.fieldIndex = fieldIndex;
+            request.specId = specOffset + j;
+            request.component = j;
+            request.pv = components.at(j);
+            requests.append(request);
+        }
+    };
+
+    // The camera historically accepts extra ROI components and uses only the first four.
+    appendRoiRequests(getROIChannelsRead(), 7, ChannelSetupRequest::RoiRead, 7);
+    appendRoiRequests(getROIChannelsWrite(), 8, ChannelSetupRequest::RoiWrite, 12);
+
+    if (!getPV_Xaverage().isEmpty()) {
+        ChannelSetupRequest request;
+        request.kind = ChannelSetupRequest::XAverage;
+        request.fieldIndex = 9;
+        request.specId = 15;
+        request.component = -1;
+        request.pv = getPV_Xaverage();
+        requests.append(request);
+    }
+    if (!getPV_Yaverage().isEmpty()) {
+        ChannelSetupRequest request;
+        request.kind = ChannelSetupRequest::YAverage;
+        request.fieldIndex = 10;
+        request.specId = 16;
+        request.component = -1;
+        request.pv = getPV_Yaverage();
+        requests.append(request);
+    }
+    return requests;
+}
+
+void caCamera::applyChannelSetupResult(const ChannelSetupRequest &request,
+                                       const ChannelSetupResult &result,
+                                       ChannelSetupState &state)
+{
+    switch (request.kind) {
+    case ChannelSetupRequest::Field:
+        switch (request.fieldIndex) {
+        case 0: setPV_Data(result.resolvedPV); break;
+        case 1: setPV_Width(result.resolvedPV); break;
+        case 2: setPV_Height(result.resolvedPV); break;
+        case 3: setPV_ColormodeChannel(result.resolvedPV); break;
+        case 4: setPV_PackingmodeChannel(result.resolvedPV); break;
+        case 5: setMinLevel(result.resolvedPV); break;
+        case 6: setMaxLevel(result.resolvedPV); break;
+        }
+        state.tooltipValues.insert(request.fieldIndex, result.resolvedPV);
+        break;
+    case ChannelSetupRequest::RoiRead:
+        if (request.component > 0)
+            state.roiRead.append(";");
+        state.roiRead.append(result.resolvedPV);
+        if (request.component == 3 && result.outerGatePassed) {
+            setROIChannelsRead(state.roiRead);
+            state.tooltipValues.insert(request.fieldIndex, state.roiRead);
+        }
+        break;
+    case ChannelSetupRequest::RoiWrite:
+        if (request.component > 0)
+            state.roiWrite.append(";");
+        state.roiWrite.append(result.expandedPV);
+        if (request.component == 3 && result.outerGatePassed) {
+            setROIChannelsWrite(state.roiWrite);
+            state.tooltipValues.insert(request.fieldIndex, state.roiWrite);
+        }
+        break;
+    case ChannelSetupRequest::XAverage:
+    case ChannelSetupRequest::YAverage:
+        break;
+    }
+}
+
 caWidgetUpdateResult caCamera::applyChannelUpdate(const QString &units, const QString &value,
                                                   const knobData &data, short aggregateAlarm)
 {

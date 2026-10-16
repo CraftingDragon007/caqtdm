@@ -1878,104 +1878,45 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
         // addmonitor normally will add a tooltip to show the pv; however here we have more than one pv
         QString tooltip;
-        QString pvs1= "";
-        QString pvs2= "";
         tooltip.append(ToolTipPrefix);
 
-        for(int i=0; i< 9; i++) {
-            QString text;
-            bool alpha = true;
-            if(i==0) text = cameraWidget->getPV_Data();
-            if(i==1) text = cameraWidget->getPV_Width();
-            if(i==2) text = cameraWidget->getPV_Height();
-            if(i==3) text = cameraWidget->getPV_ColormodeChannel();
-            if(i==4) text = cameraWidget->getPV_PackingmodeChannel();
+        const QList<caCamera::ChannelSetupRequest> setupRequests = cameraWidget->channelSetupRequests();
+        caCamera::ChannelSetupState setupState;
 
-            // for spectrum pseudo levels
-            if(i==5) {
-                alpha = cameraWidget->isAlphaMinLevel();
-                text = cameraWidget->getMinLevel();
-            }
-            if(i==6) {
-                alpha = cameraWidget->isAlphaMaxLevel();
-                text = cameraWidget->getMaxLevel();
-            }
-            // for dataprocessing data x,y,w,h ROI read and write
-            if(i > 6) {
-                QStringList thisString;
-                if(i==7) thisString = cameraWidget->getROIChannelsRead().split(";");
-                if(i==8) thisString = cameraWidget->getROIChannelsWrite().split(";");
-
-                if(thisString.count() >= 4) {
-                    if(thisString.at(0).trimmed().length() > 0 && thisString.at(1).trimmed().length() > 0  &&
-                       thisString.at(2).trimmed().length() > 0 &&thisString.at(3).trimmed().length() > 0) {
-
-                        for(int j=0; j<4; j++) {
-                            text = treatMacro(map, thisString.at(j), &doNothing, w1->objectName());
-                            if(i==7) {
-                                specData[0] = i+j;   // x,y,w,h
-                                int num = addMonitor(myWidget, &kData, text, w1, specData, map, &pv);
-                                integerList.append(num);
-                                pvs1.append(pv);
-                                if( j<3) pvs1.append(";");
-                                nbMonitors++;
-                            } else if(i==8) {
-                                specData[0] = i+j+4; // x,y,w,h
-                                int num = addMonitor(myWidget, &kData, text, w1, specData, map, &pv);
-                                integerList.append(num);
-                                pvs2.append(text);
-                                if(j<3) pvs2.append(";");
-                                nbMonitors++;
-                            }
-                        }
-                    }
-                }
-            }
-
-            if(text.size() > 0 && alpha) {
-                specData[0] = i;   // pv type
-                text =  treatMacro(map, text, &doNothing, w1->objectName());
-                if((i!=7) && (i!=8)) {
-                    int num = addMonitor(myWidget, &kData, text, w1, specData, map, &pv);
+        for (const caCamera::ChannelSetupRequest &request : setupRequests) {
+            caCamera::ChannelSetupResult result;
+            result.expandedPV = treatMacro(map, request.pv, &doNothing, w1->objectName());
+            if (request.kind == caCamera::ChannelSetupRequest::XAverage ||
+                request.kind == caCamera::ChannelSetupRequest::YAverage) {
+                // Averages are the only camera requests gated after macro expansion.
+                if (!result.expandedPV.isEmpty()) {
+                    specData[0] = request.specId;
+                    const int num = addMonitor(myWidget, &kData, result.expandedPV, w1, specData, map, &pv);
                     integerList.append(num);
                     nbMonitors++;
+                    result.resolvedPV = pv;
                 }
-
-                if(i==0) cameraWidget->setPV_Data(pv);
-                if(i==1) cameraWidget->setPV_Width(pv);
-                if(i==2) cameraWidget->setPV_Height(pv);
-                if(i==3) cameraWidget->setPV_ColormodeChannel(pv);
-                if(i==4) cameraWidget->setPV_PackingmodeChannel(pv);
-                if(i==5) cameraWidget->setMinLevel(pv);
-                if(i==6) cameraWidget->setMaxLevel(pv);
-                if(i==7) cameraWidget->setROIChannelsRead(pvs1);
-                if(i==8) cameraWidget->setROIChannelsWrite(pvs2);
-                if(i>0) tooltip.append("<br>");
-                if(i<=6) tooltip.append(pv);
-                else if(i==7) tooltip.append(pvs1);
-                else if(i==8) tooltip.append(pvs2);
-            }
-        }
-
-        QString text = cameraWidget->getPV_Xaverage();
-        if(text.size() > 0) {
-            text =  treatMacro(map, text, &doNothing, w1->objectName());
-            if(text.size() > 0) {
-                specData[0] =15;   // pv type. x waveform
-                int num = addMonitor(myWidget, &kData, text, w1, specData, map, &pv);
+            } else {
+                specData[0] = request.specId;
+                const int num = addMonitor(myWidget, &kData, result.expandedPV, w1, specData, map, &pv);
                 integerList.append(num);
                 nbMonitors++;
+                result.resolvedPV = pv;
+
+                if (request.component == 3 && result.expandedPV.size() > 0) {
+                    // The old outer i==7/8 branch expands the last component a second time.
+                    result.outerGatePassed = true;
+                    treatMacro(map, result.expandedPV, &doNothing, w1->objectName());
+                }
             }
+            cameraWidget->applyChannelSetupResult(request, result, setupState);
         }
-        text = cameraWidget->getPV_Yaverage();
-        if(text.size() > 0) {
-            text =  treatMacro(map, text, &doNothing, w1->objectName());
-            if(text.size() > 0) {
-                specData[0] = 16;   // pv type. x waveform
-                int num = addMonitor(myWidget, &kData, text, w1, specData, map, &pv);
-                integerList.append(num);
-                nbMonitors++;
-            }
+
+        // Tooltip wrapping and panel policy remain library responsibilities.
+        for (auto it = setupState.tooltipValues.constBegin(); it != setupState.tooltipValues.constEnd(); ++it) {
+            if (it.key() > 0)
+                tooltip.append("<br>");
+            tooltip.append(it.value());
         }
 
         // insert dataindex list

@@ -39,6 +39,8 @@
 #include <QScrollBar>
 #include <QComboBox>
 #include <QGridLayout>
+#include <QMap>
+#include <QList>
 #include <qtcontrols_global.h>
 #include <imagewidget.h>
 #include <calabel.h>
@@ -74,6 +76,34 @@ class QTCON_EXPORT caCamera : public QWidget, public caWidgetUpdateInterface,
                               public caColorMapContextMenuRuntime, public caDragTextInterface
 {
     Q_OBJECT
+
+public:
+    struct ChannelSetupRequest {
+        enum Kind { Field, RoiRead, RoiWrite, XAverage, YAverage };
+        Kind kind;
+        int fieldIndex;
+        int specId;
+        int component;
+        QString pv;
+    };
+
+    struct ChannelSetupResult {
+        QString expandedPV;
+        QString resolvedPV;
+        bool outerGatePassed;
+        ChannelSetupResult() : outerGatePassed(false) {}
+    };
+
+    struct ChannelSetupState {
+        QString roiRead;
+        QString roiWrite;
+        QMap<int, QString> tooltipValues;
+    };
+
+    QList<ChannelSetupRequest> channelSetupRequests();
+    void applyChannelSetupResult(const ChannelSetupRequest &request,
+                                 const ChannelSetupResult &result,
+                                 ChannelSetupState &state);
 
     Q_PROPERTY(QString channelData READ getPV_Data WRITE setPV_Data)
     Q_PROPERTY(QString channelWidth READ getPV_Width WRITE setPV_Width)
