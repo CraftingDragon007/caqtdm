@@ -5209,12 +5209,8 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
         // absolute positioning
         } else {
             QWidget *dispW;
-            int posx, posy;
-            int posX=0;
-            int posY=0;
             double factX = 1.0;
             double factY = 1.0;
-            QString pos;
 
             QVariant resizeX = this->property("RESIZEX");
             QVariant resizeY = this->property("RESIZEY");
@@ -5223,70 +5219,12 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
 
             qCDebug(caIncludeLog) << "we got a position at " << data.specData[1] << data.edata.rvalue << data.pv;
             int adjustMargin = data.specData[2];
-            if(data.specData[0] == 1) {
-                includeWidget->updateXpositionsList(data.specData[1], (int) data.edata.rvalue);
-            } else {
-                includeWidget->updateYpositionsList(data.specData[1], (int) data.edata.rvalue);
-            }
-            if(includeWidget->getXposition(data.specData[1], posx, 0, pos)) {posX = posx;}
-            if(includeWidget->getYposition(data.specData[1], posy, 0, pos)) {posY = posy;}
             memcpy(&dispW, &data.specData[3], sizeof(QWidget*));
-
-            // move to correct position
-            int xpos = qRound((double) posX * includeWidget->getXcorrection() * factX);
-            int ypos = qRound((double) posY * includeWidget->getYcorrection() * factY);
-
-            dispW->move(xpos + adjustMargin/2*factX, ypos + adjustMargin/2*factY);
-            if (includeWidget->getStacking() == caInclude::Positions){
-               includeWidget->update_position(dispW,xpos + adjustMargin/2,ypos + adjustMargin/2);
-            }
-            // recalculate eventually the size
-            if(includeWidget->getAdjustSize()) {
-                int maximumX = includeWidget->getXmaximum() + dispW->width();
-                int maximumY = includeWidget->getYmaximum() + dispW->height();
-
-                //includeWidget->resize((maximumX + adjustMargin) * factX, (maximumY + adjustMargin) * factY);
-                foreach(QWidget* l ,includeWidget->findChildren<QWidget *>()){
-                   QRect resizedata=l->childrenRect();
-                   if ((resizedata.width()>0) && (resizedata.height()>0)){
-                       QRect sizedata=l->rect();
-                       if ((sizedata.height()*sizedata.width())<(resizedata.height()*resizedata.width())) {
-                             l->resize(resizedata.width(),resizedata.height());
-                       }
-
-                   }
-                }
-
-                //QRect resizedata=includeWidget->childrenRect();
-                //includeWidget->resize(resizedata.width(),resizedata.height());
-                //includeWidget->getIncludeFrame()->resize(resizedata.width(),resizedata.height());
-                //qDebug()<< "includeWidget->resize(1)"<<maximumX<<adjustMargin<<factX<<resizedata.width()<<resizedata.height();
-
-                if (includeWidget->getStacking() == caInclude::Positions){
-//                    QList<QVariant> integerList;
-//                    integerList.insert(0, includeWidget->geometry().x());
-//                    integerList.insert(1, includeWidget->geometry().y());
-//                    integerList.insert(2, maximumX);
-//                    integerList.insert(3, maximumY);
-                    //includeWidget->setProperty("GeometryList", integerList);
-                    //qDebug()<< "includeWidget->resize(2)"<<maximumX <<maximumY;
-                    QRect resizedata=includeWidget->childrenRect();
-                    QRect sizedata=includeWidget->rect();
-                    if ((sizedata.height()*sizedata.width())<(resizedata.height()*resizedata.width())) {
-                        qCDebug(caIncludeLog) << "resizedata to:" << resizedata;
-                        includeWidget->resize(resizedata.width(),resizedata.height());
-                        includeWidget->update_geometrysave();
-                    }
-                    qCDebug(caIncludeLog) << "sizedata" << sizedata << "resizedata" << resizedata << includeWidget;
-
-
-
-                    //includeWidget->update_geometrysave();
-                }
-                includeWidget->updateGeometry();
-                // when the include is packed into a scroll area, set the scrollbars too
-                ResizeScrollBars(includeWidget, factX * (maximumX + adjustMargin), factY * (maximumY + adjustMargin));
-            }
+            const caInclude::PositionUpdateResult result = includeWidget->updatePositionChannel(
+                dispW, data.specData[0], data.specData[1], static_cast<int>(data.edata.rvalue),
+                adjustMargin, factX, factY);
+            if (result.resizeScrollBars)
+                ResizeScrollBars(includeWidget, result.scrollWidth, result.scrollHeight);
         }
 
         // animated gif ==================================================================================================================

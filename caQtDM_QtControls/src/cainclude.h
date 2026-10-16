@@ -121,6 +121,15 @@ public:
     void updateXpositionsList(int pos, int value);
     void updateYpositionsList(int pos, int value);
 
+    struct PositionUpdateResult {
+        bool resizeScrollBars = false;
+        int scrollWidth = 0;
+        int scrollHeight = 0;
+    };
+    PositionUpdateResult updatePositionChannel(QWidget *child, int channel, int item,
+                                               int value, int adjustMargin,
+                                               double factX, double factY);
+
     bool getXposition(int indx, int &posX, int width, QString &pos);
     bool getYposition(int indx, int &posY, int height, QString &pos);
     int getXmaximum();

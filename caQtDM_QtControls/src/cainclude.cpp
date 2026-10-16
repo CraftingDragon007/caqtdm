@@ -43,6 +43,59 @@
 
 Q_LOGGING_CATEGORY(caIncludeLog, "caqtdm.widgets.cainclude")
 
+caInclude::PositionUpdateResult caInclude::updatePositionChannel(QWidget *child, int channel, int item,
+                                                                 int value, int adjustMargin,
+                                                                 double factX, double factY)
+{
+    if (channel == 1)
+        updateXpositionsList(item, value);
+    else
+        updateYpositionsList(item, value);
+
+    int posX = 0;
+    int posY = 0;
+    int position;
+    QString text;
+    if (getXposition(item, position, 0, text)) posX = position;
+    if (getYposition(item, position, 0, text)) posY = position;
+
+    const int xpos = qRound(static_cast<double>(posX) * getXcorrection() * factX);
+    const int ypos = qRound(static_cast<double>(posY) * getYcorrection() * factY);
+    child->move(xpos + adjustMargin / 2 * factX, ypos + adjustMargin / 2 * factY);
+    if (getStacking() == Positions)
+        update_position(child, xpos + adjustMargin / 2, ypos + adjustMargin / 2);
+
+    PositionUpdateResult result;
+    if (!getAdjustSize()) return result;
+
+    const int maximumX = getXmaximum() + child->width();
+    const int maximumY = getYmaximum() + child->height();
+    foreach (QWidget *widget, findChildren<QWidget *>()) {
+        const QRect children = widget->childrenRect();
+        if (children.width() > 0 && children.height() > 0) {
+            const QRect size = widget->rect();
+            if (size.height() * size.width() < children.height() * children.width())
+                widget->resize(children.width(), children.height());
+        }
+    }
+
+    if (getStacking() == Positions) {
+        const QRect children = childrenRect();
+        const QRect size = rect();
+        if (size.height() * size.width() < children.height() * children.width()) {
+            qCDebug(caIncludeLog) << "resizedata to:" << children;
+            resize(children.width(), children.height());
+            update_geometrysave();
+        }
+        qCDebug(caIncludeLog) << "sizedata" << size << "resizedata" << children << this;
+    }
+    updateGeometry();
+    result.resizeScrollBars = true;
+    result.scrollWidth = factX * (maximumX + adjustMargin);
+    result.scrollHeight = factY * (maximumY + adjustMargin);
+    return result;
+}
+
 caInclude::caInclude(QWidget *parent) : QWidget(parent)
 {
     thisLoadedWidgets.clear();
