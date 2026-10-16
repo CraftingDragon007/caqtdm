@@ -1215,6 +1215,36 @@ bool CaQtDM_Lib::reaffectText(QMap<QString, QString> map, QString *text, QWidget
     return false;
 }
 
+void CaQtDM_Lib::setupRowColMenu(caRowColMenu *menu, QMap<QString, QString> map,
+                                bool shellFiles, bool logRelatedFiles)
+{
+    QString text = menu->getLabels();
+    if (reaffectText(map, &text, menu)) menu->setLabels(text);
+
+    text = menu->getArgs();
+    if (reaffectText(map, &text, menu)) menu->setArgs(text);
+
+    text = menu->getFiles();
+    if (logRelatedFiles) {
+        qCDebug(caRelatedDisplayLog) << "create caRelatedDisplay files: cainclude_path="
+                                     << QDir::toNativeSeparators(cainclude_path) << "before=" << text;
+    }
+    bool affected = reaffectText(map, &text, menu);
+    if (logRelatedFiles) {
+        qCDebug(caRelatedDisplayLog) << "create caRelatedDisplay files: afterReaffect="
+                                     << text << "affected=" << affected;
+    }
+    affected |= fixFileListRelative(cainclude_path, &text, shellFiles);
+    if (logRelatedFiles) {
+        qCDebug(caRelatedDisplayLog) << "create caRelatedDisplay files: afterFixRelative="
+                                     << text << "affected=" << affected;
+    }
+    if (affected) menu->setFiles(text);
+
+    text = menu->getLabel();
+    if (reaffectText(map, &text, menu)) menu->setLabel(text);
+}
+
 /**
  * this routine will replace inside a macro string a value for a macro name when found
  */
@@ -1747,24 +1777,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         qCDebug(caRelatedDisplayLog) << "create caRelatedDisplay" << relatedWidget << relatedWidget->getLabels() << relatedWidget->getArgs() <<  relatedWidget->getFiles();
         w1->setProperty("ObjectType", caRelatedDisplay_Widget);
 
-        QString text;
-
-        text = relatedWidget->getLabels();
-        if(reaffectText(map, &text, w1))  relatedWidget->setLabels(text);
-
-        text = relatedWidget->getArgs();
-        if(reaffectText(map, &text, w1))  relatedWidget->setArgs(text);
-
-        text = relatedWidget->getFiles();
-        qCDebug(caRelatedDisplayLog) << "create caRelatedDisplay files: cainclude_path=" << QDir::toNativeSeparators(cainclude_path) << "before=" << text;
-        bool affected = reaffectText(map, &text, w1);
-        qCDebug(caRelatedDisplayLog) << "create caRelatedDisplay files: afterReaffect=" << text << "affected=" << affected;
-        affected |= fixFileListRelative(cainclude_path, &text);
-        qCDebug(caRelatedDisplayLog) << "create caRelatedDisplay files: afterFixRelative=" << text << "affected=" << affected;
-        if (affected) relatedWidget->setFiles(text);
-
-        text = relatedWidget->getLabel();
-        if(reaffectText(map, &text, w1))  relatedWidget->setLabel(text);
+        setupRowColMenu(relatedWidget, map, false, true);
 
         connect(relatedWidget, SIGNAL(clicked(int)), this, SLOT(Callback_RelatedDisplayClicked(int)));
         connect(relatedWidget, SIGNAL(triggered(int)), this, SLOT(Callback_RelatedDisplayClicked(int)));
@@ -1779,20 +1792,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         qCDebug(caShellCommandLog) << "create caShellCommand";
         w1->setProperty("ObjectType", caShellCommand_Widget);
 
-        QString text;
-        text= shellWidget->getLabels();
-        if(reaffectText(map, &text, w1))  shellWidget->setLabels(text);
-
-        text = shellWidget->getArgs();
-        if(reaffectText(map, &text, w1))  shellWidget->setArgs(text);
-
-        text = shellWidget->getFiles();
-        bool affected = reaffectText(map, &text, w1);
-        affected |= fixFileListRelative(cainclude_path, &text, true);
-        if (affected) shellWidget->setFiles(text);
-
-        text = shellWidget->getLabel();
-        if(reaffectText(map, &text, w1))  shellWidget->setLabel(text);
+        setupRowColMenu(shellWidget, map, true);
 
         connect(shellWidget, SIGNAL(clicked(int)), this, SLOT(Callback_ShellCommandClicked(int)));
         connect(shellWidget, SIGNAL(triggered(int)), this, SLOT(Callback_ShellCommandClicked(int)));
@@ -1817,20 +1817,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         });
 #endif
 
-        QString text;
-        text= mimeWidget->getLabels();
-        if(reaffectText(map, &text, w1))  mimeWidget->setLabels(text);
-
-        text = mimeWidget->getArgs();
-        if(reaffectText(map, &text, w1))  mimeWidget->setArgs(text);
-
-        text = mimeWidget->getFiles();
-        bool affected = reaffectText(map, &text, w1);
-        affected |= fixFileListRelative(cainclude_path, &text);
-        if (affected) mimeWidget->setFiles(text);
-
-        text = mimeWidget->getLabel();
-        if(reaffectText(map, &text, w1))  mimeWidget->setLabel(text);
+        setupRowColMenu(mimeWidget, map, false);
 
         if(mimeWidget->isElevated()) mimeWidget->raise();
 

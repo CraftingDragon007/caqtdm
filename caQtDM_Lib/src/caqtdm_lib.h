@@ -413,6 +413,8 @@ public:
     short ComputeAlarm(QWidget *w);
     int setObjectVisibility(QWidget *w, double value);
     bool reaffectText(QMap<QString, QString> map, QString *text, QWidget *w);
+    void setupRowColMenu(caRowColMenu *menu, QMap<QString, QString> map,
+                         bool shellFiles, bool logRelatedFiles = false);
     int InitVisibility(QWidget* widget, knobData *kData, QMap<QString, QString> map,  int *specData, QString info);
     void postMessage(QtMsgType type, char *msg);
     void postMessageAndLog(QtMsgType type, char *msg, QMessageLogger::CategoryFunction category);
