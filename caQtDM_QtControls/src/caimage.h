@@ -35,8 +35,9 @@
 #include <qtcontrols_global.h>
 #include "messageQueue.h"
 #include "caVisibilityMonitorInterface.h"
+#include "caDragTextInterface.h"
 
-class QTCON_EXPORT caImage : public QWidget, public caVisibilityRuntimeMixin<caImage>
+class QTCON_EXPORT caImage : public QWidget, public caVisibilityRuntimeMixin<caImage>, public caDragTextInterface
 {
 
     Q_OBJECT
@@ -58,6 +59,8 @@ public:
     void noStyle(QString style) {Q_UNUSED(style);}
 
     caImage( QWidget *parent = 0 );
+    int dragTextPriority(int depth) const override { return depth == 1 ? ImageParent : -1; }
+    QString dragTextValue() override { return getChannelA(); }
 
     QString getFileName() const {return thisFileName;}
     void setFileName(QString filename, const bool isProvisional = true);

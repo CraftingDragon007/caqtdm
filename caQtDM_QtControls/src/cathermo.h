@@ -38,8 +38,9 @@
 #include <qwt_scale_draw.h>
 #include <qwt_scale_engine.h>
 #include "caRangeRuntimeMixin.h"
+#include "caDragTextInterface.h"
 
-class QTCON_EXPORT caThermo : public QwtThermoMarker, public caRangeRuntimeMixin<caThermo>
+class QTCON_EXPORT caThermo : public QwtThermoMarker, public caRangeRuntimeMixin<caThermo>, public caDragTextInterface
 {
     Q_OBJECT
 
@@ -77,6 +78,8 @@ public:
     void noStyle(QString style) {Q_UNUSED(style);}
 
     QString getPV() const;
+    int dragTextPriority(int depth) const override { return depth == 0 ? Thermo : -1; }
+    QString dragTextValue() override { return getPV(); }
     void setPV(QString const &newPV);
 
     enum Direction {Up, Down, Left, Right};

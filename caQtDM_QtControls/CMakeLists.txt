@@ -95,6 +95,7 @@ set(QTCONTROLS_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/qtcontrols.qrc)
 
 set(QTCONTROLS_HEADERS
+    ${_src}/caDragTextInterface.h
     ${_src}/networkaccess.h
     ${_src}/fileFunctions.h
     ${_src}/calinedraw.h

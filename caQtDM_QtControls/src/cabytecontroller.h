@@ -33,10 +33,11 @@
 #include <qtcontrols_global.h>
 #include "epushbutton.h"
 #include "caByteRuntimeMixin.h"
+#include "caDragTextInterface.h"
 
 class QGridLayout;
 
-class QTCON_EXPORT caByteController : public QWidget, public caByteRuntimeMixin<caByteController>
+class QTCON_EXPORT caByteController : public QWidget, public caByteRuntimeMixin<caByteController>, public caDragTextInterface
 {
     Q_OBJECT
 
@@ -81,6 +82,8 @@ public:
     int byteObjectType() const override { return caByteController_Widget; }
 
     QString getPV() const;
+    int dragTextPriority(int depth) const override { return depth == 1 ? ByteControllerParent : -1; }
+    QString dragTextValue() override { return getPV(); }
     void setPV(QString const &newPV);
 
     void setTrueColor(QColor c);

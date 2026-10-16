@@ -33,6 +33,7 @@
 #include <stdlib.h>
 #include <iostream>
 #include <sstream>
+#include <limits>
 
 #if QT_VERSION > QT_VERSION_CHECK(5,0,0)
 #ifndef MOBILE
@@ -58,6 +59,7 @@
 
 // interfacing widgets, handling their own data acquisition ... (thanks zai)
 #include "caWidgetInterface.h"
+#include "caDragTextInterface.h"
 #include "caWidgetUpdateInterface.h"
 #include "caVisibilityMonitorInterface.h"
 #include "caNumericRuntimeMixin.h"
@@ -8828,73 +8830,27 @@ void CaQtDM_Lib::mousePressEvent(QMouseEvent *event)
         mimeData->setText(alarmTree->dragText());
     } else if(caWidgetInterface* wif = dynamic_cast<caWidgetInterface *>(w)) {  // any caWidget with caWidgetInterface
         mimeData->setText(wif->getDragText());
-    } else if(caCalc *calcWidget = qobject_cast<caCalc *>(w)) {
-        mimeData->setText(calcWidget->getVariable());
-    } else if (caMenu *menu1Widget = qobject_cast<caMenu *>(w)) {
-        mimeData->setText(menu1Widget->getPV());
-    } else if (caMenu *menu2Widget = qobject_cast<caMenu *>(w->parent())) {
-        mimeData->setText(menu2Widget->getPV());
-    } else if (caChoice *choice1Widget = qobject_cast<caChoice *>(w)) {
-        mimeData->setText(choice1Widget->getPV());
-    } else if (caChoice *choice2Widget = qobject_cast<caChoice *>(w->parent())) {
-        mimeData->setText(choice2Widget->getPV());
-    } else if (caThermo *thermoWidget = qobject_cast<caThermo *>(w)) {
-        mimeData->setText(thermoWidget->getPV());
-    } else if (caSlider *sliderWidget = qobject_cast<caSlider *>(w)) {
-        mimeData->setText(sliderWidget->getPV());
-    } else if (caClock *clockWidget = qobject_cast<caClock *>(w)) {
-        mimeData->setText(clockWidget->getPV());
-    } else if (caMeter *meterWidget = qobject_cast<caMeter *>(w)) {
-        mimeData->setText(meterWidget->getPV());
-    } else if (caLinearGauge *lineargaugeWidget = qobject_cast<caLinearGauge *>(w)) {
-        mimeData->setText(lineargaugeWidget->getPV());
-    } else if (caCircularGauge *circulargaugeWidget = qobject_cast<caCircularGauge *>(w)) {
-        mimeData->setText(circulargaugeWidget->getPV());
-    } else if (caByte *byteWidget = qobject_cast<caByte *>(w->parent())) {
-        mimeData->setText(byteWidget->getPV());
-    } else if (caByteController *bytecontrollerWidget = qobject_cast<caByteController *>(w->parent())) {
-        mimeData->setText(bytecontrollerWidget->getPV());
-    } else if (caLineEdit *lineeditWidget = qobject_cast<caLineEdit *>(w)) {
-        lineeditWidget->setEnabled(true);  // enable after initiating drag for context menu
-        mimeData->setText(lineeditWidget->getPV());
-    } else if (caMultiLineString *multilinestringWidget = qobject_cast<caMultiLineString *>(w->parent())) {
-        multilinestringWidget->setEnabled(true);  // enable after initiating drag for context menu
-        mimeData->setText(multilinestringWidget->getPV());
-    } else if (caLed *ledWidget = qobject_cast<caLed *>(w)) {
-        mimeData->setText(ledWidget->getPV());
-    } else if (caApplyNumeric *applynumeric1Widget = qobject_cast<caApplyNumeric *>(w)) {
-        mimeData->setText(applynumeric1Widget->getPV());
-    } else if (caApplyNumeric *applynumeric2Widget = qobject_cast<caApplyNumeric *>(w->parent())) {
-        mimeData->setText(applynumeric2Widget->getPV());
-    } else if (caApplyNumeric *applynumeric3Widget = qobject_cast<caApplyNumeric *>(w->parent()->parent())) {
-        mimeData->setText(applynumeric3Widget->getPV());
-    } else if (caNumeric *numeric1Widget = qobject_cast<caNumeric *>(w)) {
-        mimeData->setText(numeric1Widget->getPV());
-    } else if (caNumeric *numeric2Widget = qobject_cast<caNumeric *>(w->parent())) {
-        mimeData->setText(numeric2Widget->getPV());
-    } else if (caSpinbox *spinboxWidget = qobject_cast<caSpinbox *>(w)) {
-        mimeData->setText(spinboxWidget->getPV());
-    } else if (caToggleButton *togglebuttonWidget = qobject_cast<caToggleButton *>(w)) {
-        mimeData->setText(togglebuttonWidget->getPV());
-    } else if (caCamera *cameraWidget = qobject_cast<caCamera *>(w->parent()->parent()->parent())) {
-        mimeData->setText(cameraWidget->getPV_Data());
-    } else if (caMessageButton *messagebuttonWidget = qobject_cast<caMessageButton *>(w)) {
-        mimeData->setText(messagebuttonWidget->getPV());
-    } else if (caImage *imageWidget = qobject_cast<caImage *>(w->parent())) {
-        mimeData->setText(imageWidget->getChannelA());
-    } else if (caGraphics *graphicsWidget = qobject_cast<caGraphics *>(w)) {
-        mimeData->setText(graphicsWidget->getChannelA());
-    } else if (caLabel *labelWidget = qobject_cast<caLabel *>(w)) {
-        mimeData->setText(labelWidget->getChannelA());
-    } else if (caLabelVertical *labelverticalWidget = qobject_cast<caLabelVertical *>(w)) {
-        mimeData->setText(labelverticalWidget->getChannelA());
-    } else if (caPolyLine *polylineWidget = qobject_cast<caPolyLine *>(w)) {
-        mimeData->setText(polylineWidget->getChannelA());
-    } else if (caWaterfallPlot *waterfallplotWidget = qobject_cast<caWaterfallPlot *>(w->parent()->parent())) {
-        mimeData->setText(waterfallplotWidget->getPV());
     } else {
-        qCDebug(caQtDMLibLog) << "unrecognized widget" << w;
-        return;
+        // Query only the depths handled by the legacy probes. Branch ranks
+        // preserve the old if/else order independently of QObject nesting.
+        caDragTextInterface *dragTextProvider = nullptr;
+        int bestPriority = std::numeric_limits<int>::max();
+        QObject *candidate = w;
+        for(int depth = 0; depth <= 3 && candidate != nullptr; ++depth, candidate = candidate->parent()) {
+            if(caDragTextInterface *provider = dynamic_cast<caDragTextInterface *>(candidate)) {
+                const int priority = provider->dragTextPriority(depth);
+                if(priority >= 0 && priority < bestPriority) {
+                    bestPriority = priority;
+                    dragTextProvider = provider;
+                }
+            }
+        }
+        if(dragTextProvider != nullptr) {
+            mimeData->setText(dragTextProvider->dragTextValue());
+        } else {
+            qCDebug(caQtDMLibLog) << "unrecognized widget" << w;
+            return;
+        }
     }
 
     // put it also to the clipboard (usefull for microsoft windows)

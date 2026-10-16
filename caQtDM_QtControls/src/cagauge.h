@@ -28,8 +28,9 @@
 #include <qtcontrols_global.h>
 #include <egauge.h>
 #include "caWidgetUpdateInterface.h"
+#include "caDragTextInterface.h"
 
-class QTCON_EXPORT caAbstractGauge : public EAbstractGauge, public caWidgetUpdateInterface
+class QTCON_EXPORT caAbstractGauge : public EAbstractGauge, public caWidgetUpdateInterface, public caDragTextInterface
 {
  Q_OBJECT
  Q_PROPERTY(QString channel READ getPV WRITE setPV)
@@ -41,6 +42,7 @@ public:
         ~caAbstractGauge(){}
 
         QString getPV() const;
+        QString dragTextValue() override { return getPV(); }
         void setPV(QString const &newPV);
 
         bool needsAggregateAlarm() const override { return false; }
@@ -71,6 +73,7 @@ Q_PROPERTY(Qt::Orientation orientation READ orientation WRITE setOrientation)
 Q_PROPERTY(FillMode fillMode READ fillMode WRITE setFillMode)
 
 public:
+        int dragTextPriority(int depth) const override { return depth == 0 ? LinearGauge : -1; }
 	/**
 	 * How the value is displayed on the bar
 	 */
@@ -130,6 +133,7 @@ Q_PROPERTY(bool valueDisplayed READ isValueDisplayed WRITE setValueDisplayed)
 Q_PROPERTY(QString label READ label WRITE setLabel)
 
 public:
+        int dragTextPriority(int depth) const override { return depth == 0 ? CircularGauge : -1; }
         caCircularGauge(QWidget * = NULL);
         ~caCircularGauge(){}
         int gaugeObjectType() const override { return caCircularGauge_Widget; }

@@ -45,6 +45,7 @@
 #include <qwt_scale_draw.h>
 #include <qwt_plot_zoomer.h>
 #include <qwt_plot_panner.h>
+#include "caDragTextInterface.h"
 #include <qwt_plot_layout.h>
 #include <qwt_plot_renderer.h>
 #include <qwt_plot_grid.h>
@@ -199,7 +200,7 @@ public:
 
 
 class QTCON_EXPORT caWaterfallPlot: public QWidget, public caWidgetUpdateInterface,
-                                    public caColorMapContextMenuRuntime
+                                    public caColorMapContextMenuRuntime, public caDragTextInterface
 {
     Q_OBJECT
 
@@ -323,6 +324,8 @@ public:
     void setTitleY(QString const &title);
 
     QString getPV() const {return thisPV;}
+    int dragTextPriority(int depth) const override { return depth == 2 ? WaterfallGrandparent : -1; }
+    QString dragTextValue() override { return getPV(); }
     void setPV(QString const &newPV) {thisPV = newPV;}
 
     units getUnits() const {return thisUnits;}

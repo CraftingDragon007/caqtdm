@@ -42,6 +42,7 @@
 #include <qtcontrols_global.h>
 #include <imagewidget.h>
 #include <calabel.h>
+#include "caDragTextInterface.h"
 #include "knobDefines.h"
 
 
@@ -70,7 +71,7 @@ struct SyncMinMax{
 };
 
 class QTCON_EXPORT caCamera : public QWidget, public caWidgetUpdateInterface,
-                              public caColorMapContextMenuRuntime
+                              public caColorMapContextMenuRuntime, public caDragTextInterface
 {
     Q_OBJECT
 
@@ -215,6 +216,8 @@ public:
     void setPV_PackingmodeChannel(QString const &packingPV) {thisPV_Packing = packingPV;}
 
     QString getPV_Data() const {return thisPV_Data;}
+    int dragTextPriority(int depth) const override { return depth == 3 ? CameraGreatGrandparent : -1; }
+    QString dragTextValue() override { return getPV_Data(); }
     void setPV_Data(QString const &newPV) {thisPV_Data = newPV;}
     QString getPV_Width() const {return thisPV_Width;}
     void setPV_Width(QString const &newPV) {thisPV_Width = newPV;}

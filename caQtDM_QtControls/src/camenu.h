@@ -28,8 +28,9 @@
 #include <QComboBox>
 #include <qtcontrols_global.h>
 #include "caEnumSelectionRuntimeMixin.h"
+#include "caDragTextInterface.h"
 
-class QTCON_EXPORT caMenu : public QComboBox, public caEnumSelectionRuntimeMixin<caMenu>
+class QTCON_EXPORT caMenu : public QComboBox, public caEnumSelectionRuntimeMixin<caMenu>, public caDragTextInterface
 {
     Q_OBJECT
 
@@ -56,6 +57,9 @@ public:
     enum colMode {Default, Static, Alarm};
 
     QString getPV() const;
+    int dragTextPriority(int depth) const override
+    { return depth == 0 ? MenuSelf : (depth == 1 ? MenuParent : -1); }
+    QString dragTextValue() override { return getPV(); }
     void setPV(QString const &newPV);
 
     QString getMaskPV() const;

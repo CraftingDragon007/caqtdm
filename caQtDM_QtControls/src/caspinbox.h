@@ -30,8 +30,9 @@
 #include <qtcontrols_global.h>
 #include <snumeric.h>
 #include "caNumericRuntimeMixin.h"
+#include "caDragTextInterface.h"
 
-class QTCON_EXPORT caSpinbox : public SNumeric, public caNumericRuntimeMixin<caSpinbox>
+class QTCON_EXPORT caSpinbox : public SNumeric, public caNumericRuntimeMixin<caSpinbox>, public caDragTextInterface
 {
 Q_OBJECT
 
@@ -67,6 +68,8 @@ public:
     ~caSpinbox(){}
 
     QString getPV() const;
+    int dragTextPriority(int depth) const override { return depth == 0 ? Spinbox : -1; }
+    QString dragTextValue() override { return getPV(); }
     void setPV(QString const &newPV);
 
     bool getAccessW() const {return thisAccessW;}

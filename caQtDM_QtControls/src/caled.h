@@ -30,8 +30,9 @@
 #include <qtcontrols_global.h>
 #include <eled.h>
 #include "caStateWidgetRuntime.h"
+#include "caDragTextInterface.h"
 
-class QTCON_EXPORT caLed : public ELed, public caStateWidgetRuntime
+class QTCON_EXPORT caLed : public ELed, public caStateWidgetRuntime, public caDragTextInterface
 {
     Q_OBJECT
 
@@ -59,6 +60,8 @@ public:
     virtual ~caLed(){}
 
     QString getPV() const;
+    int dragTextPriority(int depth) const override { return depth == 0 ? Led : -1; }
+    QString dragTextValue() override { return getPV(); }
     void setPV(QString const &newPV);
     int getBitNr() const;
     void setBitNr(int const newBitNr);

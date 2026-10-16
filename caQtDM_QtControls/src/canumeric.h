@@ -30,8 +30,9 @@
 #include <qtcontrols_global.h>
 #include <enumeric.h>
 #include "caNumericRuntimeMixin.h"
+#include "caDragTextInterface.h"
 
-class QTCON_EXPORT caNumeric : public ENumeric, public caNumericRuntimeMixin<caNumeric>
+class QTCON_EXPORT caNumeric : public ENumeric, public caNumericRuntimeMixin<caNumeric>, public caDragTextInterface
 {
 Q_OBJECT
 
@@ -66,6 +67,8 @@ public:
     ~caNumeric(){}
 
     QString getPV() const;
+    int dragTextPriority(int depth) const override { return depth == 0 ? NumericSelf : (depth == 1 ? NumericParent : -1); }
+    QString dragTextValue() override { return getPV(); }
     void setPV(QString const &newPV);
 
     bool getAccessW() const {return thisAccessW;}

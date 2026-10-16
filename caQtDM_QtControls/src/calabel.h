@@ -30,9 +30,10 @@
 #include <ELabel>
 #include "caLabelUpdateMixin.h"
 #include "caVisibilityMonitorInterface.h"
+#include "caDragTextInterface.h"
 
 class QTCON_EXPORT caLabel : public ESimpleLabel, public caLabelUpdateMixin,
-                            public caVisibilityMonitorInterface
+                            public caVisibilityMonitorInterface, public caDragTextInterface
 {
     Q_OBJECT
 
@@ -59,6 +60,8 @@ class QTCON_EXPORT caLabel : public ESimpleLabel, public caLabelUpdateMixin,
 
 
 public:
+    int dragTextPriority(int depth) const override { return depth == 0 ? Label : -1; }
+    QString dragTextValue() override { return getChannelA(); }
     void noStyle(QString style) {Q_UNUSED(style);}
 
     caLabel( QWidget *parent = 0 );

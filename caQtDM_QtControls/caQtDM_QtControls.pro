@@ -193,7 +193,7 @@ XDR_HACK {
     HEADERS +=  src/cadoubletabwidgetextensionfactory.h  src/capolylinetaskmenu.h
 }
 
-HEADERS += src/networkaccess.h src/sslverifyhelper.h src/fileFunctions.h \
+HEADERS += src/caDragTextInterface.h src/networkaccess.h src/sslverifyhelper.h src/fileFunctions.h \
     src/calinedraw.h \
     src/alhtreemodel.h \
     src/caalarmtree.h \

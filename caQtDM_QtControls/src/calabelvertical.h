@@ -35,9 +35,10 @@
 #include "fontscalingwidget.h"
 #include "caLabelUpdateMixin.h"
 #include "caVisibilityMonitorInterface.h"
+#include "caDragTextInterface.h"
 
 class QTCON_EXPORT caLabelVertical : public QWidget, public FontScalingWidget,
-                                    public caLabelUpdateMixin, public caVisibilityMonitorInterface
+                                    public caLabelUpdateMixin, public caVisibilityMonitorInterface, public caDragTextInterface
 {
     Q_OBJECT
 
@@ -61,6 +62,8 @@ class QTCON_EXPORT caLabelVertical : public QWidget, public FontScalingWidget,
 #include "caVisibDefs.h"
 
 public:
+    int dragTextPriority(int depth) const override { return depth == 0 ? VerticalLabel : -1; }
+    QString dragTextValue() override { return getChannelA(); }
     void noStyle(QString style) {Q_UNUSED(style);}
 
     enum ScaleMode { None, Height, WidthAndHeight};

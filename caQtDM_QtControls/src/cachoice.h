@@ -32,10 +32,11 @@
 #include "epushbutton.h"
 #include "elabel.h"
 #include "caEnumSelectionRuntimeMixin.h"
+#include "caDragTextInterface.h"
 
 class QGridLayout;
 
-class QTCON_EXPORT caChoice : public QWidget, public caEnumSelectionRuntimeMixin<caChoice>
+class QTCON_EXPORT caChoice : public QWidget, public caEnumSelectionRuntimeMixin<caChoice>, public caDragTextInterface
 {
     Q_OBJECT
 
@@ -79,6 +80,9 @@ public:
     bool selectionUsesPrimarySpec() const override { return false; }
 
     QString getPV() const;
+    int dragTextPriority(int depth) const override
+    { return depth == 0 ? ChoiceSelf : (depth == 1 ? ChoiceParent : -1); }
+    QString dragTextValue() override { return getPV(); }
     void setPV(QString const &newPV);
 
     void populateCells(QStringList list, int indx);

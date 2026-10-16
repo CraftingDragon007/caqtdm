@@ -33,8 +33,9 @@
 #include <qtcontrols_global.h>
 #include <fontscalingwidget.h>
 #include "caStateWidgetRuntime.h"
+#include "caDragTextInterface.h"
 
-class QTCON_EXPORT caToggleButton : public QCheckBox, public FontScalingWidget, public caStateWidgetRuntime
+class QTCON_EXPORT caToggleButton : public QCheckBox, public FontScalingWidget, public caStateWidgetRuntime, public caDragTextInterface
 {
     Q_OBJECT
 
@@ -89,6 +90,8 @@ public:
                                             const knobData &data, short aggregateAlarm) override;
 
     QString getPV() const;
+    int dragTextPriority(int depth) const override { return depth == 0 ? ToggleButton : -1; }
+    QString dragTextValue() override { return getPV(); }
     void setPV(QString const &newPV);
 
     void setState(Qt::CheckState state);

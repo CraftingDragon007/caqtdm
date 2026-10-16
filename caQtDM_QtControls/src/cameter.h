@@ -41,10 +41,11 @@
 #include <qwt_round_scale_draw.h>
 #include "alarmdefs.h"
 #include "caWidgetUpdateInterface.h"
+#include "caDragTextInterface.h"
 
 /* a simple meter */
 
-class QTCON_EXPORT caMeter : public QwtDial, public caWidgetUpdateInterface
+class QTCON_EXPORT caMeter : public QwtDial, public caWidgetUpdateInterface, public caDragTextInterface
 {
     Q_OBJECT
 
@@ -92,6 +93,8 @@ public:
                                             const knobData &data, short aggregateAlarm) override;
 
     QString getPV() const {return thisPV;}
+    int dragTextPriority(int depth) const override { return depth == 0 ? Meter : -1; }
+    QString dragTextValue() override { return getPV(); }
     void setPV(QString const &newPV) {thisPV = newPV;}
 
     enum colMode {Static, Alarm};

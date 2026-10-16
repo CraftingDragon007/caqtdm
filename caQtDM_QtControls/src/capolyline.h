@@ -30,6 +30,7 @@
 #include <qtcontrols_global.h>
 #include "caShapeRuntimeMixin.h"
 #include "caVisibilityMonitorInterface.h"
+#include "caDragTextInterface.h"
 
 QT_BEGIN_NAMESPACE
 class QRect;
@@ -37,7 +38,7 @@ class QSize;
 QT_END_NAMESPACE
 
 class QTCON_EXPORT caPolyLine : public QWidget, public caShapeRuntimeMixin<caPolyLine>,
-                                public caVisibilityRuntimeMixin<caPolyLine>
+                                public caVisibilityRuntimeMixin<caPolyLine>, public caDragTextInterface
 {
     Q_OBJECT
 
@@ -63,6 +64,8 @@ class QTCON_EXPORT caPolyLine : public QWidget, public caShapeRuntimeMixin<caPol
     Q_ENUMS(PolyStyle)
 
 public:
+    int dragTextPriority(int depth) const override { return depth == 0 ? PolyLine : -1; }
+    QString dragTextValue() override { return getChannelA(); }
     void noStyle(QString style) {Q_UNUSED(style);}
     bool skipVisibilityMonitors() const override
     { return getVisibility() == StaticV && getColorMode() == Static; }

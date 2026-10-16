@@ -31,10 +31,11 @@
 #include <qtcontrols_global.h>
 #include <rectangle.h>
 #include "caByteRuntimeMixin.h"
+#include "caDragTextInterface.h"
 
 class QGridLayout;
 
-class QTCON_EXPORT caByte : public QWidget, public caByteRuntimeMixin<caByte>
+class QTCON_EXPORT caByte : public QWidget, public caByteRuntimeMixin<caByte>, public caDragTextInterface
 {
     Q_OBJECT
 
@@ -73,6 +74,8 @@ public:
     int byteObjectType() const override { return caByte_Widget; }
 
     QString getPV() const;
+    int dragTextPriority(int depth) const override { return depth == 1 ? ByteParent : -1; }
+    QString dragTextValue() override { return getPV(); }
     void setPV(QString const &newPV);
 
     void setTrueColor(QColor c);

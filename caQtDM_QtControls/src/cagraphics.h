@@ -31,11 +31,12 @@
 #include <qtcontrols_global.h>
 #include "caShapeRuntimeMixin.h"
 #include "caVisibilityMonitorInterface.h"
+#include "caDragTextInterface.h"
 
 // would be so nice to get rid of my includes, however it would break the compatibility with former ui files, so I leave it like that
 // class  QTCON_EXPORT caGraphics : public caVisibility
 class  QTCON_EXPORT caGraphics : public QWidget, public caShapeRuntimeMixin<caGraphics>,
-                                 public caVisibilityRuntimeMixin<caGraphics>
+                                 public caVisibilityRuntimeMixin<caGraphics>, public caDragTextInterface
 {
     Q_OBJECT
 
@@ -95,6 +96,8 @@ public:
     enum colMode {Static=0, Alarm};
 
     caGraphics( QWidget *parent = 0 );
+    int dragTextPriority(int depth) const override { return depth == 0 ? Graphics : -1; }
+    QString dragTextValue() override { return getChannelA(); }
     int shapeObjectType() const override { return caGraphics_Widget; }
     void logShapeUpdate(const knobData &data) const;
 

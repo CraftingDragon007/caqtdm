@@ -30,9 +30,10 @@
 #include <qtcontrols_global.h>
 #include <fontscalingwidget.h>
 #include "caWidgetUpdateInterface.h"
+#include "caDragTextInterface.h"
 
 class QTCON_EXPORT caMultiLineString : public QPlainTextEdit, public FontScalingWidget,
-                                       public caWidgetUpdateInterface
+                                       public caWidgetUpdateInterface, public caDragTextInterface
 {
     Q_OBJECT
 
@@ -106,6 +107,8 @@ public:
     int getInt() {return (int) 0;}
 
     QString getPV() const;
+    int dragTextPriority(int depth) const override { return depth == 1 ? MultiLineParent : -1; }
+    QString dragTextValue() override { setEnabled(true); return getPV(); }
     void setPV(QString const &newPV);
 
     QColor getForeground() const {return thisForeColor;}

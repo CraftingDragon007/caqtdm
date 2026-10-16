@@ -38,8 +38,9 @@
 #include <qtcontrols_global.h>
 #include "alarmdefs.h"
 #include "caWidgetUpdateInterface.h"
+#include "caDragTextInterface.h"
 
-class QTCON_EXPORT caClock : public QwtAnalogClock, public caWidgetUpdateInterface
+class QTCON_EXPORT caClock : public QwtAnalogClock, public caWidgetUpdateInterface, public caDragTextInterface
 {
     Q_OBJECT
 
@@ -69,6 +70,8 @@ public:
     caClock(QWidget *parent);
 
     QString getPV() const {return thisPV;}
+    int dragTextPriority(int depth) const override { return depth == 0 ? Clock : -1; }
+    QString dragTextValue() override { return getPV(); }
     void setPV(QString const &newPV) {thisPV = newPV;}
     TimeType getTimeType() { return thisTimeType; }
     void setTimeType(TimeType type) {thisTimeType = type;

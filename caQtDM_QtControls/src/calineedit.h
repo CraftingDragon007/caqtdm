@@ -31,9 +31,10 @@
 #include <qtcontrols_global.h>
 #include <fontscalingwidget.h>
 #include "caWidgetUpdateInterface.h"
+#include "caDragTextInterface.h"
 
 class QTCON_EXPORT caLineEdit : public QLineEdit, public FontScalingWidget,
-                                 public caWidgetUpdateInterface
+                                 public caWidgetUpdateInterface, public caDragTextInterface
 {
     Q_PROPERTY(QString channel READ getPV WRITE setPV)
 
@@ -99,6 +100,8 @@ public:
     void setMinValue(double const &minim) {thisMinimum = minim;}
 
     QString getPV() const;
+    int dragTextPriority(int depth) const override { return depth == 0 ? LineEdit : -1; }
+    QString dragTextValue() override { setEnabled(true); return getPV(); }
     void setPV(QString const &newPV);
 
     QColor getForeground() const {return thisForeColor;}

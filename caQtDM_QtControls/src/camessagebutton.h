@@ -34,8 +34,9 @@
 #include <qtcontrols_global.h>
 #include <epushbutton.h>
 #include "caWidgetUpdateInterface.h"
+#include "caDragTextInterface.h"
 
-class QTCON_EXPORT caMessageButton : public EPushButton, public caWidgetUpdateInterface
+class QTCON_EXPORT caMessageButton : public EPushButton, public caWidgetUpdateInterface, public caDragTextInterface
 {
 
     Q_OBJECT
@@ -99,6 +100,8 @@ public:
     void setPressMessage(QString const &m) {thisPressMessage = m;}
 
     QString getPV() const {return thisPV;}
+    int dragTextPriority(int depth) const override { return depth == 0 ? MessageButton : -1; }
+    QString dragTextValue() override { return getPV(); }
     void setPV(QString const &newPV){ thisPV = newPV;}
 
     QString getDisablePV() const {return thisDisablePV;}

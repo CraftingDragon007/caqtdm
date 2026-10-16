@@ -29,8 +29,9 @@
 #include <qtcontrols_global.h>
 #include <eapplynumeric.h>
 #include "caNumericRuntimeMixin.h"
+#include "caDragTextInterface.h"
 
-class QTCON_EXPORT caApplyNumeric : public EApplyNumeric, public caNumericRuntimeMixin<caApplyNumeric>
+class QTCON_EXPORT caApplyNumeric : public EApplyNumeric, public caNumericRuntimeMixin<caApplyNumeric>, public caDragTextInterface
 {
 
 Q_OBJECT
@@ -66,6 +67,9 @@ void noStyle(QString style) {Q_UNUSED(style);}
 ~caApplyNumeric(){}
 
 QString getPV() const;
+int dragTextPriority(int depth) const override
+{ return depth == 0 ? ApplyNumericSelf : (depth == 1 ? ApplyNumericParent : (depth == 2 ? ApplyNumericGrandparent : -1)); }
+QString dragTextValue() override { return getPV(); }
 void setPV(QString const &newPV);
 
 bool getAccessW() const {return thisAccessW;}

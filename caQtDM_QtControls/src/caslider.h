@@ -40,8 +40,9 @@
 
 #include <QTimer>
 #include "caRangeRuntimeMixin.h"
+#include "caDragTextInterface.h"
 
-class QTCON_EXPORT caSlider : public QwtSlider, public caRangeRuntimeMixin<caSlider>
+class QTCON_EXPORT caSlider : public QwtSlider, public caRangeRuntimeMixin<caSlider>, public caDragTextInterface
 {
     Q_OBJECT
 
@@ -89,6 +90,8 @@ public:
     void noStyle(QString style) {Q_UNUSED(style);}
 
     QString getPV() const;
+    int dragTextPriority(int depth) const override { return depth == 0 ? Slider : -1; }
+    QString dragTextValue() override { return getPV(); }
     void setPV(QString const &newPV);
 
     enum Direction {Up, Down, Left, Right};
