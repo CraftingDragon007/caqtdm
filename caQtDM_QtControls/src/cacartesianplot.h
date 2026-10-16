@@ -60,8 +60,10 @@
 #include <limits>
 #include "caPropHandleDefs.h"
 #include "caWidgetUpdateInterface.h"
+#include "caPlotResizeRuntimeMixin.h"
 
-class QTCON_EXPORT caCartesianPlot : public QwtPlot, public caWidgetUpdateInterface
+class QTCON_EXPORT caCartesianPlot : public QwtPlot, public caWidgetUpdateInterface,
+        public caPlotResizeRuntimeMixin<caCartesianPlot>
 {
     Q_OBJECT
 
@@ -161,6 +163,10 @@ class QTCON_EXPORT caCartesianPlot : public QwtPlot, public caWidgetUpdateInterf
     Q_PROPERTY(QString styleSheet READ styleSheet WRITE noStyle DESIGNABLE false)
 
 public:
+    void capturePlotResizeDetails(QVariantList &geometry);
+    void resizePlotResizeDetails(QFont legendFont, double factX, double factY,
+                                 const QVariantList &geometry);
+
     bool needsAggregateAlarm() const override { return false; }
     bool needsVisibilityUpdate() const override { return false; }
     caWidgetUpdateResult applyChannelUpdate(const QString &units, const QString &value,

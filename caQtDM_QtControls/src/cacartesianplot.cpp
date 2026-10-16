@@ -1502,6 +1502,31 @@ void caCartesianPlot::setMaxYResize(double value){
     }
 
 }
+void caCartesianPlot::capturePlotResizeDetails(QVariantList &geometry)
+{
+    geometry.insert(7, 7);
+    if(getLegendEnabled()) {
+        setLegendAttribute(getScaleColor(), QFont("arial", 7), FONT);
+    }
+}
+
+void caCartesianPlot::resizePlotResizeDetails(QFont legendFont, double factX, double factY,
+                                               const QVariantList &geometry)
+{
+    if(getLegendEnabled()) {
+        setLegendAttribute(getScaleColor(), legendFont, FONT);
+        updateLayout();
+    }
+    axisScaleDraw(QwtPlot::xBottom)->setTickLength(QwtScaleDiv::MajorTick, factY * (double) geometry.at(8).toInt());
+    axisScaleDraw(QwtPlot::xBottom)->setTickLength(QwtScaleDiv::MediumTick, factY * (double) geometry.at(9).toInt());
+    axisScaleDraw(QwtPlot::xBottom)->setTickLength(QwtScaleDiv::MinorTick, factY * (double) geometry.at(10).toInt());
+    axisScaleDraw(QwtPlot::xBottom)->setSpacing(0.0);
+    axisScaleDraw(QwtPlot::yLeft)->setTickLength(QwtScaleDiv::MajorTick, factX * (double) geometry.at(8).toInt());
+    axisScaleDraw(QwtPlot::yLeft)->setTickLength(QwtScaleDiv::MediumTick, factX * (double) geometry.at(9).toInt());
+    axisScaleDraw(QwtPlot::yLeft)->setTickLength(QwtScaleDiv::MinorTick, factX * (double) geometry.at(10).toInt());
+    axisScaleDraw(QwtPlot::xBottom)->setSpacing(0.0);
+}
+
 //#ifndef MOBILE
 #include "moc_cacartesianplot.cpp"
 //#endif

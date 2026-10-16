@@ -72,8 +72,10 @@ class QwtPlotCurve;
 
 #include "caPropHandleDefs.h"
 #include "caWidgetUpdateInterface.h"
+#include "caPlotResizeRuntimeMixin.h"
 
-class QTCON_EXPORT caStripPlot : public QwtPlot, public caWidgetUpdateInterface
+class QTCON_EXPORT caStripPlot : public QwtPlot, public caWidgetUpdateInterface,
+        public caPlotResizeRuntimeMixin<caStripPlot>
 {
     Q_OBJECT
 
@@ -188,6 +190,10 @@ class QTCON_EXPORT caStripPlot : public QwtPlot, public caWidgetUpdateInterface
     Q_PROPERTY(QString styleSheet READ styleSheet WRITE noStyle DESIGNABLE false)
 
 public:
+    void capturePlotResizeDetails(QVariantList &geometry);
+    void resizePlotResizeDetails(QFont legendFont, double factX, double factY,
+                                 const QVariantList &geometry);
+
 #include "caPropHandle.h"
 
     void noStyle(QString style) {Q_UNUSED(style);}

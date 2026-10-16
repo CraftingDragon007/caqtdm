@@ -311,6 +311,7 @@ HEADERS	+= \
     src/caByteRuntimeMixin.h \
     src/caShapeRuntimeMixin.h \
     src/caTableResizeRuntimeMixin.h \
+    src/caPlotResizeRuntimeMixin.h \
     src/addevent.h \
     src/animationcode.h \
     src/hideobjectcode.h

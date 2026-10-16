@@ -1646,6 +1646,25 @@ bool caStripPlot::eventFilter(QObject *obj, QEvent *event)
     }
     return QObject::eventFilter(obj, event);
 }
+void caStripPlot::capturePlotResizeDetails(QVariantList &geometry)
+{
+    geometry.insert(7, 9);
+    if(getLegendEnabled()) {
+        setLegendAttribute(getScaleColor(), QFont("arial", 9), FONT);
+    }
+}
+
+void caStripPlot::resizePlotResizeDetails(QFont legendFont, double factX, double factY,
+                                          const QVariantList &geometry)
+{
+    Q_UNUSED(geometry);
+    if(getLegendEnabled()) {
+        setLegendAttribute(getScaleColor(), legendFont, FONT);
+        updateLayout();
+    }
+    setTicksResizeFactor(factX, factY);
+}
+
 //#ifndef MOBILE
 #include "moc_castripplot.cpp"
 //#endif

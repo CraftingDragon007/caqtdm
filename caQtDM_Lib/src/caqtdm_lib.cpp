@@ -8144,56 +8144,12 @@ void CaQtDM_Lib::resizeSpecials(QString className, QWidget *widget, QVariantList
         widget->setFont(f);
     }
 
-    else if(!className.compare("caStripPlot") || !className.compare("caCartesianPlot")) {
-        QwtPlot *plot = (QwtPlot *) widget;
-        qreal fontSize = fontResize(factX, factY, list, 4);
-
-        // change font of axis ticks
-        QFont f = plot->axisFont(QwtPlot::xBottom);
-        f.setPointSizeF(fontSize);
-        plot->setAxisFont(QwtPlot::xBottom, f);
-        plot->setAxisFont(QwtPlot::yLeft, f);
-
-        // change font of labels and title
-        f = plot->title().font();
-        QwtText title = plot->title().text();
-        QwtText titleX = plot->axisTitle(QwtPlot::xBottom).text();
-        QwtText titleY = plot->axisTitle(QwtPlot::yLeft).text();
-        fontSize = fontResize(factX, factY, list, 6);
-        f.setPointSizeF(fontSize);
-        title.setFont(f);
-        titleX.setFont(f);
-        titleY.setFont(f);
-        plot->setTitle(title);
-        plot->setAxisTitle(QwtPlot::xBottom, titleX);
-        plot->setAxisTitle(QwtPlot::yLeft, titleY);
-
-        if(!className.compare("caStripPlot")) {
-            caStripPlot * stripplotWidget = (caStripPlot *) widget;
-            fontSize = fontResize(factX, factY, list, 7);
-            f.setPointSizeF(fontSize);
-            if(stripplotWidget->getLegendEnabled()) {
-                stripplotWidget->setLegendAttribute(stripplotWidget->getScaleColor(), f, caStripPlot::FONT);
-                stripplotWidget->updateLayout();
-            }
-            stripplotWidget->setTicksResizeFactor(factX, factY);
-        } else {
-            caCartesianPlot * cartesianplotWidget = (caCartesianPlot *) widget;
-            fontSize = fontResize(factX, factY, list, 7);
-            f.setPointSizeF(fontSize);
-            if(cartesianplotWidget->getLegendEnabled()) {
-                cartesianplotWidget->setLegendAttribute(cartesianplotWidget->getScaleColor(), f, caCartesianPlot::FONT);
-                cartesianplotWidget->updateLayout();
-            }
-            plot->axisScaleDraw(QwtPlot::xBottom)->setTickLength(QwtScaleDiv::MajorTick, factY * (double) list.at(8).toInt());
-            plot->axisScaleDraw(QwtPlot::xBottom)->setTickLength(QwtScaleDiv::MediumTick, factY * (double) list.at(9).toInt());
-            plot->axisScaleDraw(QwtPlot::xBottom)->setTickLength(QwtScaleDiv::MinorTick, factY * (double) list.at(10).toInt());
-            plot->axisScaleDraw(QwtPlot::xBottom)->setSpacing(0.0);
-            plot->axisScaleDraw(QwtPlot::yLeft)->setTickLength(QwtScaleDiv::MajorTick, factX * (double) list.at(8).toInt());
-            plot->axisScaleDraw(QwtPlot::yLeft)->setTickLength(QwtScaleDiv::MediumTick, factX * (double) list.at(9).toInt());
-            plot->axisScaleDraw(QwtPlot::yLeft)->setTickLength(QwtScaleDiv::MinorTick, factX * (double) list.at(10).toInt());
-            plot->axisScaleDraw(QwtPlot::xBottom)->setSpacing(0.0);
-        }
+    else if(caPlotResizeRuntime *plot = dynamic_cast<caPlotResizeRuntime *>(widget)) {
+        const qreal tickFontSize = fontResize(factX, factY, list, 4);
+        const qreal titleFontSize = fontResize(factX, factY, list, 6);
+        const qreal legendFontSize = fontResize(factX, factY, list, 7);
+        plot->resizePlotPresentation(tickFontSize, titleFontSize, legendFontSize,
+                                     factX, factY, list);
     }
 
     else if(!className.compare("QGroupBox")) {
@@ -8560,28 +8516,8 @@ void CaQtDM_Lib::resizeEvent ( QResizeEvent * event )
                     integerList.insert(4, line->lineWidth());
                     integerList.insert(5, line->frameWidth());
                 // for plots get the linewidth
-            } else if(!className.compare("caStripPlot") || !className.compare("caCartesianPlot")) {
-                QwtPlot * plot = (QwtPlot *) widget;
-                integerList.insert(4, plot->axisFont(QwtPlot::xBottom).pointSize());         // label of ticks
-                integerList.insert(5, 9);                                                   // empty
-                integerList.insert(6, plot->axisTitle(QwtPlot::xBottom).font().pointSize()); // titles have the same font
-
-                if(!className.compare("caStripPlot")) {
-                    caStripPlot * stripplotWidget = (caStripPlot *) widget;
-                    integerList.insert(7, 9);
-                    if(stripplotWidget->getLegendEnabled()) {
-                        stripplotWidget->setLegendAttribute(stripplotWidget->getScaleColor(), QFont("arial", 9), caStripPlot::FONT);
-                    }
-                } else {
-                    caCartesianPlot * cartesianplotWidget = (caCartesianPlot *) widget;
-                    integerList.insert(7, 7);
-                    if( cartesianplotWidget->getLegendEnabled()) {
-                         cartesianplotWidget->setLegendAttribute(cartesianplotWidget->getScaleColor(), QFont("arial", 7), caCartesianPlot::FONT);
-                    }
-                }
-                integerList.insert(8, plot->axisScaleDraw(QwtPlot::xBottom)->tickLength(QwtScaleDiv::MajorTick));
-                integerList.insert(9, plot->axisScaleDraw(QwtPlot::xBottom)->tickLength(QwtScaleDiv::MediumTick));
-                integerList.insert(10, plot->axisScaleDraw(QwtPlot::xBottom)->tickLength(QwtScaleDiv::MinorTick));
+            } else if(caPlotResizeRuntime *plot = dynamic_cast<caPlotResizeRuntime *>(widget)) {
+                plot->capturePlotResizePresentation(integerList);
                 // preserve the LED's internal indicator dimensions for later resizing
             } else if (caLed *ledWidget = qobject_cast<caLed *>(widget))  {
                 ledWidget->captureResizeBaseline();
