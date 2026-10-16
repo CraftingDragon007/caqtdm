@@ -30,6 +30,37 @@
 
 Q_LOGGING_CATEGORY(caCalcLog, "caqtdm.widgets.cacalc")
 
+double caCalc::channelValue(const knobData &data) const
+{
+    if (thisDataCount > 0 && !data.edata.connected)
+        return qQNaN();
+    switch (data.edata.fieldtype) {
+    case caINT:
+    case caLONG:
+    case caENUM:
+        return data.edata.ivalue;
+    default:
+        return data.edata.rvalue;
+    }
+}
+
+bool caCalc::displayOwnChannelValue(const QString &pv, double value)
+{
+    if (thisVariable != pv) return false;
+    setValue(value);
+    return true;
+}
+
+QList<int> caCalc::inputIndicesForVariable(const QString &variable) const
+{
+    QList<int> indices;
+    for (int index = 0; index < thisPV.size(); ++index) {
+        if (thisPV.at(index) == variable)
+            indices.append(index);
+    }
+    return indices;
+}
+
 caCalc::caCalc( QWidget *parent ) :  ESimpleLabel(parent)
 {
     // to start with, clear the stylesheet, so that playing around

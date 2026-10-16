@@ -5154,44 +5154,24 @@ void CaQtDM_Lib::Callback_UpdateWidget(int indx, QWidget *w,
     // calc ==================================================================================================================
     else if(caCalc *calcWidget = qobject_cast<caCalc *>(w)) {
         bool valid;
-        double result;
-        switch (data.edata.fieldtype){
-            case caINT:
-            case caLONG:
-            case caENUM: {
-                result = data.edata.ivalue;
-                break;
-            }
-            default:{
-                result = data.edata.rvalue;
-            }
-        }
+        double result = calcWidget->channelValue(data);
         qCDebug(caCalcLog) << "we have a caCalc" << calcWidget->getVariable() << "  " <<  data.pv << "fieldtype" << data.edata.fieldtype;
 
         if(calcWidget->getDataCount() > 0) {
-            if(!data.edata.connected) result = qQNaN();
             mutexKnobDataP->UpdateSoftPV(calcWidget->getVariable(), result, myWidget, data.specData[0], calcWidget->getDataCount());
         } else {
             CalcVisibility(w, result, valid);  // visibility not used, but calculation yes
             if(valid) {
-                if (!QString::compare(calcWidget->getVariable(), data.pv, Qt::CaseSensitive)){
-                    calcWidget->setValue(result);
+                if (calcWidget->displayOwnChannelValue(QString::fromLatin1(data.pv), result)) {
                     mutexKnobDataP->UpdateSoftPV(data.pv, result, myWidget, 0, 1);
                     qCDebug(caCalcLog) << "we have a caCalc" << calcWidget->getVariable() << "  " <<  data.pv;
 
                     // be sure to update softchannels in the soft waves
-
-                    //QList<caCalc *> all = myWidget->findChildren<caCalc *>();
                     if (allCalcs_Vectors.count()>0){
                         foreach(caCalc* w, allCalcs_Vectors) {
-                            // when cacalc is a waveform composed from individual channels
-                            // get items of this waveform
-                            QList<QString> pvList = w->getPVList();
-                            for (int j = 0; j < pvList.size(); j++) {
-                                if (!QString::compare(calcWidget->getVariable(), pvList[j], Qt::CaseSensitive)) {
-                                    mutexKnobDataP->UpdateSoftPV(w->getVariable(), result, myWidget, j, pvList.count());
-                                }
-                            }
+                            for (int index : w->inputIndicesForVariable(calcWidget->getVariable()))
+                                mutexKnobDataP->UpdateSoftPV(w->getVariable(), result, myWidget,
+                                                             index, w->getDataCount());
                         }
                     }
                 }

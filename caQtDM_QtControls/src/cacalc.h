@@ -33,6 +33,7 @@
 #include "esimplelabel.h"
 #include <qtcontrols_global.h>
 #include "caPropHandleDefs.h"
+#include "knobData.h"
 
 #define MAX_QRECT_PARAMS 4
 
@@ -126,6 +127,9 @@ public:
 
     void setDataCount(int const &count) {thisDataCount = count;}
     int getDataCount() const {return thisDataCount;}
+    double channelValue(const knobData &data) const;
+    bool displayOwnChannelValue(const QString &pv, double value);
+    QList<int> inputIndicesForVariable(const QString &variable) const;
     void setValue(QString value);
 
     bool isPropertyVisible(Properties property);
