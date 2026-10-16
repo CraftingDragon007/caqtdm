@@ -2485,8 +2485,6 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         int row = 0;
         int maxColumns=0;
         int column = 0;
-        int spacingHorizontal = includeWidget->getSpacingHorizontal();
-        int spacingVertical = includeWidget->getSpacingVertical();
         w1->setProperty("ObjectType", caInclude_Widget);
 
         QWidget *thisW = (QWidget *) Q_NULLPTR;
@@ -2834,43 +2832,10 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
             parseFile = (UiConverterInterface *) Q_NULLPTR;
         }
 
-        // resize the include widget
-        if((thisW != (QWidget *) Q_NULLPTR ) && (!prcFile) && includeWidget->getAdjustSize() && includeWidget->getStacking() != caInclude::Positions) {
-            includeWidget->resize(maxColumns * thisW->width() + (maxColumns-1) * spacingHorizontal + adjustMargin,
-                                  maxRows * thisW->height() + (maxRows-1) * spacingVertical + adjustMargin);
-            includeWidget->getIncludeFrame()->resize(maxColumns * thisW->width() + (maxColumns-1) * spacingHorizontal + adjustMargin,
-                                                     maxRows * thisW->height() + (maxRows-1) * spacingVertical + adjustMargin);
-
-        } else if((thisW != (QWidget *) Q_NULLPTR ) && (!prcFile) && includeWidget->getAdjustSize() && includeWidget->getStacking() == caInclude::Positions) {
-
-
-
-            //QRect resizedata=includeWidget->childrenRect();
-            //includeWidget->resize(resizedata.width(),resizedata.height());
-            //QRect resizedata=thisW->childrenRect();
-            //qDebug()<<"childrenRect"<<resizedata;
-            //frame->resize(resizedata.width(),resizedata.height());
-            //includeWidget->resize(resizedata.width(),resizedata.height());
-
-            //QRect resizedata=includeWidget->scanChildsneededArea();
-            //includeWidget->resize(resizedata.width(),resizedata.height());
-
-            includeWidget->resize(maximumX + adjustMargin, maximumY + adjustMargin);
-            includeWidget->getIncludeFrame()->resize(maximumX + adjustMargin, maximumY + adjustMargin);
-            includeWidget->update_geometrysave();
-
-             }
-
-        // when the include is packed into a scroll area, set the minimumsize too
-        if((thisW != (QWidget *) Q_NULLPTR ) && (!prcFile) && includeWidget->getAdjustSize()) {
-            if(includeWidget->getStacking() != caInclude::Positions) {
-                includeWidget->updateGeometry();
-                ResizeScrollBars(includeWidget, maxColumns * thisW->width() + (maxColumns-1) * spacingHorizontal + adjustMargin,
-                                 maxRows * thisW->height() + (maxRows-1) * spacingVertical + adjustMargin);
-            } else {
-                ResizeScrollBars(includeWidget, maximumX + adjustMargin, maximumY + adjustMargin);
-            }
-        }
+        const QSize includeSize = includeWidget->adjustRuntimeSize(
+            thisW, prcFile, maxRows, maxColumns, maximumX, maximumY);
+        if (includeSize.isValid())
+            ResizeScrollBars(includeWidget, includeSize.width(), includeSize.height());
 
         // increment splashcounter when include is in list
         if(nbIncludes > 0 && !thisFileFull.contains(POPUPDEFENITION)) {

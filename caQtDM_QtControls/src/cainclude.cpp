@@ -146,6 +146,27 @@ void caInclude::setupRuntimeFrame()
     }
 }
 
+QSize caInclude::adjustRuntimeSize(QWidget *lastChild, bool convertedFile,
+                                  int rows, int columns, int maximumX, int maximumY)
+{
+    if (!lastChild || convertedFile || !getAdjustSize()) return QSize();
+
+    QSize size;
+    if (getStacking() == Positions) {
+        size = QSize(maximumX + getMargin(), maximumY + getMargin());
+        resize(size);
+        frame->resize(size);
+        update_geometrysave();
+    } else {
+        size = QSize(columns * lastChild->width() + (columns - 1) * getSpacingHorizontal() + getMargin(),
+                     rows * lastChild->height() + (rows - 1) * getSpacingVertical() + getMargin());
+        resize(size);
+        frame->resize(size);
+        updateGeometry();
+    }
+    return size;
+}
+
 caInclude::caInclude(QWidget *parent) : QWidget(parent)
 {
     thisLoadedWidgets.clear();
