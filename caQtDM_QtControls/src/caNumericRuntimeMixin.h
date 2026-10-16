@@ -18,6 +18,8 @@ public:
     virtual bool numericIsElevated() = 0;
     virtual void raiseNumeric() = 0;
     virtual void applyNumericLimits(const knobData &data) = 0;
+    virtual bool menuUsesUserPrecision() const = 0;
+    virtual int menuPrecision() const = 0;
 };
 
 template <typename Widget>
@@ -31,6 +33,9 @@ public:
     void setNumericPV(const QString &pv) override { widget()->setPV(pv); }
     bool numericIsElevated() override { return widget()->isElevated(); }
     void raiseNumeric() override { widget()->raise(); }
+    bool menuUsesUserPrecision() const override
+    { return widget()->getPrecisionMode() == Widget::User; }
+    int menuPrecision() const override { return widget()->decDigits(); }
 
     caWidgetUpdateResult applyChannelUpdate(const QString &units, const QString &value,
                                             const knobData &data, short aggregateAlarm) override

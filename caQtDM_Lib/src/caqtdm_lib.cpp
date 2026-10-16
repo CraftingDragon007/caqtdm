@@ -6573,30 +6573,10 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
         else if(multilinestringWidget->getColorMode() == caMultiLineString::Alarm_Static) qstrncpy(colMode, "Alarm", sizeof(colMode));
         else qstrncpy(colMode, "Static", sizeof(colMode));
 
-    } else if (caApplyNumeric* applynumericWidget = qobject_cast<caApplyNumeric *>(w)) {
-        if(applynumericWidget->getPrecisionMode() == caApplyNumeric::User) {
+    } else if (caNumericRuntimeInterface *numericWidget = dynamic_cast<caNumericRuntimeInterface *>(w)) {
+        if(numericWidget->menuUsesUserPrecision()) {
             precMode = true;
-            Precision = applynumericWidget->decDigits();
-        } else if(nbMonitors > 0) {
-            dataIndex = MonitorList.at(1).toInt();
-            knobData *kPtr = mutexKnobDataP->GetMutexKnobDataPtr(dataIndex);
-            if(kPtr != (knobData *) Q_NULLPTR) Precision =  kPtr->edata.precision;
-        }
-
-    } else if (caNumeric* numericWidget = qobject_cast<caNumeric *>(w)) {
-        if(numericWidget->getPrecisionMode() == caNumeric::User) {
-            precMode = true;
-            Precision = numericWidget->decDigits();
-        } else if(nbMonitors > 0) {
-            dataIndex = MonitorList.at(1).toInt();
-            knobData *kPtr = mutexKnobDataP->GetMutexKnobDataPtr(dataIndex);
-            if(kPtr != (knobData *) Q_NULLPTR) Precision =  kPtr->edata.precision;
-        }
-
-    } else if (caSpinbox* spinboxWidget = qobject_cast<caSpinbox *>(w)) {
-        if(spinboxWidget->getPrecisionMode() == caSpinbox::User) {
-            precMode = true;
-            Precision = spinboxWidget->decDigits();
+            Precision = numericWidget->menuPrecision();
         } else if(nbMonitors > 0) {
             dataIndex = MonitorList.at(1).toInt();
             knobData *kPtr = mutexKnobDataP->GetMutexKnobDataPtr(dataIndex);
@@ -6765,9 +6745,7 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
     if(caSlider * widget = qobject_cast< caSlider *>(w)) {Q_UNUSED(widget); myMenu.addAction(CHANGELIMITS);}
     if(caLineEdit* widget = qobject_cast<caLineEdit *>(w)) {Q_UNUSED(widget); myMenu.addAction(CHANGELIMITS);}
     if(caThermo* widget = qobject_cast<caThermo *>(w)){Q_UNUSED(widget);  myMenu.addAction(CHANGELIMITS);}
-    if(caNumeric* widget = qobject_cast<caNumeric *>(w)) {Q_UNUSED(widget); myMenu.addAction(CHANGELIMITS);}
-    if(caApplyNumeric* widget = qobject_cast<caApplyNumeric *>(w)) {Q_UNUSED(widget); myMenu.addAction(CHANGELIMITS);}
-    if(caSpinbox* widget = qobject_cast<caSpinbox *>(w)) {Q_UNUSED(widget); myMenu.addAction(CHANGELIMITS);}
+    if(dynamic_cast<caNumericRuntimeInterface *>(w)) myMenu.addAction(CHANGELIMITS);
     if(caLinearGauge* widget = qobject_cast<caLinearGauge *>(w)) {Q_UNUSED(widget); myMenu.addAction(CHANGELIMITS);}
     if(caCircularGauge* widget = qobject_cast<caCircularGauge *>(w)) {Q_UNUSED(widget); myMenu.addAction(CHANGELIMITS);}
     if(caMeter* widget = qobject_cast<caMeter *>(w)) {Q_UNUSED(widget); myMenu.addAction(CHANGELIMITS);}
