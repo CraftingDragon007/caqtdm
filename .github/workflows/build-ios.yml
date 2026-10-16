@@ -361,6 +361,25 @@ jobs:
             require_file "${EPICS_BASE}/lib/${{ matrix.epics_arch }}/lib${lib}.a"
           done
 
+      - name: Fix Qt host tool aliases
+        run: |
+          set -euo pipefail
+
+          for tool in qmake qtpaths; do
+            bin="${QT_HOST_ROOT}/bin/${tool}"
+            versioned="${QT_HOST_ROOT}/bin/${tool}6"
+
+            test -x "${bin}"
+
+            if [[ ! -e "${versioned}" && ! -L "${versioned}" ]]; then
+              ln -s "${tool}" "${versioned}"
+            fi
+
+            test -x "${versioned}"
+          done
+
+          "${QT_TARGET_ROOT}/bin/qmake" -query QT_VERSION
+
       - name: Cache Qwt
         id: cache-qwt
         uses: actions/cache@v5
