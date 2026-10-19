@@ -99,6 +99,20 @@ int caStripPlot::prepareCurves(const QStringList &channels)
     return curveCount;
 }
 
+QList<caStripPlot::CurveMonitorRequest> caStripPlot::prepareCurveMonitors(const QString &expandedChannels)
+{
+    setPVS(expandedChannels);
+    const QStringList vars = expandedChannels.split(";", SKIP_EMPTY_PARTS);
+    const int curveCount = prepareCurves(vars);
+    QList<CurveMonitorRequest> requests;
+    for (int i = 0; i < curveCount; ++i) {
+        const QString pv = vars.at(i).trimmed();
+        if (!pv.isEmpty())
+            requests.append(CurveMonitorRequest{pv, i, int(vars.count())});
+    }
+    return requests;
+}
+
 void caStripPlot::prepareCurveMonitor(int curve)
 {
     if (curve == 0)

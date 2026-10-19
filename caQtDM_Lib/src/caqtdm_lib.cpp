@@ -3025,25 +3025,20 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
         text = stripplotWidget->getPVS();
         reaffectText(map, &text, w1);
-        stripplotWidget->setPVS(text);
-        QStringList vars = text.split(";", SKIP_EMPTY_PARTS);
-
-        const int NumberOfCurves = stripplotWidget->prepareCurves(vars);
+        const QList<caStripPlot::CurveMonitorRequest> requests = stripplotWidget->prepareCurveMonitors(text);
 
         // Go through the defined curves and add monitors.
-        for(int i=0; i< NumberOfCurves; i++) {
-            pv = vars.at(i).trimmed();
-            if(pv.size() > 0) {
-                specData[1] = i;            // curve number
-                specData[0] = vars.count(); // number of curves
-                int num = addMonitor(myWidget, &kData, pv, w1, specData, map, &pv);
-                integerList.append(num);
-                nbMonitors++;
-                stripplotWidget->prepareCurveMonitor(i);
+        for (const caStripPlot::CurveMonitorRequest &request : requests) {
+            pv = request.pv;
+            specData[1] = request.curveIndex; // curve number
+            specData[0] = request.curveCount; // number of curves
+            int num = addMonitor(myWidget, &kData, pv, w1, specData, map, &pv);
+            integerList.append(num);
+            nbMonitors++;
+            stripplotWidget->prepareCurveMonitor(request.curveIndex);
 
-                tooltip.append(pv);
-                tooltip.append("<br>");
-            }
+            tooltip.append(pv);
+            tooltip.append("<br>");
         }
 
         // finish tooltip

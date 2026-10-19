@@ -235,7 +235,13 @@ public:
     bool needsVisibilityUpdate() const override { return false; }
     caWidgetUpdateResult applyChannelUpdate(const QString &units, const QString &value,
                                             const knobData &data, short aggregateAlarm) override;
+    struct CurveMonitorRequest {
+        QString pv;
+        int curveIndex;
+        int curveCount;
+    };
     int prepareCurves(const QStringList &channels);
+    QList<CurveMonitorRequest> prepareCurveMonitors(const QString &expandedChannels);
     void prepareCurveMonitor(int curve);
 
     void defineCurves(QStringList titles, units unit, double period, int width, int nb);
