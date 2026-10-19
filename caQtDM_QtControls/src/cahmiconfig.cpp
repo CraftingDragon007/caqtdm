@@ -3,6 +3,31 @@
 
 #include <QPainter>
 
+QList<caHMIConfig::ChannelSetupRequest> caHMIConfig::channelSetupRequests() const
+{
+    QList<ChannelSetupRequest> requests;
+    const QString channels[] = {channel(), channelB(), channelC(), channelD(), outputA(), outputB()};
+    for (int slot = 0; slot < 6; ++slot) {
+        if (channels[slot].size() > 0)
+            requests.append({channels[slot], slot, slot < 4});
+    }
+    return requests;
+}
+
+void caHMIConfig::applyChannelSetupResult(const ChannelSetupRequest &request,
+                                          const QString &resolvedPV)
+{
+    switch (request.slotIndex) {
+    case 0: setChannel(resolvedPV); break;
+    case 1: setChannelB(resolvedPV); break;
+    case 2: setChannelC(resolvedPV); break;
+    case 3: setChannelD(resolvedPV); break;
+    case 4: setOutputA(resolvedPV); break;
+    case 5: setOutputB(resolvedPV); break;
+    default: break;
+    }
+}
+
 caHMIConfig::caHMIConfig(QWidget *parent)
     : QWidget{parent}
 {

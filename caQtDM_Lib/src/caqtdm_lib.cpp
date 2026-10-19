@@ -3117,53 +3117,16 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
             qCDebug(caHMILog) << "Parent window:" << parentWindow->metaObject()->className();
         } else qCWarning(caHMILog) << "Unable to find parent window for caHMIConfig:" << hmiConfigWidget->objectName();
 
-        int index = 0;
-        if (hmiConfigWidget->channel().size() > 0) {
-            int num = addMonitor(myWidget, &kData, hmiConfigWidget->channel(), w1, specData, map, &pv);
+        const QList<caHMIConfig::ChannelSetupRequest> setupRequests =
+                hmiConfigWidget->channelSetupRequests();
+        for (const caHMIConfig::ChannelSetupRequest &request : setupRequests) {
+            int num = addMonitor(myWidget, &kData, request.pv, w1, specData, map, &pv);
             integerList.append(num);
-            indexList.append(index);
-            hmiConfigWidget->setChannel(pv);
-            nbMonitors++;
+            indexList.append(request.slotIndex);
+            hmiConfigWidget->applyChannelSetupResult(request, pv);
+            if (request.contributesToCalc)
+                nbMonitors++;
         }
-        index++;
-        if (hmiConfigWidget->channelB().size() > 0) {
-            int num = addMonitor(myWidget, &kData, hmiConfigWidget->channelB(), w1, specData, map, &pv);
-            integerList.append(num);
-            indexList.append(index);
-            hmiConfigWidget->setChannelB(pv);
-            nbMonitors++;
-        }
-        index++;
-        if (hmiConfigWidget->channelC().size() > 0) {
-            int num = addMonitor(myWidget, &kData, hmiConfigWidget->channelC(), w1, specData, map, &pv);
-            integerList.append(num);
-            indexList.append(index);
-            hmiConfigWidget->setChannelC(pv);
-            nbMonitors++;
-        }
-        index++;
-        if (hmiConfigWidget->channelD().size() > 0) {
-            int num = addMonitor(myWidget, &kData, hmiConfigWidget->channelD(), w1, specData, map, &pv);
-            integerList.append(num);
-            indexList.append(index);
-            hmiConfigWidget->setChannelD(pv);
-            nbMonitors++;
-        }
-        index++;
-        if (hmiConfigWidget->outputA().size() > 0) {
-            int num = addMonitor(myWidget, &kData, hmiConfigWidget->outputA(), w1, specData, map, &pv);
-            integerList.append(num);
-            indexList.append(index);
-            hmiConfigWidget->setOutputA(pv);
-        }
-        index++;
-        if (hmiConfigWidget->outputB().size() > 0) {
-            int num = addMonitor(myWidget, &kData, hmiConfigWidget->outputB(), w1, specData, map, &pv);
-            integerList.append(num);
-            indexList.append(index);
-            hmiConfigWidget->setOutputB(pv);
-        }
-        index++;
 
         caHMIConfigTransferItem* transferItem = new caHMIConfigTransferItem(hmiConfigWidget);
         transferItem->setEnabled(true);

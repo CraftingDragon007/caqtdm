@@ -2,6 +2,8 @@
 #define CAHMICONFIG_H
 
 #include <QWidget>
+#include <QList>
+#include <QString>
 
 #include <quuid.h>
 
@@ -27,10 +29,19 @@ public:
     enum calcType {SetValue, Calc};
     enum capType {KeyboardValue, KeyboardSet, MouseMove, MousePress};
     enum capRange {Local, Global};
+    struct ChannelSetupRequest {
+        QString pv;
+        int slotIndex;
+        bool contributesToCalc;
+    };
+
     Q_ENUM(calcType);
     Q_ENUM(capType);
     Q_ENUM(capRange);
     explicit caHMIConfig(QWidget *parent = nullptr);
+
+    QList<ChannelSetupRequest> channelSetupRequests() const;
+    void applyChannelSetupResult(const ChannelSetupRequest &request, const QString &resolvedPV);
 
     void setShortcut(const QKeySequence &key);
     QKeySequence shortcut() const;
