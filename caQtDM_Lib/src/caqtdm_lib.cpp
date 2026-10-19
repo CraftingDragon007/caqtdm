@@ -71,6 +71,7 @@
 #include "caTableResizeRuntimeMixin.h"
 #include "caColorMapContextMenuRuntime.h"
 #include "caPlotContextMenuRuntime.h"
+#include "caWaveTableContextMenuRuntime.h"
 #include "caRoiWriteRuntimeMixin.h"
 
 // we are using for calculations postfix of epics
@@ -6243,13 +6244,8 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
         myMenu.addAction(GETINFO);
         myMenu.addAction(CHANGEVALUE);
 
-    } else if(caWaveTable* wavetableWidget = qobject_cast<caWaveTable *>(w)) {
-        wavetableWidget->clearSelection();
-        myMenu.addAction(GETINFO);
-        myMenu.addAction(COPYDATACSV);
-        if (wavetableWidget->getAccessW()) {
-            myMenu.addAction(PASTEDATACSV);
-        }
+    } else if(caWaveTableContextMenuRuntime *wavetable = dynamic_cast<caWaveTableContextMenuRuntime *>(w)) {
+        wavetable->addWaveTableContextActions(myMenu, GETINFO, COPYDATACSV, PASTEDATACSV);
 
         // all other widgets
     } else if(!onMain){
@@ -6707,16 +6703,16 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
             connect(this, &CaQtDM_Lib::Signal_Closing, &dialog, &QWidget::close);
             dialog.exec();
         } else if(selectedItem->text().contains(COPYIMAGE)) {
-            if(caCartesianPlot* cartesianplotWidget = qobject_cast<caCartesianPlot *>(w)) {
-                cartesianplotWidget->copyImage();
+            if(caPlotContextMenuRuntime *plot = dynamic_cast<caPlotContextMenuRuntime *>(w)) {
+                plot->handlePlotContextAction(selectedItem->text(), COPYIMAGE);
             }
         } else if(selectedItem->text().contains(COPYDATACSV)) {
-            if(caWaveTable* wavetableWidget = qobject_cast<caWaveTable *>(w)) {
-                wavetableWidget->copyDataCSV();
+            if(caWaveTableContextMenuRuntime *wavetable = dynamic_cast<caWaveTableContextMenuRuntime *>(w)) {
+                wavetable->handleWaveTableContextAction(selectedItem->text(), COPYDATACSV, PASTEDATACSV);
             }
         } else if(selectedItem->text().contains(PASTEDATACSV)) {
-            if(caWaveTable* wavetableWidget = qobject_cast<caWaveTable *>(w)) {
-                wavetableWidget->pasteDataCSV();
+            if(caWaveTableContextMenuRuntime *wavetable = dynamic_cast<caWaveTableContextMenuRuntime *>(w)) {
+                wavetable->handleWaveTableContextAction(selectedItem->text(), COPYDATACSV, PASTEDATACSV);
             }
         } else {
             // any action from environment ?

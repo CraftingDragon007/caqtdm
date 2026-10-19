@@ -357,6 +357,33 @@ QString caWaveTable::getHeaderCSV()
     return "";
 }
 
+void caWaveTable::addWaveTableContextActions(QMenu &menu, const QString &infoLabel,
+                                             const QString &copyDataLabel,
+                                             const QString &pasteDataLabel)
+{
+    clearSelection();
+    menu.addAction(infoLabel);
+    menu.addAction(copyDataLabel);
+    if (getAccessW()) {
+        menu.addAction(pasteDataLabel);
+    }
+}
+
+bool caWaveTable::handleWaveTableContextAction(const QString &actionText,
+                                               const QString &copyDataLabel,
+                                               const QString &pasteDataLabel)
+{
+    if (actionText.contains(copyDataLabel)) {
+        copyDataCSV();
+        return true;
+    }
+    if (actionText.contains(pasteDataLabel)) {
+        pasteDataCSV();
+        return true;
+    }
+    return false;
+}
+
 void caWaveTable::copyDataCSV()
 {
     if (rowcount == 0 || colcount == 0 || sizeSaved == 0 || keepData.size() == 0) return;

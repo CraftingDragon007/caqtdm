@@ -37,11 +37,13 @@
 #include <qtcontrols_global.h>
 #include "caWidgetUpdateInterface.h"
 #include "caTableResizeRuntimeMixin.h"
+#include "caWaveTableContextMenuRuntime.h"
 
 typedef char string40[40];
 
 class QTCON_EXPORT caWaveTable : public QTableWidget, public caWidgetUpdateInterface,
-                                 public caTableResizeRuntimeMixin<caWaveTable>
+                                 public caTableResizeRuntimeMixin<caWaveTable>,
+                                 public caWaveTableContextMenuRuntime
 {
     Q_OBJECT
     Q_PROPERTY(int rowCount READ rowCount WRITE setRowCount DESIGNABLE false)
@@ -85,6 +87,12 @@ public:
     QList<ChannelSetupRequest> channelSetupRequests() const;
     void applyChannelSetupResult(const ChannelSetupRequest &request, const QString &resolvedPV);
     void setRuntimeHelpToolTip();
+    void addWaveTableContextActions(QMenu &menu, const QString &infoLabel,
+                                    const QString &copyDataLabel,
+                                    const QString &pasteDataLabel) override;
+    bool handleWaveTableContextAction(const QString &actionText,
+                                      const QString &copyDataLabel,
+                                      const QString &pasteDataLabel) override;
 
     caWaveTable(QWidget *parent);
 

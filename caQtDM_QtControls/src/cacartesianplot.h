@@ -167,6 +167,8 @@ public:
     void addPlotContextActions(QMenu &menu, const QString &changeAxisLabel,
                                const QString &resetZoomLabel,
                                const QString &copyImageLabel) const override;
+    bool handlePlotContextAction(const QString &actionText,
+                                 const QString &copyImageLabel) override;
     void capturePlotResizeDetails(QVariantList &geometry);
     void resizePlotResizeDetails(QFont legendFont, double factX, double factY,
                                  const QVariantList &geometry);

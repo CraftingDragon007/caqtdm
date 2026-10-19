@@ -51,6 +51,16 @@ void caCartesianPlot::addPlotContextActions(QMenu &menu, const QString &changeAx
     menu.addAction(copyImageLabel);
 }
 
+bool caCartesianPlot::handlePlotContextAction(const QString &actionText,
+                                               const QString &copyImageLabel)
+{
+    if (!actionText.contains(copyImageLabel)) {
+        return false;
+    }
+    copyImage();
+    return true;
+}
+
 void caCartesianPlot::prepareAppearance()
 {
     setForeground(getForeground());
