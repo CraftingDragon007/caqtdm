@@ -410,6 +410,40 @@ jobs:
             echo "CAQTDM_MODBUS=1"
           } >> "$GITHUB_ENV"
 
+      - name: Configure caQtDM with CMake for ${{ matrix.name }}
+        run: |
+          set -euo pipefail
+          CMAKE_BUILD_DIR="${RUNNER_TEMP}/caqtdm-cmake-${{ matrix.epics_arch }}"
+          "${QT_TARGET_ROOT}/bin/qt-cmake" \
+            -S "${GITHUB_WORKSPACE}" \
+            -B "${CMAKE_BUILD_DIR}" \
+            -G Xcode \
+            -DCMAKE_OSX_SYSROOT='${{ matrix.sdk }}' \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET="${IOS_DEPLOYMENT_TARGET}" \
+            -DCMAKE_XCODE_GENERATE_SCHEME=ON \
+            -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED=NO \
+            -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED=NO \
+            -DQT_HOST_PATH="${QT_HOST_ROOT}" \
+            -DOPENSSL_ROOT_DIR="${OPENSSL_PREFIX}" \
+            -DOPENSSL_INCLUDE_DIR="${OPENSSL_PREFIX}/include" \
+            -DOPENSSL_CRYPTO_LIBRARY="${OPENSSL_PREFIX}/lib/libcrypto.a" \
+            -DOPENSSL_SSL_LIBRARY="${OPENSSL_PREFIX}/lib/libssl.a" \
+            -DOPENSSL_USE_STATIC_LIBS=ON \
+            -DCAQTDM_EPICS_BASE="${EPICS_BASE}" \
+            -DCAQTDM_EPICS_HOST_ARCH='${{ matrix.epics_arch }}' \
+            -DCAQTDM_QWT_HOME="${QWT_ROOT}" \
+            -DCAQTDM_QWT_INCLUDE="${QWT_ROOT}/include" \
+            -DCAQTDM_QWT_LIB="${QWT_ROOT}/lib" \
+            -DCAQTDM_QWT_LIBNAME=qwt \
+            -DCAQTDM_BUILD_GPS=ON \
+            -DCAQTDM_BUILD_MODBUS=ON \
+            -DCAQTDM_BUILD_OPCUA=ON \
+            -DCAQTDM_PYTHONCALC=OFF \
+            -DCAQTDM_WEB=OFF \
+            -DCAQTDM_WITH_TESTS=OFF \
+            -DCAQTDM_NORPATH=ON
+
       - name: Prepare temporary source tree
         run: |
           set -euo pipefail
@@ -474,35 +508,6 @@ jobs:
         with:
           name: caQtDM-${{ matrix.epics_arch }}-${{ github.sha }}
           path: artifacts/caQtDM-${{ matrix.epics_arch }}.zip
-
-      - name: Configure caQtDM with CMake for ${{ matrix.name }}
-        run: |
-          set -euo pipefail
-          CMAKE_BUILD_DIR="${RUNNER_TEMP}/caqtdm-cmake-${{ matrix.epics_arch }}"
-          "${QT_TARGET_ROOT}/bin/qt-cmake" \
-            -S "${GITHUB_WORKSPACE}" \
-            -B "${CMAKE_BUILD_DIR}" \
-            -G Xcode \
-            -DCMAKE_OSX_SYSROOT='${{ matrix.sdk }}' \
-            -DCMAKE_OSX_ARCHITECTURES=arm64 \
-            -DCMAKE_OSX_DEPLOYMENT_TARGET="${IOS_DEPLOYMENT_TARGET}" \
-            -DCMAKE_XCODE_GENERATE_SCHEME=ON \
-            -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED=NO \
-            -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED=NO \
-            -DQT_HOST_PATH="${QT_HOST_ROOT}" \
-            -DCAQTDM_EPICS_BASE="${EPICS_BASE}" \
-            -DCAQTDM_EPICS_HOST_ARCH='${{ matrix.epics_arch }}' \
-            -DCAQTDM_QWT_HOME="${QWT_ROOT}" \
-            -DCAQTDM_QWT_INCLUDE="${QWT_ROOT}/include" \
-            -DCAQTDM_QWT_LIB="${QWT_ROOT}/lib" \
-            -DCAQTDM_QWT_LIBNAME=qwt \
-            -DCAQTDM_BUILD_GPS=ON \
-            -DCAQTDM_BUILD_MODBUS=ON \
-            -DCAQTDM_BUILD_OPCUA=ON \
-            -DCAQTDM_PYTHONCALC=OFF \
-            -DCAQTDM_WEB=OFF \
-            -DCAQTDM_WITH_TESTS=OFF \
-            -DCAQTDM_NORPATH=ON
 
       - name: Build caQtDM with CMake for ${{ matrix.name }}
         run: |
