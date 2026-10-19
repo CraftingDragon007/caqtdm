@@ -2867,39 +2867,30 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         qCDebug(caWaterfallPlotLog) << "create caWaterfallPlot";
         w1->setProperty("ObjectType", caWaterfallPlot_Widget);
 
-        QString countChannel, waveChannel;
-
         // addmonitor normally will add a tooltip to show the pv; however here we have more than one pv
         QString tooltip;
         tooltip.append(ToolTipPrefix);
 
-        // handle count channel if any
-        int Number;
-        specData[1] = 0; // Count must not be waited for
-        if(!waterfallplotWidget->hasCountNumber(&Number)) {
-            countChannel = waterfallplotWidget->getCountPV();
-            if(countChannel.trimmed().length() > 0) {
-                specData[0] = 1; // Count
-                specData[1] = 1; // Count must be waited for
-                int num = addMonitor(myWidget, &kData, countChannel, w1, specData, map, &pv);
-                integerList.append(num);
-                nbMonitors++;
-                tooltip.append(pv);
-                tooltip.append("<br>");
-                waterfallplotWidget->setCountPV(pv);
+        // The widget describes count/waveform ordering and the wait flag. The
+        // library still registers monitors and collects their resolved PVs.
+        const QList<caWaterfallPlot::ChannelSetupRequest> requests =
+                waterfallplotWidget->channelSetupRequests();
+        for (const caWaterfallPlot::ChannelSetupRequest &request : requests) {
+            if (request.kind == caWaterfallPlot::ChannelSetupRequest::NumericCount) {
+                qCDebug(caWaterfallPlotLog) << "count=" << request.countNumber;
+                continue;
             }
-        } else {
-            qCDebug(caWaterfallPlotLog) << "count=" << Number;
-        }
 
-        waveChannel = waterfallplotWidget->getPV();
-        specData[0] = 0; // waveform
-        int num = addMonitor(myWidget, &kData, waveChannel, w1, specData, map, &pv);
-        integerList.append(num);
-        nbMonitors++;
-        waterfallplotWidget->setPV(pv);
-        tooltip.append(pv);
-        tooltip.append("<br>");
+            const bool countMonitor = request.kind == caWaterfallPlot::ChannelSetupRequest::CountMonitor;
+            specData[0] = countMonitor ? 1 : 0;
+            specData[1] = request.waitForCount ? 1 : 0;
+            int num = addMonitor(myWidget, &kData, request.pv, w1, specData, map, &pv);
+            integerList.append(num);
+            nbMonitors++;
+            tooltip.append(pv);
+            tooltip.append("<br>");
+            waterfallplotWidget->applyChannelSetupResult(request, pv);
+        }
 
         // finish tooltip
         tooltip.append(ToolTipPostfix);

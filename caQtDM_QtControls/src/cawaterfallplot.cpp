@@ -32,6 +32,53 @@
 
 Q_LOGGING_CATEGORY(caWaterfallPlotLog, "caqtdm.widgets.cawaterfallplot")
 
+QList<caWaterfallPlot::ChannelSetupRequest> caWaterfallPlot::channelSetupRequests()
+{
+    QList<ChannelSetupRequest> requests;
+    int countNumber = 0;
+    if (hasCountNumber(&countNumber)) {
+        ChannelSetupRequest request;
+        request.kind = ChannelSetupRequest::NumericCount;
+        request.countNumber = countNumber;
+        request.waitForCount = false;
+        requests.append(request);
+    } else {
+        const QString countPV = getCountPV();
+        if (!countPV.trimmed().isEmpty()) {
+            ChannelSetupRequest request;
+            request.kind = ChannelSetupRequest::CountMonitor;
+            request.pv = countPV;
+            request.countNumber = 0;
+            request.waitForCount = true;
+            requests.append(request);
+        }
+    }
+
+    ChannelSetupRequest waveformRequest;
+    waveformRequest.kind = ChannelSetupRequest::WaveformMonitor;
+    waveformRequest.pv = getPV();
+    waveformRequest.countNumber = 0;
+    waveformRequest.waitForCount = !requests.isEmpty()
+            && requests.constLast().kind == ChannelSetupRequest::CountMonitor;
+    requests.append(waveformRequest);
+    return requests;
+}
+
+void caWaterfallPlot::applyChannelSetupResult(const ChannelSetupRequest &request,
+                                               const QString &resolvedPV)
+{
+    switch (request.kind) {
+    case ChannelSetupRequest::NumericCount:
+        break;
+    case ChannelSetupRequest::CountMonitor:
+        setCountPV(resolvedPV);
+        break;
+    case ChannelSetupRequest::WaveformMonitor:
+        setPV(resolvedPV);
+        break;
+    }
+}
+
 caWidgetUpdateResult caWaterfallPlot::applyChannelUpdate(const QString &units, const QString &value,
                                                          const knobData &data, short aggregateAlarm)
 {

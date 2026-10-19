@@ -33,6 +33,7 @@
 
 
 #include <QTimer>
+#include <QList>
 #include <QtGui>
 #include <QApplication>
 #include <QHBoxLayout>
@@ -242,6 +243,17 @@ class QTCON_EXPORT caWaterfallPlot: public QWidget, public caWidgetUpdateInterfa
     Q_PROPERTY(QString styleSheet READ styleSheet WRITE noStyle DESIGNABLE false)
 
 public:
+    struct ChannelSetupRequest {
+        enum Kind { NumericCount, CountMonitor, WaveformMonitor };
+        Kind kind;
+        QString pv;
+        int countNumber;
+        bool waitForCount;
+    };
+
+    QList<ChannelSetupRequest> channelSetupRequests();
+    void applyChannelSetupResult(const ChannelSetupRequest &request, const QString &resolvedPV);
+
     void noStyle(QString style) {Q_UNUSED(style);}
 
     enum units {Monitor=0,  Millisecond, Second, Minute};
