@@ -76,6 +76,47 @@ bool caSlider::applyRangeValue(const knobData &data)
     return highChannelLimitEnabled && lowChannelLimitEnabled;
 }
 
+caRangeDialogState caSlider::rangeDialogState(int channelPrecision) const
+{
+    return {true, false, false,
+            getHighLimitMode() == User, getLowLimitMode() == User,
+            true, getPrecisionMode() == User, true,
+            getMinValue(), getMaxValue(),
+            getPrecisionMode() == Channel ? channelPrecision : getPrecision()};
+}
+
+void caSlider::applyRangeDialog(const caRangeDialogApply &state)
+{
+    // Keep Qwt from emitting a user value while its bounds change.
+    blockSignals(true);
+
+    if (state.highChannel) {
+        setHighLimitMode(Channel);
+        if (state.channelLimitsAvailable) setMaxValue(state.channelUpperLimit);
+    } else if (state.highUser) {
+        setHighLimitMode(User);
+        setMaxValue(state.maxValue);
+    }
+
+    if (state.lowChannel) {
+        setLowLimitMode(Channel);
+        if (state.channelLimitsAvailable) setMinValue(state.channelLowerLimit);
+    } else if (state.lowUser) {
+        setLowLimitMode(User);
+        setMinValue(state.minValue);
+    }
+
+    if (state.precisionMode == Channel) {
+        setPrecisionMode(Channel);
+        setPrecision(state.channelPrecision);
+    } else if (state.precisionMode == User) {
+        setPrecisionMode(User);
+        setPrecision(state.precision);
+    }
+
+    blockSignals(false);
+}
+
 // I need to overload the scaleengine of qwt in order to get the upper and lower scale ticks drawn
 class mySliderScaleEngine: public QwtLinearScaleEngine
 {

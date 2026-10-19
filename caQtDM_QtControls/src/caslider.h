@@ -173,6 +173,9 @@ public:
     void prepareRange() override {}
     bool rangeIsElevated() override { return isElevated(); }
     void raiseRange() override { raise(); }
+    caRangeDialogState rangeDialogState(int channelPrecision) const override;
+    void applyRangeDialog(const caRangeDialogApply &state) override;
+    void restoreRangeDialogValue(double value) override { setSliderValue(value); }
 
     void setAlarmColors(short status);
     void setUserAlarmColors(double val);

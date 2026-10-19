@@ -77,6 +77,47 @@ bool caThermo::applyRangeValue(const knobData &data)
     return channelLimitsEnabled;
 }
 
+caRangeDialogState caThermo::rangeDialogState(int channelPrecision) const
+{
+    Q_UNUSED(channelPrecision);
+    return {false, true, getLimitsMode() == User, false, false,
+            false, false, false, minValue(), maxValue(), 0};
+}
+
+void caThermo::applyRangeDialog(const caRangeDialogApply &state)
+{
+    if (state.limitsMode == Channel) {
+        setLimitsMode(Channel);
+        if (state.channelLimitsAvailable) {
+            if (getDirection() == Down || getDirection() == Left) {
+                setMinValue(state.channelUpperLimit);
+                setMaxValue(state.channelLowerLimit);
+            } else {
+                setMaxValue(state.channelUpperLimit);
+                setMinValue(state.channelLowerLimit);
+            }
+        }
+    } else if (state.limitsMode == User) {
+        setLimitsMode(User);
+        if (getDirection() == Down || getDirection() == Left) {
+            setMinValue(state.maxValue);
+            setMaxValue(state.minValue);
+        } else {
+            setMaxValue(state.maxValue);
+            setMinValue(state.minValue);
+        }
+    }
+
+    if (state.precisionMode == Channel) {
+        setPrecisionMode(Channel);
+        setPrecision(state.channelPrecision);
+    } else if (state.precisionMode == User) {
+        setPrecisionMode(User);
+        setPrecision(state.precision);
+    }
+
+}
+
 // I need to overload the scaleengine of qwt in order to get the upper and lower scale ticks drawn
 class myThermoScaleEngine: public QwtLinearScaleEngine
 {

@@ -6,6 +6,38 @@
 
 #include <QWidget>
 
+struct caRangeDialogState
+{
+    bool separateLimitModes;
+    bool initializeLimitsMode;
+    bool userLimits;
+    bool userHighLimit;
+    bool userLowLimit;
+    bool initializePrecisionMode;
+    bool userPrecision;
+    bool initializePrecisionValue;
+    double minValue;
+    double maxValue;
+    int precision;
+};
+
+struct caRangeDialogApply
+{
+    bool highChannel;
+    bool highUser;
+    bool lowChannel;
+    bool lowUser;
+    int limitsMode;
+    int precisionMode;
+    double minValue;
+    double maxValue;
+    double channelLowerLimit;
+    double channelUpperLimit;
+    bool channelLimitsAvailable;
+    int channelPrecision;
+    int precision;
+};
+
 class caRangeRuntime : public caWidgetUpdateInterface
 {
 public:
@@ -16,6 +48,9 @@ public:
     virtual bool rangeIsElevated() = 0;
     virtual void raiseRange() = 0;
     virtual bool rangeUsesAlarmColorMode() const = 0;
+    virtual caRangeDialogState rangeDialogState(int channelPrecision) const = 0;
+    virtual void applyRangeDialog(const caRangeDialogApply &state) = 0;
+    virtual void restoreRangeDialogValue(double value) = 0;
 };
 
 template <typename Widget>
