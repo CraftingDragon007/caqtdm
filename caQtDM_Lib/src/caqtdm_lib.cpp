@@ -7830,59 +7830,14 @@ void CaQtDM_Lib::resizeSpecials(QString className, QWidget *widget, QVariantList
     }
 
     else if(!className.compare("caInclude")) {
-        caInclude *includeWidget = (caInclude *) widget;
-        int adjustMargin = includeWidget->getMargin();
-        int maximumX = 10;
-        int maximumY = 10;
-        includeWidget->childResizeCall(factX,factY);
-        // in case of absolute positioning, reposition the elements
-        if(includeWidget->getStacking() == caInclude::Positions) {
-/*
-            QList<QWidget*> list =  includeWidget->getChildsList();
-            for(int j=0; j<list.count(); j++) {
-                QString pos;
-                QWidget * widget = list[j];
-                int posx, posy;
-                int posX=0;
-                int posY=0;
-                if(includeWidget->getXposition(j, posx, 0, pos)) {posX = posx;}
-                if(includeWidget->getYposition(j, posy, 0, pos)) {posY = posy;}
-                // move to correct position
-                int xpos = qRound((double) posX * includeWidget->getXcorrection() * factX);
-                int ypos = qRound((double) posY * includeWidget->getYcorrection() * factY);
-                widget->move(xpos + adjustMargin/2*factX, ypos + adjustMargin/2*factY);
-                maximumX = includeWidget->getXmaximum() + widget->width();
-                maximumY = includeWidget->getYmaximum() + widget->height();
-             }
-*/
-            if(includeWidget->getAdjustSize()) {
-
-                //foreach(QWidget* l ,includeWidget->findChildren<QWidget *>()){
-                //   QRect resizedata=l->childrenRect();
-                //   if ((resizedata.width()>0) && (resizedata.height()>0))
-                //   l->resize(resizedata.width(),resizedata.height());
-                //}
-
-                QRect resizedata=includeWidget->childrenRect();
-                includeWidget->resize(resizedata.width(),resizedata.height());
-
-                //QRect resizedata=includeWidget->scanChildsneededArea();
-                qCDebug(caQtDMLibLog) <<"resizedata in resizespezial:"<< resizedata;
-
-                //includeWidget->getIncludeFrame()->resize(resizedata.width(),resizedata.height());
-                //includeWidget->resize(resizedata.width(),resizedata.height());
-                 // when the include is packed into a scroll area, set the minimumsize too
-                maximumX = includeWidget->getXmaximum() + widget->width();
-                maximumY = includeWidget->getYmaximum() + widget->height();
-
-                ResizeScrollBars(includeWidget, factX * (maximumX + adjustMargin), factY * (maximumY + adjustMargin));
-            }
-
-        } else {
-            // when the include is packed into a scroll area, set the minimumsize too
-            ResizeScrollBars(includeWidget, factX * (list.at(2).toInt() + adjustMargin), factY * (list.at(3).toInt() + adjustMargin));
-
-
+        caInclude *includeWidget = static_cast<caInclude *>(widget);
+        const caInclude::RuntimeResizeResult resizeResult =
+            includeWidget->resizeRuntimeContents(list, factX, factY);
+        if (resizeResult.logResizedata) {
+            qCDebug(caQtDMLibLog) <<"resizedata in resizespezial:"<< resizeResult.resizedata;
+        }
+        if (resizeResult.resizeScrollBars) {
+            ResizeScrollBars(includeWidget, resizeResult.scrollWidth, resizeResult.scrollHeight);
         }
     }
 

@@ -824,6 +824,35 @@ void caInclude::childResizeCall(double factX,double factY){
 
 }
 
+caInclude::RuntimeResizeResult caInclude::resizeRuntimeContents(const QVariantList &geometryList,
+                                                                  double factX, double factY)
+{
+    RuntimeResizeResult result;
+    const int adjustMargin = getMargin();
+
+    // Included displays must receive their geometry update before their contents are inspected.
+    childResizeCall(factX, factY);
+
+    if (getStacking() == Positions) {
+        if (getAdjustSize()) {
+            result.resizedata = childrenRect();
+            resize(result.resizedata.width(), result.resizedata.height());
+            result.logResizedata = true;
+            const int maximumX = getXmaximum() + width();
+            const int maximumY = getYmaximum() + height();
+            result.scrollWidth = static_cast<int>(factX * (maximumX + adjustMargin));
+            result.scrollHeight = static_cast<int>(factY * (maximumY + adjustMargin));
+            result.resizeScrollBars = true;
+        }
+        return result;
+    }
+
+    result.resizeScrollBars = true;
+    result.scrollWidth = static_cast<int>(factX * (geometryList.at(2).toInt() + adjustMargin));
+    result.scrollHeight = static_cast<int>(factY * (geometryList.at(3).toInt() + adjustMargin));
+    return result;
+}
+
 
 void caInclude::setLineSize(int size )
 {

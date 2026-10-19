@@ -29,6 +29,8 @@
 #include <QWidget>
 #include <QFrame>
 #include <QGridLayout>
+#include <QRect>
+#include <QVariant>
 #include <qtcontrols_global.h>
 
 #include "caPropHandleDefs.h"
@@ -131,6 +133,16 @@ public:
     PositionUpdateResult updatePositionChannel(QWidget *child, int channel, int item,
                                                int value, int adjustMargin,
                                                double factX, double factY);
+
+    struct RuntimeResizeResult {
+        bool resizeScrollBars = false;
+        bool logResizedata = false;
+        int scrollWidth = 0;
+        int scrollHeight = 0;
+        QRect resizedata;
+    };
+    RuntimeResizeResult resizeRuntimeContents(const QVariantList &geometryList,
+                                              double factX, double factY);
 
     bool getXposition(int indx, int &posX, int width, QString &pos);
     bool getYposition(int indx, int &posY, int height, QString &pos);
