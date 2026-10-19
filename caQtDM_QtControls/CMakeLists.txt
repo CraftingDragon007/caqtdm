@@ -195,6 +195,7 @@ set(QTCONTROLS_HEADERS
     ${_src}/caTableResizeRuntimeMixin.h
     ${_src}/caPlotResizeRuntimeMixin.h
     ${_src}/caColorMapContextMenuRuntime.h
+    ${_src}/caPlotContextMenuRuntime.h
     ${_src}/addevent.h
     ${_src}/animationcode.h
     ${_src}/hideobjectcode.h

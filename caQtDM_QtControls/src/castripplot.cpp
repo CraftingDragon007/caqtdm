@@ -36,10 +36,20 @@
 #include <qpainter.h>
 #include <QMetaProperty>
 #include "castripplot.h"
+#include <QMenu>
 #include <cmath>
 #include <qwt_picker_machine.h>
 #include <qelapsedtimer.h>
 #include <plotHelperClasses.h>
+
+void caStripPlot::addPlotContextActions(QMenu &menu, const QString &changeAxisLabel,
+                                        const QString &resetZoomLabel,
+                                        const QString &copyImageLabel) const
+{
+    Q_UNUSED(resetZoomLabel);
+    Q_UNUSED(copyImageLabel);
+    menu.addAction(changeAxisLabel);
+}
 
 #if QT_VERSION > QT_VERSION_CHECK(5, 12, 0)
 #if !defined(NAN)

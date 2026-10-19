@@ -69,6 +69,7 @@
 #include "caByteRuntimeMixin.h"
 #include "caTableResizeRuntimeMixin.h"
 #include "caColorMapContextMenuRuntime.h"
+#include "caPlotContextMenuRuntime.h"
 
 // we are using for calculations postfix of epics
 // therefore we need this include and also link with the epics libraries
@@ -6316,20 +6317,8 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
         myMenu.addAction(GETINFO);
     }
 
-    // for stripplot add one more action
-    if(caStripPlot* stripplotWidget = qobject_cast<caStripPlot *>(w)) {
-        Q_UNUSED(stripplotWidget);
-        myMenu.addAction(CHANGEAXIS);
-    }
-
-    // for cartesian plot add more actions
-    if(caCartesianPlot* cartesianplotWidget = qobject_cast<caCartesianPlot *>(w)) {
-        Q_UNUSED(cartesianplotWidget);
-        myMenu.addAction(CHANGEAXIS);
-        myMenu.addAction(QWhatsThis::createAction());
-        myMenu.addAction(RESETZOOM);
-        myMenu.addAction(COPYIMAGE);
-    }
+    if(caPlotContextMenuRuntime *plot = dynamic_cast<caPlotContextMenuRuntime *>(w))
+        plot->addPlotContextActions(myMenu, CHANGEAXIS, RESETZOOM, COPYIMAGE);
 
     // for catextentry add filedialog
     if(caTextEntry* catextentryWidget = qobject_cast<caTextEntry *>(w)) {

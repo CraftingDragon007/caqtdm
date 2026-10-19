@@ -35,9 +35,21 @@
 #include <QtCore>
 #include <QGuiApplication>
 #include <QMutexLocker>
+#include <QMenu>
+#include <QWhatsThis>
 #include <cstring>
 
 Q_LOGGING_CATEGORY(caCartesianPlotLog, "caqtdm.widgets.cacartesianplot")
+
+void caCartesianPlot::addPlotContextActions(QMenu &menu, const QString &changeAxisLabel,
+                                            const QString &resetZoomLabel,
+                                            const QString &copyImageLabel) const
+{
+    menu.addAction(changeAxisLabel);
+    menu.addAction(QWhatsThis::createAction());
+    menu.addAction(resetZoomLabel);
+    menu.addAction(copyImageLabel);
+}
 
 void caCartesianPlot::prepareAppearance()
 {
