@@ -68,11 +68,19 @@ class QTCON_EXPORT caTable : public QTableWidget, public caWidgetUpdateInterface
 public:
 #include "caPropHandle.h"
 
+    struct RowMonitorRequest {
+        int row;
+        QString pv;
+    };
+
     void noStyle(QString style) {Q_UNUSED(style);}
 
     caTable(QWidget *parent);
     void prepareMonitors(int rowCount);
+    QList<RowMonitorRequest> prepareRowMonitorRequests();
     void setResolvedRowPV(int row, const QString &pv);
+    void finishRowMonitorSetup();
+    void setRuntimeHelpToolTip();
     bool needsAggregateAlarm() const override { return false; }
     bool needsVisibilityUpdate() const override { return false; }
     caWidgetUpdateResult applyChannelUpdate(const QString &units, const QString &value,

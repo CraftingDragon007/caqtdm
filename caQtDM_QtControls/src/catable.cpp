@@ -113,11 +113,36 @@ void caTable::prepareMonitors(int rows)
     setRowCount(rows);
 }
 
+QList<caTable::RowMonitorRequest> caTable::prepareRowMonitorRequests()
+{
+    const QStringList vars = getPVS().split(";", SKIP_EMPTY_PARTS);
+    prepareMonitors(vars.count());
+
+    QList<RowMonitorRequest> requests;
+    for (int row = 0; row < vars.count(); ++row) {
+        const QString &pv = vars.at(row);
+        if (pv.size() > 0) {
+            requests.append({row, pv});
+        }
+    }
+    return requests;
+}
+
 void caTable::setResolvedRowPV(int row, const QString &pv)
 {
     QTableWidgetItem *item = new QTableWidgetItem(pv);
     item->setTextAlignment(Qt::AlignAbsolute | Qt::AlignLeft);
     setItem(row, 0, item);
+}
+
+void caTable::finishRowMonitorSetup()
+{
+    setColumnSizes(getColumnSizes());
+}
+
+void caTable::setRuntimeHelpToolTip()
+{
+    setToolTip("select row or columns, then with Ctrl+C you can copy to the clipboard\ninside X11 you can then do shft+ins\nwhen doubleclicking on a value, you may execute a shell script for that device");
 }
 
 caWidgetUpdateResult caTable::applyChannelUpdate(const QString &units, const QString &value,

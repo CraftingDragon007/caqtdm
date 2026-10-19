@@ -2956,27 +2956,24 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         qCDebug(caTableLog) << "create caTable" << tableWidget->getPVS();
         w1->setProperty("ObjectType", caTable_Widget);
 
-        QStringList vars = tableWidget->getPVS().split(";", SKIP_EMPTY_PARTS);
-        tableWidget->prepareMonitors(vars.count());
+        const QList<caTable::RowMonitorRequest> monitorRequests = tableWidget->prepareRowMonitorRequests();
 
         // go through the pvs and add monitor
-        for(int i=0; i< vars.count(); i++) {
-            pv = vars.at(i);
-            if(pv.size() > 0) {
-                specData[0] = i;            // table row
-                int num = addMonitor(myWidget, &kData, pv, w1, specData, map, &pv);
-                integerList.append(num);
-                nbMonitors++;
-                tableWidget->setResolvedRowPV(i, pv);
-            }
+        for(const caTable::RowMonitorRequest &request : monitorRequests) {
+            pv = request.pv;
+            specData[0] = request.row;            // table row
+            int num = addMonitor(myWidget, &kData, pv, w1, specData, map, &pv);
+            integerList.append(num);
+            nbMonitors++;
+            tableWidget->setResolvedRowPV(request.row, pv);
         }
-        tableWidget->setColumnSizes(tableWidget->getColumnSizes());
+        tableWidget->finishRowMonitorSetup();
 
         integerList.insert(0, nbMonitors); /* set property into stripplotWidget */
         tableWidget->setProperty("MonitorList", integerList);
 
         tableWidget->setProperty("Taken", true);
-        tableWidget->setToolTip("select row or columns, then with Ctrl+C you can copy to the clipboard\ninside X11 you can then do shft+ins\nwhen doubleclicking on a value, you may execute a shell script for that device");
+        tableWidget->setRuntimeHelpToolTip();
 
         connect(tableWidget, SIGNAL(TableDoubleClickedSignal(QString)), this, SLOT(Callback_TableDoubleClicked(QString)));
 
