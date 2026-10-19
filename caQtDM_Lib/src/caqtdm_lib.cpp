@@ -71,6 +71,7 @@
 #include "caTableResizeRuntimeMixin.h"
 #include "caColorMapContextMenuRuntime.h"
 #include "caPlotContextMenuRuntime.h"
+#include "caRoiWriteRuntimeMixin.h"
 
 // we are using for calculations postfix of epics
 // therefore we need this include and also link with the epics libraries
@@ -8283,105 +8284,25 @@ void CaQtDM_Lib::StripPlotsVerticalAlign()
 
 void CaQtDM_Lib::Callback_WriteDetectedValues(QWidget* child)
 {
-    double x,y,w,h;
-    int count=4;
-    double values[4] = {0,0,0,0};
-
-    QStringList thisString;
-    QWidget *widget = (QWidget *) 0;
-    QPointF P1, P2;
-
-    // must fit the definitions in cacamera and cascan2d
-    enum ROI_type {none=0, xy_only, xy1_xy2, xyUpleft_xyLowright, xycenter_width_height};
-    enum ROI_markertype {box=0, line, arrow};
-
-    ROI_type roiType;
-
-    if (caCamera *cameraWidget = qobject_cast<caCamera *>(child)) {
-        roiType = (ROI_type) cameraWidget->getROIwriteType();
-        widget = (QWidget*) cameraWidget;
-        cameraWidget->getROI(P1, P2);
-        thisString = cameraWidget->getROIChannelsWrite().split(";");
-    } else if (caScan2D *scan2dWidget = qobject_cast<caScan2D *>(child)) {
-        roiType = (ROI_type) scan2dWidget->getROIwriteType();
-        widget = (QWidget*) scan2dWidget;
-        scan2dWidget->getROI(P1, P2);
-        thisString = scan2dWidget->getROIChannelsWrite().split(";");
-    } else {
+    caRoiWriteRuntimeInterface *roiWriter = dynamic_cast<caRoiWriteRuntimeInterface *>(child);
+    if (!roiWriter)
         return;
-    }
-
-    double deltax = -(P1.x() - P2.x());
-    double deltay = -(P1.y() - P2.y());
-
-    switch (roiType) {
-    case none:
+    const caRoiWriteRuntimeInterface::Request request = roiWriter->roiWriteRequest();
+    if (!request.active)
         return;
-    case xy_only:
-        count = 2;
-        values[0] = P1.x();
-        values[1] = P1.y();
-        break;
-    case xy1_xy2:
-        values[0] = P1.x();
-        values[1] = P1.y();
-        values[2] = P2.x();
-        values[3] = P2.y();
-        break;
-    case xyUpleft_xyLowright:
-        if(deltax < 0 && deltay > 0) {
-            values[0] = P2.x();
-            values[1] = P1.y();
-            values[2] = P1.x();
-            values[3] = P2.y();
-        } else if(deltax < 0 && deltay < 0) {
-            values[0] = P2.x();
-            values[1] = P2.y();
-            values[2] = P1.x();
-            values[3] = P1.y();
-        } else if(deltax > 0 && deltay < 0) {
-            values[0] = P1.x();
-            values[1] = P2.y();
-            values[2] = P2.x();
-            values[3] = P1.y();
-        } else if(deltax > 0 && deltay > 0) {
-            values[0] = P1.x();
-            values[1] = P1.y();
-            values[2] = P2.x();
-            values[3] = P2.y();
-        }
-        break;
-    case xycenter_width_height:
-    {
-        double ROIx = x = P1.x();
-        double ROIy = y = P1.y();
-        double ROIw = w = P2.x() - P1.x();
-        double ROIh = h = P2.y() - P1.y();
-        if(ROIw < 0) { x = ROIx + ROIw; w = -ROIw;}
-        if(ROIh < 0) { y = ROIy + ROIh; h = -ROIh;}
-        values[0] = x+w/2.0;
-        values[1] = y+h/2.0;
-        values[2]=w;
-        values[3]=h;
-    }
-        break;
 
-    default:
-        return;
-    }
-
-    if (thisString.count() != count) {
+    if (request.channels.count() != request.count) {
         QString message="not the correct amount of PVs defined for writing ROI values: ";
         message.append(child->objectName());
         messageWindowP->postMsgEvent(QtInfoMsg,  (char*)qasc(message));
         return;
     }
 
-    for(int i=0; i<count; i++) {
-        int32_t idata = (int32_t) values[i];
-        double rdata = (double) values[i];
-        if(thisString.at(i).trimmed().length() > 0) {
-            TreatOrdinaryValue(thisString.at(i), rdata,  idata, "", widget);
+    for(int i=0; i<request.count; i++) {
+        int32_t idata = (int32_t) request.values[i];
+        double rdata = (double) request.values[i];
+        if(request.channels.at(i).trimmed().length() > 0) {
+            TreatOrdinaryValue(request.channels.at(i), rdata,  idata, "", child);
         }
     }
 }

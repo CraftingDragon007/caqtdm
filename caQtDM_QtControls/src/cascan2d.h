@@ -56,12 +56,14 @@
 #include "caPropHandleDefs.h"
 #include "caWidgetUpdateInterface.h"
 #include "caColorMapContextMenuRuntime.h"
+#include "caRoiWriteRuntimeMixin.h"
 
 #define XMAXPTS 1000
 #define YMAXPTS 1000
 
 class QTCON_EXPORT caScan2D : public QWidget, public caWidgetUpdateInterface,
-                              public caColorMapContextMenuRuntime
+                              public caColorMapContextMenuRuntime,
+                              public caRoiWriteRuntimeMixin<caScan2D>
 {
     Q_OBJECT
 

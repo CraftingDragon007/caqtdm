@@ -64,6 +64,7 @@
 #include "caPropHandleDefs.h"
 #include "caWidgetUpdateInterface.h"
 #include "caColorMapContextMenuRuntime.h"
+#include "caRoiWriteRuntimeMixin.h"
 
 struct SyncMinMax{
     uint Max[2];
@@ -73,7 +74,8 @@ struct SyncMinMax{
 };
 
 class QTCON_EXPORT caCamera : public QWidget, public caWidgetUpdateInterface,
-                              public caColorMapContextMenuRuntime, public caDragTextInterface
+                              public caColorMapContextMenuRuntime, public caDragTextInterface,
+                              public caRoiWriteRuntimeMixin<caCamera>
 {
     Q_OBJECT
 

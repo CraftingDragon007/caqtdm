@@ -316,6 +316,7 @@ HEADERS	+= \
     src/caPlotResizeRuntimeMixin.h \
     src/caColorMapContextMenuRuntime.h \
     src/caPlotContextMenuRuntime.h \
+    src/caRoiWriteRuntimeMixin.h \
     src/addevent.h \
     src/animationcode.h \
     src/hideobjectcode.h
