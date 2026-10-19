@@ -29,6 +29,8 @@
 
 #include <QPixmap>
 #include <QWidget>
+#include <QList>
+#include <QMap>
 #include <QResizeEvent>
 #include <QSize>
 #include <caLabel>
@@ -118,6 +120,33 @@ class QTCON_EXPORT caScan2D : public QWidget, public caWidgetUpdateInterface,
 
 public:
 #include "caPropHandle.h"
+
+    struct ChannelSetupRequest {
+        enum Kind { Field, RoiRead, RoiWrite };
+        Kind kind;
+        int slot;
+        int specId;
+        int component;
+        QString pv;
+    };
+
+    struct ChannelSetupResult {
+        QString expandedPV;
+        QString resolvedPV;
+        bool outerGatePassed;
+        ChannelSetupResult() : outerGatePassed(false) {}
+    };
+
+    struct ChannelSetupState {
+        QString roiRead;
+        QString roiWrite;
+        QMap<int, QString> tooltipValues;
+    };
+
+    QList<ChannelSetupRequest> channelSetupRequests();
+    void applyChannelSetupResult(const ChannelSetupRequest &request,
+                                 const ChannelSetupResult &result,
+                                 ChannelSetupState &state);
 
     void noStyle(QString style) {Q_UNUSED(style);}
 

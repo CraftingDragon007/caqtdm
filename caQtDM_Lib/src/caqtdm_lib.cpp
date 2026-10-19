@@ -3161,97 +3161,49 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
         qCDebug(caScan2DLog) << "create caScan2D";
 
-        QString text;
-
         // if we need to write c    hannels from the camera widget, we do it by timer and slot
         connect(scan2dWidget, SIGNAL(WriteDetectedValuesSignal(QWidget*)), this, SLOT(Callback_WriteDetectedValues(QWidget*)));
 
         // addmonitor normally will add a tooltip to show the pv; however here we have more than one pv
         QString tooltip;
-        QString pvs1= "";
-        QString pvs2= "";
-
         tooltip.append(ToolTipPrefix);
 
-        for(int i=0; i<17; i++) {
-            bool alpha = true;
-            text = "";
-
-            if(i==0) {text = scan2dWidget->getPV_Data(); if (text.size() > 0) specData[0] = i;}
-            if(i==1) {text = scan2dWidget->getPV_Width(); if (text.size() > 0) specData[0] = i;}
-            if(i==2) {text = scan2dWidget->getPV_Height(); if (text.size() > 0) specData[0] = i;}
-            // for spectrum pseudo levels
-            if(i==5) {
-                alpha = scan2dWidget->isAlphaMinLevel();
-                text = scan2dWidget->getMinLevel();
-                if ((text.size() > 0) && alpha) specData[0] = i;
-            }
-            if(i==6) {
-                alpha = scan2dWidget->isAlphaMaxLevel();
-                text = scan2dWidget->getMaxLevel();
-                if ((text.size() > 0) && alpha) specData[0] = i;
-            }
-            if (i==8) {text = scan2dWidget->getPV_XCPT(); if (text.size() > 0) specData[0] = 11;}
-            if (i==9) {text = scan2dWidget->getPV_YCPT(); if (text.size() > 0) specData[0] = 12;}
-            if (i==10) {text = scan2dWidget->getPV_XNEWDATA(); if (text.size() > 0) specData[0] = 13;}
-            if (i==11) {text = scan2dWidget->getPV_YNEWDATA(); if (text.size() > 0) specData[0] = 14;}
-            if (i==12) {text = scan2dWidget->getPV_SAVEDATA_PATH(); if (text.size() > 0) specData[0] = 15;}
-            if (i==13) {text = scan2dWidget->getPV_SAVEDATA_SUBDIR(); if (text.size() > 0) specData[0] = 16;}
-            if (i==14) {text = scan2dWidget->getPV_SAVEDATA_FILENAME(); if (text.size() > 0) specData[0] = 17;}
-
-            // for dataprocessing data x,y,w,h ROI read and write
-            if(i > 14) {
-                QStringList thisString;
-                if(i==15) thisString = scan2dWidget->getROIChannelsRead().split(";");
-                if(i==16) thisString = scan2dWidget->getROIChannelsWrite().split(";");
-
-                if(thisString.count() == 4 &&
-                        thisString.at(0).trimmed().length() > 0 &&
-                        thisString.at(1).trimmed().length() > 0  &&
-                        thisString.at(2).trimmed().length() > 0 &&
-                        thisString.at(3).trimmed().length() > 0) {
-                    for(int j=0; j<4; j++) {
-                        if(i==15)specData[0] = i+j+3;   // x,y,w,h
-                        text = treatMacro(map, thisString.at(j), &doNothing, w1->objectName());
-                        if(i==15) {
-                            int num = addMonitor(myWidget, &kData, text, w1, specData, map, &pv);
-                            integerList.append(num);
-                            nbMonitors++;
-                            pvs1.append(pv);
-                        }
-                        if(i==16)pvs2.append(text);
-                        if((j<3) && (i==15))pvs1.append(";");
-                        if((j<3) && (i==16))pvs2.append(";");
-                    }
+        caScan2D::ChannelSetupState setupState;
+        const QList<caScan2D::ChannelSetupRequest> setupRequests = scan2dWidget->channelSetupRequests();
+        for (const caScan2D::ChannelSetupRequest &request : setupRequests) {
+            caScan2D::ChannelSetupResult result;
+            result.expandedPV = treatMacro(map, request.pv, &doNothing, w1->objectName());
+            if (request.kind == caScan2D::ChannelSetupRequest::Field) {
+                // The legacy field gate checks the raw text before macro expansion.
+                result.outerGatePassed = true;
+                specData[0] = request.specId;
+                const int num = addMonitor(myWidget, &kData, result.expandedPV, w1, specData, map, &pv);
+                integerList.append(num);
+                nbMonitors++;
+                result.resolvedPV = pv;
+            } else if (request.kind == caScan2D::ChannelSetupRequest::RoiRead) {
+                specData[0] = request.specId;
+                const int num = addMonitor(myWidget, &kData, result.expandedPV, w1, specData, map, &pv);
+                integerList.append(num);
+                nbMonitors++;
+                result.resolvedPV = pv;
+                if (request.component == 3 && !result.expandedPV.isEmpty()) {
+                    result.outerGatePassed = true;
+                    treatMacro(map, result.expandedPV, &doNothing, w1->objectName());
                 }
+            } else if (request.component == 3 && !result.expandedPV.isEmpty()) {
+                // ROI write channels only appear in the tooltip. The legacy outer
+                // branch expands the final component again, then discards it.
+                result.outerGatePassed = true;
+                treatMacro(map, result.expandedPV, &doNothing, w1->objectName());
             }
+            scan2dWidget->applyChannelSetupResult(request, result, setupState);
+        }
 
-            if(text.size() > 0 && alpha) {
-                text =  treatMacro(map, text, &doNothing, w1->objectName());
-                if((i!=15) && (i!=16)) {
-                    int num = addMonitor(myWidget, &kData, text, w1, specData, map, &pv);
-                    integerList.append(num);
-                    nbMonitors++;
-                }
-                if(i==0) scan2dWidget->setPV_Data(pv);
-                if(i==1) scan2dWidget->setPV_Width(pv);
-                if(i==2) scan2dWidget->setPV_Height(pv);
-                if(i==5) scan2dWidget->setMinLevel(pv);
-                if(i==6) scan2dWidget->setMaxLevel(pv);
-                if(i==8) scan2dWidget->setPV_XCPT(pv);
-                if(i==9) scan2dWidget->setPV_YCPT(pv);
-                if(i==10) scan2dWidget->setPV_XNEWDATA(pv);
-                if(i==11) scan2dWidget->setPV_YNEWDATA(pv);
-                if(i==12) scan2dWidget->setPV_SAVEDATA_PATH(pv);
-                if(i==13) scan2dWidget->setPV_SAVEDATA_SUBDIR(pv);
-                if(i==14) scan2dWidget->setPV_SAVEDATA_FILENAME(pv);
-
-
-                if(i>0) tooltip.append("<br>");
-                if(i<15) tooltip.append(pv);
-                else if(i==15) tooltip.append(pvs1);
-                else if(i==16) tooltip.append(pvs2);
-            }
+        for (auto it = setupState.tooltipValues.constBegin(); it != setupState.tooltipValues.constEnd(); ++it) {
+            if (it.key() > 0)
+                tooltip.append("<br>");
+            tooltip.append(it.value());
         }
 
 

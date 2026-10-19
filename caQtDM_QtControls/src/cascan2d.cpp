@@ -31,6 +31,93 @@
 
 Q_LOGGING_CATEGORY(caScan2DLog, "caqtdm.widgets.cascan2d")
 
+QList<caScan2D::ChannelSetupRequest> caScan2D::channelSetupRequests()
+{
+    QList<ChannelSetupRequest> requests;
+    const QString fields[] = {
+        getPV_Data(), getPV_Width(), getPV_Height(), QString(), QString(),
+        getMinLevel(), getMaxLevel(), QString(), getPV_XCPT(), getPV_YCPT(),
+        getPV_XNEWDATA(), getPV_YNEWDATA(), getPV_SAVEDATA_PATH(),
+        getPV_SAVEDATA_SUBDIR(), getPV_SAVEDATA_FILENAME()
+    };
+    const bool enabled[] = {
+        true, true, true, false, false, isAlphaMinLevel(), isAlphaMaxLevel(),
+        false, true, true, true, true, true, true, true
+    };
+    const int specIds[] = {0, 1, 2, 0, 0, 5, 6, 0, 11, 12, 13, 14, 15, 16, 17};
+
+    for (int slot = 0; slot < 15; ++slot) {
+        if (!fields[slot].isEmpty() && enabled[slot]) {
+            ChannelSetupRequest request;
+            request.kind = ChannelSetupRequest::Field;
+            request.slot = slot;
+            request.specId = specIds[slot];
+            request.component = -1;
+            request.pv = fields[slot];
+            requests.append(request);
+        }
+    }
+
+    const auto appendRoiRequests = [&requests](const QString &value,
+                                                ChannelSetupRequest::Kind kind,
+                                                int slot, int specOffset) {
+        const QStringList components = value.split(";");
+        if (components.size() != 4)
+            return;
+        for (const QString &component : components) {
+            if (component.trimmed().isEmpty())
+                return;
+        }
+        for (int component = 0; component < 4; ++component) {
+            ChannelSetupRequest request;
+            request.kind = kind;
+            request.slot = slot;
+            request.specId = specOffset + component;
+            request.component = component;
+            request.pv = components.at(component);
+            requests.append(request);
+        }
+    };
+
+    appendRoiRequests(getROIChannelsRead(), ChannelSetupRequest::RoiRead, 15, 18);
+    appendRoiRequests(getROIChannelsWrite(), ChannelSetupRequest::RoiWrite, 16, 0);
+    return requests;
+}
+
+void caScan2D::applyChannelSetupResult(const ChannelSetupRequest &request,
+                                      const ChannelSetupResult &result,
+                                      ChannelSetupState &state)
+{
+    if (request.kind == ChannelSetupRequest::Field) {
+        if (!result.outerGatePassed)
+            return;
+        switch (request.slot) {
+        case 0: setPV_Data(result.resolvedPV); break;
+        case 1: setPV_Width(result.resolvedPV); break;
+        case 2: setPV_Height(result.resolvedPV); break;
+        case 5: setMinLevel(result.resolvedPV); break;
+        case 6: setMaxLevel(result.resolvedPV); break;
+        case 8: setPV_XCPT(result.resolvedPV); break;
+        case 9: setPV_YCPT(result.resolvedPV); break;
+        case 10: setPV_XNEWDATA(result.resolvedPV); break;
+        case 11: setPV_YNEWDATA(result.resolvedPV); break;
+        case 12: setPV_SAVEDATA_PATH(result.resolvedPV); break;
+        case 13: setPV_SAVEDATA_SUBDIR(result.resolvedPV); break;
+        case 14: setPV_SAVEDATA_FILENAME(result.resolvedPV); break;
+        }
+        state.tooltipValues.insert(request.slot, result.resolvedPV);
+        return;
+    }
+
+    QString &roi = request.kind == ChannelSetupRequest::RoiRead ? state.roiRead : state.roiWrite;
+    if (request.component > 0)
+        roi.append(";");
+    roi.append(request.kind == ChannelSetupRequest::RoiRead ? result.resolvedPV : result.expandedPV);
+
+    if (request.component == 3 && result.outerGatePassed)
+        state.tooltipValues.insert(request.slot, roi);
+}
+
 caWidgetUpdateResult caScan2D::applyChannelUpdate(const QString &units, const QString &value,
                                                   const knobData &data, short aggregateAlarm)
 {
