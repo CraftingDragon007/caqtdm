@@ -173,6 +173,21 @@ public:
                                             const knobData &data, short aggregateAlarm) override;
     void prepareAppearance();
     void prepareCurveAppearance(int curve);
+    struct CurveMonitorRequest {
+        int curve;
+        int curveType;
+        int channel;
+        QString pv;
+    };
+    struct CurveMonitorPlan {
+        int curve;
+        int entryCount;
+        int curveType;
+        QList<CurveMonitorRequest> requests;
+    };
+    CurveMonitorPlan prepareCurveMonitorPlan(int curve);
+    void applyCurveMonitorResults(const CurveMonitorPlan &plan,
+                                  const QString &resolvedX, const QString &resolvedY);
 #include "caPropHandle.h"
 
     double getSymbolsizeFactor() {return symbolSizeFactor;}

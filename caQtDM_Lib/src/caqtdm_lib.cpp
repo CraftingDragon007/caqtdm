@@ -2751,64 +2751,47 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
         // go through all possible curves and add monitor
         for(int i=0; i< caCartesianPlot::curveCount; i++) {
-            QString pvs ="";
-            QStringList thisString = cartesianplotWidget->getPV(i).split(";");
+            const caCartesianPlot::CurveMonitorPlan plan =
+                cartesianplotWidget->prepareCurveMonitorPlan(i);
+            QString resolvedX;
+            QString resolvedY;
 
-
-            cartesianplotWidget->prepareCurveAppearance(i);
-
-            if(thisString.count() >= 2 && thisString.at(0).trimmed().length() > 0 && thisString.at(1).trimmed().length() > 0) {
-                specData[0] = i; // curve number
-                specData[1] = caCartesianPlot::XY_both;
-                specData[2] = caCartesianPlot::CH_X; // X
-                int num = addMonitor(myWidget, &kData, thisString.at(0), w1, specData, map, &pv);
+            for (const caCartesianPlot::CurveMonitorRequest &request : plan.requests) {
+                specData[0] = request.curve; // curve number
+                specData[1] = request.curveType;
+                specData[2] = request.channel;
+                const int num = addMonitor(myWidget, &kData, request.pv, w1, specData, map, &pv);
                 integerList.append(num);
                 nbMonitors++;
-                tooltip.append(pv);
-                pvs = pv;
-                specData[2] = caCartesianPlot::CH_Y; // Y
-                num = addMonitor(myWidget, &kData, thisString.at(1), w1, specData, map, &pv);
-                integerList.append(num);
-                nbMonitors++;
+                if (request.channel == caCartesianPlot::CH_X)
+                    resolvedX = pv;
+                else
+                    resolvedY = pv;
+            }
+
+            if (plan.curveType == caCartesianPlot::XY_both) {
+                tooltip.append(resolvedX);
                 tooltip.append(",");
-                tooltip.append(pv);
-                pvs.append(";");
-                pvs.append(pv);
+                tooltip.append(resolvedY);
                 tooltip.append("<br>");
-            } else if(thisString.count() >= 2 && thisString.at(0).trimmed().length() > 0 && thisString.at(1).trimmed().length() == 0) {
-                specData[0] = i; // curve number
-                specData[1] = caCartesianPlot::X_only;
-                specData[2] = caCartesianPlot::CH_X; // X
-                int num = addMonitor(myWidget, &kData, thisString.at(0), w1, specData, map, &pv);
-                integerList.append(num);
-                nbMonitors++;
-                pvs.append(pv);
-                pvs.append(";");
-                tooltip.append(pv);
+            } else if (plan.curveType == caCartesianPlot::X_only) {
+                tooltip.append(resolvedX);
                 tooltip.append("<br>");
-            } else if(thisString.count() >= 2 && thisString.at(1).trimmed().length() > 0 && thisString.at(0).trimmed().length() == 0) {
-                specData[0] = i; // curve number
-                specData[1] = caCartesianPlot::Y_only;
-                specData[2] = caCartesianPlot::CH_Y; // Y
-                int num = addMonitor(myWidget, &kData, thisString.at(1), w1, specData, map, &pv);
-                integerList.append(num);
-                nbMonitors++;
-                pvs.append(";");
-                pvs.append(pv);
-                tooltip.append(pv);
+            } else if (plan.curveType == caCartesianPlot::Y_only) {
+                tooltip.append(resolvedY);
                 tooltip.append("<br>");
             }
-            if (thisString.count() > 2) {
+            if (plan.entryCount > 2) {
                 postMessage(
                     QtWarningMsg,
                     (char *) qasc(
                         tr("caCartesianPlot widget %1 has too many entries (%2) in "
                            "channelList_%3, should be 2.")
                             .arg(cartesianplotWidget->objectName())
-                            .arg(thisString.count())
+                            .arg(plan.entryCount)
                             .arg(i + 1)));
             }
-            cartesianplotWidget->setPV(pvs, i);
+            cartesianplotWidget->applyCurveMonitorResults(plan, resolvedX, resolvedY);
         }
 
         cartesianplotWidget->updateLegendsPV();

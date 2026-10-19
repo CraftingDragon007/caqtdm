@@ -54,6 +54,49 @@ void caCartesianPlot::prepareCurveAppearance(int curve)
     setSymbol(getSymbol(curve), curve);
 }
 
+caCartesianPlot::CurveMonitorPlan caCartesianPlot::prepareCurveMonitorPlan(int curve)
+{
+    const QStringList components = getPV(curve).split(QLatin1Char(';'), Qt::KeepEmptyParts);
+    prepareCurveAppearance(curve);
+
+    CurveMonitorPlan plan;
+    plan.curve = curve;
+    plan.entryCount = int(components.count());
+    plan.curveType = XY_nothing;
+
+    if (components.count() >= 2 && !components.at(0).trimmed().isEmpty() &&
+        !components.at(1).trimmed().isEmpty()) {
+        plan.curveType = XY_both;
+        plan.requests.append(CurveMonitorRequest{curve, XY_both, CH_X, components.at(0)});
+        plan.requests.append(CurveMonitorRequest{curve, XY_both, CH_Y, components.at(1)});
+    } else if (components.count() >= 2 && !components.at(0).trimmed().isEmpty() &&
+               components.at(1).trimmed().isEmpty()) {
+        plan.curveType = X_only;
+        plan.requests.append(CurveMonitorRequest{curve, X_only, CH_X, components.at(0)});
+    } else if (components.count() >= 2 && !components.at(1).trimmed().isEmpty() &&
+               components.at(0).trimmed().isEmpty()) {
+        plan.curveType = Y_only;
+        plan.requests.append(CurveMonitorRequest{curve, Y_only, CH_Y, components.at(1)});
+    }
+
+    return plan;
+}
+
+void caCartesianPlot::applyCurveMonitorResults(const CurveMonitorPlan &plan,
+                                                const QString &resolvedX,
+                                                const QString &resolvedY)
+{
+    QString pvs;
+    if (plan.curveType == XY_both) {
+        pvs = resolvedX + QLatin1Char(';') + resolvedY;
+    } else if (plan.curveType == X_only) {
+        pvs = resolvedX + QLatin1Char(';');
+    } else if (plan.curveType == Y_only) {
+        pvs = QLatin1Char(';') + resolvedY;
+    }
+    setPV(pvs, plan.curve);
+}
+
 caWidgetUpdateResult caCartesianPlot::applyChannelUpdate(const QString &units, const QString &value,
                                                          const knobData &data, short aggregateAlarm)
 {
