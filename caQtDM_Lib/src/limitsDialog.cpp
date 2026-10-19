@@ -27,6 +27,7 @@
 #include "limitsDialog.h"
 #include "caRangeRuntimeMixin.h"
 #include "caNumericRuntimeMixin.h"
+#include "caLimitsDialogRuntime.h"
 /* total digit budget of the numeric widgets */
 #define PREC_LIMIT_NUMERIC ENumeric::MaxTotalDigits
 
@@ -200,10 +201,8 @@ limitsDialog::limitsDialog(QWidget *w, MutexKnobData *data, const QString &title
 
     if(caRangeRuntime *rangeWidget = dynamic_cast<caRangeRuntime *>(w)) {
         thisPV = rangeWidget->rangePV();
-    } else if(caLineEdit* lineeditWidget  = qobject_cast<caLineEdit *>(w)) {
-        thisPV = lineeditWidget->getPV();
-    } else if(caTextEntry* textentryWidget  = qobject_cast<caTextEntry *>(w)) {
-        thisPV = textentryWidget->getPV();
+    } else if(caLimitsDialogRuntime *limitsRuntime = dynamic_cast<caLimitsDialogRuntime *>(w)) {
+        thisPV = limitsRuntime->limitsDialogPV();
     } else if(numericRuntime) {
         thisPV = numericRuntime->numericPV();
     } else if(caLinearGauge* lineargaugeWidget = qobject_cast<caLinearGauge *>(w)) {
@@ -343,28 +342,16 @@ limitsDialog::limitsDialog(QWidget *w, MutexKnobData *data, const QString &title
 
         connect(formatComboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(indexChanged(int)));
 
-    } else if(caLineEdit* lineeditWidget  = qobject_cast<caLineEdit *>(w)) {
-        caLineEdit::SourceMode mode = lineeditWidget->getLimitsMode();
-        if(mode == caLineEdit::Channel) {
-            limitsComboBox->setCurrentIndex(0);
-            initMin = channelLowerLimit;
-            initMax = channelUpperLimit;
-        } else {
-            limitsComboBox->setCurrentIndex(1);
-            initMin = lineeditWidget->getMinValue();
-            initMax = lineeditWidget->getMaxValue();
-        }
+    } else if(caLimitsDialogRuntime *limitsRuntime = dynamic_cast<caLimitsDialogRuntime *>(w)) {
+        const caLimitsDialogState state = limitsRuntime->limitsDialogState(channelPrecision);
+        limitsComboBox->setCurrentIndex(state.userLimits ? 1 : 0);
+        initMin = state.userLimits ? state.minValue : channelLowerLimit;
+        initMax = state.userLimits ? state.maxValue : channelUpperLimit;
         minimumLineEdit->setText(QString::number(initMin, 'g'));
         maximumLineEdit->setText(QString::number(initMax, 'g'));
 
-        mode = lineeditWidget->getPrecisionMode();
-        if(mode == caLineEdit::Channel) {
-            initPrecision =  channelPrecision;
-            precisionComboBox->setCurrentIndex(0);
-        } else {
-            initPrecision = lineeditWidget->getPrecision();
-            precisionComboBox->setCurrentIndex(1);
-        }
+        initPrecision = state.precision;
+        precisionComboBox->setCurrentIndex(state.userPrecision ? 1 : 0);
         precisionLineEdit->setValue(initPrecision);
     }
 
@@ -415,6 +402,7 @@ void limitsDialog::applyClicked()
     int precisionMode = precisionComboBox->currentIndex();
 
     caNumericRuntimeInterface *numericRuntime = dynamic_cast<caNumericRuntimeInterface *>(thisWidget);
+    caLimitsDialogRuntime *limitsRuntime = dynamic_cast<caLimitsDialogRuntime *>(thisWidget);
     if(numericRuntime) {
         if(formatComboBox->currentIndex() == 0) fixedFormat = false; else fixedFormat = true;
         intDigits = integerLineEdit->value();
@@ -514,29 +502,18 @@ void limitsDialog::applyClicked()
         meterWidget->invalidate();
 
     // ************* we have a calineedit or catextentry
-    } else if(caLineEdit* lineeditWidget = qobject_cast<caLineEdit *>(thisWidget)) {
-
-        if(limitsMode == Channel) {
-            lineeditWidget->setLimitsMode(caLineEdit::Channel);
-            if(!doNothing) {
-                lineeditWidget->setMaxValue(channelUpperLimit);
-                lineeditWidget->setMinValue(channelLowerLimit);
-            }
-        } else if(limitsMode == User){
-            lineeditWidget->setLimitsMode(caLineEdit::User);
-            lineeditWidget->setMaxValue(max);
-            lineeditWidget->setMinValue(min);
-        }
-
-        if(precisionMode == Channel) {
-            lineeditWidget->setPrecisionMode(caLineEdit::Channel);
-            lineeditWidget->setFormat(channelPrecision);
-        } else if(precisionMode == User){
-            lineeditWidget->setPrecisionMode(caLineEdit::User);
-            lineeditWidget->setPrecision(prec);
-            lineeditWidget->setFormat(prec);
-        }
-        lineeditWidget->updateAlarmColors();
+    } else if(limitsRuntime) {
+        caLimitsDialogApply state;
+        state.userLimits = limitsMode == User;
+        state.minValue = min;
+        state.maxValue = max;
+        state.channelLowerLimit = channelLowerLimit;
+        state.channelUpperLimit = channelUpperLimit;
+        state.channelLimitsAvailable = !doNothing;
+        state.userPrecision = precisionMode == User;
+        state.channelPrecision = channelPrecision;
+        state.precision = prec;
+        limitsRuntime->applyLimitsDialog(state);
 
         // ************* we have a caNumeric, caApplyNumeric or caSpinbox
     } else if(numericRuntime) {

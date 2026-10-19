@@ -32,9 +32,11 @@
 #include <fontscalingwidget.h>
 #include "caWidgetUpdateInterface.h"
 #include "caDragTextInterface.h"
+#include "caLimitsDialogRuntime.h"
 
 class QTCON_EXPORT caLineEdit : public QLineEdit, public FontScalingWidget,
-                                 public caWidgetUpdateInterface, public caDragTextInterface
+                                 public caWidgetUpdateInterface, public caDragTextInterface,
+                                 public caLimitsDialogRuntime
 {
     Q_PROPERTY(QString channel READ getPV WRITE setPV)
 
@@ -100,6 +102,9 @@ public:
     void setMinValue(double const &minim) {thisMinimum = minim;}
 
     QString getPV() const;
+    QString limitsDialogPV() const override { return getPV(); }
+    caLimitsDialogState limitsDialogState(int channelPrecision) const override;
+    void applyLimitsDialog(const caLimitsDialogApply &state) override;
     int dragTextPriority(int depth) const override { return depth == 0 ? LineEdit : -1; }
     QString dragTextValue() override { setEnabled(true); return getPV(); }
     void setPV(QString const &newPV);

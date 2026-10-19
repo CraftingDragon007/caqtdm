@@ -190,6 +190,7 @@ set(QTCONTROLS_HEADERS
     ${_src}/caStateWidgetRuntime.h
     ${_src}/caEnumSelectionRuntimeMixin.h
     ${_src}/caRangeRuntimeMixin.h
+    ${_src}/caLimitsDialogRuntime.h
     ${_src}/caByteRuntimeMixin.h
     ${_src}/caShapeRuntimeMixin.h
     ${_src}/caTableResizeRuntimeMixin.h
