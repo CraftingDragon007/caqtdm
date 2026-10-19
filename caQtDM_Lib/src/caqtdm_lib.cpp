@@ -1517,19 +1517,9 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
             kData.soft = true;
 
-            QString pv = calcWidget->getVariable();
-            if(pv.size() == 0) {
-                pv =  QUuid::createUuid().toString();
-                pv = pv.replace("{", "");  // otherwise a json string, that would be taken out
-                pv = pv.replace("}", "");
-            // no plugin can be set, while it is a softvariable; however it will write to the real variable of the same name when changing
-            } else if(pv.contains("://")) {
-                int pos = pv.indexOf("://");
-                if(pos != -1) pv = pv.mid(pos+3);
-            }
+            QString pv = calcWidget->normalizedOutputVariable();
             reaffectText(map, &pv, w1);
-            calcWidget->setVariable(pv);
-            calcWidget->setDataCount(0);
+            calcWidget->setExpandedOutputVariable(pv);
             addMonitor(myWidget, &kData, qasc(pv), w1, specData, map, &pv);
             // Special treatment for QRect
             if (calcWidget->getCalc().startsWith("%QRect")){
@@ -1539,8 +1529,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
                 if (!qrectscan.isEmpty()){
                     qCDebug(caCalcLog) << "Check QRectString: "<< qrectscan;
                     if (parseForQRectConst(qrectscan,qrectvalues)){
-                        for (int i=0;i<4;i++)
-                            calcWidget->setQRectParam(i,qrectvalues[i]);
+                        calcWidget->setQRectParams(qrectvalues);
                     }
                 }
             }
@@ -1567,28 +1556,19 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
             // when cacalc is a waveform composed from individual channels
             if(calcWidget->getVariableType() == caCalc::vector) {
                 // test for waveform
-                int num;
                 kData.soft = false;
                 QString text;
-                QList<QVariant> monitorList;
-                QList<QVariant> indexList;
-                QList<QString> pvList = calcWidget->getPVList();
+                QList<int> monitorIds;
+                QStringList pvList = calcWidget->prepareVectorChannelRequests();
 
                 // add all channels
                 nbMonitors = pvList.count();
-                calcWidget->setDataCount(nbMonitors);
                 for(int i=0; i<pvList.count(); i++) {
                     specData[0] = i;
                     text = treatMacro(map, pvList[i], &doNothing, w1->objectName());
-                    num = addMonitor(myWidget, &kData, text, w1, specData, map, &pv);
-                    monitorList.append(num);
-                    indexList.append(i);
+                    monitorIds.append(addMonitor(myWidget, &kData, text, w1, specData, map, &pv));
                 }
-                monitorList.insert(0, nbMonitors);
-                indexList.insert(0, nbMonitors);
-                calcWidget->setProperty("MonitorList", monitorList);
-                calcWidget->setProperty("IndexList", indexList);
-                calcWidget->setValue(calcWidget->getVariable());
+                calcWidget->setVectorMonitorIds(monitorIds);
             }
 
             // softchannels calculating with themselves are done first
@@ -1608,9 +1588,9 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
             }
             // when no monitors then inititalize value
             if(nbMonitors == 0) {
-                qCDebug(caCalcLog) << "update " << qasc(calcWidget->getVariable()) << "initial value" << calcWidget->getInitialValue();
-                calcWidget->setValue(calcWidget->getInitialValue());
-                mutexKnobDataP->UpdateSoftPV(calcWidget->getVariable(), calcWidget->getInitialValue(), myWidget, 0, 1);
+                const double initialValue = calcWidget->initializeScalarValue();
+                qCDebug(caCalcLog) << "update " << qasc(calcWidget->getVariable()) << "initial value" << initialValue;
+                mutexKnobDataP->UpdateSoftPV(calcWidget->getVariable(), initialValue, myWidget, 0, 1);
             }
 
             // other channels if any
@@ -6860,6 +6840,7 @@ bool CaQtDM_Lib::SoftPVusesItsself(QWidget* widget, QMap<QString, QString> map)
 {
     if (caCalc *calcWidget = qobject_cast<caCalc *>(widget)) {
         QString strng[5];
+        QStringList expandedInputs;
         QString JSONString = "";
         bool doNothing = false;
         int rate = 5;
@@ -6875,6 +6856,8 @@ bool CaQtDM_Lib::SoftPVusesItsself(QWidget* widget, QMap<QString, QString> map)
             if(pos != -1) JSONString = trimmedPV.mid(pos+1);
             if(pos != -1) trimmedPV = trimmedPV.mid(0, pos);
             strng[i] = treatMacro(map, trimmedPV, &doNothing, widget->objectName());
+            if (i < 4)
+                expandedInputs.append(strng[i]);
             if(i==4) {
                 char asc[ MAX_STRING_LENGTH];
                 QString pv = calcWidget->getVariable();
@@ -6891,16 +6874,7 @@ bool CaQtDM_Lib::SoftPVusesItsself(QWidget* widget, QMap<QString, QString> map)
             }
         }
 
-        // keep this rate for further use
-        QVariant oldRate = widget->property("RATE");
-        if (!oldRate.isValid()) {
-            calcWidget->setProperty("RATE", rate);
-        }
-
-        for(int i=0; i<4; i++) {
-            if(strng[4] == strng[i]) return true;
-        }
-        return false;
+        return calcWidget->setExpandedSoftPVState(expandedInputs, rate);
     } else {
         return false;
     }

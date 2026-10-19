@@ -61,6 +61,74 @@ QList<int> caCalc::inputIndicesForVariable(const QString &variable) const
     return indices;
 }
 
+QString caCalc::normalizedOutputVariable() const
+{
+    QString variable = getVariable();
+    if (variable.isEmpty()) {
+        variable = QUuid::createUuid().toString();
+        variable.remove('{');
+        variable.remove('}');
+    } else {
+        const int schemeEnd = variable.indexOf("://");
+        if (schemeEnd != -1)
+            variable = variable.mid(schemeEnd + 3);
+    }
+    return variable;
+}
+
+void caCalc::setExpandedOutputVariable(const QString &variable)
+{
+    setVariable(variable);
+    setDataCount(0);
+}
+
+QStringList caCalc::prepareVectorChannelRequests()
+{
+    QStringList requests = getPVList();
+    setDataCount(requests.count());
+    return requests;
+}
+
+void caCalc::setVectorMonitorIds(const QList<int> &monitorIds)
+{
+    const int count = monitorIds.count();
+    QList<QVariant> monitorList;
+    QList<QVariant> indexList;
+    for (int index = 0; index < count; ++index) {
+        monitorList.append(monitorIds.at(index));
+        indexList.append(index);
+    }
+    monitorList.insert(0, count);
+    indexList.insert(0, count);
+    setProperty("MonitorList", monitorList);
+    setProperty("IndexList", indexList);
+    setValue(getVariable());
+}
+
+double caCalc::initializeScalarValue()
+{
+    const double value = getInitialValue();
+    setValue(value);
+    return value;
+}
+
+void caCalc::setQRectParams(const double *params)
+{
+    for (int index = 0; index < 4; ++index)
+        setQRectParam(index, params[index]);
+}
+
+bool caCalc::setExpandedSoftPVState(const QStringList &inputs, int rate)
+{
+    if (!property("RATE").isValid())
+        setProperty("RATE", rate);
+    for (const QString &input : inputs) {
+        if (getVariable() == input)
+            return true;
+    }
+    return false;
+}
+
 caCalc::caCalc( QWidget *parent ) :  ESimpleLabel(parent)
 {
     // to start with, clear the stylesheet, so that playing around

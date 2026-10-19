@@ -130,6 +130,13 @@ public:
 
     void setDataCount(int const &count) {thisDataCount = count;}
     int getDataCount() const {return thisDataCount;}
+    QString normalizedOutputVariable() const;
+    void setExpandedOutputVariable(const QString &variable);
+    QStringList prepareVectorChannelRequests();
+    void setVectorMonitorIds(const QList<int> &monitorIds);
+    double initializeScalarValue();
+    void setQRectParams(const double *params);
+    bool setExpandedSoftPVState(const QStringList &inputs, int rate);
     double channelValue(const knobData &data) const;
     bool displayOwnChannelValue(const QString &pv, double value);
     QList<int> inputIndicesForVariable(const QString &variable) const;
