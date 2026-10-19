@@ -50,7 +50,6 @@
 #include "knobDefines.h"
 #include "knobData.h"
 #include "mutexKnobData.h"
-#include "inlines.h"
 #include "caqtdm_lib.h"
 #include "specialFunctions.h"
 

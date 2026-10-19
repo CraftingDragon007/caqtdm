@@ -25,6 +25,7 @@
 
 #include <QtGui>
 #include "limitsDialog.h"
+#include "caNumericRuntimeMixin.h"
 /* total digit budget of the numeric widgets */
 #define PREC_LIMIT_NUMERIC ENumeric::MaxTotalDigits
 
@@ -178,7 +179,8 @@ limitsDialog::limitsDialog(QWidget *w, MutexKnobData *data, const QString &title
     connect( button, SIGNAL(clicked()), this, SLOT(applyClicked()) );
     buttonBox->addButton(button, QDialogButtonBox::ApplyRole );
 
-    if(className.contains("caNumeric") || className.contains("caApplyNumeric") || className.contains("caSpinbox")) {
+    caNumericRuntimeInterface *numericRuntime = dynamic_cast<caNumericRuntimeInterface *>(w);
+    if(numericRuntime) {
         precisionLineEdit->setMaximum(PREC_LIMIT_NUMERIC);
         Layout->addWidget(buttonBox, 5, 0, 1, -1);
     }
@@ -203,12 +205,8 @@ limitsDialog::limitsDialog(QWidget *w, MutexKnobData *data, const QString &title
         thisPV = textentryWidget->getPV();
     } else if(caThermo* thermoWidget  = qobject_cast<caThermo *>(w)) {
         thisPV = thermoWidget->getPV();
-    } else if(caNumeric* numericWidget = qobject_cast<caNumeric *>(w)) {
-        thisPV = numericWidget->getPV();
-    } else if(caApplyNumeric* applynumericWidget = qobject_cast<caApplyNumeric *>(w)) {
-        thisPV = applynumericWidget->getPV();
-    } else if(caSpinbox* spinboxWidget = qobject_cast<caSpinbox *>(w)) {
-        thisPV = spinboxWidget->getPV();
+    } else if(numericRuntime) {
+        thisPV = numericRuntime->numericPV();
     } else if(caLinearGauge* lineargaugeWidget = qobject_cast<caLinearGauge *>(w)) {
         thisPV = lineargaugeWidget->getPV();
     } else if(caCircularGauge* circulargaugeWidget = qobject_cast<caCircularGauge *>(w)) {
@@ -295,42 +293,17 @@ limitsDialog::limitsDialog(QWidget *w, MutexKnobData *data, const QString &title
             initPrecision = extractPrecisionFromFormat(abstractgaugeWidget->valueFormat());
             if(initPrecision >=0) precisionLineEdit->setValue(initPrecision);
 
-    } else  if(className.contains("caNumeric") || className.contains("caApplyNumeric")  || className.contains("caSpinbox")) {
-        int decDigits=2, intDigits=4;
-        bool fixedFormat = false;
-
-        if(caNumeric* numericWidget = qobject_cast<caNumeric *>(w)) {
-            if(numericWidget->getLimitsMode()== caNumeric::Channel) limitsComboBox->setCurrentIndex(0); else limitsComboBox->setCurrentIndex(1);
-            if(numericWidget->getPrecisionMode() == caNumeric::Channel) {
-                initPrecision =  channelPrecision;
-                precisionComboBox->setCurrentIndex(0);
-            } else {
-                initPrecision = numericWidget->decDigits();
-                precisionComboBox->setCurrentIndex(1);
-            }
-
-            decDigits = numericWidget->decDigits();
-            intDigits = numericWidget->intDigits();
-            initMin = numericWidget->getMinValue();
-            initMax = numericWidget->getMaxValue();
-            fixedFormat = numericWidget->getFixedFormat();
-        } else if(caApplyNumeric* applynumericWidget = qobject_cast<caApplyNumeric *>(w)) {
-            if(applynumericWidget->getLimitsMode() == caApplyNumeric::Channel) limitsComboBox->setCurrentIndex(0); else limitsComboBox->setCurrentIndex(1);
-            if(applynumericWidget->getPrecisionMode() == caApplyNumeric::Channel) initPrecision =  channelPrecision; else initPrecision = applynumericWidget->decDigits();
-            decDigits = applynumericWidget->decDigits();
-            intDigits = applynumericWidget->intDigits();
-            initMin = applynumericWidget->getMinValue();
-            initMax = applynumericWidget->getMaxValue();
-            fixedFormat = applynumericWidget->getFixedFormat();
-        } else if(caSpinbox* spinboxWidget = qobject_cast<caSpinbox *>(w)) {
-            if(spinboxWidget->getLimitsMode() == caSpinbox::Channel) limitsComboBox->setCurrentIndex(0); else limitsComboBox->setCurrentIndex(1);
-            if(spinboxWidget->getPrecisionMode() == caSpinbox::Channel) initPrecision =  channelPrecision; else initPrecision = spinboxWidget->decDigits();
-            decDigits = spinboxWidget->decDigits();
-            intDigits = spinboxWidget->intDigits();
-            initMin = spinboxWidget->getMinValue();
-            initMax = spinboxWidget->getMaxValue();
-            fixedFormat = spinboxWidget->getFixedFormat();
-        }
+    } else if(numericRuntime) {
+        const caNumericDialogState state = numericRuntime->numericDialogState();
+        limitsComboBox->setCurrentIndex(state.userLimits ? 1 : 0);
+        if (state.initializePrecisionMode)
+            precisionComboBox->setCurrentIndex(state.userPrecision ? 1 : 0);
+        int decDigits = state.decimalDigits;
+        int intDigits = state.integerDigits;
+        bool fixedFormat = state.fixedFormat;
+        initMin = state.minValue;
+        initMax = state.maxValue;
+        initPrecision = state.userPrecision ? state.precision : channelPrecision;
 
         minimumLineEdit->setText(QString::number(initMin, 'g'));
         maximumLineEdit->setText(QString::number(initMax, 'g'));
@@ -462,8 +435,8 @@ void limitsDialog::applyClicked()
     int limitsMode = limitsComboBox->currentIndex();
     int precisionMode = precisionComboBox->currentIndex();
 
-    QString className = thisWidget->metaObject()->className();
-    if(className.contains("caNumeric") || className.contains("caApplyNumeric") || className.contains("caSpinbox")) {
+    caNumericRuntimeInterface *numericRuntime = dynamic_cast<caNumericRuntimeInterface *>(thisWidget);
+    if(numericRuntime) {
         if(formatComboBox->currentIndex() == 0) fixedFormat = false; else fixedFormat = true;
         intDigits = integerLineEdit->value();
         decDigits = decimalLineEdit->value();
@@ -486,7 +459,7 @@ void limitsDialog::applyClicked()
     // set already something to the dialog
     QString highS;
     QString lowS;
-    if(className.contains("caSlider"))
+    if(qobject_cast<caSlider *>(thisWidget))
     {
         highS = highLimitComboBox->currentText();
         lowS = lowLimitComboBox->currentText();
@@ -658,36 +631,14 @@ void limitsDialog::applyClicked()
         lineeditWidget->updateAlarmColors();
 
         // ************* we have a caNumeric, caApplyNumeric or caSpinbox
-    } else if(className.contains("caNumeric") || className.contains("caApplyNumeric")  || className.contains("caSpinbox")) {
+    } else if(numericRuntime) {
         if(prec > PREC_LIMIT_NUMERIC) prec = PREC_LIMIT_NUMERIC;
         // qDebug() << "set precision to:"  << prec;
 
-        if(limitsMode == Channel) {
-            setLimitsModeChannel(thisWidget);
-            if(!doNothing) {
-                setMaxValueA(thisWidget, channelUpperLimit);
-                setMinValueA(thisWidget, channelLowerLimit);
-            }
-        } else if(limitsMode == User){
-            setLimitsModeUser(thisWidget);
-            setMaxValueA(thisWidget, max);
-            setMinValueA(thisWidget, min);
-        }
-
-        if(fixedFormat) {
-           setFixedFormatA(thisWidget, true);
-           // both counts at once, they share the total digit budget
-           setDigitsA(thisWidget, intDigits, decDigits);
-        } else {
-           setFixedFormatA(thisWidget, false);
-           if(precisionMode == Channel) {
-               setPrecisionModeChannel(thisWidget);
-               setDecDigitsA(thisWidget, (int) channelPrecision);
-           } else if(precisionMode == User){
-               setPrecisionModeUser(thisWidget);
-               setDecDigitsA(thisWidget, prec);
-           }
-        }
+        numericRuntime->applyNumericDialogState(limitsMode == User, precisionMode == User,
+                                                min, max, channelLowerLimit, channelUpperLimit,
+                                                !doNothing, channelPrecision, prec, fixedFormat,
+                                                intDigits, decDigits);
 
         knobData *kPtr = monData->getMutexKnobDataPV(thisWidget, thisPV);
         CaQtDM_Lib *compute = (CaQtDM_Lib *) thisWidget;

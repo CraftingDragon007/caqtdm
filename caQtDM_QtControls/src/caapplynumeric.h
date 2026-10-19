@@ -128,6 +128,7 @@ public slots:
 
 private:
 int numericObjectType() const override { return caApplyNumeric_Widget; }
+bool numericDialogInitializesPrecisionMode() const override { return false; }
 bool logInvalidNumericType() const override { return false; }
 
 bool eventFilter(QObject *obj, QEvent *event);

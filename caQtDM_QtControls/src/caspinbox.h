@@ -135,6 +135,7 @@ public slots:
 
 private:
     int numericObjectType() const override { return caSpinbox_Widget; }
+    bool numericDialogInitializesPrecisionMode() const override { return false; }
 
     QString thisPV;
     bool thisAccessW;

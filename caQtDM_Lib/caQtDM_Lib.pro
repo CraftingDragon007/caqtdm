@@ -119,7 +119,6 @@ HEADERS += caqtdm_lib.h\
     sliderDialog.h \
     splashscreen.h \
     epicsExternals.h \
-    inlines.h \
     loadPlugins.h \
     caqtdm_lib_interface.h
 

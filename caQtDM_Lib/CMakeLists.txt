@@ -37,7 +37,6 @@ set(LIB_HEADERS
     ${_src}/sliderDialog.h
     ${_src}/splashscreen.h
     ${_src}/epicsExternals.h
-    ${_src}/inlines.h
     ${_src}/loadPlugins.h
     ${_src}/caqtdm_lib_interface.h
     ${_src}/causerid.h

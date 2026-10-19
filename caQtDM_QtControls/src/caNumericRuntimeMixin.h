@@ -9,6 +9,19 @@
 
 #include <cmath>
 
+struct caNumericDialogState
+{
+    bool userLimits = false;
+    bool userPrecision = false;
+    bool initializePrecisionMode = true;
+    double minValue = 0.0;
+    double maxValue = 0.0;
+    int precision = 0;
+    int integerDigits = 4;
+    int decimalDigits = 2;
+    bool fixedFormat = false;
+};
+
 class caNumericRuntimeInterface : public caWidgetUpdateInterface
 {
 public:
@@ -20,6 +33,14 @@ public:
     virtual void applyNumericLimits(const knobData &data) = 0;
     virtual bool menuUsesUserPrecision() const = 0;
     virtual int menuPrecision() const = 0;
+    virtual bool numericDialogInitializesPrecisionMode() const { return true; }
+    virtual caNumericDialogState numericDialogState() const = 0;
+    virtual void applyNumericDialogState(bool userLimits, bool userPrecision,
+                                         double minValue, double maxValue,
+                                         double channelLowerLimit, double channelUpperLimit,
+                                         bool hasChannelLimits, int channelPrecision,
+                                         int precision, bool fixedFormat,
+                                         int integerDigits, int decimalDigits) = 0;
 };
 
 template <typename Widget>
@@ -36,6 +57,51 @@ public:
     bool menuUsesUserPrecision() const override
     { return widget()->getPrecisionMode() == Widget::User; }
     int menuPrecision() const override { return widget()->decDigits(); }
+
+    caNumericDialogState numericDialogState() const override
+    {
+        const Widget *w = widget();
+        caNumericDialogState state;
+        state.userLimits = w->getLimitsMode() == Widget::User;
+        state.userPrecision = w->getPrecisionMode() == Widget::User;
+        state.initializePrecisionMode = numericDialogInitializesPrecisionMode();
+        state.minValue = w->getMinValue();
+        state.maxValue = w->getMaxValue();
+        state.precision = state.userPrecision ? w->decDigits() : 0;
+        state.integerDigits = w->intDigits();
+        state.decimalDigits = w->decDigits();
+        state.fixedFormat = w->getFixedFormat();
+        return state;
+    }
+
+    void applyNumericDialogState(bool userLimits, bool userPrecision,
+                                 double minValue, double maxValue,
+                                 double channelLowerLimit, double channelUpperLimit,
+                                 bool hasChannelLimits, int channelPrecision,
+                                 int precision, bool fixedFormat,
+                                 int integerDigits, int decimalDigits) override
+    {
+        Widget *w = widget();
+        w->setLimitsMode(userLimits ? Widget::User : Widget::Channel);
+        if (userLimits) {
+            w->setMaxValue(maxValue);
+            w->setMinValue(minValue);
+        } else if (hasChannelLimits) {
+            w->setMaxValue(channelUpperLimit);
+            w->setMinValue(channelLowerLimit);
+        }
+
+        w->setFixedFormat(fixedFormat);
+        if (fixedFormat) {
+            w->setDigits(integerDigits, decimalDigits);
+        } else if (userPrecision) {
+            w->setPrecisionMode(Widget::User);
+            w->setDecDigits(precision);
+        } else {
+            w->setPrecisionMode(Widget::Channel);
+            w->setDecDigits(channelPrecision);
+        }
+    }
 
     caWidgetUpdateResult applyChannelUpdate(const QString &units, const QString &value,
                                             const knobData &data, short aggregateAlarm) override
