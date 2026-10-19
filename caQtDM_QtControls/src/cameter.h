@@ -42,10 +42,12 @@
 #include "alarmdefs.h"
 #include "caWidgetUpdateInterface.h"
 #include "caDragTextInterface.h"
+#include "caLimitsDialogRuntime.h"
 
 /* a simple meter */
 
-class QTCON_EXPORT caMeter : public QwtDial, public caWidgetUpdateInterface, public caDragTextInterface
+class QTCON_EXPORT caMeter : public QwtDial, public caWidgetUpdateInterface,
+                             public caDragTextInterface, public caLimitsDialogRuntime
 {
     Q_OBJECT
 
@@ -93,6 +95,10 @@ public:
                                             const knobData &data, short aggregateAlarm) override;
 
     QString getPV() const {return thisPV;}
+    QString limitsDialogPV() const override { return getPV(); }
+    caLimitsDialogState limitsDialogState(double channelLowerLimit, double channelUpperLimit,
+                                          int channelPrecision) const override;
+    void applyLimitsDialog(const caLimitsDialogApply &state) override;
     int dragTextPriority(int depth) const override { return depth == 0 ? Meter : -1; }
     QString dragTextValue() override { return getPV(); }
     void setPV(QString const &newPV) {thisPV = newPV;}
@@ -114,10 +120,10 @@ public:
     FormatType getFormatType() { return thisFormatType; }
 
     void setMinValue(double v);
-    double getMinValue(){ return thisMinValue; }
+    double getMinValue() const { return thisMinValue; }
 
     void setMaxValue(double v);
-    double getMaxValue(){ return thisMaxValue; }
+    double getMaxValue() const { return thisMaxValue; }
 
     void setScaleEnabled(bool b) {thisScaleEnabled = b; invalidate();}
     bool isScaleEnabled(){ return thisScaleEnabled; }

@@ -12,6 +12,7 @@ struct caLimitsDialogState
     double maxValue = 0.0;
     bool userPrecision = false;
     int precision = 0;
+    bool initializePrecisionValue = true;
 };
 
 struct caLimitsDialogApply
@@ -32,7 +33,9 @@ class caLimitsDialogRuntime
 public:
     virtual ~caLimitsDialogRuntime() {}
     virtual QString limitsDialogPV() const = 0;
-    virtual caLimitsDialogState limitsDialogState(int channelPrecision) const = 0;
+    virtual caLimitsDialogState limitsDialogState(double channelLowerLimit,
+                                                  double channelUpperLimit,
+                                                  int channelPrecision) const = 0;
     virtual void applyLimitsDialog(const caLimitsDialogApply &state) = 0;
 };
 

@@ -209,8 +209,6 @@ limitsDialog::limitsDialog(QWidget *w, MutexKnobData *data, const QString &title
         thisPV = lineargaugeWidget->getPV();
     } else if(caCircularGauge* circulargaugeWidget = qobject_cast<caCircularGauge *>(w)) {
         thisPV = circulargaugeWidget->getPV();
-    } else if(caMeter* meterWidget = qobject_cast<caMeter *>(w)) {
-        thisPV = meterWidget->getPV();
     }
 
     if(className.contains("Gauge")) {
@@ -251,22 +249,6 @@ limitsDialog::limitsDialog(QWidget *w, MutexKnobData *data, const QString &title
             initPrecision = state.precision;
             if (initPrecision >= 0) precisionLineEdit->setValue(initPrecision);
         }
-    } else if(caMeter* meterWidget = qobject_cast<caMeter *>(w)) {
-            caMeter::SourceMode mode = meterWidget->getLimitsMode();
-            if(mode == caMeter::Channel) limitsComboBox->setCurrentIndex(0); else limitsComboBox->setCurrentIndex(1);
-            initMin = meterWidget->getMinValue();
-            initMax = meterWidget->getMaxValue();
-            minimumLineEdit->setText(QString::number(initMin, 'g'));
-            maximumLineEdit->setText(QString::number(initMax, 'g'));
-            if(meterWidget->getPrecisionMode() == caMeter::Channel) {
-                initPrecision =  channelPrecision;
-                precisionComboBox->setCurrentIndex(0);
-            } else {
-                initPrecision = meterWidget->getPrecision();
-                precisionComboBox->setCurrentIndex(1);
-            }
-            if(initPrecision >=0) precisionLineEdit->setValue(initPrecision);
-
     } else if(EAbstractGauge* abstractgaugeWidget = qobject_cast<EAbstractGauge *>(w)) {
             EAbstractGauge::displayLims mode = abstractgaugeWidget->getDisplayLimits();
             if(mode == EAbstractGauge::Channel_Limits) limitsComboBox->setCurrentIndex(0); else limitsComboBox->setCurrentIndex(1);
@@ -343,16 +325,18 @@ limitsDialog::limitsDialog(QWidget *w, MutexKnobData *data, const QString &title
         connect(formatComboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(indexChanged(int)));
 
     } else if(caLimitsDialogRuntime *limitsRuntime = dynamic_cast<caLimitsDialogRuntime *>(w)) {
-        const caLimitsDialogState state = limitsRuntime->limitsDialogState(channelPrecision);
+        const caLimitsDialogState state = limitsRuntime->limitsDialogState(
+            channelLowerLimit, channelUpperLimit, channelPrecision);
         limitsComboBox->setCurrentIndex(state.userLimits ? 1 : 0);
-        initMin = state.userLimits ? state.minValue : channelLowerLimit;
-        initMax = state.userLimits ? state.maxValue : channelUpperLimit;
+        initMin = state.minValue;
+        initMax = state.maxValue;
         minimumLineEdit->setText(QString::number(initMin, 'g'));
         maximumLineEdit->setText(QString::number(initMax, 'g'));
 
         initPrecision = state.precision;
         precisionComboBox->setCurrentIndex(state.userPrecision ? 1 : 0);
-        precisionLineEdit->setValue(initPrecision);
+        if (state.initializePrecisionValue)
+            precisionLineEdit->setValue(initPrecision);
     }
 
     setWindowTitle(title);
@@ -478,30 +462,6 @@ void limitsDialog::applyClicked()
             if (kPtr != Q_NULLPTR)
                 rangeWidget->restoreRangeDialogValue(kPtr->edata.rvalue);
         }
-    } else if(caMeter* meterWidget = qobject_cast<caMeter *>(thisWidget)) {
-        if(limitsMode == Channel) {
-            meterWidget->setLimitsMode(caMeter::Channel);
-            if(!doNothing) {
-                meterWidget->setMaxValue(channelUpperLimit);
-                meterWidget->setMinValue(channelLowerLimit);
-            }
-        } else if(limitsMode == User){
-            meterWidget->setLimitsMode(caMeter::User);
-            meterWidget->setMaxValue(max);
-            meterWidget->setMinValue(min);
-        }
-
-        if(precisionMode == Channel) {
-            meterWidget->setPrecisionMode(caMeter::Channel);
-            meterWidget->setPrecision(channelPrecision);
-        } else if(precisionMode == User){
-            meterWidget->setPrecisionMode(caMeter::User);
-            meterWidget->setPrecision(prec);
-        }
-        meterWidget->updateMeter();
-        meterWidget->invalidate();
-
-    // ************* we have a calineedit or catextentry
     } else if(limitsRuntime) {
         caLimitsDialogApply state;
         state.userLimits = limitsMode == User;

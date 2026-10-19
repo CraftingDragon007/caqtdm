@@ -126,12 +126,14 @@ caLineEdit::caLineEdit(QWidget *parent) : QLineEdit(parent), FontScalingWidget(t
     installEventFilter(this);
 }
 
-caLimitsDialogState caLineEdit::limitsDialogState(int channelPrecision) const
+caLimitsDialogState caLineEdit::limitsDialogState(double channelLowerLimit,
+                                                  double channelUpperLimit,
+                                                  int channelPrecision) const
 {
     caLimitsDialogState state;
     state.userLimits = getLimitsMode() == User;
-    state.minValue = getMinValue();
-    state.maxValue = getMaxValue();
+    state.minValue = state.userLimits ? getMinValue() : channelLowerLimit;
+    state.maxValue = state.userLimits ? getMaxValue() : channelUpperLimit;
     state.userPrecision = getPrecisionMode() == User;
     state.precision = state.userPrecision ? getPrecision() : channelPrecision;
     return state;

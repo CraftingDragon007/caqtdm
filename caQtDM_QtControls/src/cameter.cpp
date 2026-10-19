@@ -31,6 +31,47 @@
 
 #include "cameter.h"
 
+caLimitsDialogState caMeter::limitsDialogState(double channelLowerLimit,
+                                              double channelUpperLimit,
+                                              int channelPrecision) const
+{
+    Q_UNUSED(channelLowerLimit);
+    Q_UNUSED(channelUpperLimit);
+    caLimitsDialogState state;
+    state.userLimits = getLimitsMode() == User;
+    state.minValue = getMinValue();
+    state.maxValue = getMaxValue();
+    state.userPrecision = getPrecisionMode() == User;
+    state.precision = state.userPrecision ? getPrecision() : channelPrecision;
+    state.initializePrecisionValue = state.precision >= 0;
+    return state;
+}
+
+void caMeter::applyLimitsDialog(const caLimitsDialogApply &state)
+{
+    if (!state.userLimits) {
+        setLimitsMode(Channel);
+        if (state.channelLimitsAvailable) {
+            setMaxValue(state.channelUpperLimit);
+            setMinValue(state.channelLowerLimit);
+        }
+    } else {
+        setLimitsMode(User);
+        setMaxValue(state.maxValue);
+        setMinValue(state.minValue);
+    }
+
+    if (!state.userPrecision) {
+        setPrecisionMode(Channel);
+        setPrecision(state.channelPrecision);
+    } else {
+        setPrecisionMode(User);
+        setPrecision(state.precision);
+    }
+    updateMeter();
+    invalidate();
+}
+
 #if defined(_MSC_VER)
  #define fmax max
  #define fmin min

@@ -103,7 +103,8 @@ public:
 
     QString getPV() const;
     QString limitsDialogPV() const override { return getPV(); }
-    caLimitsDialogState limitsDialogState(int channelPrecision) const override;
+    caLimitsDialogState limitsDialogState(double channelLowerLimit, double channelUpperLimit,
+                                          int channelPrecision) const override;
     void applyLimitsDialog(const caLimitsDialogApply &state) override;
     int dragTextPriority(int depth) const override { return depth == 0 ? LineEdit : -1; }
     QString dragTextValue() override { setEnabled(true); return getPV(); }
