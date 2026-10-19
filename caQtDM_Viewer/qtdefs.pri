@@ -38,6 +38,13 @@ TARGET_DESCRIPTION = "Channel Access Qt Display Manager"
 TARGET_COPYRIGHT = "Copyright (C) 2012-2025 Paul Scherrer Institut"
 TARGET_INTERNALNAME = "caqtdm"
 
+# Do not export inlined/template symbols from caQtDM's DSOes, so they can't be
+# interposed over libQt6Core's copies (e.g. QtPrivate::QPodArrayOps<double>::emplace)
+# and corrupt Qwt's scale construction on FreeBSD (maybe also other platforms). Same flag Qt itself is built with.
+unix {
+    QMAKE_CXXFLAGS += -fvisibility-inlines-hidden
+}
+
 # enable opengl in stripplot and cartesianplot (edo not use, experimental only, for Qt5 and qwt6.1)
 
 contains(QT_VER_MAJ, 5) {
