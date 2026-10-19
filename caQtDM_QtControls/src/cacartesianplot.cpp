@@ -206,6 +206,41 @@ void caCartesianPlot::applyAxisScaleMonitorResults(const AxisScaleMonitorPlan &p
         setYaxisLimits(limits);
 }
 
+caCartesianPlot::ResetZoomMonitorRequest
+caCartesianPlot::prepareResetZoomMonitorRequest(bool xAxis) const
+{
+    ResetZoomMonitorRequest request{false, QString()};
+    if ((xAxis ? getXscaling() : getYscaling()) != Channel)
+        return request;
+
+    const QStringList components = getPV(0).split(QLatin1Char(';'), Qt::KeepEmptyParts);
+    if (components.size() == 2 ||
+        (components.size() > 2 && !components.at(1).trimmed().isEmpty())) {
+        request.enabled = true;
+        const int pvIndex = xAxis ? 0 : 1;
+        request.pv = pvIndex < components.size() ? components.at(pvIndex).trimmed() : QString();
+    }
+    return request;
+}
+
+void caCartesianPlot::applyResetZoomMonitorResult(bool xAxis, bool hasMonitor,
+                                                   double lowerLimit, double upperLimit)
+{
+    if (!hasMonitor)
+        return;
+
+    if (lowerLimit != upperLimit) {
+        if (xAxis)
+            setScaleX(lowerLimit, upperLimit);
+        else
+            setScaleY(lowerLimit, upperLimit);
+    } else if (xAxis) {
+        setXscaling(Auto);
+    } else {
+        setYscaling(Auto);
+    }
+}
+
 caWidgetUpdateResult caCartesianPlot::applyChannelUpdate(const QString &units, const QString &value,
                                                          const knobData &data, short aggregateAlarm)
 {

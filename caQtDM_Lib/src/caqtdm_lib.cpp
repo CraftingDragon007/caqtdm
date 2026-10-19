@@ -6674,42 +6674,25 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
         } else if(selectedItem->text().contains(RESETZOOM)) {
             if(caCartesianPlot* cartesianplotWidget = qobject_cast<caCartesianPlot *>(w)) {
                 cartesianplotWidget->resetZoom();
-
-                /*************************************************/
-                // oops, case of axis defines by channel forgotten
-                if(cartesianplotWidget->getXscaling() == caCartesianPlot::Channel) {
-
-                    QString pvs =cartesianplotWidget->getPV(0);
-                    QStringList vars = pvs.split(";");
-                    if((vars.size()== 2) || (vars.at(1).trimmed().length() > 0)) {
-                        knobData *kPtr =  mutexKnobDataP->getMutexKnobDataPV(w, vars.at(0).trimmed());
-                        if(kPtr != (knobData *) Q_NULLPTR) {
-                            if(kPtr->edata.lower_disp_limit != kPtr->edata.upper_disp_limit) {
-                                cartesianplotWidget->setScaleX(kPtr->edata.lower_disp_limit, kPtr->edata.upper_disp_limit);
-                            } else {
-                                cartesianplotWidget->setXscaling(caCartesianPlot::Auto);
-                            }
-                        }
-                    }
+                const caCartesianPlot::ResetZoomMonitorRequest xRequest =
+                    cartesianplotWidget->prepareResetZoomMonitorRequest(true);
+                if (xRequest.enabled) {
+                    knobData *kPtr = mutexKnobDataP->getMutexKnobDataPV(w, xRequest.pv);
+                    cartesianplotWidget->applyResetZoomMonitorResult(
+                        true, kPtr != nullptr,
+                        kPtr ? kPtr->edata.lower_disp_limit : 0.0,
+                        kPtr ? kPtr->edata.upper_disp_limit : 0.0);
                 }
-                if(cartesianplotWidget->getYscaling() == caCartesianPlot::Channel) {
-                    /*************************************************/
-                    // oops, case of axis defines by channel forgotten
-                    QString pvs =cartesianplotWidget->getPV(0);
-                    QStringList vars = pvs.split(";");
-                    if((vars.size()== 2) || (vars.at(1).trimmed().length() > 0)) {
-                        knobData *kPtr =  mutexKnobDataP->getMutexKnobDataPV(w, vars.at(1).trimmed());
-                        if(kPtr != (knobData *) 0) {
-                            if(kPtr->edata.lower_disp_limit != kPtr->edata.upper_disp_limit) {
-                                cartesianplotWidget->setScaleY(kPtr->edata.lower_disp_limit, kPtr->edata.upper_disp_limit);
-                            } else {
-                                cartesianplotWidget->setYscaling(caCartesianPlot::Auto);
-                            }
-                        }
-                    }
 
+                const caCartesianPlot::ResetZoomMonitorRequest yRequest =
+                    cartesianplotWidget->prepareResetZoomMonitorRequest(false);
+                if (yRequest.enabled) {
+                    knobData *kPtr = mutexKnobDataP->getMutexKnobDataPV(w, yRequest.pv);
+                    cartesianplotWidget->applyResetZoomMonitorResult(
+                        false, kPtr != nullptr,
+                        kPtr ? kPtr->edata.lower_disp_limit : 0.0,
+                        kPtr ? kPtr->edata.upper_disp_limit : 0.0);
                 }
-                /*************************************************/
             }
 
         } else if(selectedItem->text().contains(CHANGEVALUE)) {

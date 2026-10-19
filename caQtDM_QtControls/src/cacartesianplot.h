@@ -212,6 +212,13 @@ public:
     AxisScaleMonitorPlan prepareAxisScaleMonitorPlan(bool xAxis);
     void applyAxisScaleMonitorResults(const AxisScaleMonitorPlan &plan,
                                       const QString &resolvedFirst, const QString &resolvedSecond);
+    struct ResetZoomMonitorRequest {
+        bool enabled;
+        QString pv;
+    };
+    ResetZoomMonitorRequest prepareResetZoomMonitorRequest(bool xAxis) const;
+    void applyResetZoomMonitorResult(bool xAxis, bool hasMonitor,
+                                     double lowerLimit, double upperLimit);
 #include "caPropHandle.h"
 
     double getSymbolsizeFactor() {return symbolSizeFactor;}
