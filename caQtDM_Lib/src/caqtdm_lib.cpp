@@ -2813,90 +2813,32 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
             cartesianplotWidget->applyAuxiliaryMonitorResult(event.channel, pv);
         }
 
-        // handle user scale
-        if(cartesianplotWidget->getXscaling() == caCartesianPlot::User) {
-            double xmin, xmax;
-            int ok=cartesianplotWidget->getXLimits(xmin, xmax);
-            if(ok) cartesianplotWidget->setScaleX(xmin, xmax);
-        } else if(cartesianplotWidget->getXscaling() == caCartesianPlot::Auto) {
-            cartesianplotWidget->setXscaling(caCartesianPlot::Auto);
-            // in case of channel the limits will be defined later by the hopr and lopr
-            // however in case of channel, it is possible to get dynamic limits through monitors
-        } else if(cartesianplotWidget->getXscaling() == caCartesianPlot::Channel) {
-            QString pvs ="";
-            QStringList thisStrings = cartesianplotWidget->getXaxisLimits().split(";");
-            if(thisStrings.count() == 2 && thisStrings.at(0).trimmed().length() > 0 && thisStrings.at(1).trimmed().length() > 0) {
-                double xmin, xmax;
-                int ok=cartesianplotWidget->getXLimits(xmin, xmax);
-                if(ok) {
-                    cartesianplotWidget->setScaleX(xmin, xmax);
-                    // when channel was specified for x, but no channel was defined for the plot then set to auto
-                    QStringList thisStrngs = cartesianplotWidget->getPV(0).split(";");
-                    if(thisStrngs.count() == 2 && thisStrngs.at(0).trimmed().length() == 0)  cartesianplotWidget->setXscaling(caCartesianPlot::Auto);
-                } else {
-                    specData[0] = 0;
-                    specData[2] = caCartesianPlot::CH_Xscale;
-                    int num = addMonitor(myWidget, &kData, thisStrings.at(0), w1, specData, map, &pv);
-                    integerList.append(num);
-                    nbMonitors++;
+        auto registerAxisScale = [&](const caCartesianPlot::AxisScaleMonitorPlan &plan) {
+            QString resolvedFirst;
+            QString resolvedSecond;
+            for (const caCartesianPlot::AxisScaleMonitorRequest &request : plan.requests) {
+                specData[0] = request.limitIndex;
+                specData[2] = request.channel;
+                const int num = addMonitor(myWidget, &kData, request.pv, w1, specData, map, &pv);
+                integerList.append(num);
+                nbMonitors++;
+                if (request.limitIndex == 0) {
+                    resolvedFirst = pv;
                     tooltip.append(pv);
-                    pvs = pv;
-                    specData[0] = 1;
-                    specData[2] = caCartesianPlot::CH_Xscale;
-                    num = addMonitor(myWidget, &kData, thisStrings.at(1), w1, specData, map, &pv);
-                    integerList.append(num);
-                    nbMonitors++;
+                } else {
+                    resolvedSecond = pv;
                     tooltip.append(",");
                     tooltip.append(pv);
-                    pvs.append(";");
-                    pvs.append(pv);
-                    tooltip.append("<br>");
-                    cartesianplotWidget->setXaxisLimits(pvs);
                 }
             }
-        }
-        if(cartesianplotWidget->getYscaling() == caCartesianPlot::User) {
-            double ymin, ymax;
-            int ok=cartesianplotWidget->getYLimits(ymin, ymax);
-            if(ok) cartesianplotWidget->setScaleY(ymin, ymax);
-        } else if(cartesianplotWidget->getYscaling() == caCartesianPlot::Auto){
-            cartesianplotWidget->setYscaling(caCartesianPlot::Auto);
-            // in case of channel the limits will be defined later by the hopr and lopr
-            // however in case of channel, it is possible to get dynamic limits through monitors
-        } else if(cartesianplotWidget->getYscaling() == caCartesianPlot::Channel) {
-            QString pvs ="";
-            QStringList thisStrings = cartesianplotWidget->getYaxisLimits().split(";");
-            if(thisStrings.count() == 2 && thisStrings.at(0).trimmed().length() > 0 && thisStrings.at(1).trimmed().length() > 0) {
-                double ymin, ymax;
-                int ok=cartesianplotWidget->getYLimits(ymin, ymax);
-                if(ok) {
-                    cartesianplotWidget->setScaleY(ymin, ymax);
-                    // when channel was specified for x, but no channel was defined for the plot then set to auto
-                    QStringList thisStrngs = cartesianplotWidget->getPV(0).split(";");
-                    if(thisStrngs.count() == 2 && thisStrngs.at(1).trimmed().length() == 0)  cartesianplotWidget->setYscaling(caCartesianPlot::Auto);
-                } else {
-                    specData[0] = 0;
-                    specData[2] = caCartesianPlot::CH_Yscale;
-                    int num = addMonitor(myWidget, &kData, thisStrings.at(0), w1, specData, map, &pv);
-                    integerList.append(num);
-                    nbMonitors++;
-                    tooltip.append(pv);
-                    pvs = pv;
-
-                    specData[0] = 1;
-                    specData[2] = caCartesianPlot::CH_Yscale;
-                    num = addMonitor(myWidget, &kData, thisStrings.at(1), w1, specData, map, &pv);
-                    integerList.append(num);
-                    nbMonitors++;
-                    tooltip.append(",");
-                    tooltip.append(pv);
-                    pvs.append(";");
-                    pvs.append(pv);
-                    tooltip.append("<br>");
-                    cartesianplotWidget->setYaxisLimits(pvs);
-                }
+            if (!plan.requests.isEmpty()) {
+                tooltip.append("<br>");
+                cartesianplotWidget->applyAxisScaleMonitorResults(plan, resolvedFirst, resolvedSecond);
             }
-        }
+        };
+        // Apply X results before preparing Y, which reads the updated widget state.
+        registerAxisScale(cartesianplotWidget->prepareAxisScaleMonitorPlan(true));
+        registerAxisScale(cartesianplotWidget->prepareAxisScaleMonitorPlan(false));
 
         // finish tooltip
         tooltip.append(ToolTipPostfix);

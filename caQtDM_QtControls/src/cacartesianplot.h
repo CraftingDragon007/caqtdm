@@ -196,6 +196,18 @@ public:
     };
     QList<AuxiliaryMonitorEvent> prepareAuxiliaryMonitorEvents();
     void applyAuxiliaryMonitorResult(int channel, const QString &resolvedPV);
+    struct AxisScaleMonitorRequest {
+        int limitIndex;
+        int channel;
+        QString pv;
+    };
+    struct AxisScaleMonitorPlan {
+        bool xAxis;
+        QList<AxisScaleMonitorRequest> requests;
+    };
+    AxisScaleMonitorPlan prepareAxisScaleMonitorPlan(bool xAxis);
+    void applyAxisScaleMonitorResults(const AxisScaleMonitorPlan &plan,
+                                      const QString &resolvedFirst, const QString &resolvedSecond);
 #include "caPropHandle.h"
 
     double getSymbolsizeFactor() {return symbolSizeFactor;}

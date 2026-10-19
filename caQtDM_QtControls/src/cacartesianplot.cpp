@@ -129,6 +129,71 @@ void caCartesianPlot::applyAuxiliaryMonitorResult(int channel, const QString &re
         setErasePV(resolvedPV);
 }
 
+caCartesianPlot::AxisScaleMonitorPlan caCartesianPlot::prepareAxisScaleMonitorPlan(bool xAxis)
+{
+    AxisScaleMonitorPlan plan;
+    plan.xAxis = xAxis;
+
+    const axisScaling scaling = xAxis ? getXscaling() : getYscaling();
+    if (scaling == User) {
+        double minimum, maximum;
+        const int valid = xAxis ? getXLimits(minimum, maximum) : getYLimits(minimum, maximum);
+        if (valid) {
+            if (xAxis)
+                setScaleX(minimum, maximum);
+            else
+                setScaleY(minimum, maximum);
+        }
+    } else if (scaling == Auto) {
+        if (xAxis)
+            setXscaling(Auto);
+        else
+            setYscaling(Auto);
+    } else if (scaling == Channel) {
+        const QStringList limits = (xAxis ? getXaxisLimits() : getYaxisLimits()).split(";");
+        if (limits.count() == 2 && !limits.at(0).trimmed().isEmpty() &&
+            !limits.at(1).trimmed().isEmpty()) {
+            double minimum, maximum;
+            const int valid = xAxis ? getXLimits(minimum, maximum) : getYLimits(minimum, maximum);
+            if (valid) {
+                if (xAxis)
+                    setScaleX(minimum, maximum);
+                else
+                    setScaleY(minimum, maximum);
+
+                const QStringList plotPVs = getPV(0).split(";");
+                const int side = xAxis ? 0 : 1;
+                if (plotPVs.count() == 2 && plotPVs.at(side).trimmed().isEmpty()) {
+                    if (xAxis)
+                        setXscaling(Auto);
+                    else
+                        setYscaling(Auto);
+                }
+            } else {
+                const int channel = xAxis ? CH_Xscale : CH_Yscale;
+                plan.requests.append(AxisScaleMonitorRequest{0, channel, limits.at(0)});
+                plan.requests.append(AxisScaleMonitorRequest{1, channel, limits.at(1)});
+            }
+        }
+    }
+
+    return plan;
+}
+
+void caCartesianPlot::applyAxisScaleMonitorResults(const AxisScaleMonitorPlan &plan,
+                                                    const QString &resolvedFirst,
+                                                    const QString &resolvedSecond)
+{
+    if (plan.requests.isEmpty())
+        return;
+
+    const QString limits = resolvedFirst + ";" + resolvedSecond;
+    if (plan.xAxis)
+        setXaxisLimits(limits);
+    else
+        setYaxisLimits(limits);
+}
+
 caWidgetUpdateResult caCartesianPlot::applyChannelUpdate(const QString &units, const QString &value,
                                                          const knobData &data, short aggregateAlarm)
 {
