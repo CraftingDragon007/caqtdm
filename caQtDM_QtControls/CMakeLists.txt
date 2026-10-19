@@ -191,6 +191,7 @@ set(QTCONTROLS_HEADERS
     ${_src}/caEnumSelectionRuntimeMixin.h
     ${_src}/caRangeRuntimeMixin.h
     ${_src}/caLimitsDialogRuntime.h
+    ${_src}/caLimitsContextRuntime.h
     ${_src}/caByteRuntimeMixin.h
     ${_src}/caShapeRuntimeMixin.h
     ${_src}/caTableResizeRuntimeMixin.h

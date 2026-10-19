@@ -102,6 +102,7 @@ public:
     void setMinValue(double const &minim) {thisMinimum = minim;}
 
     QString getPV() const;
+    caLimitsContextState limitsContextState(const knobData *firstMonitor) const override;
     QString limitsDialogPV() const override { return getPV(); }
     caLimitsDialogState limitsDialogState(double channelLowerLimit, double channelUpperLimit,
                                           int channelPrecision) const override;

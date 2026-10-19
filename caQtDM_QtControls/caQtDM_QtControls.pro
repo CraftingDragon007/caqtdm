@@ -309,6 +309,7 @@ HEADERS	+= \
     src/caEnumSelectionRuntimeMixin.h \
     src/caRangeRuntimeMixin.h \
     src/caLimitsDialogRuntime.h \
+    src/caLimitsContextRuntime.h \
     src/caByteRuntimeMixin.h \
     src/caShapeRuntimeMixin.h \
     src/caTableResizeRuntimeMixin.h \

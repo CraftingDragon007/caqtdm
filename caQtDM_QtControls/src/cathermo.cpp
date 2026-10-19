@@ -77,6 +77,22 @@ bool caThermo::applyRangeValue(const knobData &data)
     return channelLimitsEnabled;
 }
 
+caLimitsContextState caThermo::limitsContextState(const knobData *firstMonitor) const
+{
+    caLimitsContextState state;
+    if (getLimitsMode() == User) {
+        state.limitsMode = true;
+        state.limitsMax = maxValue();
+        state.limitsMin = minValue();
+    }
+    if (firstMonitor && firstMonitor->edata.lower_disp_limit == firstMonitor->edata.upper_disp_limit) {
+        state.limitsDefault = true;
+        state.limitsMax = maxValue();
+        state.limitsMin = minValue();
+    }
+    return state;
+}
+
 caRangeDialogState caThermo::rangeDialogState(int channelPrecision) const
 {
     Q_UNUSED(channelPrecision);

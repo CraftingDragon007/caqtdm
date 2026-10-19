@@ -3,6 +3,7 @@
 
 #include <QString>
 #include "knobData.h"
+#include "caLimitsContextRuntime.h"
 
 // Runtime behavior shared by widgets that expose the limits dialog.
 // The channel values are supplied by the dialog because it owns monitor lookup.
@@ -31,7 +32,7 @@ struct caLimitsDialogApply
     knobData *currentMonitor = nullptr;
 };
 
-class caLimitsDialogRuntime
+class caLimitsDialogRuntime : public caLimitsContextRuntime
 {
 public:
     virtual ~caLimitsDialogRuntime() {}

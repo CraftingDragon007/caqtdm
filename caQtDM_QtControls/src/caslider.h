@@ -173,6 +173,7 @@ public:
     void prepareRange() override {}
     bool rangeIsElevated() override { return isElevated(); }
     void raiseRange() override { raise(); }
+    caLimitsContextState limitsContextState(const knobData *firstMonitor) const override;
     caRangeDialogState rangeDialogState(int channelPrecision) const override;
     void applyRangeDialog(const caRangeDialogApply &state) override;
     void restoreRangeDialogValue(double value) override { setSliderValue(value); }

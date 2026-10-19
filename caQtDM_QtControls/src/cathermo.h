@@ -133,6 +133,7 @@ public:
     void prepareRange() override;
     bool rangeIsElevated() override { return false; }
     void raiseRange() override {}
+    caLimitsContextState limitsContextState(const knobData *firstMonitor) const override;
     caRangeDialogState rangeDialogState(int channelPrecision) const override;
     void applyRangeDialog(const caRangeDialogApply &state) override;
     void restoreRangeDialogValue(double value) override { Q_UNUSED(value); }

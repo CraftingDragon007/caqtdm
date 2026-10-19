@@ -66,6 +66,7 @@
 #include "caStateWidgetRuntime.h"
 #include "caEnumSelectionRuntimeMixin.h"
 #include "caRangeRuntimeMixin.h"
+#include "caLimitsContextRuntime.h"
 #include "caByteRuntimeMixin.h"
 #include "caTableResizeRuntimeMixin.h"
 #include "caColorMapContextMenuRuntime.h"
@@ -6185,70 +6186,28 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
         if(choiceWidget->getColorMode() == caChoice::Alarm) qstrncpy(colMode, "Alarm", sizeof(colMode));
         else qstrncpy(colMode, "Static", sizeof(colMode));
 
-    } else if(caLineEdit* lineeditWidget = qobject_cast<caLineEdit *>(w)) {
-        if(lineeditWidget->getPrecisionMode() == caLineEdit::User) {
-            precMode = true;
-            Precision = lineeditWidget->getPrecision();
+    } else if(caLimitsContextRuntime *limitsContext = dynamic_cast<caLimitsContextRuntime *>(w)) {
+        knobData *firstMonitor = nullptr;
+        if (nbMonitors > 0 && MonitorList.size() > 1) {
+            dataIndex = MonitorList.at(1).toInt();
+            firstMonitor = mutexKnobDataP->GetMutexKnobDataPtr(dataIndex);
         }
-        if(lineeditWidget->getLimitsMode() == caLineEdit::User) {
-            limitsMode = true;
-            limitsMax = lineeditWidget->getMaxValue();
-            limitsMin = lineeditWidget->getMinValue();
-        }
-        if(lineeditWidget->getColorMode() == caLineEdit::Alarm_Default) qstrncpy(colMode, "Alarm", sizeof(colMode));
-        else if(lineeditWidget->getColorMode() == caLineEdit::Alarm_Static) qstrncpy(colMode, "Alarm", sizeof(colMode));
-        else qstrncpy(colMode, "Static", sizeof(colMode));
+        const caLimitsContextState state = limitsContext->limitsContextState(firstMonitor);
+        limitsDefault = state.limitsDefault;
+        precMode = state.precMode;
+        limitsMode = state.limitsMode;
+        highLimit = state.highLimit;
+        lowLimit = state.lowLimit;
+        Precision = state.precision;
+        limitsMax = state.limitsMax;
+        limitsMin = state.limitsMin;
+        if (state.hasColorMode)
+            qstrncpy(colMode, state.alarmColorMode ? "Alarm" : "Static", sizeof(colMode));
 
     } else if(caMultiLineString* multilinestringWidget = qobject_cast<caMultiLineString *>(w)) {
         if(multilinestringWidget->getColorMode() == caMultiLineString::Alarm_Default) qstrncpy(colMode, "Alarm", sizeof(colMode));
         else if(multilinestringWidget->getColorMode() == caMultiLineString::Alarm_Static) qstrncpy(colMode, "Alarm", sizeof(colMode));
         else qstrncpy(colMode, "Static", sizeof(colMode));
-
-    } else if (caNumericRuntimeInterface *numericWidget = dynamic_cast<caNumericRuntimeInterface *>(w)) {
-        if(numericWidget->menuUsesUserPrecision()) {
-            precMode = true;
-            Precision = numericWidget->menuPrecision();
-        } else if(nbMonitors > 0) {
-            dataIndex = MonitorList.at(1).toInt();
-            knobData *kPtr = mutexKnobDataP->GetMutexKnobDataPtr(dataIndex);
-            if(kPtr != (knobData *) Q_NULLPTR) Precision =  kPtr->edata.precision;
-        }
-
-    } else if(caSlider* sliderWidget = qobject_cast<caSlider *>(w)) {
-        if(sliderWidget->getHighLimitMode() == caSlider::User) {
-            highLimit = true;
-            limitsMax = sliderWidget->getMaxValue();
-        }
-        if(sliderWidget->getLowLimitMode() == caSlider::User) {
-            lowLimit = true;
-            limitsMin = sliderWidget->getMinValue();
-        }
-        if(sliderWidget->getPrecisionMode() == caSlider::User) {
-            precMode = true;
-            Precision = sliderWidget->getPrecision();
-        } else if(nbMonitors > 0) {
-            dataIndex = MonitorList.at(1).toInt();
-            knobData *kPtr = mutexKnobDataP->GetMutexKnobDataPtr(dataIndex);
-            if(kPtr != (knobData *) Q_NULLPTR) Precision =  kPtr->edata.precision;
-        }
-
-    } else if(caThermo* thermoWidget = qobject_cast<caThermo *>(w)) {
-        if(thermoWidget->getLimitsMode() == caThermo::User) {
-            limitsMode = true;
-            limitsMax = thermoWidget->maxValue();
-            limitsMin = thermoWidget->minValue();
-        }
-        if(nbMonitors > 0) {
-            dataIndex = MonitorList.at(1).toInt();
-            knobData *kPtr = mutexKnobDataP->GetMutexKnobDataPtr(dataIndex);
-            if(kPtr != (knobData *) Q_NULLPTR) {
-               if(kPtr->edata.lower_disp_limit == kPtr->edata.upper_disp_limit) {
-                limitsDefault = true;
-                limitsMax = thermoWidget->maxValue();
-                limitsMin = thermoWidget->minValue();
-               }
-            }
-        }
     } else if(caScriptButton* scriptbuttonWidget =  qobject_cast< caScriptButton *>(w)) {
         Q_UNUSED(scriptbuttonWidget);
         // add action : kill associated process if running
@@ -6337,13 +6296,7 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
     }
 
     // for some widgets one more action
-    if(caSlider * widget = qobject_cast< caSlider *>(w)) {Q_UNUSED(widget); myMenu.addAction(CHANGELIMITS);}
-    if(caLineEdit* widget = qobject_cast<caLineEdit *>(w)) {Q_UNUSED(widget); myMenu.addAction(CHANGELIMITS);}
-    if(caThermo* widget = qobject_cast<caThermo *>(w)){Q_UNUSED(widget);  myMenu.addAction(CHANGELIMITS);}
-    if(dynamic_cast<caNumericRuntimeInterface *>(w)) myMenu.addAction(CHANGELIMITS);
-    if(caLinearGauge* widget = qobject_cast<caLinearGauge *>(w)) {Q_UNUSED(widget); myMenu.addAction(CHANGELIMITS);}
-    if(caCircularGauge* widget = qobject_cast<caCircularGauge *>(w)) {Q_UNUSED(widget); myMenu.addAction(CHANGELIMITS);}
-    if(caMeter* widget = qobject_cast<caMeter *>(w)) {Q_UNUSED(widget); myMenu.addAction(CHANGELIMITS);}
+    if(dynamic_cast<caLimitsContextRuntime *>(w)) myMenu.addAction(CHANGELIMITS);
 
     // add to context menu, the actions requested by the environment variable caQtDM_EXEC_LIST
     if(validExecListItems) {

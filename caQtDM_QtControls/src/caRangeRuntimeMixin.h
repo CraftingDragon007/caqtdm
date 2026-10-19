@@ -2,6 +2,7 @@
 #define CARANGERUNTIMEMIXIN_H
 
 #include "caWidgetUpdateInterface.h"
+#include "caLimitsContextRuntime.h"
 #include "alarmdefs.h"
 
 #include <QWidget>
@@ -38,7 +39,7 @@ struct caRangeDialogApply
     int precision;
 };
 
-class caRangeRuntime : public caWidgetUpdateInterface
+class caRangeRuntime : public caWidgetUpdateInterface, public caLimitsContextRuntime
 {
 public:
     virtual int rangeObjectType() const = 0;

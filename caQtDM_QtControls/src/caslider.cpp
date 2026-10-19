@@ -76,6 +76,26 @@ bool caSlider::applyRangeValue(const knobData &data)
     return highChannelLimitEnabled && lowChannelLimitEnabled;
 }
 
+caLimitsContextState caSlider::limitsContextState(const knobData *firstMonitor) const
+{
+    caLimitsContextState state;
+    if (getHighLimitMode() == User) {
+        state.highLimit = true;
+        state.limitsMax = getMaxValue();
+    }
+    if (getLowLimitMode() == User) {
+        state.lowLimit = true;
+        state.limitsMin = getMinValue();
+    }
+    if (getPrecisionMode() == User) {
+        state.precMode = true;
+        state.precision = getPrecision();
+    } else if (firstMonitor) {
+        state.precision = firstMonitor->edata.precision;
+    }
+    return state;
+}
+
 caRangeDialogState caSlider::rangeDialogState(int channelPrecision) const
 {
     return {true, false, false,

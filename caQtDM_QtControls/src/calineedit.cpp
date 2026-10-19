@@ -126,6 +126,24 @@ caLineEdit::caLineEdit(QWidget *parent) : QLineEdit(parent), FontScalingWidget(t
     installEventFilter(this);
 }
 
+caLimitsContextState caLineEdit::limitsContextState(const knobData *firstMonitor) const
+{
+    Q_UNUSED(firstMonitor);
+    caLimitsContextState state;
+    if (getPrecisionMode() == User) {
+        state.precMode = true;
+        state.precision = getPrecision();
+    }
+    if (getLimitsMode() == User) {
+        state.limitsMode = true;
+        state.limitsMax = getMaxValue();
+        state.limitsMin = getMinValue();
+    }
+    state.hasColorMode = true;
+    state.alarmColorMode = getColorMode() == Alarm_Default || getColorMode() == Alarm_Static;
+    return state;
+}
+
 caLimitsDialogState caLineEdit::limitsDialogState(double channelLowerLimit,
                                                   double channelUpperLimit,
                                                   int channelPrecision) const

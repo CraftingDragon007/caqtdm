@@ -2,6 +2,7 @@
 #define CANUMERICRUNTIMEMIXIN_H
 
 #include "caWidgetUpdateInterface.h"
+#include "caLimitsContextRuntime.h"
 
 #include <QCoreApplication>
 #include <QEvent>
@@ -22,7 +23,7 @@ struct caNumericDialogState
     bool fixedFormat = false;
 };
 
-class caNumericRuntimeInterface : public caWidgetUpdateInterface
+class caNumericRuntimeInterface : public caWidgetUpdateInterface, public caLimitsContextRuntime
 {
 public:
     virtual int numericObjectType() const = 0;
@@ -57,6 +58,18 @@ public:
     bool menuUsesUserPrecision() const override
     { return widget()->getPrecisionMode() == Widget::User; }
     int menuPrecision() const override { return widget()->decDigits(); }
+
+    caLimitsContextState limitsContextState(const knobData *firstMonitor) const override
+    {
+        caLimitsContextState state;
+        if (menuUsesUserPrecision()) {
+            state.precMode = true;
+            state.precision = menuPrecision();
+        } else if (firstMonitor) {
+            state.precision = firstMonitor->edata.precision;
+        }
+        return state;
+    }
 
     caNumericDialogState numericDialogState() const override
     {
