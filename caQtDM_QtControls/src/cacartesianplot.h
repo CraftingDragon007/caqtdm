@@ -188,6 +188,14 @@ public:
     CurveMonitorPlan prepareCurveMonitorPlan(int curve);
     void applyCurveMonitorResults(const CurveMonitorPlan &plan,
                                   const QString &resolvedX, const QString &resolvedY);
+    struct AuxiliaryMonitorEvent {
+        int channel;
+        QString pv;
+        bool numericCount;
+        int countNumber;
+    };
+    QList<AuxiliaryMonitorEvent> prepareAuxiliaryMonitorEvents();
+    void applyAuxiliaryMonitorResult(int channel, const QString &resolvedPV);
 #include "caPropHandle.h"
 
     double getSymbolsizeFactor() {return symbolSizeFactor;}

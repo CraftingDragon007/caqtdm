@@ -2719,7 +2719,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         qCDebug(caCartesianPlotLog) << "treat caCartesianPlot" << w1;
         w1->setProperty("ObjectType", caCartesianPlot_Widget);
 
-        QString triggerChannel, countChannel, eraseChannel, title;
+        QString title;
 
         // addmonitor normally will add a tooltip to show the pv; however here we have more than one pv
         QString tooltip;
@@ -2796,45 +2796,21 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
         cartesianplotWidget->updateLegendsPV();
 
-        // handle trigger channel if any
-        triggerChannel = cartesianplotWidget->getTriggerPV();
-        if(triggerChannel.trimmed().length() > 0) {
-            specData[2] = caCartesianPlot::CH_Trigger; // Trigger
-            int num = addMonitor(myWidget, &kData, triggerChannel, w1, specData, map, &pv);
-            integerList.append(num);
-            nbMonitors++;
-            tooltip.append(pv);
-            tooltip.append("<br>");
-            cartesianplotWidget->setTriggerPV(pv);
-        }
-
-        // handle count channel if any
-        int Number;
-        if(!cartesianplotWidget->hasCountNumber(&Number)) {
-            countChannel = cartesianplotWidget->getCountPV();
-            if(countChannel.trimmed().length() > 0) {
-                specData[2] = caCartesianPlot::CH_Count; // Count
-                int num = addMonitor(myWidget, &kData, countChannel, w1, specData, map, &pv);
-                integerList.append(num);
-                nbMonitors++;
-                tooltip.append(pv);
-                tooltip.append("<br>");
-                cartesianplotWidget->setCountPV(pv);
+        // Trigger, count, and erase requests retain their widget-defined order.
+        for (const caCartesianPlot::AuxiliaryMonitorEvent &event :
+             cartesianplotWidget->prepareAuxiliaryMonitorEvents()) {
+            if (event.numericCount) {
+                qCDebug(caCartesianPlotLog) << "count=" << event.countNumber;
+                continue;
             }
-        } else {
-            qCDebug(caCartesianPlotLog) << "count=" << Number;
-        }
 
-        // handle erase channel if any
-        eraseChannel = cartesianplotWidget->getErasePV();
-        if(eraseChannel.trimmed().length() > 0) {
-            specData[2] = caCartesianPlot::CH_Erase; // Count
-            int num = addMonitor(myWidget, &kData, eraseChannel, w1, specData, map, &pv);
+            specData[2] = event.channel;
+            const int num = addMonitor(myWidget, &kData, event.pv, w1, specData, map, &pv);
             integerList.append(num);
             nbMonitors++;
             tooltip.append(pv);
             tooltip.append("<br>");
-            cartesianplotWidget->setErasePV(pv);
+            cartesianplotWidget->applyAuxiliaryMonitorResult(event.channel, pv);
         }
 
         // handle user scale

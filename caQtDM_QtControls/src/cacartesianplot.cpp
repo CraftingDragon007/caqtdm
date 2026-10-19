@@ -97,6 +97,38 @@ void caCartesianPlot::applyCurveMonitorResults(const CurveMonitorPlan &plan,
     setPV(pvs, plan.curve);
 }
 
+QList<caCartesianPlot::AuxiliaryMonitorEvent> caCartesianPlot::prepareAuxiliaryMonitorEvents()
+{
+    QList<AuxiliaryMonitorEvent> events;
+    const QString triggerPV = getTriggerPV();
+    if (!triggerPV.trimmed().isEmpty())
+        events.append(AuxiliaryMonitorEvent{CH_Trigger, triggerPV, false, 0});
+
+    int number = 0;
+    if (hasCountNumber(&number)) {
+        events.append(AuxiliaryMonitorEvent{CH_Count, QString(), true, number});
+    } else {
+        const QString countPV = getCountPV();
+        if (!countPV.trimmed().isEmpty())
+            events.append(AuxiliaryMonitorEvent{CH_Count, countPV, false, 0});
+    }
+
+    const QString erasePV = getErasePV();
+    if (!erasePV.trimmed().isEmpty())
+        events.append(AuxiliaryMonitorEvent{CH_Erase, erasePV, false, 0});
+    return events;
+}
+
+void caCartesianPlot::applyAuxiliaryMonitorResult(int channel, const QString &resolvedPV)
+{
+    if (channel == CH_Trigger)
+        setTriggerPV(resolvedPV);
+    else if (channel == CH_Count)
+        setCountPV(resolvedPV);
+    else if (channel == CH_Erase)
+        setErasePV(resolvedPV);
+}
+
 caWidgetUpdateResult caCartesianPlot::applyChannelUpdate(const QString &units, const QString &value,
                                                          const knobData &data, short aggregateAlarm)
 {
