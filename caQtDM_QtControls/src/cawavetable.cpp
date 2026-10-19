@@ -54,6 +54,31 @@ Q_DECLARE_METATYPE(QtMsgType)
 
 Q_LOGGING_CATEGORY(caWaveTableLog, "caqtdm.widgets.cawavetable")
 
+QList<caWaveTable::ChannelSetupRequest> caWaveTable::channelSetupRequests() const
+{
+    QList<ChannelSetupRequest> requests;
+    const QString rawPV = getPV();
+    if (rawPV.size() == 0)
+        return requests;
+
+    const QString pv = rawPV.trimmed();
+    requests.append({1, pv + ".FTVL"});
+    requests.append({0, pv});
+    return requests;
+}
+
+void caWaveTable::applyChannelSetupResult(const ChannelSetupRequest &request,
+                                          const QString &resolvedPV)
+{
+    if (request.specId == 0)
+        setPV(resolvedPV);
+}
+
+void caWaveTable::setRuntimeHelpToolTip()
+{
+    setToolTip("select row or columns, then with Ctrl+C you can copy to the clipboard\ninside X11 you can then do shft+ins\nwhen doubleclicking on a value, you can change the value");
+}
+
 caWidgetUpdateResult caWaveTable::applyChannelUpdate(const QString &units, const QString &value,
                                                      const knobData &data, short aggregateAlarm)
 {

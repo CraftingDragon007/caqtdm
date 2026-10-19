@@ -27,6 +27,7 @@
 #define CAWAVETABLE_H
 
 #include <QTableWidget>
+#include <QList>
 #include <QAction>
 #include <QFont>
 #include <QEvent>
@@ -75,6 +76,15 @@ class QTCON_EXPORT caWaveTable : public QTableWidget, public caWidgetUpdateInter
 
 public:
     //void noStyle(QString style) {Q_UNUSED(style);}
+
+    struct ChannelSetupRequest {
+        int specId;
+        QString pv;
+    };
+
+    QList<ChannelSetupRequest> channelSetupRequests() const;
+    void applyChannelSetupResult(const ChannelSetupRequest &request, const QString &resolvedPV);
+    void setRuntimeHelpToolTip();
 
     caWaveTable(QWidget *parent);
 

@@ -3015,29 +3015,25 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         qCDebug(caWaveTableLog) << "create caWaveTable";
         w1->setProperty("ObjectType", caWaveTable_Widget);
 
-        if(wavetableWidget->getPV().size() > 0) {
-
-            // add also the FTVL field in order to know if we have signed or unsigned data
-            specData[0] = 1;
-            int num = addMonitor(myWidget, &kData, wavetableWidget->getPV().trimmed() + ".FTVL", w1, specData, map, &pv);
+        const QList<caWaveTable::ChannelSetupRequest> requests =
+                wavetableWidget->channelSetupRequests();
+        for (const caWaveTable::ChannelSetupRequest &request : requests) {
+            specData[0] = request.specId;
+            int num = addMonitor(myWidget, &kData, request.pv, w1, specData, map, &pv);
             integerList.append(num);
             nbMonitors++;
-
-            specData[0] = 0;
-            num = addMonitor(myWidget, &kData, wavetableWidget->getPV().trimmed(), w1, specData, map, &pv);
-            integerList.append(num);
-            nbMonitors++;
-            wavetableWidget->setPV(pv);
-
-            connect(wavetableWidget, SIGNAL(WaveEntryChanged(QString, int)), this, SLOT(Callback_WaveEntryChanged(QString, int)));
+            wavetableWidget->applyChannelSetupResult(request, pv);
         }
+
+        if (!requests.isEmpty())
+            connect(wavetableWidget, SIGNAL(WaveEntryChanged(QString, int)), this, SLOT(Callback_WaveEntryChanged(QString, int)));
 
         integerList.insert(0, nbMonitors); /* set property into stripplotWidget */
         wavetableWidget->setProperty("MonitorList", integerList);
 
         wavetableWidget->setProperty("Taken", true);
 
-        wavetableWidget->setToolTip("select row or columns, then with Ctrl+C you can copy to the clipboard\ninside X11 you can then do shft+ins\nwhen doubleclicking on a value, you can change the value");
+        wavetableWidget->setRuntimeHelpToolTip();
 
         //==================================================================================================================
 
