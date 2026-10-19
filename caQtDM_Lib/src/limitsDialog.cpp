@@ -31,41 +31,6 @@
 /* total digit budget of the numeric widgets */
 #define PREC_LIMIT_NUMERIC ENumeric::MaxTotalDigits
 
-int limitsDialog::extractPrecisionFromFormat(const QString &fmt)
-{
-    int prec = -1;
-    bool ok = false;
-
-    QString format = fmt.trimmed();
-    if(format.right(1).contains("d)")) return 0;   // d format
-    if(!format.left(1).contains("%")) return -1;    // not a valid format
-
-    if(format.right(1).contains("f")) {            // f format
-        int len = format.size();
-        if(len-3 > 0) {
-            QString rightPart = format.mid(len-3, len);
-            if(rightPart.left(1).contains(".")) {
-                QString precision = rightPart.mid(1,1);
-                prec = precision.toInt(&ok);
-                if(ok) return prec;
-            } else {
-                return -1;
-            }
-        } else {
-            return -1;
-        }
-    }
-    return -1;
-}
-
-
-QString limitsDialog::getFormatFromPrecision(int prec)
-{
-    QString format = "\\%.%1f";
-    format = format.arg(prec);
-    return format;
-}
-
 limitsDialog::limitsDialog(QWidget *w, MutexKnobData *data, const QString &title, QWidget *parent) : QWidget(parent)
 {
     int thisWidth = 650;
@@ -205,10 +170,6 @@ limitsDialog::limitsDialog(QWidget *w, MutexKnobData *data, const QString &title
         thisPV = limitsRuntime->limitsDialogPV();
     } else if(numericRuntime) {
         thisPV = numericRuntime->numericPV();
-    } else if(caLinearGauge* lineargaugeWidget = qobject_cast<caLinearGauge *>(w)) {
-        thisPV = lineargaugeWidget->getPV();
-    } else if(caCircularGauge* circulargaugeWidget = qobject_cast<caCircularGauge *>(w)) {
-        thisPV = circulargaugeWidget->getPV();
     }
 
     if(className.contains("Gauge")) {
@@ -249,18 +210,6 @@ limitsDialog::limitsDialog(QWidget *w, MutexKnobData *data, const QString &title
             initPrecision = state.precision;
             if (initPrecision >= 0) precisionLineEdit->setValue(initPrecision);
         }
-    } else if(EAbstractGauge* abstractgaugeWidget = qobject_cast<EAbstractGauge *>(w)) {
-            EAbstractGauge::displayLims mode = abstractgaugeWidget->getDisplayLimits();
-            if(mode == EAbstractGauge::Channel_Limits) limitsComboBox->setCurrentIndex(0); else limitsComboBox->setCurrentIndex(1);
-            initMin = abstractgaugeWidget->minValue();
-            initMax = abstractgaugeWidget->maxValue();
-            minimumLineEdit->setText(QString::number(initMin, 'g'));
-            maximumLineEdit->setText(QString::number(initMax, 'g'));
-            precisionComboBox->setCurrentIndex(1);
-            precisionComboBox->setDisabled(true);
-            initPrecision = extractPrecisionFromFormat(abstractgaugeWidget->valueFormat());
-            if(initPrecision >=0) precisionLineEdit->setValue(initPrecision);
-
     } else if(numericRuntime) {
         const caNumericDialogState state = numericRuntime->numericDialogState();
         limitsComboBox->setCurrentIndex(state.userLimits ? 1 : 0);
@@ -335,6 +284,7 @@ limitsDialog::limitsDialog(QWidget *w, MutexKnobData *data, const QString &title
 
         initPrecision = state.precision;
         precisionComboBox->setCurrentIndex(state.userPrecision ? 1 : 0);
+        precisionComboBox->setDisabled(!state.precisionModeEnabled);
         if (state.initializePrecisionValue)
             precisionLineEdit->setValue(initPrecision);
     }
@@ -473,6 +423,7 @@ void limitsDialog::applyClicked()
         state.userPrecision = precisionMode == User;
         state.channelPrecision = channelPrecision;
         state.precision = prec;
+        state.currentMonitor = monData->getMutexKnobDataPV(thisWidget, thisPV);
         limitsRuntime->applyLimitsDialog(state);
 
         // ************* we have a caNumeric, caApplyNumeric or caSpinbox
@@ -493,27 +444,6 @@ void limitsDialog::applyClicked()
             kPtr->edata.initialize = false;
         }
 
-    } else if(EAbstractGauge* abstractgaugeWidget = qobject_cast<EAbstractGauge *>(thisWidget)) {
-
-        if(limitsMode == Channel) {
-            abstractgaugeWidget->setDisplayLimits(EAbstractGauge::Channel_Limits);
-        } else if(limitsMode == User){
-            abstractgaugeWidget->setDisplayLimits(EAbstractGauge::User_Limits);
-            abstractgaugeWidget->setMaxValue(max);
-            abstractgaugeWidget->setMinValue(min);
-            abstractgaugeWidget->setLowWarning(min);
-            abstractgaugeWidget->setHighWarning(max);
-            abstractgaugeWidget->setLowError(min);
-            abstractgaugeWidget->setHighError(max);
-        }
-        knobData *kPtr = monData->getMutexKnobDataPV(abstractgaugeWidget, thisPV);
-        if(kPtr != (knobData*) Q_NULLPTR) {
-            kPtr->edata.initialize = true;
-            if (caAbstractGauge *gauge = qobject_cast<caAbstractGauge *>(abstractgaugeWidget))
-                gauge->updateGaugeValue(*kPtr);
-            kPtr->edata.initialize = false;
-        }
-        abstractgaugeWidget->setValueFormat(getFormatFromPrecision(prec));
     }
 }
 

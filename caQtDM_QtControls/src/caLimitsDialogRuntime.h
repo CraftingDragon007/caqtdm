@@ -2,6 +2,7 @@
 #define CALIMITSDIALOGRUNTIME_H
 
 #include <QString>
+#include "knobData.h"
 
 // Runtime behavior shared by widgets that expose the limits dialog.
 // The channel values are supplied by the dialog because it owns monitor lookup.
@@ -13,6 +14,7 @@ struct caLimitsDialogState
     bool userPrecision = false;
     int precision = 0;
     bool initializePrecisionValue = true;
+    bool precisionModeEnabled = true;
 };
 
 struct caLimitsDialogApply
@@ -26,6 +28,7 @@ struct caLimitsDialogApply
     bool userPrecision = false;
     int channelPrecision = 0;
     int precision = 0;
+    knobData *currentMonitor = nullptr;
 };
 
 class caLimitsDialogRuntime

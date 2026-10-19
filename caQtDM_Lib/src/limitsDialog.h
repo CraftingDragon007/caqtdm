@@ -83,9 +83,6 @@ class CAQTDM_LIBSHARED_EXPORT limitsDialog : public QWidget
 
  private:
      enum SourceMode {Channel = 0, User};
-     int extractPrecisionFromFormat(const QString &fmt);
-     QString getFormatFromPrecision(int prec);
-
      QWidget *thisWidget;
      QString thisPV;
      QComboBox *limitsComboBox;

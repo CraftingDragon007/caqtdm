@@ -29,8 +29,10 @@
 #include <egauge.h>
 #include "caWidgetUpdateInterface.h"
 #include "caDragTextInterface.h"
+#include "caLimitsDialogRuntime.h"
 
-class QTCON_EXPORT caAbstractGauge : public EAbstractGauge, public caWidgetUpdateInterface, public caDragTextInterface
+class QTCON_EXPORT caAbstractGauge : public EAbstractGauge, public caWidgetUpdateInterface, public caDragTextInterface,
+                                     public caLimitsDialogRuntime
 {
  Q_OBJECT
  Q_PROPERTY(QString channel READ getPV WRITE setPV)
@@ -51,6 +53,10 @@ public:
                                                 const knobData &data, short aggregateAlarm) override;
         void updateGaugeValue(const knobData &data);
         virtual int gaugeObjectType() const = 0;
+        QString limitsDialogPV() const override { return getPV(); }
+        caLimitsDialogState limitsDialogState(double channelLowerLimit, double channelUpperLimit,
+                                              int channelPrecision) const override;
+        void applyLimitsDialog(const caLimitsDialogApply &state) override;
 
   protected:
         virtual void logGaugeUpdate() const = 0;

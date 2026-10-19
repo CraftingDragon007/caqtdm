@@ -29,12 +29,49 @@
 #include <QApplication>
 #include <eng_notation.h>
 #include <qnumeric.h>
+#include <knobData.h>
 
 #define MIN_FONT_SIZE 3
 
 Q_LOGGING_CATEGORY(caGaugeLog, "caqtdm.widgets.cagauge")
 Q_LOGGING_CATEGORY(caLinearGaugeLog, "caqtdm.widgets.calineargauge")
 Q_LOGGING_CATEGORY(caCircularGaugeLog, "caqtdm.widgets.cacirculargauge")
+
+namespace {
+int extractPrecisionFromFormat(const QString &fmt)
+{
+    int prec = -1;
+    bool ok = false;
+
+    QString format = fmt.trimmed();
+    if(format.right(1).contains("d)")) return 0;
+    if(!format.left(1).contains("%")) return -1;
+
+    if(format.right(1).contains("f")) {
+        int len = format.size();
+        if(len-3 > 0) {
+            QString rightPart = format.mid(len-3, len);
+            if(rightPart.left(1).contains(".")) {
+                QString precision = rightPart.mid(1,1);
+                prec = precision.toInt(&ok);
+                if(ok) return prec;
+            } else {
+                return -1;
+            }
+        } else {
+            return -1;
+        }
+    }
+    return -1;
+}
+
+QString getFormatFromPrecision(int prec)
+{
+    QString format = "\\%.%1f";
+    format = format.arg(prec);
+    return format;
+}
+}
 
 void caLinearGauge::logGaugeUpdate() const
 {
@@ -135,6 +172,46 @@ QString caAbstractGauge::getPV() const
 void caAbstractGauge::setPV(QString const &newPV)
 {
     thisPV = newPV;
+}
+
+caLimitsDialogState caAbstractGauge::limitsDialogState(double channelLowerLimit,
+                                                       double channelUpperLimit,
+                                                       int channelPrecision) const
+{
+    Q_UNUSED(channelLowerLimit);
+    Q_UNUSED(channelUpperLimit);
+    Q_UNUSED(channelPrecision);
+    caLimitsDialogState state;
+    state.userLimits = m_displayLimits != Channel_Limits;
+    state.minValue = d_naturalMinV;
+    state.maxValue = d_naturalMaxV;
+    state.userPrecision = true;
+    state.precision = extractPrecisionFromFormat(m_valueFormat);
+    state.initializePrecisionValue = state.precision >= 0;
+    state.precisionModeEnabled = false;
+    return state;
+}
+
+void caAbstractGauge::applyLimitsDialog(const caLimitsDialogApply &state)
+{
+    if (!state.userLimits) {
+        setDisplayLimits(Channel_Limits);
+    } else {
+        setDisplayLimits(User_Limits);
+        setMaxValue(state.maxValue);
+        setMinValue(state.minValue);
+        setLowWarning(state.minValue);
+        setHighWarning(state.maxValue);
+        setLowError(state.minValue);
+        setHighError(state.maxValue);
+    }
+
+    if (state.currentMonitor) {
+        state.currentMonitor->edata.initialize = true;
+        updateGaugeValue(*state.currentMonitor);
+        state.currentMonitor->edata.initialize = false;
+    }
+    setValueFormat(getFormatFromPrecision(state.precision));
 }
 
 caLinearGauge::caLinearGauge(QWidget *parent, Qt::Orientation o) : caAbstractGauge(parent), m_orientation(o), m_fillMode(ALL)
