@@ -1814,34 +1814,32 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         if (qobject_cast<caMenu *>(w1)) qCDebug(caMenuLog) << "create caMenu";
         else qCDebug(caChoiceLog) << "create caChoice";
 
-        QString text = selection->selectionPV();
-        if(text.size() > 0) {
-            text = treatMacro(map, text, &doNothing, w1->objectName());
-            if (selection->selectionUsesPrimarySpec()) {
-                specData[0] = 0;
-            }
-            int num = addMonitor(myWidget, &kData, text, w1, specData, map, &pv);
-            integerList.append(num);
-            if (caMenu *menuWidget = qobject_cast<caMenu *>(w1)) {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-                connect(menuWidget, SIGNAL(activated(QString)), this, SLOT(Callback_MenuClicked(QString)));
-#else
-                connect(menuWidget, SIGNAL(textActivated(QString)), this, SLOT(Callback_MenuClicked(QString)));
-#endif
-            } else if (caChoice *choiceWidget = qobject_cast<caChoice *>(w1)) {
-                connect(choiceWidget, SIGNAL(clicked(QString)), this, SLOT(Callback_ChoiceClicked(QString)));
-            }
-            selection->setSelectionPV(pv);
-            nbMonitors++;
-        }
+        for (caEnumSelectionRuntime::SelectionMonitorKind kind : selection->selectionMonitorKinds()) {
+            QString text;
+            bool usesPrimarySpec = false;
+            if (!selection->selectionMonitorRequest(kind, text, usesPrimarySpec))
+                continue;
 
-        text = selection->selectionMaskPV();
-        if(text.size() > 0) {
-            text =  treatMacro(map, text, &doNothing, w1->objectName());
-            specData[0] = 1;
+            text = treatMacro(map, text, &doNothing, w1->objectName());
+            if (kind == caEnumSelectionRuntime::MaskSelectionMonitor)
+                specData[0] = 1;
+            else if (usesPrimarySpec)
+                specData[0] = 0;
+
             int num = addMonitor(myWidget, &kData, text, w1, specData, map, &pv);
             integerList.append(num);
-            selection->setSelectionMaskPV(pv);
+            if (kind == caEnumSelectionRuntime::PrimarySelectionMonitor) {
+                if (caMenu *menuWidget = qobject_cast<caMenu *>(w1)) {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+                    connect(menuWidget, SIGNAL(activated(QString)), this, SLOT(Callback_MenuClicked(QString)));
+#else
+                    connect(menuWidget, SIGNAL(textActivated(QString)), this, SLOT(Callback_MenuClicked(QString)));
+#endif
+                } else if (caChoice *choiceWidget = qobject_cast<caChoice *>(w1)) {
+                    connect(choiceWidget, SIGNAL(clicked(QString)), this, SLOT(Callback_ChoiceClicked(QString)));
+                }
+            }
+            selection->setSelectionMonitorPV(kind, pv);
             nbMonitors++;
         }
 

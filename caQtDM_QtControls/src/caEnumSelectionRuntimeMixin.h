@@ -6,17 +6,45 @@
 
 #include <QCoreApplication>
 #include <QEvent>
+#include <QList>
 #include <QWidget>
 
 class caEnumSelectionRuntime : public caWidgetUpdateInterface
 {
 public:
+    enum SelectionMonitorKind { PrimarySelectionMonitor, MaskSelectionMonitor };
+
     virtual int selectionObjectType() const = 0;
     virtual QString selectionPV() const = 0;
     virtual void setSelectionPV(const QString &pv) = 0;
     virtual QString selectionMaskPV() const { return QString(); }
     virtual void setSelectionMaskPV(const QString &) {}
     virtual bool selectionUsesPrimarySpec() const = 0;
+    virtual QList<SelectionMonitorKind> selectionMonitorKinds() const
+    {
+        return QList<SelectionMonitorKind>() << PrimarySelectionMonitor;
+    }
+    // Query one channel at a time so a primary resolved-PV setter can run
+    // before the mask request is read, matching the original setup order.
+    virtual bool selectionMonitorRequest(SelectionMonitorKind kind, QString &rawPV,
+                                         bool &usesPrimarySpec) const
+    {
+        if (kind == PrimarySelectionMonitor) {
+            rawPV = selectionPV();
+            usesPrimarySpec = selectionUsesPrimarySpec();
+        } else {
+            rawPV = selectionMaskPV();
+            usesPrimarySpec = false;
+        }
+        return rawPV.size() > 0;
+    }
+    virtual void setSelectionMonitorPV(SelectionMonitorKind kind, const QString &pv)
+    {
+        if (kind == PrimarySelectionMonitor)
+            setSelectionPV(pv);
+        else
+            setSelectionMaskPV(pv);
+    }
     virtual bool selectionIsElevated() = 0;
     virtual void raiseSelection() = 0;
 };

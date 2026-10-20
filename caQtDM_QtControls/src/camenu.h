@@ -86,6 +86,12 @@ public:
     caMenu(QWidget *parent);
 
     int selectionObjectType() const override { return caMenu_Widget; }
+    QList<caEnumSelectionRuntime::SelectionMonitorKind> selectionMonitorKinds() const override
+    {
+        return QList<caEnumSelectionRuntime::SelectionMonitorKind>()
+            << caEnumSelectionRuntime::PrimarySelectionMonitor
+            << caEnumSelectionRuntime::MaskSelectionMonitor;
+    }
     QString selectionMaskPV() const override { return getMaskPV(); }
     void setSelectionMaskPV(const QString &pv) override { setMaskPV(pv); }
     bool selectionUsesPrimarySpec() const override { return true; }
