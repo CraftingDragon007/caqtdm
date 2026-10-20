@@ -1945,10 +1945,11 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
             replaceMacroWidget->updateCombo(keys, values);
 
             // macrovalueslist will be populated by a channel giving a list
-            if(replaceMacroWidget->getForm() == replaceMacro::Channel) {
-                int num = addMonitor(myWidget, &kData, replaceMacroWidget->getPV(), w1, specData, map, &pv);
+            QString rawPV;
+            if(replaceMacroWidget->channelMonitorRequest(rawPV)) {
+                int num = addMonitor(myWidget, &kData, rawPV, w1, specData, map, &pv);
                 integerList.append(num);
-                replaceMacroWidget->setPV(pv);
+                replaceMacroWidget->applyChannelMonitorResult(pv);
                 nbMonitors++;
             }
 

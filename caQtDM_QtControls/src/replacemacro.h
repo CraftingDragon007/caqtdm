@@ -120,6 +120,10 @@ public:
 
     void updateCombo(QStringList keys, QStringList values);
 
+    // Channel form requests a monitor even when the configured PV is empty.
+    bool channelMonitorRequest(QString &rawPV) const;
+    void applyChannelMonitorResult(const QString &resolvedPV);
+
     QString getKey() const;
     QString getNewValue() const;
 

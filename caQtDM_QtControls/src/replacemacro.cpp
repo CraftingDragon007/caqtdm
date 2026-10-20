@@ -102,6 +102,18 @@ caWidgetUpdateResult replaceMacro::applyChannelUpdate(const QString &units, cons
     return {};
 }
 
+bool replaceMacro::channelMonitorRequest(QString &rawPV) const
+{
+    if (getForm() != Channel) return false;
+    rawPV = getPV();
+    return true;
+}
+
+void replaceMacro::applyChannelMonitorResult(const QString &resolvedPV)
+{
+    setPV(resolvedPV);
+}
+
 QString replaceMacro::getKey() const {
     if(thisForm == Value) {
         return comboKeys.at(macroKeyListCombo->currentIndex());
