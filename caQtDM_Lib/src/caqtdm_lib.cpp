@@ -1734,7 +1734,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
             reaffectText(map, &text, w1);
             fixFileListRelative(cainclude_path, &text);
             // Always call this, since isProvisional = false tells the widget to only now emit errors if still not found, initially errors were suppressed
-            imageWidget->setFileName(text, false);
+            imageWidget->bindFinalFileName(text);
         }
 
         // any error messages for this object?
@@ -1746,12 +1746,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
         nbMonitors = InitVisibility(w1, &kData, map, specData, "");
 
-        // empty calc string, set animation
-        if(imageWidget->getImageCalc().size() == 0) {
-            qCDebug(caImageLog) <<  "no calc for image";
-            imageWidget->setFrame(0);
-            imageWidget->startMovie();
-        }
+        imageWidget->startAnimationIfUncalculated();
 
         imageWidget->setProperty("Taken", true);
 

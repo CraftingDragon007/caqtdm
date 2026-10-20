@@ -64,6 +64,8 @@ public:
 
     QString getFileName() const {return thisFileName;}
     void setFileName(QString filename, const bool isProvisional = true);
+    void bindFinalFileName(const QString &filename);
+    void startAnimationIfUncalculated();
 
     int getFrame() const {return thisFrame;}
     void setFrame(int frame);

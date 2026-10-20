@@ -192,6 +192,23 @@ void caImage::setFileName(QString filename, bool isProvisional)
     init(thisFileName, isProvisional);
 }
 
+void caImage::bindFinalFileName(const QString &filename)
+{
+    // The initial Designer load may have used a provisional path. Report
+    // final lookup failures only after the library has resolved macros and
+    // the panel-relative path.
+    setFileName(filename, false);
+}
+
+void caImage::startAnimationIfUncalculated()
+{
+    if (getImageCalc().isEmpty()) {
+        qCDebug(caImageLog) << "no calc for image";
+        setFrame(0);
+        startMovie();
+    }
+}
+
 void caImage::setFrame(int frame)
 {
     thisFrame = frame;
