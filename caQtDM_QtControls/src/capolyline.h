@@ -119,7 +119,7 @@ public:
 
     void setHide(bool hide);
 
-    void setActualSize(QSize size);
+    void setActualSize(QSize size) override;
 
 public slots:
     void animation(QRect p) {

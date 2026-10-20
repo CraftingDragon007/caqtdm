@@ -5,12 +5,14 @@
 #include "alarmdefs.h"
 
 #include <QColor>
+#include <QSize>
 #include <QWidget>
 
 class caShapeRuntime : public caWidgetUpdateInterface
 {
 public:
     virtual int shapeObjectType() const = 0;
+    virtual void setActualSize(QSize size) { Q_UNUSED(size); }
 };
 
 template <typename Widget>

@@ -7863,10 +7863,9 @@ void CaQtDM_Lib::resizeEvent ( QResizeEvent * event )
             integerList.insert(2, widget->geometry().width());
             integerList.insert(3, widget->geometry().height());
 
-            // tell polylinewidget about its actual size for resizing its internals
-            if (caPolyLine *polylineWidget = qobject_cast<caPolyLine *>(widget))  {
-                polylineWidget->setActualSize(QSize(widget->geometry().width(), widget->geometry().height()));
-            }
+            // tell shape widgets about their actual size for resizing their internals
+            if (caShapeRuntime *shape = dynamic_cast<caShapeRuntime *>(widget))
+                shape->setActualSize(widget->geometry().size());
 
             // for a horizontal or vertical line get the linewidth and for box the framewidth
             if(caFrameResizeRuntime::isEligible(className)) {
