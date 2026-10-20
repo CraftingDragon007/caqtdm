@@ -33,9 +33,10 @@
 
 #include <qtcontrols_global.h>
 #include <caLineEdit>
+#include "caTextEntryContextMenuRuntime.h"
 
 
-class QTCON_EXPORT caTextEntry : public caLineEdit
+class QTCON_EXPORT caTextEntry : public caLineEdit, public caTextEntryContextMenuRuntime
 {
     Q_OBJECT
     Q_PROPERTY(bool unitsEnabled READ getUnitsEnabled WRITE setUnitsEnabled DESIGNABLE false)
@@ -63,6 +64,14 @@ public:
                                             const knobData &data, short aggregateAlarm) override;
     bool getAccessW() const {return _AccessW;}
     void setAccessW(bool access);
+    bool contextMenuWriteAccess() const override { return getAccessW(); }
+    void addTextEntryContextActions(QMenu &menu, const QString &inputDialogLabel,
+                                    const QString &fileDialogLabel, bool hasValidPv,
+                                    bool pvSupportsFileDialog, bool vncServer) const override {
+        if (!getAccessW() || !hasValidPv) return;
+        menu.addAction(inputDialogLabel);
+        if (pvSupportsFileDialog && !vncServer) menu.addAction(fileDialogLabel);
+    }
     void updateText(const QString &text);
 
     bool getKeepFocus() const { return keepFocusOnLeave; }

@@ -321,6 +321,8 @@ HEADERS	+= \
     src/caColorMapContextMenuRuntime.h \
     src/caPlotContextMenuRuntime.h \
     src/caWaveTableContextMenuRuntime.h \
+    src/caSliderContextMenuRuntime.h \
+    src/caTextEntryContextMenuRuntime.h \
     src/caRoiWriteRuntimeMixin.h \
     src/caTextWidgetRuntime.h \
     src/addevent.h \

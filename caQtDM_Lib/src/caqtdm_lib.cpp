@@ -6185,10 +6185,8 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
         colorMapMenu->addColorMapContextActions(myMenu, colorMapActions);
 
         // for the slider
-    } else if(caSlider * sliderWidget = qobject_cast< caSlider *>(w)) {
-        Q_UNUSED(sliderWidget);
-        myMenu.addAction(GETINFO);
-        myMenu.addAction(CHANGEVALUE);
+    } else if(caSliderContextMenuRuntime *sliderMenu = dynamic_cast<caSliderContextMenuRuntime *>(w)) {
+        sliderMenu->addSliderContextActions(myMenu, GETINFO, CHANGEVALUE);
 
     } else if(caWaveTableContextMenuRuntime *wavetable = dynamic_cast<caWaveTableContextMenuRuntime *>(w)) {
         wavetable->addWaveTableContextActions(myMenu, GETINFO, COPYDATACSV, PASTEDATACSV);
@@ -6203,18 +6201,15 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
         plot->addPlotContextActions(myMenu, CHANGEAXIS, RESETZOOM, COPYIMAGE);
 
     // for catextentry add filedialog
-    if(caTextEntry* catextentryWidget = qobject_cast<caTextEntry *>(w)) {
-        if(catextentryWidget->getAccessW()) {
-            if(nbMonitors > 0) {
-                dataIndex = MonitorList.at(1).toInt();
-                knobData *kPtr = mutexKnobDataP->GetMutexKnobDataPtr(dataIndex);
-                if((kPtr != (knobData *) Q_NULLPTR) && (strlen(kPtr->pv) > 0)) {
-                    myMenu.addAction(INPUTDIALOG);
-                    if(((kPtr->edata.fieldtype == caSTRING) || (kPtr->edata.fieldtype == caCHAR)) && !vncServer) {
-                        myMenu.addAction(FILEDIALOG);
-                    }
-                }
-            }
+    if(caTextEntryContextMenuRuntime *textEntryMenu = dynamic_cast<caTextEntryContextMenuRuntime *>(w)) {
+        if(textEntryMenu->contextMenuWriteAccess() && nbMonitors > 0) {
+            dataIndex = MonitorList.at(1).toInt();
+            knobData *kPtr = mutexKnobDataP->GetMutexKnobDataPtr(dataIndex);
+            const bool hasValidPv = kPtr != nullptr && strlen(kPtr->pv) > 0;
+            const bool pvSupportsFileDialog = hasValidPv
+                && ((kPtr->edata.fieldtype == caSTRING) || (kPtr->edata.fieldtype == caCHAR));
+            textEntryMenu->addTextEntryContextActions(myMenu, INPUTDIALOG, FILEDIALOG,
+                                                       hasValidPv, pvSupportsFileDialog, vncServer);
         }
     }
 

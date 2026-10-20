@@ -41,8 +41,10 @@
 #include <QTimer>
 #include "caRangeRuntimeMixin.h"
 #include "caDragTextInterface.h"
+#include "caSliderContextMenuRuntime.h"
 
-class QTCON_EXPORT caSlider : public QwtSlider, public caRangeRuntimeMixin<caSlider>, public caDragTextInterface
+class QTCON_EXPORT caSlider : public QwtSlider, public caRangeRuntimeMixin<caSlider>,
+                              public caDragTextInterface, public caSliderContextMenuRuntime
 {
     Q_OBJECT
 
@@ -182,6 +184,11 @@ public:
     void setUserAlarmColors(double val);
     void setColors(QColor bg, QColor fg);
     void setNormalColors();
+    void addSliderContextActions(QMenu &menu, const QString &getInfoLabel,
+                                 const QString &changeValueLabel) const override {
+        menu.addAction(getInfoLabel);
+        menu.addAction(changeValueLabel);
+    }
     bool timerActive();
     void stopUpdating();
     void setPosition (const QPoint &);

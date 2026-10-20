@@ -203,6 +203,8 @@ set(QTCONTROLS_HEADERS
     ${_src}/caColorMapContextMenuRuntime.h
     ${_src}/caPlotContextMenuRuntime.h
     ${_src}/caWaveTableContextMenuRuntime.h
+    ${_src}/caSliderContextMenuRuntime.h
+    ${_src}/caTextEntryContextMenuRuntime.h
     ${_src}/caRoiWriteRuntimeMixin.h
     ${_src}/caTextWidgetRuntime.h
     ${_src}/addevent.h
