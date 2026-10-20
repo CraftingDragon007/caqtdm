@@ -200,6 +200,7 @@ set(QTCONTROLS_HEADERS
     ${_src}/caPlotContextMenuRuntime.h
     ${_src}/caWaveTableContextMenuRuntime.h
     ${_src}/caRoiWriteRuntimeMixin.h
+    ${_src}/caTextWidgetRuntime.h
     ${_src}/addevent.h
     ${_src}/animationcode.h
     ${_src}/hideobjectcode.h

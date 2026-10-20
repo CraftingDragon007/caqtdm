@@ -1958,71 +1958,47 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         replaceMacroWidget->setProperty("Taken", true);
 
         //==================================================================================================================
-    } else if(caTextEntry* textentryWidget = qobject_cast<caTextEntry *>(w1)) {
-
-        qCDebug(caTextEntryLog) << "create caTextEntry";
-        w1->setProperty("ObjectType", caTextEntry_Widget);
-
-        if(textentryWidget->getPV().size() > 0) {
-            textentryWidget->setEnabled(true);
-            int num = addMonitor(myWidget, &kData, textentryWidget->getPV(), w1, specData, map, &pv);
-            integerList.append(num);
-            textentryWidget->setPV(pv);
-            connect(textentryWidget, SIGNAL(TextEntryChanged(const QString&)), this, SLOT(Callback_TextEntryChanged(const QString&)));
-            nbMonitors++;
+    } else if(caTextWidgetRuntime *textWidget = dynamic_cast<caTextWidgetRuntime *>(w1)) {
+        const bool isTextEntry = qobject_cast<caTextEntry *>(w1) != nullptr;
+        const bool isLineEdit = !isTextEntry && qobject_cast<caLineEdit *>(w1) != nullptr;
+        if (isTextEntry) {
+            qCDebug(caTextEntryLog) << "create caTextEntry";
+            w1->setProperty("ObjectType", caTextEntry_Widget);
+        } else if (isLineEdit) {
+            qCDebug(caLineEditLog) << "create caLineEdit";
+            w1->setProperty("ObjectType", caLineEdit_Widget);
+        } else {
+            qCDebug(caMultiLineStringLog) << "create caMultilineString";
+            w1->setProperty("ObjectType", caMultiLineString_Widget);
         }
-        // default format, format from ui file will be used normally except for channel precision
-        textentryWidget->setFormat(1);
 
-        QString text =  treatMacro(map, textentryWidget->text(), &doNothing, w1->objectName());
-        text.replace(QString::fromWCharArray(L"\u00A6"), " ");    // replace Â¦ with a blanc (was used in macros for creating blancs)
-        textentryWidget->setText(text);
-
-        // get focus away
-        textentryWidget->clearFocus();
-        myWidget->setFocus();
-
-        if(textentryWidget->isElevated()) textentryWidget->raise();
-
-        // insert dataindex list
-        integerList.insert(0, nbMonitors);
-        textentryWidget->setProperty("MonitorList", integerList);
-
-        textentryWidget->setProperty("Taken", true);
-
-        //==================================================================================================================
-    } else if(caLineEdit* lineeditWidget = qobject_cast<caLineEdit *>(w1)) {
-        QString text;
-        qCDebug(caLineEditLog) << "create caLineEdit";
-        w1->setProperty("ObjectType", caLineEdit_Widget);
-
-        if(lineeditWidget->getPV().size() > 0) {
-            lineeditWidget->prepareReadOnlyMonitor();
-            QString pv = lineeditWidget->getPV();
-
-            lineeditWidget->setAlignment(lineeditWidget->alignment());
-            specData[0] = 0;
-            int num = addMonitor(myWidget, &kData, lineeditWidget->getPV(), w1, specData, map, &pv);
+        if (!textWidget->runtimeTextPV().isEmpty()) {
+            textWidget->prepareRuntimeTextMonitor();
+            if (textWidget->resetsRuntimeTextMonitorSpecData()) specData[0] = 0;
+            int num = addMonitor(myWidget, &kData, textWidget->runtimeTextPV(), w1, specData, map, &pv);
             integerList.append(num);
-            lineeditWidget->setPV(pv);
+            textWidget->setRuntimeTextPV(pv);
+            if (isTextEntry) {
+                connect(w1, SIGNAL(TextEntryChanged(const QString&)), this, SLOT(Callback_TextEntryChanged(const QString&)));
+            }
             nbMonitors++;
 
-            // this is in principle crap, but necessary for psi's bsread, in order to get the unit (.EGU), that was normally
-            // transmitted in the epics protocol
-            QVariant var=lineeditWidget->property("Interface");
-            if(!var.isNull()) {
-                QVariantList infoList = var.toList();
-                void *ptr = (void*) infoList.at(0).value<void *>();
-                if(ptr != (void*) Q_NULLPTR) {
-                    ControlsInterface * plugininterface = (ControlsInterface *) ptr;
-                    if(plugininterface != (ControlsInterface *) Q_NULLPTR) {
-                        if(plugininterface->pluginName().contains("bsread")) {
+            // bsread does not transmit the EPICS .EGU field, so request it through epics3.
+            if (isLineEdit) {
+                QVariant var = w1->property("Interface");
+                if (!var.isNull()) {
+                    QVariantList infoList = var.toList();
+                    void *ptr = (void *) infoList.at(0).value<void *>();
+                    if (ptr != (void *) Q_NULLPTR) {
+                        ControlsInterface *plugininterface = (ControlsInterface *) ptr;
+                        if (plugininterface != (ControlsInterface *) Q_NULLPTR &&
+                            plugininterface->pluginName().contains("bsread")) {
                             qCInfo(caLineEditLog) << "bsread detected";
                             pv.append(".EGU");
                             specData[0] = 1;
-                            if(pv.contains("bsread://")) pv.replace("bsread://", "epics3://");
+                            if (pv.contains("bsread://")) pv.replace("bsread://", "epics3://");
                             else pv.prepend("epics3://");
-                            int num = addMonitor(myWidget, &kData, pv, w1, specData, map, &pv);
+                            num = addMonitor(myWidget, &kData, pv, w1, specData, map, &pv);
                             integerList.append(num);
                             nbMonitors++;
                         }
@@ -2031,48 +2007,25 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
             }
         }
 
-        // default format, format from ui file will be used normally except for channel precision
-        lineeditWidget->setFormat(1);
+        textWidget->beginRuntimeTextSetup();
 
-        text= lineeditWidget->toolTip();
-        if(reaffectText(map, &text, w1))  lineeditWidget->setToolTip(text);
-        text= lineeditWidget->statusTip();
-        if(reaffectText(map, &text, w1))  lineeditWidget->setStatusTip(text);
-
-        text =  treatMacro(map, lineeditWidget->text(), &doNothing, w1->objectName());
-        text.replace(QString::fromWCharArray(L"\u00A6"), " ");    // replace Â¦ with a blanc (was used in macros for creating blancs)
-        lineeditWidget->setText(text);
-
-
-        // insert dataindex list
-        integerList.insert(0, nbMonitors);
-        lineeditWidget->setProperty("MonitorList", integerList);
-
-        lineeditWidget->setProperty("Taken", true);
-
-        //==================================================================================================================
-    } else if(caMultiLineString* multilinestringWidget = qobject_cast<caMultiLineString *>(w1)) {
         QString text;
-        qCDebug(caMultiLineStringLog) << "create caMultilineString";
-        w1->setProperty("ObjectType", caMultiLineString_Widget);
-
-        if(multilinestringWidget->getPV().size() > 0) {
-            multilinestringWidget->prepareMonitor();
-            int num = addMonitor(myWidget, &kData, multilinestringWidget->getPV(), w1, specData, map, &pv);
-            integerList.append(num);
-            multilinestringWidget->setPV(pv);
-            nbMonitors++;
+        if (textWidget->reaffectsRuntimeToolTips()) {
+            text = w1->toolTip();
+            if (reaffectText(map, &text, w1)) textWidget->setRuntimeToolTip(text);
+            text = w1->statusTip();
+            if (reaffectText(map, &text, w1)) textWidget->setRuntimeStatusTip(text);
         }
-        text= multilinestringWidget->toolTip();
-        if(reaffectText(map, &text, w1))  multilinestringWidget->setToolTip(text);
-        text= multilinestringWidget->statusTip();
-        if(reaffectText(map, &text, w1))  multilinestringWidget->setStatusTip(text);
+        if (textWidget->expandsRuntimeInitialText()) {
+            text = treatMacro(map, textWidget->runtimeInitialText(), &doNothing, w1->objectName());
+            text.replace(QString::fromWCharArray(L"\u00A6"), " ");
+            textWidget->setRuntimeText(text);
+        }
+        textWidget->finishRuntimeTextSetup(myWidget);
 
-        // insert dataindex list
         integerList.insert(0, nbMonitors);
-        multilinestringWidget->setProperty("MonitorList", integerList);
-
-        multilinestringWidget->setProperty("Taken", true);
+        w1->setProperty("MonitorList", integerList);
+        w1->setProperty("Taken", true);
 
         //==================================================================================================================
     } else if (caShapeRuntime *shapeWidget = dynamic_cast<caShapeRuntime *>(w1)) {

@@ -33,10 +33,11 @@
 #include "caWidgetUpdateInterface.h"
 #include "caDragTextInterface.h"
 #include "caLimitsDialogRuntime.h"
+#include "caTextWidgetRuntime.h"
 
 class QTCON_EXPORT caLineEdit : public QLineEdit, public FontScalingWidget,
                                  public caWidgetUpdateInterface, public caDragTextInterface,
-                                 public caLimitsDialogRuntime
+                                 public caLimitsDialogRuntime, public caTextWidgetRuntime
 {
     Q_PROPERTY(QString channel READ getPV WRITE setPV)
 
@@ -87,6 +88,21 @@ public:
      ~caLineEdit(){}
 
     void prepareReadOnlyMonitor();
+    QString runtimeTextPV() const override { return getPV(); }
+    void setRuntimeTextPV(const QString &pv) override { setPV(pv); }
+    QString runtimeInitialText() const override { return text(); }
+    void prepareRuntimeTextMonitor() override {
+        prepareReadOnlyMonitor();
+        setAlignment(alignment());
+    }
+    bool resetsRuntimeTextMonitorSpecData() const override { return true; }
+    bool expandsRuntimeInitialText() const override { return true; }
+    bool reaffectsRuntimeToolTips() const override { return true; }
+    void beginRuntimeTextSetup() override { setFormat(1); }
+    void setRuntimeText(const QString &text) override { setText(text); }
+    void setRuntimeToolTip(const QString &text) override { setToolTip(text); }
+    void setRuntimeStatusTip(const QString &text) override { setStatusTip(text); }
+    void finishRuntimeTextSetup(QWidget *display) override { Q_UNUSED(display); }
     bool needsAggregateAlarm() const override { return false; }
     bool needsVisibilityUpdate() const override { return false; }
     caWidgetUpdateResult applyChannelUpdate(const QString &units, const QString &value,

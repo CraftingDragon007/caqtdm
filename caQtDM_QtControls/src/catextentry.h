@@ -50,6 +50,15 @@ class QTCON_EXPORT caTextEntry : public caLineEdit
 
 public:
     caTextEntry( QWidget *parent = 0 );
+    void prepareRuntimeTextMonitor() override { setEnabled(true); }
+    bool resetsRuntimeTextMonitorSpecData() const override { return false; }
+    bool reaffectsRuntimeToolTips() const override { return false; }
+    void beginRuntimeTextSetup() override { setFormat(1); }
+    void finishRuntimeTextSetup(QWidget *display) override {
+        clearFocus();
+        if (display) display->setFocus();
+        if (isElevated()) raise();
+    }
     caWidgetUpdateResult applyChannelUpdate(const QString &units, const QString &value,
                                             const knobData &data, short aggregateAlarm) override;
     bool getAccessW() const {return _AccessW;}

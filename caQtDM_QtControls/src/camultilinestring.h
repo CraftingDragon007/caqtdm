@@ -31,9 +31,11 @@
 #include <fontscalingwidget.h>
 #include "caWidgetUpdateInterface.h"
 #include "caDragTextInterface.h"
+#include "caTextWidgetRuntime.h"
 
 class QTCON_EXPORT caMultiLineString : public QPlainTextEdit, public FontScalingWidget,
-                                       public caWidgetUpdateInterface, public caDragTextInterface
+                                       public caWidgetUpdateInterface, public caDragTextInterface,
+                                       public caTextWidgetRuntime
 {
     Q_OBJECT
 
@@ -94,6 +96,17 @@ public:
      ~caMultiLineString(){}
 
     void prepareMonitor();
+    QString runtimeTextPV() const override { return getPV(); }
+    void setRuntimeTextPV(const QString &pv) override { setPV(pv); }
+    QString runtimeInitialText() const override { return toPlainText(); }
+    void prepareRuntimeTextMonitor() override { prepareMonitor(); }
+    bool expandsRuntimeInitialText() const override { return false; }
+    bool reaffectsRuntimeToolTips() const override { return true; }
+    void beginRuntimeTextSetup() override {}
+    void setRuntimeText(const QString &text) override { setPlainText(text); }
+    void setRuntimeToolTip(const QString &text) override { setToolTip(text); }
+    void setRuntimeStatusTip(const QString &text) override { setStatusTip(text); }
+    void finishRuntimeTextSetup(QWidget *display) override { Q_UNUSED(display); }
     bool needsAggregateAlarm() const override { return false; }
     bool needsVisibilityUpdate() const override { return false; }
     caWidgetUpdateResult applyChannelUpdate(const QString &units, const QString &value,

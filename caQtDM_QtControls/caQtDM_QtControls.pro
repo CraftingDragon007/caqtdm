@@ -318,6 +318,7 @@ HEADERS	+= \
     src/caPlotContextMenuRuntime.h \
     src/caWaveTableContextMenuRuntime.h \
     src/caRoiWriteRuntimeMixin.h \
+    src/caTextWidgetRuntime.h \
     src/addevent.h \
     src/animationcode.h \
     src/hideobjectcode.h
