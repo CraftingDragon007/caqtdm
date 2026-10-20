@@ -45,6 +45,7 @@ public:
         else
             setSelectionMaskPV(pv);
     }
+    virtual void applyMenuAndroidResizeWorkaround() {}
     virtual bool selectionIsElevated() = 0;
     virtual void raiseSelection() = 0;
 };

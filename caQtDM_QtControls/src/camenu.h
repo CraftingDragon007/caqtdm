@@ -95,6 +95,7 @@ public:
     QString selectionMaskPV() const override { return getMaskPV(); }
     void setSelectionMaskPV(const QString &pv) override { setMaskPV(pv); }
     bool selectionUsesPrimarySpec() const override { return true; }
+    void applyMenuAndroidResizeWorkaround() override { setMinimumWidth(10); }
 
     int getAccessW() const {return thisAccessW;}
     void setAccessW(int access);
