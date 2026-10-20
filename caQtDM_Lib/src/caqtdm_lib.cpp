@@ -6459,7 +6459,10 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
                         }
 
                         info.append(asc);
-                        if(ClassName.contains("Gauge")) {
+                        const bool hasScalePrecisionNote = (infoWidget
+                                && infoWidget->getInfoHasScalePrecisionNote())
+                                || ClassName.contains("Gauge");
+                        if(hasScalePrecisionNote) {
                             snprintf(asc, MAX_STRING_LENGTH, "not used for scale") ;
                             info.append(asc);
                         }

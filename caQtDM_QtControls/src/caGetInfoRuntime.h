@@ -13,6 +13,7 @@ public:
     virtual QString getInfoCalculation() const { return QString(); }
     virtual QString getInfoImageCalculation() const { return QString(); }
     virtual bool getInfoCalculationIsWidgetCalculation() const { return false; }
+    virtual bool getInfoHasScalePrecisionNote() const { return false; }
 };
 
 #endif // CAGETINFORUNTIME_H
