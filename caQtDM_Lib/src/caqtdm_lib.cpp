@@ -7870,7 +7870,7 @@ void CaQtDM_Lib::resizeEvent ( QResizeEvent * event )
             } else if(caPlotResizeRuntime *plot = dynamic_cast<caPlotResizeRuntime *>(widget)) {
                 plot->capturePlotResizePresentation(integerList);
                 // preserve the LED's internal indicator dimensions for later resizing
-            } else if (caLed *ledWidget = qobject_cast<caLed *>(widget))  {
+            } else if (caLedResizeRuntime *ledWidget = dynamic_cast<caLedResizeRuntime *>(widget))  {
                 ledWidget->captureResizeBaseline();
 
             } else if(!className.compare("QTabWidget")) {
@@ -7993,7 +7993,7 @@ void CaQtDM_Lib::resizeEvent ( QResizeEvent * event )
                     }
 
                     // resize the LED's internal indicator with its display geometry
-                    if (caLed *ledWidget = qobject_cast<caLed *>(widget)) {
+                    if (caLedResizeRuntime *ledWidget = dynamic_cast<caLedResizeRuntime *>(widget)) {
                         ledWidget->resizeLed(factX, factY);
                     }
                     // this is something new (Qt5.13), probably a bug for android and a very dirty fix

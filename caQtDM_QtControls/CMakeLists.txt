@@ -194,6 +194,7 @@ set(QTCONTROLS_HEADERS
     ${_src}/caLimitsContextRuntime.h
     ${_src}/caByteRuntimeMixin.h
     ${_src}/caSingleChannelRuntime.h
+    ${_src}/caLedResizeRuntime.h
     ${_src}/caContextColorModeRuntime.h
     ${_src}/caShapeRuntimeMixin.h
     ${_src}/caTableResizeRuntimeMixin.h

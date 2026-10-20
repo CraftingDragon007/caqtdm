@@ -31,8 +31,10 @@
 #include <eled.h>
 #include "caStateWidgetRuntime.h"
 #include "caDragTextInterface.h"
+#include "caLedResizeRuntime.h"
 
-class QTCON_EXPORT caLed : public ELed, public caStateWidgetRuntime, public caDragTextInterface
+class QTCON_EXPORT caLed : public ELed, public caStateWidgetRuntime,
+                           public caDragTextInterface, public caLedResizeRuntime
 {
     Q_OBJECT
 
@@ -85,8 +87,8 @@ public:
     void setState(Qt::CheckState state);
 
     // Preserve and scale the LED's internal indicator size with display resizing.
-    void captureResizeBaseline();
-    void resizeLed(double factX, double factY);
+    void captureResizeBaseline() override;
+    void resizeLed(double factX, double factY) override;
 
     void setAlarmColors(short status);
 
