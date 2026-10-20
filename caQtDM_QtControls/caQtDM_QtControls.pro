@@ -316,6 +316,7 @@ HEADERS	+= \
     src/caTableResizeRuntimeMixin.h \
     src/caPlotResizeRuntimeMixin.h \
     src/caFrameResizeRuntime.h \
+    src/caSimpleFontResizeRuntime.h \
     src/caColorMapContextMenuRuntime.h \
     src/caPlotContextMenuRuntime.h \
     src/caWaveTableContextMenuRuntime.h \

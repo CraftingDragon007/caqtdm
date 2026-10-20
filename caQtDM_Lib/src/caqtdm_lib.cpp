@@ -70,6 +70,7 @@
 #include "caByteRuntimeMixin.h"
 #include "caContextColorModeRuntime.h"
 #include "caFrameResizeRuntime.h"
+#include "caSimpleFontResizeRuntime.h"
 #include "caTableResizeRuntimeMixin.h"
 #include "caColorMapContextMenuRuntime.h"
 #include "caPlotContextMenuRuntime.h"
@@ -7598,38 +7599,16 @@ void CaQtDM_Lib::resizeSpecials(QString className, QWidget *widget, QVariantList
         table->resizeTablePresentation(fontSize, rowHeight);
     }
 
-    else if(!className.compare("QLabel")) {
-        QLabel *label = (QLabel *) widget;
-        className = label->parent()->metaObject()->className();
-        if(!className.contains("Numeric") && !className.contains("caSpinbox")) {  // would otherwise interfere with our wheelswitch or spinbox
-            QFont f = label->font();
+    else if(caSimpleFontResizeRuntime::isLabel(className)) {
+        if (caSimpleFontResizeRuntime::isLabelEligible(widget)) {
             qreal fontSize = fontResize(factX, factY, list, 4);
-            f.setPointSize(qRound(fontSize));
-
-            label->setFont(f);
+            caSimpleFontResizeRuntime::resize(className, widget, fontSize);
         }
     }
 
-    else if((!className.compare("caMenu")) ||
-            (!className.compare("QPlainTextEdit")) ||
-            (!className.compare("QTextEdit")) ||
-            (!className.compare("QLineEdit")) ||
-            (!className.compare("QRadioButton")) ||
-            (!className.compare("QComboBox")) ||
-            (!className.compare("QCheckBox"))
-            ) {
-        QFont f = widget->font();
+    else if(caSimpleFontResizeRuntime::isSimpleTextControl(className)) {
         qreal fontSize = fontResize(factX, factY, list, 4);
-        f.setPointSize(qRound(fontSize));
-        //in case of a textedit widget, one has to selct the text to change the font (if somebody mixes fonts, he has bad luck)
-        if(!className.compare("QTextEdit")) {
-            QTextEdit *textEdit = (QTextEdit *) widget;
-            QTextCursor cursor = textEdit->textCursor();
-            textEdit->selectAll();
-            textEdit->setFontPointSize(fontSize);
-            textEdit->setTextCursor( cursor );
-        }
-        widget->setFont(f);
+        caSimpleFontResizeRuntime::resize(className, widget, fontSize);
     }
 
     else if(caPlotResizeRuntime *plot = dynamic_cast<caPlotResizeRuntime *>(widget)) {
