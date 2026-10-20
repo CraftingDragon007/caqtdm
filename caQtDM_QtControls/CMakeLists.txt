@@ -193,6 +193,7 @@ set(QTCONTROLS_HEADERS
     ${_src}/caLimitsDialogRuntime.h
     ${_src}/caLimitsContextRuntime.h
     ${_src}/caByteRuntimeMixin.h
+    ${_src}/caContextColorModeRuntime.h
     ${_src}/caShapeRuntimeMixin.h
     ${_src}/caTableResizeRuntimeMixin.h
     ${_src}/caPlotResizeRuntimeMixin.h

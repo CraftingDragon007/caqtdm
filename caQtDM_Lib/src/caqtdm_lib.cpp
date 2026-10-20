@@ -68,6 +68,7 @@
 #include "caRangeRuntimeMixin.h"
 #include "caLimitsContextRuntime.h"
 #include "caByteRuntimeMixin.h"
+#include "caContextColorModeRuntime.h"
 #include "caTableResizeRuntimeMixin.h"
 #include "caColorMapContextMenuRuntime.h"
 #include "caPlotContextMenuRuntime.h"
@@ -6112,10 +6113,6 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
     } else if(caCalc* calcWidget = qobject_cast<caCalc *>(w)) {
         calcString = calcWidget->getCalc();
 
-    } else if(caChoice* choiceWidget = qobject_cast<caChoice *>(w)) {
-        if(choiceWidget->getColorMode() == caChoice::Alarm) qstrncpy(colMode, "Alarm", sizeof(colMode));
-        else qstrncpy(colMode, "Static", sizeof(colMode));
-
     } else if(caLimitsContextRuntime *limitsContext = dynamic_cast<caLimitsContextRuntime *>(w)) {
         knobData *firstMonitor = nullptr;
         if (nbMonitors > 0 && MonitorList.size() > 1) {
@@ -6134,10 +6131,6 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
         if (state.hasColorMode)
             qstrncpy(colMode, state.alarmColorMode ? "Alarm" : "Static", sizeof(colMode));
 
-    } else if(caMultiLineString* multilinestringWidget = qobject_cast<caMultiLineString *>(w)) {
-        if(multilinestringWidget->getColorMode() == caMultiLineString::Alarm_Default) qstrncpy(colMode, "Alarm", sizeof(colMode));
-        else if(multilinestringWidget->getColorMode() == caMultiLineString::Alarm_Static) qstrncpy(colMode, "Alarm", sizeof(colMode));
-        else qstrncpy(colMode, "Static", sizeof(colMode));
     } else if(caScriptButton* scriptbuttonWidget =  qobject_cast< caScriptButton *>(w)) {
         Q_UNUSED(scriptbuttonWidget);
         // add action : kill associated process if running
@@ -6167,6 +6160,8 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
         qstrncpy(colMode, rangeWidget->rangeUsesAlarmColorMode() ? "Alarm" : "Static", sizeof(colMode));
     } else if (caByteRuntime *byteWidget = dynamic_cast<caByteRuntime *>(w)) {
         qstrncpy(colMode, byteWidget->byteUsesAlarmColorMode() ? "Alarm" : "Static", sizeof(colMode));
+    } else if (caContextColorModeRuntime *colorModeWidget = dynamic_cast<caContextColorModeRuntime *>(w)) {
+        qstrncpy(colMode, colorModeWidget->contextUsesAlarmColorMode() ? "Alarm" : "Static", sizeof(colMode));
     }
 
     // add some more actions

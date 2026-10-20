@@ -32,10 +32,11 @@
 #include "caWidgetUpdateInterface.h"
 #include "caDragTextInterface.h"
 #include "caTextWidgetRuntime.h"
+#include "caContextColorModeRuntime.h"
 
 class QTCON_EXPORT caMultiLineString : public QPlainTextEdit, public FontScalingWidget,
                                        public caWidgetUpdateInterface, public caDragTextInterface,
-                                       public caTextWidgetRuntime
+                                       public caTextWidgetRuntime, public caContextColorModeRuntime
 {
     Q_OBJECT
 
@@ -131,6 +132,10 @@ public:
 
     enum colMode {Default=0, Static, Alarm_Default, Alarm_Static};
     colMode getColorMode() const { return thisColorMode; }
+    bool contextUsesAlarmColorMode() const override
+    {
+        return getColorMode() == Alarm_Default || getColorMode() == Alarm_Static;
+    }
     void setColorMode(colMode colormode);
 
     bool getFrame() const { return thisFramePresent;}

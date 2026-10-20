@@ -33,10 +33,12 @@
 #include "elabel.h"
 #include "caEnumSelectionRuntimeMixin.h"
 #include "caDragTextInterface.h"
+#include "caContextColorModeRuntime.h"
 
 class QGridLayout;
 
-class QTCON_EXPORT caChoice : public QWidget, public caEnumSelectionRuntimeMixin<caChoice>, public caDragTextInterface
+class QTCON_EXPORT caChoice : public QWidget, public caEnumSelectionRuntimeMixin<caChoice>,
+                              public caDragTextInterface, public caContextColorModeRuntime
 {
     Q_OBJECT
 
@@ -97,6 +99,7 @@ public:
     void setEndBit(int const &bit);
 
     colMode getColorMode() const { return thisColorMode; }
+    bool contextUsesAlarmColorMode() const override { return getColorMode() == Alarm; }
     void setColorMode(colMode colormode);
 
      void setAlarmColors(short status);

@@ -311,6 +311,7 @@ HEADERS	+= \
     src/caLimitsDialogRuntime.h \
     src/caLimitsContextRuntime.h \
     src/caByteRuntimeMixin.h \
+    src/caContextColorModeRuntime.h \
     src/caShapeRuntimeMixin.h \
     src/caTableResizeRuntimeMixin.h \
     src/caPlotResizeRuntimeMixin.h \
