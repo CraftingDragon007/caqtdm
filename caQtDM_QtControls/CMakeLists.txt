@@ -208,6 +208,7 @@ set(QTCONTROLS_HEADERS
     ${_src}/caTextEntryContextMenuRuntime.h
     ${_src}/caScriptContextMenuRuntime.h
     ${_src}/caMimeContextMenuRuntime.h
+    ${_src}/caGetInfoRuntime.h
     ${_src}/caRoiWriteRuntimeMixin.h
     ${_src}/caTextWidgetRuntime.h
     ${_src}/addevent.h

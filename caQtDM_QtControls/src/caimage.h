@@ -36,8 +36,9 @@
 #include "messageQueue.h"
 #include "caVisibilityMonitorInterface.h"
 #include "caDragTextInterface.h"
+#include "caGetInfoRuntime.h"
 
-class QTCON_EXPORT caImage : public QWidget, public caVisibilityRuntimeMixin<caImage>, public caDragTextInterface
+class QTCON_EXPORT caImage : public QWidget, public caVisibilityRuntimeMixin<caImage>, public caDragTextInterface, public caGetInfoRuntime
 {
 
     Q_OBJECT
@@ -74,6 +75,7 @@ public:
     void setDelay(int delay) {thisDelay = delay;}
 
     QString getImageCalc() const {return thisImageCalc;}
+    QString getInfoImageCalculation() const override { return getImageCalc(); }
     void setImageCalc(QString const &calc) {thisImageCalc = calc;}
 
     void setAngle( int angle );

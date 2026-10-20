@@ -326,6 +326,7 @@ HEADERS	+= \
     src/caTextEntryContextMenuRuntime.h \
     src/caScriptContextMenuRuntime.h \
     src/caMimeContextMenuRuntime.h \
+    src/caGetInfoRuntime.h \
     src/caRoiWriteRuntimeMixin.h \
     src/caTextWidgetRuntime.h \
     src/addevent.h \

@@ -6069,13 +6069,8 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
 
     } else if(caVisibilityMonitorInterface *visibilityWidget = dynamic_cast<caVisibilityMonitorInterface *>(w)) {
         calcString = visibilityWidget->visibilityDescription();
-        if (caImage *imageWidget = qobject_cast<caImage *>(w))
-            imageString = imageWidget->getImageCalc();
         if (caShapeRuntime *shapeWidget = dynamic_cast<caShapeRuntime *>(w))
             qstrncpy(colMode, shapeWidget->needsAggregateAlarm() ? "Alarm" : "Static", sizeof(colMode));
-
-    } else if(caCalc* calcWidget = qobject_cast<caCalc *>(w)) {
-        calcString = calcWidget->getCalc();
 
     } else if(caLimitsContextRuntime *limitsContext = dynamic_cast<caLimitsContextRuntime *>(w)) {
         knobData *firstMonitor = nullptr;
@@ -6117,6 +6112,12 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
         }
         myMenu.addAction(RELOADWINDOW);
         myMenu.addAction(INCLUDES);
+    }
+
+    if (caGetInfoRuntime *infoWidget = dynamic_cast<caGetInfoRuntime *>(w)) {
+        if (!dynamic_cast<caVisibilityMonitorInterface *>(w))
+            calcString = infoWidget->getInfoCalculation();
+        imageString = infoWidget->getInfoImageCalculation();
     }
 
     if (caRangeRuntime *rangeWidget = dynamic_cast<caRangeRuntime *>(w)) {
@@ -6249,7 +6250,9 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
 
             info.append("Object: ");
             info.append(ObjectName);
-            if(caCalc* widget = qobject_cast<caCalc *>(w)) {info.append(", Variable: " + widget->getVariable());}
+            caGetInfoRuntime *infoWidget = dynamic_cast<caGetInfoRuntime *>(w);
+            if (infoWidget && infoWidget->getInfoHasVariable())
+                info.append(", Variable: " + infoWidget->getInfoVariable());
             info.append("<br>");
 
             if(!urlStrings.isEmpty()) {
@@ -6268,7 +6271,7 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
 
             if(!calcString.isEmpty()) {
                 info.append("<br>");
-                if(caCalc* widget = qobject_cast<caCalc *>(w)) {Q_UNUSED(widget); info.append("Calc: "); } else info.append("VisibilityCalc: ");
+                if (infoWidget && infoWidget->getInfoCalculationIsWidgetCalculation()) info.append("Calc: "); else info.append("VisibilityCalc: ");
 #if QT_VERSION > 0x050000
                 info.append(QString(calcString).toHtmlEscaped());
 #else

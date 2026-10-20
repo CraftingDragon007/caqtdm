@@ -35,10 +35,11 @@
 #include "caPropHandleDefs.h"
 #include "knobData.h"
 #include "caDragTextInterface.h"
+#include "caGetInfoRuntime.h"
 
 #define MAX_QRECT_PARAMS 4
 
-class  QTCON_EXPORT caCalc : public  ESimpleLabel, public caDragTextInterface
+class  QTCON_EXPORT caCalc : public  ESimpleLabel, public caDragTextInterface, public caGetInfoRuntime
 {
     Q_OBJECT
 
@@ -97,6 +98,10 @@ public:
     void setVariableType(varType vartype);
 
     QString getVariable() const {return thisVariable;}
+    bool getInfoHasVariable() const override { return true; }
+    QString getInfoVariable() const override { return getVariable(); }
+    QString getInfoCalculation() const override { return getCalc(); }
+    bool getInfoCalculationIsWidgetCalculation() const override { return true; }
     void setVariable(QString const &var) {thisVariable = var;}
     int dragTextPriority(int depth) const override { return depth == 0 ? Calc : -1; }
     QString dragTextValue() override { return getVariable(); }
