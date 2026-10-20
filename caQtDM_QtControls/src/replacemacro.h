@@ -31,6 +31,7 @@
 #include <QFrame>
 #include <QEvent>
 #include <QDebug>
+#include <QMap>
 #include <caLineEdit>
 
 #include <qtcontrols_global.h>
@@ -119,6 +120,7 @@ public:
     void setMacroKey(QString const &MacroKey);
 
     void updateCombo(QStringList keys, QStringList values);
+    void updateComboFromMap(const QMap<QString, QString> &map);
 
     // Channel form requests a monitor even when the configured PV is empty.
     bool channelMonitorRequest(QString &rawPV) const;

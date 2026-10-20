@@ -1932,15 +1932,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         w1->setProperty("ObjectType", replaceMacro_Widget);
 
         if(!map.isEmpty()) {
-            QStringList keys;
-            QStringList values;
-            QMapIterator<QString, QString> i(map);
-            while (i.hasNext()) {
-                i.next();
-                keys.append(i.key());
-                values.append(i.value());
-            }
-            replaceMacroWidget->updateCombo(keys, values);
+            replaceMacroWidget->updateComboFromMap(map);
 
             // macrovalueslist will be populated by a channel giving a list
             QString rawPV;

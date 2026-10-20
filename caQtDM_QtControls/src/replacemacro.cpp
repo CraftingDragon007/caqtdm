@@ -325,6 +325,19 @@ void replaceMacro::updateCombo(QStringList keys, QStringList values)
     setMacroKey(thisMacroKey);
 }
 
+void replaceMacro::updateComboFromMap(const QMap<QString, QString> &map)
+{
+    QStringList keys;
+    QStringList values;
+    QMapIterator<QString, QString> i(map);
+    while (i.hasNext()) {
+        i.next();
+        keys.append(i.key());
+        values.append(i.value());
+    }
+    updateCombo(keys, values);
+}
+
 bool replaceMacro::eventFilter(QObject *obj, QEvent *event)
 {
     // repeat enter or return key are not really wanted
