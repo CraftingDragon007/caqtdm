@@ -90,6 +90,16 @@ public:
     void prepareReadOnlyMonitor();
     QString runtimeTextPV() const override { return getPV(); }
     void setRuntimeTextPV(const QString &pv) override { setPV(pv); }
+    bool supportsRuntimeSecondaryMonitor() const override { return true; }
+    bool runtimeSecondaryMonitor(const QString &resolvedPV, QString &monitorPV,
+                                 int &monitorSpecData) const override {
+        monitorPV = resolvedPV;
+        monitorPV.append(".EGU");
+        monitorSpecData = 1;
+        if (monitorPV.contains("bsread://")) monitorPV.replace("bsread://", "epics3://");
+        else monitorPV.prepend("epics3://");
+        return true;
+    }
     QString runtimeInitialText() const override { return text(); }
     void prepareRuntimeTextMonitor() override {
         prepareReadOnlyMonitor();

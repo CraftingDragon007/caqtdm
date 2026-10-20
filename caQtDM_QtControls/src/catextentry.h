@@ -51,6 +51,7 @@ class QTCON_EXPORT caTextEntry : public caLineEdit, public caTextEntryContextMen
 
 public:
     caTextEntry( QWidget *parent = 0 );
+    bool supportsRuntimeSecondaryMonitor() const override { return false; }
     void prepareRuntimeTextMonitor() override { setEnabled(true); }
     bool resetsRuntimeTextMonitorSpecData() const override { return false; }
     bool reaffectsRuntimeToolTips() const override { return false; }

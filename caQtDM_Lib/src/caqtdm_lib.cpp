@@ -1983,7 +1983,7 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
             nbMonitors++;
 
             // bsread does not transmit the EPICS .EGU field, so request it through epics3.
-            if (isLineEdit) {
+            if (textWidget->supportsRuntimeSecondaryMonitor()) {
                 QVariant var = w1->property("Interface");
                 if (!var.isNull()) {
                     QVariantList infoList = var.toList();
@@ -1993,13 +1993,14 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
                         if (plugininterface != (ControlsInterface *) Q_NULLPTR &&
                             plugininterface->pluginName().contains("bsread")) {
                             qCInfo(caLineEditLog) << "bsread detected";
-                            pv.append(".EGU");
-                            specData[0] = 1;
-                            if (pv.contains("bsread://")) pv.replace("bsread://", "epics3://");
-                            else pv.prepend("epics3://");
-                            num = addMonitor(myWidget, &kData, pv, w1, specData, map, &pv);
-                            integerList.append(num);
-                            nbMonitors++;
+                            QString secondaryPV;
+                            int secondarySpecData = specData[0];
+                            if (textWidget->runtimeSecondaryMonitor(pv, secondaryPV, secondarySpecData)) {
+                                specData[0] = secondarySpecData;
+                                num = addMonitor(myWidget, &kData, secondaryPV, w1, specData, map, &pv);
+                                integerList.append(num);
+                                nbMonitors++;
+                            }
                         }
                     }
                 }

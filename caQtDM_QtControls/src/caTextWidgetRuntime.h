@@ -14,6 +14,9 @@ public:
 
     virtual QString runtimeTextPV() const = 0;
     virtual void setRuntimeTextPV(const QString &pv) = 0;
+    // Optional monitor declared from the resolved primary PV (for example, line-edit units).
+    virtual bool supportsRuntimeSecondaryMonitor() const { return false; }
+    virtual bool runtimeSecondaryMonitor(const QString &, QString &, int &) const { return false; }
     virtual QString runtimeInitialText() const = 0;
     virtual void prepareRuntimeTextMonitor() = 0;
     virtual bool resetsRuntimeTextMonitorSpecData() const { return false; }
