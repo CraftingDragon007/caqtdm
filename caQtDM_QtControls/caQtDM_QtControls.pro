@@ -319,6 +319,7 @@ HEADERS	+= \
     src/caFrameResizeRuntime.h \
     src/caSimpleFontResizeRuntime.h \
     src/caContainerResizeRuntime.h \
+    src/caResizeFactorRuntime.h \
     src/caColorMapContextMenuRuntime.h \
     src/caPlotContextMenuRuntime.h \
     src/caWaveTableContextMenuRuntime.h \

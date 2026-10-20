@@ -29,16 +29,17 @@
 #include <QWidget>
 #include <QScrollArea>
 #include "esimplelabel.h"
+#include "caResizeFactorRuntime.h"
 #include <qtcontrols_global.h>
 
 
-class  QTCON_EXPORT wmSignalPropagator : public  ESimpleLabel
+class  QTCON_EXPORT wmSignalPropagator : public  ESimpleLabel, public caResizeFactorRuntime
 {
     Q_OBJECT
 
 public:
     wmSignalPropagator( QWidget *parent = 0 );
-    void setResizeFactors(const double factX, const double factY);
+    void setResizeFactors(double factX, double factY) override;
 
 public slots:
     void animation(QRect p) {

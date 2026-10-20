@@ -7959,8 +7959,8 @@ void CaQtDM_Lib::resizeEvent ( QResizeEvent * event )
 
         // give wmsignalpropagator the resize factors
         if(!className.compare("wmSignalPropagator")) {
-            wmSignalPropagator *signalWidget = (wmSignalPropagator *) widget;
-            signalWidget->setResizeFactors(factX, factY);
+            if(caResizeFactorRuntime *resizeFactorWidget = dynamic_cast<caResizeFactorRuntime *>(widget))
+                resizeFactorWidget->setResizeFactors(factX, factY);
         }
 
         if(     !className.contains("QMainWindow")  &&
