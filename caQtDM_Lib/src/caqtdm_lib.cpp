@@ -2074,19 +2074,13 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
 
         QString text;
 
-        if(messagebuttonWidget->getPV().size() > 0) {
-            specData[0] = 0;
-            int num = addMonitor(myWidget, &kData, messagebuttonWidget->getPV(), w1, specData, map, &pv);
+        const QList<caMessageButton::ChannelSetupRequest> setupRequests =
+            messagebuttonWidget->channelSetupRequests();
+        for (const caMessageButton::ChannelSetupRequest &request : setupRequests) {
+            specData[0] = request.specData;
+            int num = addMonitor(myWidget, &kData, request.pv, w1, specData, map, &pv);
             integerList.append(num);
-            messagebuttonWidget->setPV(pv);
-            nbMonitors++;
-        }
-
-        if(messagebuttonWidget->getDisablePV().size() > 0) {
-            specData[0] = 1;
-            int num = addMonitor(myWidget, &kData, messagebuttonWidget->getDisablePV(), w1, specData, map, &pv);
-            integerList.append(num);
-            messagebuttonWidget->setDisablePV(pv);
+            messagebuttonWidget->applyChannelSetupResult(request, pv);
             nbMonitors++;
         }
 

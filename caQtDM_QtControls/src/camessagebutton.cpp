@@ -27,6 +27,33 @@
 #include "alarmdefs.h"
 #include <QApplication>
 
+QList<caMessageButton::ChannelSetupRequest> caMessageButton::channelSetupRequests() const
+{
+    QList<ChannelSetupRequest> requests;
+    const QString mainPV = getPV();
+    if (mainPV.size() > 0)
+        requests.append({ChannelSetupRequest::MainPV, mainPV, 0});
+
+    const QString disablePV = getDisablePV();
+    if (disablePV.size() > 0)
+        requests.append({ChannelSetupRequest::DisablePV, disablePV, 1});
+
+    return requests;
+}
+
+void caMessageButton::applyChannelSetupResult(const ChannelSetupRequest &request,
+                                               const QString &resolvedPV)
+{
+    switch (request.kind) {
+    case ChannelSetupRequest::MainPV:
+        setPV(resolvedPV);
+        break;
+    case ChannelSetupRequest::DisablePV:
+        setDisablePV(resolvedPV);
+        break;
+    }
+}
+
 caMessageButton::caMessageButton(QWidget *parent) : EPushButton(parent)
 {
     // to start with, clear the stylesheet, so that playing around

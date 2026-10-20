@@ -29,6 +29,7 @@
 #define caMessageMenu_H
 
 #include <QString>
+#include <QList>
 #include <QPushButton>
 #include <QEvent>
 #include <qtcontrols_global.h>
@@ -60,6 +61,16 @@ class QTCON_EXPORT caMessageButton : public EPushButton, public caWidgetUpdateIn
 
 public:
     void noStyle(QString style) {Q_UNUSED(style);}
+
+    struct ChannelSetupRequest {
+        enum Kind { MainPV, DisablePV };
+        Kind kind;
+        QString pv;
+        int specData;
+    };
+
+    QList<ChannelSetupRequest> channelSetupRequests() const;
+    void applyChannelSetupResult(const ChannelSetupRequest &request, const QString &resolvedPV);
 
     caMessageButton(QWidget *parent);
     bool needsAggregateAlarm() const override { return false; }
