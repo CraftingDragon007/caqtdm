@@ -43,11 +43,13 @@
 #include "caWidgetUpdateInterface.h"
 #include "caDragTextInterface.h"
 #include "caLimitsDialogRuntime.h"
+#include "caSingleChannelRuntime.h"
 
 /* a simple meter */
 
 class QTCON_EXPORT caMeter : public QwtDial, public caWidgetUpdateInterface,
-                             public caDragTextInterface, public caLimitsDialogRuntime
+                             public caDragTextInterface, public caLimitsDialogRuntime,
+                             public caSingleChannelRuntime
 {
     Q_OBJECT
 
@@ -88,6 +90,11 @@ public:
     caMeter( QWidget *parent = 0 );
     ~caMeter();
 
+    QString singleChannelPV() const override { return getPV(); }
+    bool requestsSingleChannelMonitor() const override { return getPV().size() > 0; }
+    int singleChannelObjectType() const override { return caMeter_Widget; }
+    void setSingleChannelPV(const QString &pv) override { setPV(pv); }
+    void prepareSingleChannelMonitor() override { prepareMonitor(); }
     void prepareMonitor() { setAlarmColors(NO_ALARM, true); }
     bool needsAggregateAlarm() const override { return false; }
     bool needsVisibilityUpdate() const override { return false; }

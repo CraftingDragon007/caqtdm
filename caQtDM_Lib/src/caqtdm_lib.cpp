@@ -66,6 +66,7 @@
 #include "caStateWidgetRuntime.h"
 #include "caEnumSelectionRuntimeMixin.h"
 #include "caRangeRuntimeMixin.h"
+#include "caSingleChannelRuntime.h"
 #include "caLimitsContextRuntime.h"
 #include "caByteRuntimeMixin.h"
 #include "caContextColorModeRuntime.h"
@@ -2216,65 +2217,34 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         w1->setProperty("Taken", true);
 
         //==================================================================================================================
-    } else if(caClock* clockWidget = qobject_cast<caClock *>(w1)) {
+    } else if (caSingleChannelRuntime *singleChannelWidget = dynamic_cast<caSingleChannelRuntime *>(w1)) {
+        if (caClock *clockWidget = qobject_cast<caClock *>(w1)) {
+            qCDebug(caClockLog) << "create caClock";
+        } else if (caAbstractGauge *gaugeWidget = qobject_cast<caAbstractGauge *>(w1)) {
+            if (qobject_cast<caLinearGauge *>(w1))
+                qCDebug(caLinearGaugeLog) << "create lineargauge for" << gaugeWidget->getPV();
+            else
+                qCDebug(caCircularGaugeLog) << "create circulargauge for" << gaugeWidget->getPV();
+        } else if (caMeter *meterWidget = qobject_cast<caMeter *>(w1)) {
+            qCDebug(caMeterLog) << "create circulargauge for" << meterWidget->getPV();
+        }
 
-        qCDebug(caClockLog) << "create caClock";
-        w1->setProperty("ObjectType", caClock_Widget);
+        w1->setProperty("ObjectType", singleChannelWidget->singleChannelObjectType());
 
-        if(clockWidget->getPV().size() > 0) {
-            int num = addMonitor(myWidget, &kData, clockWidget->getPV(), w1, specData, map, &pv);
+        if (singleChannelWidget->requestsSingleChannelMonitor()) {
+            int num = addMonitor(myWidget, &kData, singleChannelWidget->singleChannelPV(),
+                                 w1, specData, map, &pv);
             integerList.append(num);
-            clockWidget->setPV(pv);
+            singleChannelWidget->setSingleChannelPV(pv);
             nbMonitors++;
         }
 
-        clockWidget->prepareMonitor();
+        singleChannelWidget->prepareSingleChannelMonitor();
 
         // insert dataindex list
-        integerList.insert(0, nbMonitors);
-        clockWidget->setProperty("MonitorList", integerList);
-
-        clockWidget->setProperty("Taken", true);
-
-        //==================================================================================================================
-    } else if (caAbstractGauge *gaugeWidget = qobject_cast<caAbstractGauge *>(w1)) {
-        if (qobject_cast<caLinearGauge *>(w1))
-            qCDebug(caLinearGaugeLog) << "create lineargauge for" << gaugeWidget->getPV();
-        else
-            qCDebug(caCircularGaugeLog) << "create circulargauge for" << gaugeWidget->getPV();
-        w1->setProperty("ObjectType", gaugeWidget->gaugeObjectType());
-
-        if (!gaugeWidget->getPV().isEmpty()) {
-            int num = addMonitor(myWidget, &kData, gaugeWidget->getPV(), w1, specData, map, &pv);
-            integerList.append(num);
-            gaugeWidget->setPV(pv);
-            nbMonitors++;
-        }
-
         integerList.insert(0, nbMonitors);
         w1->setProperty("MonitorList", integerList);
         w1->setProperty("Taken", true);
-
-        //==================================================================================================================
-    } else if(caMeter* meterWidget = qobject_cast<caMeter *>(w1)) {
-
-        qCDebug(caMeterLog) << "create circulargauge for" << meterWidget->getPV();
-        w1->setProperty("ObjectType", caMeter_Widget);
-
-        if(meterWidget->getPV().size() > 0) {
-            int num = addMonitor(myWidget, &kData, meterWidget->getPV(), w1, specData, map, &pv);
-            integerList.append(num);
-            meterWidget->setPV(pv);
-            nbMonitors++;
-        }
-
-        meterWidget->prepareMonitor();
-
-        // insert dataindex list
-        integerList.insert(0, nbMonitors);
-        meterWidget->setProperty("MonitorList", integerList);
-
-        meterWidget->setProperty("Taken", true);
 
         //==================================================================================================================
     } else if (caByteRuntime *byteWidget = dynamic_cast<caByteRuntime *>(w1)) {

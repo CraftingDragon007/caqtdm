@@ -39,8 +39,10 @@
 #include "alarmdefs.h"
 #include "caWidgetUpdateInterface.h"
 #include "caDragTextInterface.h"
+#include "caSingleChannelRuntime.h"
 
-class QTCON_EXPORT caClock : public QwtAnalogClock, public caWidgetUpdateInterface, public caDragTextInterface
+class QTCON_EXPORT caClock : public QwtAnalogClock, public caWidgetUpdateInterface,
+                             public caDragTextInterface, public caSingleChannelRuntime
 {
     Q_OBJECT
 
@@ -70,6 +72,11 @@ public:
     caClock(QWidget *parent);
 
     QString getPV() const {return thisPV;}
+    QString singleChannelPV() const override { return getPV(); }
+    bool requestsSingleChannelMonitor() const override { return getPV().size() > 0; }
+    int singleChannelObjectType() const override { return caClock_Widget; }
+    void setSingleChannelPV(const QString &pv) override { setPV(pv); }
+    void prepareSingleChannelMonitor() override { prepareMonitor(); }
     int dragTextPriority(int depth) const override { return depth == 0 ? Clock : -1; }
     QString dragTextValue() override { return getPV(); }
     void setPV(QString const &newPV) {thisPV = newPV;}

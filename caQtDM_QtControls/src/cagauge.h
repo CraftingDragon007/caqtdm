@@ -30,9 +30,10 @@
 #include "caWidgetUpdateInterface.h"
 #include "caDragTextInterface.h"
 #include "caLimitsDialogRuntime.h"
+#include "caSingleChannelRuntime.h"
 
 class QTCON_EXPORT caAbstractGauge : public EAbstractGauge, public caWidgetUpdateInterface, public caDragTextInterface,
-                                     public caLimitsDialogRuntime
+                                     public caLimitsDialogRuntime, public caSingleChannelRuntime
 {
  Q_OBJECT
  Q_PROPERTY(QString channel READ getPV WRITE setPV)
@@ -44,6 +45,11 @@ public:
         ~caAbstractGauge(){}
 
         QString getPV() const;
+        QString singleChannelPV() const override { return getPV(); }
+        bool requestsSingleChannelMonitor() const override { return !getPV().isEmpty(); }
+        int singleChannelObjectType() const override { return gaugeObjectType(); }
+        void setSingleChannelPV(const QString &pv) override { setPV(pv); }
+        void prepareSingleChannelMonitor() override {}
         QString dragTextValue() override { return getPV(); }
         void setPV(QString const &newPV);
 
