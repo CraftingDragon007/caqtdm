@@ -62,6 +62,15 @@ class QTCON_EXPORT caBitnames : public EFlag, public caWidgetUpdateInterface
 public:
     void noStyle(QString style) {Q_UNUSED(style);}
 
+    struct ChannelSetupRequest {
+        enum Kind { EnumPV, ValuePV };
+        Kind kind;
+        QString pv;
+    };
+
+    QList<ChannelSetupRequest> channelSetupRequests() const;
+    void applyChannelSetupResult(const ChannelSetupRequest &request, const QString &resolvedPV);
+
     caBitnames(QWidget *parent);
     bool needsAggregateAlarm() const override { return false; }
     bool needsVisibilityUpdate() const override { return false; }

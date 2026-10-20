@@ -25,6 +25,30 @@
 
 #include "cabitnames.h"
 
+QList<caBitnames::ChannelSetupRequest> caBitnames::channelSetupRequests() const
+{
+    const QString enumPV = getEnumPV();
+    const QString valuePV = getValuePV();
+    if (enumPV.size() == 0 || valuePV.size() == 0)
+        return {};
+
+    return {{ChannelSetupRequest::EnumPV, enumPV},
+            {ChannelSetupRequest::ValuePV, valuePV}};
+}
+
+void caBitnames::applyChannelSetupResult(const ChannelSetupRequest &request,
+                                         const QString &resolvedPV)
+{
+    switch (request.kind) {
+    case ChannelSetupRequest::EnumPV:
+        setEnumPV(resolvedPV);
+        break;
+    case ChannelSetupRequest::ValuePV:
+        setValuePV(resolvedPV);
+        break;
+    }
+}
+
 caBitnames::caBitnames(QWidget *parent) : EFlag(parent)
 {
     setNumColumns(1);

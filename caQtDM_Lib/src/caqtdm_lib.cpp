@@ -2172,15 +2172,13 @@ void CaQtDM_Lib::HandleWidget(QWidget *w1, QString macro, bool firstPass, bool t
         qCDebug(caBitnamesLog) << "create caBitnames";
         w1->setProperty("ObjectType", caBitnames_Widget);
 
-        if(bitnamesWidget->getEnumPV().size() > 0 && bitnamesWidget->getValuePV().size() > 0) {
-            int num = addMonitor(myWidget, &kData, bitnamesWidget->getEnumPV(), w1, specData, map, &pv);
+        const QList<caBitnames::ChannelSetupRequest> requests = bitnamesWidget->channelSetupRequests();
+        for (const caBitnames::ChannelSetupRequest &request : requests) {
+            int num = addMonitor(myWidget, &kData, request.pv, w1, specData, map, &pv);
             integerList.append(num);
-            bitnamesWidget->setEnumPV(pv);
-            num = addMonitor(myWidget, &kData, bitnamesWidget->getValuePV(), w1, specData, map, &pv);
-            integerList.append(num);
-            bitnamesWidget->setValuePV(pv);
-            nbMonitors = 2;
+            bitnamesWidget->applyChannelSetupResult(request, pv);
         }
+        if (requests.size() == 2) nbMonitors = 2;
 
         // insert dataindex list
         integerList.insert(0, nbMonitors);
