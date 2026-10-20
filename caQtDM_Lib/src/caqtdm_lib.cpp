@@ -69,6 +69,7 @@
 #include "caLimitsContextRuntime.h"
 #include "caByteRuntimeMixin.h"
 #include "caContextColorModeRuntime.h"
+#include "caFrameResizeRuntime.h"
 #include "caTableResizeRuntimeMixin.h"
 #include "caColorMapContextMenuRuntime.h"
 #include "caPlotContextMenuRuntime.h"
@@ -7587,25 +7588,8 @@ QRect CaQtDM_Lib::widgetResize(QWidget* w,double factX, double factY){
 void CaQtDM_Lib::resizeSpecials(QString className, QWidget *widget, QVariantList list, double factX, double factY)
 {
     // for horizontal or vertical line we still have to set the linewidth and for a frame the border framewidth
-    if(!className.compare("caFrame") || !className.compare("QFrame")) {
-        double linewidth;
-        QFrame * line = (QFrame *) widget;
-        if(line->frameShape() == QFrame::HLine || line->frameShape() == QFrame::VLine) {
-            if(line->frameShape() != QFrame::HLine) {
-                qCDebug(caQtDMLibLog) << "resize vertical line" << widget << (double) list.at(4).toInt() * factX;
-                linewidth = (double) list.at(4).toInt() * factX;
-            } else {
-                qCDebug(caQtDMLibLog) << "resize horizontal line" << widget << (double) list.at(4).toInt() * factY;
-                linewidth = (double) list.at(4).toInt() * factY;
-            }
-            line->setLineWidth(qRound(linewidth));
-        } else {
-            qCDebug(caQtDMLibLog) << "resize frame" << widget << (double) list.at(5).toInt() * qMin(factX, factY);
-            if ((list.count()>=5) && list.at(4).isValid()){
-                linewidth = (double) list.at(4).toInt() * qMin(factX, factY);
-                line->setLineWidth(qRound(linewidth));
-            }
-        }
+    if(caFrameResizeRuntime::isEligible(className)) {
+        caFrameResizeRuntime::resize(className, widget, list, factX, factY, caQtDMLibLog());
     }
 
     else if(caTableResizeRuntime *table = dynamic_cast<caTableResizeRuntime *>(widget)) {
@@ -7970,10 +7954,8 @@ void CaQtDM_Lib::resizeEvent ( QResizeEvent * event )
             }
 
             // for a horizontal or vertical line get the linewidth and for box the framewidth
-            if(!className.compare("caFrame") || !className.compare("QFrame") ) {
-                QFrame * line = (QFrame *) widget;
-                    integerList.insert(4, line->lineWidth());
-                    integerList.insert(5, line->frameWidth());
+            if(caFrameResizeRuntime::isEligible(className)) {
+                    caFrameResizeRuntime::captureBaseline(static_cast<QFrame *>(widget), integerList);
                 // for plots get the linewidth
             } else if(caPlotResizeRuntime *plot = dynamic_cast<caPlotResizeRuntime *>(widget)) {
                 plot->capturePlotResizePresentation(integerList);
