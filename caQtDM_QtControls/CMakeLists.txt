@@ -199,6 +199,7 @@ set(QTCONTROLS_HEADERS
     ${_src}/caPlotResizeRuntimeMixin.h
     ${_src}/caFrameResizeRuntime.h
     ${_src}/caSimpleFontResizeRuntime.h
+    ${_src}/caContainerResizeRuntime.h
     ${_src}/caColorMapContextMenuRuntime.h
     ${_src}/caPlotContextMenuRuntime.h
     ${_src}/caWaveTableContextMenuRuntime.h

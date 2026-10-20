@@ -71,6 +71,7 @@
 #include "caContextColorModeRuntime.h"
 #include "caFrameResizeRuntime.h"
 #include "caSimpleFontResizeRuntime.h"
+#include "caContainerResizeRuntime.h"
 #include "caTableResizeRuntimeMixin.h"
 #include "caColorMapContextMenuRuntime.h"
 #include "caPlotContextMenuRuntime.h"
@@ -7620,15 +7621,7 @@ void CaQtDM_Lib::resizeSpecials(QString className, QWidget *widget, QVariantList
     }
 
     else if(!className.compare("QGroupBox")) {
-        if(list.at(4).toInt() < 0) return; // on android I got -1 for these fonts at initialization, i.e pixelsize
-        if(qMin(factX, factY) < 1.0) {
-            QGroupBox *box = (QGroupBox *) widget;
-            qreal fontSize = qMin(factX, factY) * (double) list.at(4).toInt();
-            if(fontSize < MIN_FONT_SIZE) fontSize = MIN_FONT_SIZE;
-            QFont f;
-            f.setPointSizeF(fontSize);
-            box->setFont(f);
-        }
+        if (caContainerResizeRuntime::resizeGroupBox(static_cast<QGroupBox *>(widget), list, factX, factY)) return;
     }
 
     else if(!className.compare("caInclude")) {
@@ -7645,22 +7638,7 @@ void CaQtDM_Lib::resizeSpecials(QString className, QWidget *widget, QVariantList
 
     // Tabbar adjustment
     else if(!className.compare("QTabWidget")) {
-#ifdef MOBILE
-        if(list.at(4).toInt() < 0) return; // on android I got -1 for these fonts at initialization, i.e pixelsize
-        qreal fontSize = (qMin(factX, factY) * (double) list.at(4).toInt());
-        if(fontSize < MIN_FONT_SIZE) fontSize = MIN_FONT_SIZE;
-        if(fontSize > (double) list.at(4).toInt()) fontSize = (double) list.at(4).toInt();
-        QString style= "";
-        QTabWidget *box = (QTabWidget *) widget;
-        qreal height = 1.0;
-        QString thisStyle = "QTabBar::tab {font: %1pt;  height:%2em; padding: %3px;}";
-        thisStyle = thisStyle.arg(qRound(fontSize)).arg(height).arg(qRound(5.0*qMin(factX, factY)));
-
-        // get eventual stylesheet from property set at start for addition
-        QVariant Style=box->property("Stylesheet");
-        if(!Style.isNull()) style = Style.toString();
-        box->setStyleSheet(thisStyle + style);
-#endif
+        if (caContainerResizeRuntime::resizeTabWidget(static_cast<QTabWidget *>(widget), list, factX, factY)) return;
     }
 }
 
@@ -7943,9 +7921,7 @@ void CaQtDM_Lib::resizeEvent ( QResizeEvent * event )
                 ledWidget->captureResizeBaseline();
 
             } else if(!className.compare("QTabWidget")) {
-                QTabWidget *tabW = (QTabWidget *) widget;
-                integerList.insert(4, widget->font().pointSize());
-                tabW->setProperty("Stylesheet", tabW->styleSheet());
+                caContainerResizeRuntime::captureTabWidgetBaseline(static_cast<QTabWidget *>(widget), integerList);
 
             } else {
                 integerList.insert(4, widget->font().pointSize());
