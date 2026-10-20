@@ -6134,13 +6134,12 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
         if (state.hasColorMode)
             qstrncpy(colMode, state.alarmColorMode ? "Alarm" : "Static", sizeof(colMode));
 
-    } else if(caScriptButton* scriptbuttonWidget =  qobject_cast< caScriptButton *>(w)) {
-        Q_UNUSED(scriptbuttonWidget);
+    } else if(caScriptContextMenuRuntime *scriptWidget = dynamic_cast<caScriptContextMenuRuntime *>(w)) {
         // add action : kill associated process if running
-        myMenu.addAction(KILLPROCESS);
+        scriptWidget->addScriptContextActions(myMenu, KILLPROCESS);
 
-    } else if(caMimeDisplay* mimeWidget = qobject_cast<caMimeDisplay *>(w)) {
-        urlStrings = mimeWidget->getFilesList();
+    } else if(caMimeContextMenuRuntime *mimeWidget = dynamic_cast<caMimeContextMenuRuntime *>(w)) {
+        urlStrings = mimeWidget->contextMenuFiles();
 
     } else if(ClassName.contains("QE")) {
         qCDebug(caQtDMLibLog) << "treat" << w;
@@ -6234,12 +6233,12 @@ void CaQtDM_Lib::DisplayContextMenu(QWidget* w)
     caColorMapContextMenuRuntime *colorMapMenu = dynamic_cast<caColorMapContextMenuRuntime *>(w);
     if (selectedItem) {
         if(selectedItem->text().contains(KILLPROCESS)) {
-            if(caScriptButton* scriptbuttonWidget =  qobject_cast< caScriptButton *>(w)) {
+            if(caScriptContextMenuRuntime *scriptWidget = dynamic_cast<caScriptContextMenuRuntime *>(w)) {
 #ifndef MOBILE
-                processWindow *t= (processWindow *) scriptbuttonWidget->getProcess();
+                processWindow *t= (processWindow *) scriptWidget->contextMenuProcess();
                 if(t != (processWindow *) Q_NULLPTR) t->tryTerminate();
 #else
-                Q_UNUSED(scriptbuttonWidget);
+                Q_UNUSED(scriptWidget);
 #endif
             }
 

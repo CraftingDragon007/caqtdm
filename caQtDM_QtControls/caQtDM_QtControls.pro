@@ -323,6 +323,8 @@ HEADERS	+= \
     src/caWaveTableContextMenuRuntime.h \
     src/caSliderContextMenuRuntime.h \
     src/caTextEntryContextMenuRuntime.h \
+    src/caScriptContextMenuRuntime.h \
+    src/caMimeContextMenuRuntime.h \
     src/caRoiWriteRuntimeMixin.h \
     src/caTextWidgetRuntime.h \
     src/addevent.h \

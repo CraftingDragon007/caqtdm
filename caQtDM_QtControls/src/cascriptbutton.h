@@ -33,8 +33,9 @@
 #include <epushbutton.h>
 #include <QHBoxLayout>
 #include <QCheckBox>
+#include "caScriptContextMenuRuntime.h"
 
-class QTCON_EXPORT caScriptButton : public QWidget
+class QTCON_EXPORT caScriptButton : public QWidget, public caScriptContextMenuRuntime
 {
     Q_OBJECT
 
@@ -97,6 +98,9 @@ public:
     void setAccessW(bool access) {_AccessW = access;}
 
     void *getProcess() const {return thisProcess;}
+    void addScriptContextActions(QMenu &menu, const QString &killProcessLabel) const override
+    { menu.addAction(killProcessLabel); }
+    void *contextMenuProcess() const override { return getProcess(); }
     void setProcess(void *t) {thisProcess = t;}
 
 public slots:

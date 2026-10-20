@@ -205,6 +205,8 @@ set(QTCONTROLS_HEADERS
     ${_src}/caWaveTableContextMenuRuntime.h
     ${_src}/caSliderContextMenuRuntime.h
     ${_src}/caTextEntryContextMenuRuntime.h
+    ${_src}/caScriptContextMenuRuntime.h
+    ${_src}/caMimeContextMenuRuntime.h
     ${_src}/caRoiWriteRuntimeMixin.h
     ${_src}/caTextWidgetRuntime.h
     ${_src}/addevent.h

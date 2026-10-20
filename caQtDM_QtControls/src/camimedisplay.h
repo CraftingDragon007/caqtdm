@@ -35,9 +35,10 @@
 #include <QUrl>
 #include <qtcontrols_global.h>
 #include <carowcolmenu.h>
+#include "caMimeContextMenuRuntime.h"
 #include "pathdefinitions.h"
 
-class QTCON_EXPORT caMimeDisplay : public caRowColMenu
+class QTCON_EXPORT caMimeDisplay : public caRowColMenu, public caMimeContextMenuRuntime
 {
     Q_OBJECT
 
@@ -53,6 +54,7 @@ public:
     void noStyle(QString style) {Q_UNUSED(style);}
 
     caMimeDisplay(QWidget *parent);
+    QStringList contextMenuFiles() const override { return getFilesList(); }
 
 #ifdef WEB
     void setVNCEnabled(bool isVNC);
